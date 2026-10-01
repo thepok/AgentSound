@@ -216,9 +216,36 @@ void testStrictAndDeterministic() {
     check(during <= 1.05 * after, fmt("gain / treble automation glides (largest step %.3f, steady %.3f)", during, after));
 }
 
+void testMix() {
+    std::printf("amp: mix blends the time-aligned DI under the amp (a bass rig)\n");
+    const long n = 48000;
+    const auto x = sine(80.0, 0.25, n);
+    const auto di = run({{"gain", 8}, {"mix", 0}}, x);
+    check(std::fabs(db(rms(di, 24000, 12000) / rms(x, 24000, 12000))) < 0.1,
+          fmt("mix 0 passes the DI at its input level (%+.2f dB)", db(rms(di, 24000, 12000) / rms(x, 24000, 12000))));
+    int best = 0;
+    double bestC = -1e9;
+    for (int lag = 0; lag < 16; ++lag) {
+        double c = 0.0;
+        for (long i = 24000; i < 36000; ++i) c += di[static_cast<std::size_t>(i)] * x[static_cast<std::size_t>(i - lag)];
+        if (c > bestC) { bestC = c; best = lag; }
+    }
+    check(best >= 3 && best <= 8, fmt("the DI is delayed like the oversampled amp path (%.0f samples)", best));
+    const auto amp1 = run({{"gain", 8}}, x), half = run({{"gain", 8}, {"mix", 0.5}}, x);
+    double err = 0.0;
+    for (long i = 24000; i < 36000; ++i) {
+        const std::size_t k = static_cast<std::size_t>(i);
+        err = std::max(err, static_cast<double>(std::fabs(half[k] - 0.5f * (amp1[k] + di[k]))));
+    }
+    check(err < 1e-5, fmt("mix 0.5 = half amp + half DI (max err %.2g)", err));
+    const auto a = run({{"gain", 8}, {"mix", 1}}, x);
+    check(a == amp1, "mix 1 (the default) is the amp alone");
+}
+
 }  // namespace
 
 int main() {
+    testMix();
     testHarmonics();
     testAliasing();
     testToneStack();

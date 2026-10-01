@@ -4,7 +4,7 @@
 //   eq (7-band SVF: hp, low shelf, 3 peaks, high shelf, lp), filter (resonant SVF / ladder sweeps),
 //   compressor (feed-forward, stereo-linked, sidechain), ducker (sidechain or tempo-synced pump),
 //   saturator (4x oversampled + ADAA: tape|tube|hard|fold), limiter (true-peak lookahead brickwall),
-//   width (M/S + Linkwitz-Riley mono bass), bitcrush, utility.
+//   width (M/S + Linkwitz-Riley mono bass), bitcrush, utility, deesser (split-band sibilance control).
 
 #include "core/Module.h"
 

@@ -126,24 +126,49 @@ double coincidence(const StreamStats& a, const StreamStats& b, int band, double 
     return (sa > 0 && sb > 0) ? num / std::sqrt(sa * sb) : 0.0;
 }
 
-// How strongly two parts' low-end (< 150 Hz) energy avoids each other, in dB, from 10 ms envelopes:
-// -10*log10(mean(eA*eB) / (mean(eA)*mean(eB))). 0 = independent (a kick over a sustained bass),
-// 3-10 = one ducks while the other hits (working sidechain), < 0 = they hit together.
+// How strongly two parts' low-end (< 150 Hz) energy avoids each other, in dB: ~0 = independent or hitting together
+// (a kick over an unducked sustained bass, a bass that plays only with the kick), 3-10 = one ducks while the other hits
+// (a working sidechain), < 0 = the sustained one is louder on the hits than between them.
+// How far the sustained part steps aside while the transient one hits (dB, 10 ms low-band envelopes of the two
+// nodes' own outputs): the hits = the frames where the more transient node (higher p90 / median of its envelope: the
+// kick) is in its top 10 %; the other node's mean energy there vs between the hits (where the kick sits below its
+// median). A bass ducked 9 dB under each kick reads ~+9 dB, a bass that sounds only with the kick (no duck) ~0 or
+// below, a bass in the kick's gaps strongly positive. (The earlier measure, the envelopes' normalised product, could
+// not exceed ~1.5 dB for a sustained bass however deep its duck - the kick's own tail and ring dominate it - so the
+// warning came and went with small bass edits.)
 double lowSeparationDb(const StreamStats& a, const StreamStats& b, double sr, double t0, double t1) {
-    const auto& ea = a.lowEnvelope();
-    const auto& eb = b.lowEnvelope();
+    const auto& ea0 = a.lowEnvelope();
+    const auto& eb0 = b.lowEnvelope();
     const double F = a.envFrames();
     const auto i0 = static_cast<std::size_t>(std::max(0.0, std::ceil(t0 * sr / F)));
-    const auto i1 = std::min({ea.size(), eb.size(), static_cast<std::size_t>(std::max(0.0, std::floor(t1 * sr / F)))});
-    double sa = 0.0, sb = 0.0, sab = 0.0;
+    const auto i1 = std::min({ea0.size(), eb0.size(), static_cast<std::size_t>(std::max(0.0, std::floor(t1 * sr / F)))});
+    if (i1 <= i0 + 20) return 0.0;
+    auto pct = [&](const std::vector<float>& e, double q) {
+        std::vector<float> v(e.begin() + static_cast<std::ptrdiff_t>(i0), e.begin() + static_cast<std::ptrdiff_t>(i1));
+        const std::size_t k = std::min(v.size() - 1, static_cast<std::size_t>(q * static_cast<double>(v.size())));
+        std::nth_element(v.begin(), v.begin() + static_cast<std::ptrdiff_t>(k), v.end());
+        return static_cast<double>(v[k]);
+    };
+    const double a50 = pct(ea0, 0.5), a90 = pct(ea0, 0.9), b50 = pct(eb0, 0.5), b90 = pct(eb0, 0.9);
+    const bool aHits = a90 / std::max(a50, 1e-20) >= b90 / std::max(b50, 1e-20);
+    const auto& ek = aHits ? ea0 : eb0;    // the transient one (the kick)
+    const auto& es = aHits ? eb0 : ea0;    // the sustained one (the bass)
+    const double k50 = aHits ? a50 : b50, k90 = aHits ? a90 : b90;
+    if (!(k90 > 0.0)) return 0.0;
+    double sHit = 0.0, sGap = 0.0;
+    std::size_t nHit = 0, nGap = 0;
     for (std::size_t i = i0; i < i1; ++i) {
-        sa += ea[i];
-        sb += eb[i];
-        sab += static_cast<double>(ea[i]) * eb[i];
+        if (ek[i] >= k90) {
+            sHit += es[i];
+            ++nHit;
+        } else if (ek[i] < k50) {
+            sGap += es[i];
+            ++nGap;
+        }
     }
-    if (!(sa > 0.0 && sb > 0.0) || i1 <= i0) return 0.0;
-    const double ratio = sab * static_cast<double>(i1 - i0) / (sa * sb);
-    return std::clamp(-10.0 * std::log10(std::max(ratio, 1e-3)), -30.0, 30.0);
+    if (nHit == 0 || nGap == 0 || !(sGap > 0.0)) return 0.0;
+    const double hit = sHit / static_cast<double>(nHit), gap = sGap / static_cast<double>(nGap);
+    return std::clamp(10.0 * std::log10(std::max(gap, 1e-30) / std::max(hit, 1e-30)), -30.0, 30.0);
 }
 
 json bandObject(const double* values) {
@@ -822,11 +847,18 @@ void ReportBuilder::checkMasking() {
             // Only bands that matter in this section (relative to how much that band usually carries).
             if (bandE / total < std::max(0.25 * m_.refShare[static_cast<std::size_t>(b)], 0.005)) continue;
             if (frames <= 0 || dbFromPower(bandE / (2.0 * frames)) < -60.0) continue;
-            std::vector<std::size_t> big;
+            // the two biggest carriers of the band. Mids and highs: both over 35 %. The low end (sub / bass: kick vs
+            // bass) is judged on the separation of their envelopes, not on the shares: there both need only 25 %
+            // and 70 % together - a pair near 35 % no longer drops in and out of the check with a 1 dB level edit.
+            std::vector<std::pair<double, std::size_t>> shares;
             for (std::size_t n = 0; n < m_.nodes.size(); ++n)
-                if (!m_.nodes[n].isBus && nodeSec_[n][s].band[b] / bandE > 0.35) big.push_back(n);
-            if (big.size() < 2) continue;
-            const std::size_t a = big[0], c = big[1];
+                if (!m_.nodes[n].isBus) shares.push_back({nodeSec_[n][s].band[b] / bandE, n});
+            std::stable_sort(shares.begin(), shares.end(), [](const auto& x, const auto& y) { return x.first > y.first; });
+            if (shares.size() < 2) continue;
+            const bool low = b <= 1;
+            const double s0 = shares[0].first, s1 = shares[1].first;
+            if (low ? !(s1 > 0.25 && s0 + s1 > 0.7) : !(s1 > 0.35)) continue;
+            const std::size_t a = std::min(shares[0].second, shares[1].second), c = std::max(shares[0].second, shares[1].second);
             const double co = coincidence(*m_.nodes[a].stats, *m_.nodes[c].stats, b, sr_, m_.sections[s].startSec, m_.sections[s].endSec);
             if (co < 0.3) continue;  // one of them is (almost) only a tail or they strictly alternate
             const double sep = b <= 1 ? lowSeparationDb(*m_.nodes[a].stats, *m_.nodes[c].stats, sr_, m_.sections[s].startSec,
@@ -841,10 +873,12 @@ void ReportBuilder::checkMasking() {
         const std::string& B = m_.nodes[key.b].id;
         std::vector<std::string> secNames;
         double maxCo = 0.0, sa = 0.0, sb = 0.0, minSep = 1e9;
+        std::string sepList;   // the low-end separation per section (the worst decides)
         for (auto& h : list) {
             secNames.push_back(h.section);
             maxCo = std::max(maxCo, h.coinc);
             minSep = std::min(minSep, h.sep);
+            sepList += (sepList.empty() ? "" : ", ") + h.section + fmt(" %.1f", h.sep);
             sa = std::max(sa, h.shareA);
             sb = std::max(sb, h.shareB);
         }
@@ -855,9 +889,11 @@ void ReportBuilder::checkMasking() {
         const bool lowBand = band <= 1, topBand = band >= 5;
         const bool ducked = lowBand && minSep >= 3.0;
         const int sev = topBand ? 2 : lowBand ? (ducked ? 2 : 1) : (maxCo >= 0.6 ? 1 : 2);
-        std::string msg = fmt("'%s' and '%s' both carry >35%% of the %s band (%s) %s (up to %.0f%% / %.0f%%, ", A.c_str(), B.c_str(),
-                              kBandNames[band], kBandRanges[band], where.c_str(), 100 * sa, 100 * sb);
-        msg += lowBand ? fmt("low-end ducking between them %.1f dB, 3+ = they alternate)", minSep) : fmt("temporal overlap %.2f)", maxCo);
+        std::string msg = fmt("'%s' and '%s' both carry %s of the %s band (%s) %s (up to %.0f%% / %.0f%%, ", A.c_str(), B.c_str(),
+                              lowBand ? "the bulk (>25% each, >70% together)" : ">35%", kBandNames[band], kBandRanges[band],
+                              where.c_str(), 100 * sa, 100 * sb);
+        msg += lowBand ? fmt("low-end ducking between them %.1f dB", minSep) + (list.size() > 1 ? " (" + sepList + ")" : "")
+                           + ", 3+ = they alternate)" : fmt("temporal overlap %.2f)", maxCo);
         msg += lowBand ? (ducked ? ": they alternate (ducking/sidechain works), so masking is moderate."
                           : minSep >= 1.5 ? ": they overlap in time; the ducking between them is weak."
                                           : ": they overlap in time (little or no ducking between them).")
@@ -1392,8 +1428,10 @@ json ReportBuilder::build() {
         {"balanceLrDb", "left vs right energy in dB (+ = louder left); nodes: where a part sits in the stereo field"},
         {"plr", "peak-to-loudness ratio, truePeakDbtp - lufsIntegrated (8-12 typical, below reference.plrMinDb squashed)"},
         {"shortTermMax", "loudest 3 s window (LUFS); for sections only windows inside the section"},
-        {"masking", "two tracks each carrying > 35 % of a band in a section; for sub/bass the message gives the ducking "
-                    "between them measured on 10 ms low-end envelopes (3+ dB = they alternate, e.g. working sidechain)"},
+        {"masking", "two tracks each carrying > 35 % of a band in a section (sub / bass: > 25 % each and > 70 % together); "
+                    "for sub/bass the message gives the ducking between them per section: the sustained part's 10 ms "
+                    "low-end energy on the transient part's hits vs between them (3+ dB = they alternate, e.g. a working "
+                    "sidechain; ~0 = they hit together)"},
         {"mixSharePct", "node energy per band relative to the summed energy of all tracks (buses: relative to that same track sum)"},
         {"sharePct", "node energy relative to the summed energy of all tracks in that section"},
         {"widthPct", "side/mid energy ratio in % (0 = mono, 100 = as much side as mid)"},

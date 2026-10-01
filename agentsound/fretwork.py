@@ -901,7 +901,7 @@ def noise_track(song, lead, id=None, level_db: float = -8.0):
                        'filter.type': 'bp12', 'cutoff': 900, 'filter.keytrack': 1.0, 'resonance': 0.55,
                        'hpf': 250, 'amp.attack': 0.004, 'amp.decay': 0.6, 'amp.sustain': 0.7, 'amp.release': 0.08,
                        'amp.velocity': 0.9, 'glide': 0.15, 'mode': 'legato'})
-    tr = song.track(tid, noise, fx=_sg._amp('lead', drive=20.0, bright=3.0), gain_db=level_db,
+    tr = song.track(tid, noise, fx=_sg.amp('lead', gain=5.5, bright=3.0), gain_db=level_db,
                     pan=getattr(lead, 'pan', 0.0) or 0.0)
     tr.sends.update(dict(getattr(lead, '_patch_sends', {}) or {}))
     tr.sends.update(dict(getattr(lead, 'sends', {}) or {}))

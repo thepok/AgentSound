@@ -57,20 +57,26 @@ from .. import heroes
 from . import fx, inst, layer
 from . import sampled_guitars as _sg    # the DI sample sets and the amp voicings (registers sampled/* + cab/*)
 
-VERSION = 1
+VERSION = 2   # v2: the plain hero on the engine's tube amp (Plexi lead voicing) + a rolled-back DI filter
 
 # gain_db of each patch: its audition material at -18.0 LUFS (python -m agentsound audition <patch>)
-LEVELS = {'hero_guitar': -1.0, 'hero_guitar_clean': -6.9, 'hero_guitar_heavy': -3.8}
+LEVELS = {'hero_guitar': -4.5, 'hero_guitar_clean': -9.4, 'hero_guitar_heavy': -3.8}
 
 DI = _sg.FSBS['direct']
 METAL_LEAD = 'samples/sampleradar-heavy-metal-guitar/Guitar B/Lead Multi'
 
-# Velocity zones of the driven heroes: (vello, velhi, amp drive dB, bright cap dB, output level dB). One picking
-# strength per zone: harder = more gain, a brighter amp input, louder after the amp. Five zones ~3.2 dB apart:
-# measured on a picked line (random velocities 60-115, A4-D6) ~2.0 dB per 10 velocity steps (the old lead_guitar:
-# 0.2), residual scatter ~2 dB (round robins, register, the zone steps).
-ZONES = ((1, 64, 19.0, 3.0, -12.8), (65, 79, 21.5, 4.0, -9.6), (80, 94, 23.5, 5.0, -6.4), (95, 109, 25.5, 6.0, -3.2),
-         (110, 127, 27.0, 7.0, 0.0))
+# Velocity zones of the plain hero (v2): (vello, velhi, the amp's gain knob, bright cap dB, output level dB). One
+# picking strength per zone: harder = more gain, a brighter amp input, louder after the amp, ~3.2 dB apart (v1 was a
+# saturator per zone: drive 19-27 dB - a fuzz box; v2 the tube amp's Plexi lead channel: PLEXI_LEAD).
+ZONES = ((1, 64, 4.4, 2.0, -12.8), (65, 79, 5.0, 2.5, -9.6), (80, 94, 5.6, 3.0, -6.4), (95, 109, 6.2, 3.5, -3.2),
+         (110, 127, 6.8, 4.0, 0.0))
+# The plain hero's amp: a cranked two-stage Plexi with a Tube Screamer push (the Gilmour / Slash "November Rain"
+# lead: less preamp gain than the heavy hero, the power amp joining in), on top of LEAD_AMP.
+PLEXI_LEAD = {'stages': 2, 'boost': 8.0, 'tight': 100.0, 'mid': 7.5, 'treble': 6.5, 'presence': 7.0,
+              'resonance': 5.5, 'master': 6.0, 'sag': 0.35}
+# The plain hero's DI: the bridge pickup rolled back (a key-tracked low-pass at ~1.9x the note): the fundamental
+# leads like the heavy hero's neck, with a little more bite.
+PLEXI_DI = {'cutoff': 600.0, 'veltrack': 1200.0, 'keytrack': 100.0}
 # The heavy hero (v2): (vello, velhi, the amp's gain knob 0-10, its bright cap dB, output level dB) per zone.
 HEAVY_ZONES = ((1, 69, 5.6, 1.0, -9.6), (70, 86, 6.3, 2.0, -6.4), (87, 104, 7.0, 3.0, -3.2), (105, 127, 7.6, 4.0, 0.0))
 # The heavy hero's lead amp (the engine's 'amp': a 3-stage hot-rodded preamp, a Marshall tone stack, a push-pull power
@@ -124,20 +130,19 @@ def _post_comp(attack: float = 20.0, release: float = 120.0):
 
 
 def _tube_amp(gain: float, bright: float, cab: str = 'cab/rock_4x12', mic_lp: float = 6000.0, **knobs) -> list:
-    """The engine's tube amp head (LEAD_AMP + knobs) into a cab IR (the convolver of a cab/* patch) and the mic's
-    roll-off (70 Hz high-pass, a low-pass at mic_lp)."""
-    ir = [f for f in _sg.get(cab).fx if f.type == 'convolver'][0]
-    return [fx.amp(**dict(LEAD_AMP, gain=gain, bright=bright, **knobs), name='amp'), ir.copy(),
-            fx.eq({'hp.freq': 70, 'lp.freq': mic_lp}, name='mic')]
+    """The library's amp (sampled_guitars.amp: the engine's tube head) with LEAD_AMP + knobs into a cab IR (a cab/*
+    patch) and the mic's roll-off (70 Hz high-pass, a low-pass at mic_lp)."""
+    return _sg.amp('lead', cab=cab, mic={'hp.freq': 70, 'lp.freq': mic_lp},
+                   **dict(LEAD_AMP, gain=gain, bright=bright, **knobs))
 
 
-def _zone_layers(zones, amp_kind: str = 'lead', sustainer=None, post=None, di=None, tube: bool = False) -> list:
-    """One layer per velocity zone: the DI -> [sustainer] -> the amp (amp_kind: a cab/* saturator chain, or with
-    tube=True the engine's tube amp: _tube_amp) -> a post compressor. di: a factory of the DI source (one per zone)."""
+def _zone_layers(zones, sustainer=None, post=None, di=None, **knobs) -> list:
+    """One layer per velocity zone (vello, velhi, amp gain, bright cap dB, level dB): the DI -> [sustainer] -> the
+    tube amp (_tube_amp: LEAD_AMP + knobs) -> a post compressor. di: a factory of the DI source (one per zone)."""
     out = []
-    for i, (lo, hi, drive, bright, lvl) in enumerate(zones):
-        amp = _tube_amp(drive, bright) if tube else _sg._amp(amp_kind, drive=drive, bright=bright)
-        chain = ([sustainer.copy()] if sustainer is not None else []) + amp + [(post or _post_comp()).copy()]
+    for i, (lo, hi, gain, bright, lvl) in enumerate(zones):
+        chain = (([sustainer.copy()] if sustainer is not None else []) + _tube_amp(gain, bright, **knobs)
+                 + [(post or _post_comp()).copy()])
         out.append(layer(di() if di else _di(), f'z{i + 1}', vel=(lo, hi), level=lvl, fx=chain))
     return out
 
@@ -186,11 +191,10 @@ _PLAY_NOTES = ('PLAY: through agentsound.patches.hero_guitar - hero.lead(track, 
 
 _preset(
     'guitar', 'layered/hero_guitar',
-    lambda: _zone_layers(ZONES, 'lead', _sustainer()),
-    {'tone': {'name': 'tone', 'hp.freq': 150, 'hp.slope': 24, 'peak1.freq': 260, 'peak1.gain': -1.5, 'peak1.q': 0.9,
-              'peak2.freq': 1000, 'peak2.gain': 0.5, 'peak2.q': 0.7, 'peak3.freq': 3800, 'peak3.gain': -3.5,
-              'peak3.q': 0.9, 'lp.freq': 6800},
-     'tape': {'speed': '15', 'drive': 3.0, 'bump': 0.5, 'wow': 0.04, 'flutter': 0.04},
+    lambda: _zone_layers(ZONES, _sustainer(), di=lambda: _di(**PLEXI_DI), **PLEXI_LEAD),
+    {'tone': {'name': 'tone', 'hp.freq': 90, 'hp.slope': 12, 'peak1.freq': 260, 'peak1.gain': -1.0,
+              'peak1.q': 0.9, 'lp.freq': 7500},
+     'tape': {'speed': '15', 'drive': 0.0, 'bump': 0.5, 'wow': 0.04, 'flutter': 0.04},
      'double': {'style': 'smooth', 'detune': 7, 'delay': 6, 'focus': 300, 'mix': 0.3},
      'echo': _echo_stage()},
     user_gain_db=2.5, words=('guitar', 'gtr', 'strat', 'stratocaster', 'lead_guitar'),
@@ -198,14 +202,14 @@ _preset(
     sends={'hall': -12, 'plate': -18},
     notes=f'v{VERSION}. The singing overdriven lead guitar (Gilmour, Slash "November Rain", Gary Moore, the Baker Street '
           'solo). SOURCE: the FreePats FSBS Stratocaster, bridge pickup, recorded DI (2 picking strengths x 4 random '
-          'takes, E2-D6), a mono legato player, key-up release 80 ms (a new pick stops the old note). CHAIN per '
-          'velocity zone (5 zones, 1-64 / 65-79 / 80-94 / 95-109 / 110-127): a velocity-tracking low-pass (soft picks '
-          'darker), a sustainer compressor (15 ms attack: the pick speaks, the tail sings - a B4 holds within ~3 dB '
-          'for 3 s, the old lead lost 15 dB), the Plexi lead channel (bright cap +3..+7 dB, tube drive 19 / 21.5 / '
-          '23.5 / 25.5 / 27) into a Marshall 4x12 Greenback IR, a scooped tone stack, a 3:1 compressor (20 ms attack); '
-          'zone levels -12.8 / -9.6 / -6.4 / -3.2 / 0 dB: ~1.9 dB per 10 velocity steps (the old lead_guitar: 0.2). '
-          'Then for the whole: eq (150 Hz high-pass - no pick thumps -, -1.5 dB mud at 260 Hz, +0.5 dB at 1 kHz - '
-          'mid-forward -, -3.5 dB fizz at 3.8 kHz, low-pass 6.8 kHz: a smooth top), tape (15 ips), an H3000-style '
+          'takes, E2-D6), the pickup rolled back (a key-tracked low-pass at ~1.9x the note: the fundamental leads), a mono '
+          'legato player, key-up release 80 ms (a new pick stops the old note). CHAIN per velocity zone (5 zones, '
+          '1-64 / 65-79 / 80-94 / 95-109 / 110-127): a sustainer compressor (15 ms attack: the pick speaks, the tail '
+          'sings), the engine\'s tube amp as a cranked Plexi lead channel (fx \'amp\': 2 preamp stages, gain 4.4 / 5.0 / '
+          '5.6 / 6.2 / 6.8, bright +2..+4 dB, a Tube Screamer push, Marshall stack mid 7.5, master 6: the power amp '
+          'joins in, sag 0.35) into a Marshall 4x12 Greenback IR, a 3:1 compressor (20 ms attack); zone levels -12.8 / '
+          '-9.6 / -6.4 / -3.2 / 0 dB (v1 was one tube saturator per zone at 19-27 dB of drive: a fuzz box). Then for '
+          'the whole: eq (90 Hz high-pass, -1 dB at 260 Hz, low-pass 7.5 kHz), tape without drive, an H3000-style '
           'microshift double (+-7 ct above 300 Hz: width without phasing) and its own stereo echo (dotted 8th left / '
           'quarter right, dark, ducked). ' + _MIX_NOTES + ' ' + _PLAY_NOTES + ' Range G3-D6 (solos G4-D6; above C6 '
           'the DI decays in ~3 s even with the sustainer - long held peaks: layered/hero_guitar_heavy). Tweak: '
@@ -218,7 +222,7 @@ _preset(
     lambda: _di(cutoff=1700.0, veltrack=3000.0, mono='off', release=0.12, velcurve=CLEAN_VELCURVE),
     {'comp': {'threshold': -18, 'ratio': 1.4, 'attack': 25, 'release': 220, 'knee': 8, 'automakeup': 'on',
               'name': 'comp'},
-     'amp': _sg._amp('blues', drive=5.0, bright=3.0),
+     'amp': _sg.amp('blues', gain=2.0, bright=3.0),
      'tone': {'name': 'tone', 'hp.freq': 120, 'hp.slope': 24, 'peak1.freq': 700, 'peak1.gain': -2.0, 'peak1.q': 0.8,
               'peak2.freq': 2800, 'peak2.gain': 2.0, 'peak2.q': 1.2, 'peak3.freq': 5200, 'peak3.gain': -1.5,
               'peak3.q': 1.0, 'lp.freq': 9500},
@@ -233,7 +237,7 @@ _preset(
           'Gilmour clean, 80s pop-rock fills): the FreePats FSBS Stratocaster DI, polyphonic (notes ring into each '
           'other like strings, 120 ms release; a velocity-tracking low-pass per note: soft picks darker; a velocity '
           'curve ~(v/127)^3.4) -> a gentle 1.4:1 compressor (25 ms attack: the pick snaps) -> an edge-of-breakup '
-          'British combo (bright cap +3 dB, tube drive 5, 1x12 Celestion '
+          'British combo (the engine\'s tube amp, blues voicing at gain 2, bright cap +3 dB, a 1x12 Celestion '
           'G12H30 IR) -> eq (-2 dB boxiness at 700 Hz, +2 dB snap at 2.8 kHz, low-pass 9.5 kHz), tape, a light '
           'microshift double and a quarter / dotted-8th stereo echo (low mix). A PLAIN SAMPLER: guitarist.lead(..., '
           'sound=track) and arrangement.play(track, at) work direct (hero.lead / hero.play do the same); the guitarist '
@@ -262,7 +266,7 @@ def _neck_di():
 
 _preset(
     'guitar_heavy', 'layered/hero_guitar_heavy',
-    lambda: _zone_layers(HEAVY_ZONES, sustainer=_sustainer(threshold=-36.0, ratio=5.0), di=_neck_di, tube=True) + [
+    lambda: _zone_layers(HEAVY_ZONES, sustainer=_sustainer(threshold=-36.0, ratio=5.0), di=_neck_di) + [
         layer(_metal_double(_sg.LEVELS['metal_lead']), 'double', level=-7.0, pan=0.45,
               fx=[fx.eq({'hp.freq': 140, 'hp.slope': 24, 'peak1.freq': 400, 'peak1.gain': -2.0, 'peak1.q': 0.8,
                          'peak3.freq': 3800, 'peak3.gain': -3.0, 'peak3.q': 1.0, 'lp.freq': 7000}),

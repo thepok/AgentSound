@@ -141,8 +141,8 @@ _define(
           'ducks 2 dB, carved 3 dB at 2.2 kHz, competitors -1.5 dB, +1 dB in the hooks. Credit: VSCO 2 CE (CC0).')
 
 _define(
-    'voice', sound='sampled/choir', aliases=('choir', 'vocal', 'vox', 'aah'),
-    words=('choir', 'voice', 'vox', 'vocal', 'aah', 'aahs', 'ooh', 'oh'),
+    'voice', sound='sampled/choir', aliases=('choir', 'aah'),
+    words=('choir', 'voice', 'aah', 'aahs', 'ooh', 'oh'),
     chain={'tone': {'hp.freq': 160, 'hp.slope': 24, 'peak1.freq': 300, 'peak1.gain': -2.0, 'peak1.q': 0.9,
                     'peak2.freq': 900, 'peak2.gain': -1.0, 'peak2.q': 1.2},
            'comp': {'threshold': -21, 'ratio': 2.0, 'knee': 6, 'attack': 15, 'release': 150, 'automakeup': 'on'},

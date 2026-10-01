@@ -40,9 +40,6 @@ it. Add new findings here instead of losing them in a report.
 - **Guitar tone, after the v2 heavy hero (songs/kestrel-bay/TONE.md):**
   - Not yet heard: the tube `amp` + neck-pickup tone was judged by numbers (harmonics, bands, sustain, dynamics,
     `compare` vs Sweet Child O' Mine) - A/B `songs/kestrel-bay/out/tone_ab/` by ear before more guitar songs.
-  - `layered/hero_guitar`, `sampled/hero_guitar_clean` and the rhythm guitars (`sampled/crunch_guitar`,
-    `dist_guitar`, `rock_guitar`, `metal_guitar` ... - `sampled_guitars._amp`) still use one saturator per amp; move
-    them to the `amp` effect (heavy hero: `hero_guitar._tube_amp`) after an A/B on their own song.
   - Pick attack vs picking dynamics: a sampler filter envelope that opens the neck filter at every pick (2 octaves,
     100 ms) made every onset equally bright and took the velocity part of the note dynamics 1.9 -> 0.0 dB, so the hero
     has none. A velocity-scaled `filterEnv` depth (SFZ `fileg_vel2depth`) would give a bright pick that still follows
@@ -54,6 +51,30 @@ it. Add new findings here instead of losing them in a report.
     1-2 dB over the band, kestrel-bay's solos read `balance_mid_high` +4.0..+4.5 dB / `balance_presence_high` ~+4 dB
     (limit +4) while against Sweet Child O' Mine's solo the same mix is within +-1.5 dB from 0.8 to 6 kHz.
     Re-derive the profile from guitar-led records.
+- **The rock pass (the-drummer-speaks, songs/the-drummer-speaks/ROCK.md): verify by ear.** Judged by numbers against
+  Sweet Child O' Mine's band sections only (the A/B clips in `songs/the-drummer-speaks/out/rock_ab/`):
+  - Snare punch in the dense choruses: 7-8 dB over its surroundings vs 10-12 in the record (the kick improved 11.6 ->
+    15 dB, ref 21). Neither the kit's slow-attack compressor, a 2 dB snare-keyed duck of the wall (dropped: no
+    measurable effect, a ghost key track) nor the master's limiting moved it; the open power chords + octave ring
+    under every hit. Try: a snare-only transient path (the kit split: a snare track with its own compressor / plate),
+    shorter chorus chords (the riff player's 'drive' grip in the chorus), or less wall level in the hooks.
+  - The wall is much wider than the record at 250-500 Hz (45-54 % vs 9-20 %; L/R correlation 0.3-0.4 there): two
+    different guitars + `guitarist.double`'s tuning drift. The user asked for a wide wall; check the low-mid width and
+    mono by ear (mono sum 0.9 dB quieter, mono_compat ok).
+  - The rhythm guitars' note dynamics come only from the articulation: through the driven amps velocity moves the level
+    ~0 dB (flat_dynamics info). A harder pick on a real amp is brighter and a little louder: velocity zones like the
+    heroes', or a velocity -> amp input / bright cap lane, would give the wall picking dynamics.
+  - The mixer tags `gtr_r` as a 'low' part in the-drummer-speaks (its verse riff is palm-muted single notes on E2) and
+    trims it with the bass; role inference should keep a guitar a guitar (patch / track name).
+  - Every other song on the rock presets / guitar patches (ashes-and-chandeliers, kestrel-bay, lamplight-avenue,
+    `_demo_soloist`, `songs/_bands/*`) now plays through the tube amp, the calibrated Big Rusty, the new drum bus and the
+    bass rig - not re-rendered (one-song iteration); re-check their mixes when they are touched.
+  - `songs/_bands/rock_band` (the preset demo) now warns: the intro riff's kick + bass unison (separation -3.3 dB:
+    they hit together - the new check measures it) and flat dynamics on its gtr_r / band lead (velocities 89-117 /
+    90-113 through driven amps). Give the demo velocity arcs (or use the riff player) and decide whether a locked
+    kick + bass unison should stay a warning.
+  - No bass cabinet IR is installed: `bass_rig` rolls the amp + DI off with an eq ('cab' 4.5 kHz). An 8x10 / 4x10 IR
+    would be more real (fetch one into the manifest).
 - **Guitar solos (kestrel-bay, fretwork / soloist): verify by ear.** Everything was judged by numbers and images
   (stem pitch tracks: vibrato 5.7 Hz 0..+50 ct up from the note, the dive B5 -> B4 in 1.3 s, the pinch's partial 6
   at 2 kHz; lead note dynamics 5.4 dB). Untested by ear: whether the bend overshoot (4 + 3 x amount ct) and the
@@ -65,6 +86,41 @@ it. Add new findings here instead of losing them in a report.
   the shared budget's `played` penalty (0.35 per use) and per-solo `weights`. More moves per role (climax: only
   scream / feedback / dive / pinch / double_stop / tremolo / trill) and a seeded spread in the scoring would give two
   solos more different shapes.
+
+- **Sung vocals (feat/singing, `agentsound.singer`): not yet heard by the user.** Everything was judged from
+  spectrograms, the timelines and the report (no listening): diction, buzz and naturalness need an ear. A/B files in
+  `songs/_demo_vocal/out/` (`ab_robotic` vs `ab_singer`, `ab_pitch_model`, `ab_player_pitch`, `ab_tiger`,
+  `vocal_dry`, `vocal_demo`). Open questions for that listen:
+  - `pitch='hybrid'` (the default): the voicebank's pitch model approaches notes from below on its own; the player's
+    scoops are scaled x0.6 on top (`singer.HYBRID_SCOOP`) - they may still stack into a "sliding" voice.
+  - Breaths are the bank's `AP` token at `breath_db` -4 dB (pop): level and colour unverified; a phrase start right
+    after a short gap may sound gasped.
+  - Consonants: lengths are the duration model's predictions x the style's `cons`, squeezed to <= 45 % of the note
+    before; fast lines (8ths at 120+ BPM) may lose consonants. Hanami's readme: a short `t` / `d` becomes a flap by
+    itself - not checked.
+  - Vocoder buzz / metallic edges on long high notes (the banks' own vocoders) - unknown until heard.
+- **Vocal note dynamics in the report.** The vocal track plays one trigger note per phrase (the takes), so
+  `nodes[].dynamics` reads "too few notes" and `flat_dynamics` never judges a sung line. The sung notes (one per
+  syllable, with their velocities) should be handed to the analysis (e.g. as the node's analysis notes).
+- **Vocal expression lanes.** The two banks have no energy / breathiness / tension embeddings (no `dsvariance`); the
+  singer blends the voice modes (soft / power) per frame instead. Banks with a variance model are not driven yet
+  (the runner has no `variance` op), and the vibrato does not follow the air like the hornist's.
+- **`build --section` and vocals.** A phrase whose take starts before the rendered section is not heard (one-shot
+  triggers); render from the phrase start (`--from-beat`).
+- **Licences of the voices.** Hanami's voicebank allows commercial use, but its bundled AI❤dolGAN vocoder is
+  CC BY-NC-SA 4.0: whether rendered output is covered is unclear - the build warns "non-commercial voice". TIGER is
+  non-commercial outright. A commercially clear voice (another bank with an open vocoder, e.g. one using the openvpi
+  NSF-HiFiGAN) would need its own approval.
+- **SoulX-Singer (zero-shot, Apache-2.0) not evaluated yet** as a third A/B option; only with a licensed prompt
+  (`voicebank.check_prompt`: a Hanami render), never SoulX's bundled prompts or a dataset without synthesis consent.
+  Prepared: `agentsound/voicebank_runner/soulx_runner.py` (WSL, score control, torchaudio-free loading) and
+  `songs/_demo_vocal/soulx_ab.py` (prompt = one Hanami take + metadata from the singer's timeline; target = the
+  demo score) + the `soulx` variant of the demo. Blocked 2026-10-01: the host's C: drive (which holds the WSL disk)
+  ran full during the 2.7 GB weight download (a torch venv of ~7 GB had been added before); the venv and the
+  partial weights were removed again. Needs ~10 GB free on C: (or the WSL disk moved) - then: venv (torch 2.9.1,
+  transformers 4.41.2, accelerate, omegaconf, soundfile, scipy, librosa, numpy<2), model.pt only (not the SVC model,
+  not the 6.4 GB SoulX-Singer-Preprocess pack: our own metadata replaces it), `python songs/_demo_vocal/soulx_ab.py`,
+  `make_ab.py soulx`.
 
 ## Medium: tools, engine and library
 
@@ -110,7 +166,8 @@ it. Add new findings here instead of losing them in a report.
   - The hero guitars are mono legato stacks: a unison / oblique bend's held string plays on a twin track
     (`fretwork.twin_track`, a second instance of the stack). `bendfollow` (the sampler's per-note bend latch) only
     helps polyphonic guitars (`sampled/hero_guitar_clean`).
-  - Palm mute on the hero is emulated (the voices' low-pass, the 'mute' lane): its DI zones load only the 'open'
+  - Palm mute on the hero is emulated (the voices' low-pass, the 'mute' lane; no installed pack has DI palm-mute
+    samples - the rhythm guitars' `sampled_guitars.PALM` is measured against real amped chugs): its DI zones load only the 'open'
     articulation. Add the FSBS 'palm mute' / 'dead note' keyswitches to the hero zones (hero_guitar.play would have to
     copy each keyswitch note into every velocity zone - a stack routes a note to one zone by velocity).
   - The wah goes ahead of the amp in every zone of a hero stack (5-6 instances); a stack-level pre-split insert would be
@@ -166,17 +223,14 @@ it. Add new findings here instead of losing them in a report.
   - Only the pedal is delayed with a delayed layer.
   - `layered/piano_strings`, `piano_pad` and `piano_organ` peak at +0.6 to +0.8 dBFS on the track.
 - **Drummer:**
-  - No 6/8 or 12/8 feel.
+  - No 6/8 or 12/8 feel (looked at in the rock pass, not cheap: the drummer's beat patterns are 16th grids in 4/4 -
+    the 'shuffle' style only swings them, triplet fills exist; a 12/8 ballad / 6/8 groove needs a triplet grid for the
+    patterns, hands and solo vocabulary, and the bassist's / guitarist's patterns with it).
   - Cymbal chokes and the live hi-hat work on the `sampled/big_rusty_kit` / `unruly_kit` / `mf_natural` layouts only
     (their choke keys; `Kit.live_hat` = the SFZ CC4 imported live). The band presets' `rock_kit()` copies tom 47 over
     the Big Rusty crash choke (50), so `ending='choke'` has nothing to grab there; kits without choke samples need a
     silent choke zone (`*silence` + `offBy` on the cymbal zones: a kits.py helper) - and both silent-notes ears would
     then report those strokes as silent (they must learn that a choke-only key is meant to be silent).
-  - Big Rusty's snare layers 2-4 (velocity 14-51) are recorded at nearly one level (-35 dB RMS rendered for velocity
-    15, 25, 35, 50; then +8 dB at 65): ghost notes and soft taps sound alike, and at the same low velocity its toms
-    are ~10 dB louder than its snare (velocity 50: tom 45 -24 dB, snare -34 dB). A soft solo passage jumps when the
-    hands move to the toms. A per-piece level / velocity curve in `Kit` (or the patch) would let the drummer balance
-    it (measured in `the-drummer-speaks`, `.scratch/velcurve`).
   - The hands' physics run move by move (`drummer.perform()`) or slot by slot (`soloist.solo()` with
     `drummer.vocabulary()`): a rebound or an up-stroke across a boundary is not modelled, and `check()` / the limb
     resolver do not see two neighbouring soloist slots together (a stroke at a slot's very end and one at the next
@@ -199,8 +253,6 @@ it. Add new findings here instead of losing them in a report.
   machine and stack layers, not SoundFont key ranges (sf2 drum kits lack keys too) nor `{'dir': ...}` samplers; the
   render-time ear cannot hear a silent note that starts together with a sounding one on the same track (a crash on the
   kick), so those stay unseen for sf2 tracks. Reading sf2 preset key ranges in Python (or asking the engine) would close it.
-- **Kick/bass overlap check is touchy.** In `ghosts-of-ocean-drive` it came and went with small bass edits. Its
-  stability and thresholds need checking.
 - **Synthwave references disagree.** Sunset says "too dark", Deckard's Dream "too bright", Nightcall "too wide".
   Per-style reference choice should be documented in `recipes/synthwave.md`.
 - **Bassist:** the `funk_band` demo has a remaining drums/bass masking warning.

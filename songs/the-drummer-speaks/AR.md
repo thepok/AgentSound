@@ -68,3 +68,31 @@ and hands the riff back to the band with unison hits; the band explodes back in,
 The riff-as-motif idea (the solo grows out of the band's riff and gives it back as the cue), the hat foot keeping the
 pulse in the solo's space, the gated break on its own return, the finish's unison hits, the choked final hit with the
 band cutting together, the organ's swell pedal and Leslie moves, the hero guitar's head.
+
+## Re-check after the rock pass (the band sound, ROCK.md)
+
+Judged: the full build of song.py on the rock pass (guitarist.riff + double, the tube-amp guitars, the bass rig, the
+calibrated kit and drum bus), `out/report.json`, `mix`, `master --check`, `compare` against Sweet Child O' Mine's
+band sections (riff / chorus / climax) and the A/B clips in `out/rock_ab/`.
+
+```
+verdict: ship
+summary: The same song with a real rock band under it: the riff now breathes with the form (palm-muted single notes
+under the head, chugged power chords in the intro, an open ringing wall with the octave in the riff section and the
+choruses), the bass growls, the kit rises evenly from ghost note to backbeat, and the kick finally punches in the
+choruses.
+```
+
+1. [minor] Snare punch in the choruses 7.6 dB over its surroundings vs 12.4 in the record (was 8.7): the open power
+   chords + octave ring under every backbeat. owner: mix-engineer / sound-designer (TODO: a snare path of its own).
+2. [minor] The wall is far wider than the record at 250-500 Hz (45-54 % vs 9-20 %); the brief asked for a wide wall and
+   the mono sum is 0.9 dB quieter (mono_compat ok) - judge by ear. owner: producer.
+3. [minor] `masking` drums / bass in A (-0.9 dB: the riff's kick + bass unison, they hit together) - deliberate as
+   before; the chorus's duck is now measured (no longer listed). owner: mix-engineer.
+4. [minor] `flat_dynamics` info on gtr_l (the rhythm guitars' dynamics are the articulations: through the driven amps
+   velocity moves the level ~0 dB). owner: sound-designer (TODO).
+5. [minor] Numbers only - the A/B (`out/rock_ab/`) is for the user's ears.
+
+Numbers: -10.0 LUFS-I (inside -10..-7; was -10.2: loudness_low gone), LRA 5.1 LU, true peak -1.20 dBTP, width >150 Hz 33 %,
+clicks 0, 1 warning (the riff unison), lead note dynamics 7.3 dB, `mix` no moves, `master --check` all ok. Kept: everything
+in Keep above (the solo and its arc were not touched).

@@ -197,6 +197,29 @@ Add new feedback here (date, song, the user's words, the rule) whenever the user
   1-2 dB over the band in solos): "ja genau jetzt its cool". That A/B (old vs new, same 18 s, level-matched) is how
   a tone change is presented to the user.
 
+- **2026-10-01, the-drummer-speaks rock pass (A/B: tube amp for all guitars, palm mute, double-tracking, SVT bass,
+  kit calibration, drum bus):** "kann keine großen Unterschiede erkennen, mag sie alle". Measured improvements
+  of 1-3 dB in band balance and punch are below what the user notices on a phone. Rule: the user hears big things
+  (a lame vs singing lead tone, a beepy lead, robotic phrasing, missing consonants) - spend effort there; fine mix
+  polish is fine to do but not worth long A/B rounds with the user.
+
+## Vocals
+
+- **2026-10-01, _demo_vocal (first sung vocals, Hanami + TIGER via DiffSinger + the singer player):** "die Stimmen
+  klingen super". The timbre and the singer moves work. ("kann die Konsonanten nicht erkennen" only meant the user
+  did not know the words.) Rule: always send the lyrics as text along with a sung song.
+- **2026-10-01, _demo_vocal:** "out verliert sein t" - the final /t/ of "out" (a two-note melisma "out -" at a phrase
+  end before a breath) is not heard. Rule: word-final consonants (t, d, k, p, s ...) must be sung and audible, also
+  after a melisma and at a phrase end - placed at the END of the word's last note, before the breath, never dropped
+  or swallowed by the release / de-esser.
+
+- **2026-10-01, lyrics (the user's tips before the first sung song):** "LLMs schreiben gern zu sehr on the nose,
+  dabei sollte das Thema eher umgarnt als genannt werden. Ein paar catchy Phrasen sind wichtig wie 'I crashed my
+  car against the bridge, I don't care'". Rule: show the theme through concrete images and actions, never name the
+  emotion or topic; give every song 2-3 short, punchy, quotable lines with attitude (original - the quoted line only
+  shows the tone). Not a 100 % rule ("manchmal muss man auch etwas direkter sein, aber halt nicht immer"): mostly
+  circled, a few deliberate direct lines. roles/lyricist.md carries it.
+
 ## Clicks and parameter changes
 
 - "In msound wurden Parameteränderungen deswegen manchmal über ein paar Millisekunden gestreckt, um Klicks zu vermeiden."

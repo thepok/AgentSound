@@ -169,7 +169,9 @@ class TestGuitarArticulations(unittest.TestCase):
     def test_palm_mute_keeps_the_pick_attack(self):
         g = rock.di_guitar(rock.FSBS_DI)
         palm = [z for z in g.params['samples'] if z.get('swLast') == 1 and z.get('trigger') != 'release']
-        self.assertTrue(all(z['cutoff'] >= 1500 for z in palm), 'a 900 Hz palm mute is a muffled synth, not a chug')
+        # the rock pass: a 900 Hz resonant low-pass keeps the chug's thump, its pick envelope (+3600 ct for ~60 ms)
+        # keeps the attack: through the amp as bright as the open chord (centroid ratio 1.02), not a muffled synth
+        self.assertTrue(all(z['cutoff'] >= 800 and z['filterEnv'][0] >= 2400 for z in palm), 'the palm mute lost its pick')
 
     def test_di_sets_hit_the_amp_at_the_same_level(self):
         self.assertEqual(rock.di_guitar(rock.FSBS_DI).params['level'], rock.DI_LEVEL[rock.FSBS_DI])
@@ -218,13 +220,10 @@ class TestRealDeadNotes(unittest.TestCase):
 
 class TestAmpAndMaster(unittest.TestCase):
     def test_amp_voicing(self):
-        chain = rock.amp('crunch')
-        self.assertEqual((chain[0].type, chain[0].name), ('eq', 'bright'))
-        self.assertEqual((chain[-1].type, chain[-1].name), ('eq', 'tonestack'))
-        self.assertIn('convolver', [f.type for f in chain])
-        self.assertNotIn('bright', [f.name for f in rock.amp('crunch', bright=0)])
-        sat = next(f for f in rock.amp('lead', drive=12) if f.type == 'saturator')
-        self.assertEqual(sat.params['drive'], 12)
+        chain = rock.amp('crunch')                       # the tube amp (its bright cap + tone stack) -> cab -> mic
+        self.assertEqual([(f.type, f.name) for f in chain], [('amp', 'amp'), ('convolver', None), ('eq', 'mic')])
+        self.assertEqual(rock.amp('crunch', bright=0)[0].params['bright'], 0)
+        self.assertEqual(rock.amp('lead', gain=4.5)[0].params['gain'], 4.5)
 
     def test_second_preset_keeps_the_master_chain(self):
         s, a = _song()

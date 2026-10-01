@@ -18,6 +18,7 @@ brief and the user's ears, and says "done" only after the A&R says "ship".
 | 1 | Brief | `roles/producer.md` | `songs/<slug>/BRIEF.md` |
 | 2 | Arrangement | `roles/arranger.md` | `songs/<slug>/ARRANGEMENT.md`, the section skeleton of `song.py` |
 | 3 | Composition / players | `roles/arranger.md` (players part) | the parts in `song.py` (pianist, drummer, bassist, guitarist, ...) |
+| 3b | Lyrics (a sung vocal only) | `roles/lyricist.md` | `songs/<slug>/LYRICS.md`, the `lyrics=` of `singer.sing` |
 | 4 | Sound design | `roles/sound-designer.md` | the sounds + chains in `song.py`, `songs/<slug>/SOUND.md` |
 | 5 | Mix | `roles/mix-engineer.md` | module-level `MIX` in `song.py`, `songs/<slug>/MIX.md` |
 | 6 | Master | `roles/mastering-engineer.md` | the master chain in `song.py`, `songs/<slug>/MASTER.md` |
@@ -45,6 +46,9 @@ buried hook the mixer's, a squashed master the mastering engineer's - never a fa
    - the wish, quoted; the genre + analysis profile (`ANALYSIS = {'profile': ...}`); tempo, key, meter, feel
      (straight or swung - and how much), length;
    - the hook: what carries it (instrument + register) and why it is not beepy; the band preset if one fits;
+   - a sung vocal (`agentsound.singer`): the voice (`python -m agentsound voicebanks`: a licensed voicebank -
+     Hanami (female pop soprano) or TIGER (male pop / rock, non-commercial) - never a cloned real singer), its
+     range, the theme / story for the lyricist, and the credits it brings (voicebank attribution, NC terms);
    - the form in one line (e.g. `intro 4 | A 16 | B 8 | A' 16 | solo 16 | A'' 16 | tag 6`) and the energy arc;
    - references: at most one named track + the excerpt to compare with (chorus vs chorus); `none` is fine;
    - the HUMAN_FEEDBACK rules that apply to this song, as a checklist the A&R will tick;

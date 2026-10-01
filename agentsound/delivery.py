@@ -270,6 +270,9 @@ def _classify(kind: str, path: str, samples: Path, assets: Path):
             return ('soundfont', parts[-1], str(assets / rel))
         return ('file', str(assets / rel))
     ap = Path(p)
+    voice = _voice_source(ap)
+    if voice is not None:                    # a sung take rendered by agentsound.singer: the voicebank's licence
+        return ('voice', voice['id'], voice)
     for root in (samples, assets / 'samples', REPO / 'assets' / 'samples'):
         try:
             rel = ap.resolve().relative_to(root.resolve())
@@ -283,6 +286,20 @@ def _classify(kind: str, path: str, samples: Path, assets: Path):
     except (ValueError, OSError):
         pass
     return ('file', p)
+
+
+def _voice_source(path: Path) -> dict | None:
+    """The SOURCE.json of a voicebank next to a rendered vocal take (agentsound.singer writes it into
+    <song>/samples/vocals/<voice>/), or None."""
+    try:
+        src = path.parent / 'SOURCE.json'
+        if src.is_file():
+            data = json.loads(src.read_text(encoding='utf-8'))
+            if data.get('kind') == 'voice' and data.get('id'):
+                return data
+    except (OSError, ValueError):
+        pass
+    return None
 
 
 def _pack_source(pack_id: str, samples: Path, manifest: dict | None) -> dict | None:
@@ -320,6 +337,19 @@ def collect_credits(render: dict, samples: Path | None = None, assets: Path | No
                 sources[key] = {'kind': 'pack', 'id': c[1], 'title': info.get('title', c[1]), 'license': lic,
                                 'licenseUrl': info.get('licenseUrl', ''), 'attribution': info.get('attribution', ''),
                                 'homepage': info.get('homepage', info.get('url', '')), 'class': license_class(lic)}
+        elif c[0] == 'voice':
+            key = 'voice:' + c[1]
+            if key in sources:
+                continue
+            info = c[2]
+            lic = info.get('license', 'Unknown')
+            cls = license_class(lic)
+            if cls == 'free' and info.get('attribution'):
+                cls = 'attribution'
+            sources[key] = {'kind': 'voice', 'id': c[1], 'title': info.get('title', c[1]), 'license': lic,
+                            'licenseUrl': info.get('licenseUrl', ''), 'attribution': info.get('attribution', ''),
+                            'homepage': info.get('homepage', info.get('url', '')), 'class': cls,
+                            'credit': info.get('credit', ''), 'restrictions': info.get('restrictions', '')}
         elif c[0] == 'soundfont':
             key = 'sf:' + c[1].lower()
             if key in sources:
@@ -349,6 +379,8 @@ def collect_credits(render: dict, samples: Path | None = None, assets: Path | No
             attributions.append(line)
         why = {'nc': 'non-commercial license', 'noredist': 'no redistribution of the samples',
                'unclear': 'license unclear'}.get(cls)
+        if s['kind'] == 'voice' and cls == 'nc':
+            why = 'non-commercial voice (the voicebank or its vocoder)'
         if why:
             extra = ' (the pack notes say music made with it is fine)' if 'music-ok' in s.get('license', '').lower() else ''
             warnings.append(f"'{s['id']}' ({s['license']}): {why}{extra} - fine for private listening; check before publishing")
@@ -367,7 +399,7 @@ def credits_text(credits: dict, title: str, artist: str) -> str:
     if not credits['sources']:
         lines.append("Sounds: synthesised only (no sample packs, SoundFonts or impulse responses).")
     else:
-        lines.append("Sample packs, SoundFonts and impulse responses used:")
+        lines.append("Sample packs, SoundFonts, impulse responses and voicebanks used:")
         for s in credits['sources']:
             lines.append(f"- {s['title']} [{s['id']}]")
             lines.append(f"    license: {s['license']}" + (f" - {s['licenseText']}" if s.get('licenseText') else '') +
@@ -376,6 +408,10 @@ def credits_text(credits: dict, title: str, artist: str) -> str:
                 lines.append(f"    by: {s['attribution']}")
             if s.get('homepage'):
                 lines.append(f"    source: {s['homepage']}")
+            if s.get('credit'):
+                lines.append(f"    credit: {s['credit']}")
+            if s.get('restrictions'):
+                lines.append(f"    terms: {s['restrictions']}")
     if credits['attributions']:
         lines += ["", "Required attributions when publishing:"] + [f"  {a}" for a in credits['attributions']]
     if credits['warnings']:

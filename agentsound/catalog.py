@@ -57,6 +57,8 @@ MODULES = {
     'eq': "7-band EQ: hp, low shelf, 3 peaks, high shelf, lp",
     'filter': "resonant filter lp/bp/hp/ladder with drive (sweeps, automation target)",
     'utility': "gain, pan, polarity flip per channel, mono sum",
+    'deesser': "de-esser for sung vocals: split-band (only above freq) or wide sibilance reduction, threshold / ratio / "
+               "range, listen mode (the vocal hero's 'deess' stage)",
     'width': "stereo width (mid/side) with mono-below-frequency (monobass) and balance",
     # modulation / time
     'chorus': "Juno-style chorus (modes I, II, I+II) or custom multi-voice chorus",
@@ -148,10 +150,10 @@ def recipes() -> list[tuple[str, str]]:
 
 
 HELPER_MODULES = ('theory', 'voicing', 'notation', 'patterns', 'humanize', 'automation', 'modulation', 'midifx', 'vamod', 'jazz', 'pianist', 'romantic',
-                  'drummer', 'hornist', 'gesture', 'fretwork', 'soloist', 'guitar_vocab', 'horn_vocab', 'budget',
+                  'drummer', 'hornist', 'gesture', 'fretwork', 'soloist', 'guitar_vocab', 'guitar_riff', 'horn_vocab', 'budget',
                   'bassist', 'guitarist', 'sfz', 'kits', 'organ', 'articulation', 'speech', 'tempo', 'song', 'mixer',
                   'mastering', 'heroes', 'bands', 'compare', 'delivery', 'library', 'silent_notes', 'figures',
-                  'bandlib.scoring')
+                  'bandlib.scoring', 'singer', 'lyrics', 'voicebank')
 
 
 def helpers() -> dict[str, list[tuple[str, str]]]:

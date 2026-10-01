@@ -332,9 +332,38 @@ _RUSTY = 'samples/big-rusty-drums/Programs/01-full.sfz'
 _RUSTY_MAP = {48: 47, 50: 47, 88: 50, 89: 55, 90: 59, 91: 52, 52: 57, 57: 65, 59: 60, 55: 71}
 _RUSTY_MICS = {'oh': -2.0, 'top': 0.0, 'btm': -4.0}
 
+# Big Rusty's velocity response, calibrated (kits.velocity_map): every snare / tom layer measured at its velocity
+# edges (4 round robins each, the first 250 ms) and mapped onto the kick's natural curve (the kick: -48.7 dB at
+# velocity 1 .. -20.4 at 127, smooth). Before: the snare's layers 2-4 (velocity 14-51) sat within 4 dB (-43 .. -38.8
+# dB, the kick moves 8 dB there) and jumped +3 dB at 52 and 65 - ghost notes and soft taps alike -, and the toms were
+# 5-8 dB louder than the snare at the same mid velocity (velocity 50: snare -38.9, toms -30.3 .. -33.6 dB). After: the
+# snare follows the kick's curve, the toms sit 1-2.5 dB over the snare at every velocity (41 floor +2.5, 43 +2, 45
+# +1.5, 47 / 48 / 50 +1). Values: dB at the layer edges (the measured pack level -> the curve).
+BIG_RUSTY_VELOCITY = {
+    38: [(1, 1.3), (7, 2.9), (13, 1.8), (14, -1.6), (19, -1.5), (25, -1.5), (26, -0.8), (32, -1.0), (38, 0.1), (39, 1.6), (45, 1.6), (51, 2.5), (52, -0.6), (58, 0.5), (64, 0.5), (65, -1.9), (70, -1.8), (76, -1.1), (77, -0.5), (83, -0.5), (89, -0.1), (90, -1.6), (95, 0.1), (101, 0.6), (102, -0.6), (108, -0.6), (114, -0.3), (115, -1.1), (121, -0.0), (127, 0.0)],
+    41: [(1, -5.4), (9, -2.1), (18, -3.2), (19, -3.9), (27, -3.6), (36, -3.8), (37, -3.2), (45, -3.1), (54, -2.3), (55, -2.2), (64, -2.1), (73, -1.5), (74, -1.5), (82, -1.5), (91, -1.0), (92, 0.3), (100, 0.3), (109, 0.8), (110, -0.4), (118, -0.4), (127, 0.7)],
+    43: [(1, -5.9), (8, -3.3), (15, -4.4), (16, -3.9), (23, -3.7), (31, -3.9), (32, -5.3), (39, -4.2), (47, -3.3), (48, -4.6), (55, -3.5), (63, -3.5), (64, -4.7), (71, -4.1), (79, -3.3), (80, -5.3), (87, -4.8), (95, -3.2), (96, -4.3), (103, -3.8), (111, -3.5), (112, -4.5), (119, -3.4), (127, -3.4)],
+    45: [(1, -7.3), (9, -3.9), (18, -5.0), (19, -7.3), (27, -7.0), (36, -7.2), (37, -5.2), (45, -5.1), (54, -4.3), (55, -3.9), (64, -3.9), (73, -3.2), (74, -3.5), (82, -3.5), (91, -3.1), (92, -2.0), (100, -1.9), (109, -1.4), (110, -2.3), (118, -2.3), (127, -1.2)],
+    47: [(1, -4.6), (11, -1.9), (21, -1.9), (22, -4.2), (32, -4.1), (42, -3.0), (43, -2.7), (53, -1.8), (63, -0.7), (64, -1.3), (74, 0.2), (85, 0.7), (86, -1.5), (96, 0.2), (106, 0.7), (107, -0.5), (117, -0.2), (127, 0.9)],
+}
+BIG_RUSTY_VELOCITY[48] = BIG_RUSTY_VELOCITY[50] = BIG_RUSTY_VELOCITY[47]
+
+
+def _rusty_levels(ins):
+    """The lazy patch's post hook: Big Rusty's calibrated velocity response (BIG_RUSTY_VELOCITY)."""
+    from ..kits import velocity_map
+    velocity_map(ins, BIG_RUSTY_VELOCITY)
+
+
+def _rusty_sticks():
+    ins = _sfz('big_rusty_kit', _RUSTY, mics=_RUSTY_MICS, dyn_cc=4, keymap=_RUSTY_MAP)
+    ins.lazy['post'] = ['agentsound.patches.sampled_drums:_rusty_levels']
+    return ins
+
+
 register(Patch(
     'sampled/big_rusty_kit',
-    instrument=_sfz('big_rusty_kit', _RUSTY, mics=_RUSTY_MICS, dyn_cc=4, keymap=_RUSTY_MAP),
+    instrument=_rusty_sticks(),
     fx=[_hp(28)],
     sends={'plate': -20},
     notes='v1. Karoryfer Big Rusty Drums (CC0), played with sticks: a big 80s kit (24" kick, 22" / 18" / 15" / 14" '

@@ -39,7 +39,7 @@ from pathlib import Path
 
 from .theory import ComposeError
 
-__all__ = ['build', 'describe', 'multisample', 'analyze', 'classify', 'GM_NAMES', 'format_info']
+__all__ = ['build', 'describe', 'multisample', 'analyze', 'classify', 'GM_NAMES', 'format_info', 'velocity_map']
 
 AUDIO_EXT = ('.wav',)
 _CONVERTIBLE = ('.flac', '.aif', '.aiff', '.ogg')   # the downloader converts these to .wav
@@ -1848,3 +1848,47 @@ def multisample(source, *, octave: int = 0, loop: str | None = 'auto', keys: tup
     info = {'kind': 'multisample', 'path': str(base), 'roots': roots, 'zones': len(zones), 'unmapped': unmapped,
             'layers': max(len(_order_layers(v, 'auto')) if len(v) > 1 else 1 for v in notes.values())}
     return zones, info
+
+
+# --------------------------------------------------------------------------------------------- level calibration
+
+def _interp(pts, v: float) -> float:
+    if v <= pts[0][0]:
+        return pts[0][1]
+    for (v0, d0), (v1, d1) in zip(pts, pts[1:]):
+        if v <= v1:
+            return d0 + (d1 - d0) * (v - v0) / (v1 - v0) if v1 > v0 else d1
+    return pts[-1][1]
+
+
+def velocity_map(ins, maps: dict):
+    """Re-level a sampled kit's velocity layers per key (in place; returns ins): maps = {key: [(velocity, dB), ...]}
+    - the level correction at those velocities (measured: a key whose recorded layers sit at one level, a tom ~6 dB
+    louder than the snare at the same velocity). Each single-key zone of a mapped key gets the correction at its own
+    layer edges: its gain moves by the correction at its velhi, its velcurve's points by the difference to it (the
+    layer's own ramp is bent along the curve); a zone without a velcurve takes the mean of its two edges. Measure
+    first (each round robin at each layer's edges), then map the measured levels onto the curve you want
+    (agentsound/patches/sampled_drums.py BIG_RUSTY_VELOCITY: snare and toms on the kick's natural curve)."""
+    zones = ins.params.get('samples') if hasattr(ins, 'params') else None
+    if zones is None:
+        raise ComposeError("velocity_map: needs an expanded sampler instrument (its zones)")
+    table = {}
+    for k, pts in maps.items():
+        ps = sorted((float(v), float(d)) for v, d in pts)
+        if not ps or any(not 0 <= v <= 127 or abs(d) > 24 for v, d in ps):
+            raise ComposeError(f"velocity_map[{k!r}]: points must be (velocity 0..127, dB -24..24), got {pts!r}")
+        table[int(k)] = ps
+    for z in zones:
+        k = z.get('lo')
+        if k is None or k != z.get('hi') or k not in table:
+            continue
+        ps = table[k]
+        lo, hi = max(1, z.get('vello', 0)), z.get('velhi', 127)
+        c_hi = _interp(ps, hi)
+        vc = z.get('velcurve')
+        if vc:
+            z['velcurve'] = [[p[0], round(p[1] * 10.0 ** ((_interp(ps, p[0]) - c_hi) / 20.0), 6)] for p in vc]
+            z['gain'] = round(z.get('gain', 0.0) + c_hi, 4)
+        else:
+            z['gain'] = round(z.get('gain', 0.0) + 0.5 * (_interp(ps, lo) + c_hi), 4)
+    return ins

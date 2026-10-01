@@ -165,7 +165,7 @@ _LEAD_CHAIN = {
                      fx.compressor(threshold=-22, ratio=3, attack=10, release=150, automakeup='on')], -1.0),
     'tenor': (lambda: [_eq(hp__freq=110, peak1__freq=380, peak1__gain=-2.5, peak3__freq=2600, peak3__gain=1.0),
                        fx.compressor(threshold=-22, ratio=3, attack=10, release=150, automakeup='on')], -1.0),
-    'guitar': (lambda: amp('clean', drive=9) + [fx.compressor(threshold=-24, ratio=3, attack=8, release=120,
+    'guitar': (lambda: amp('clean', gain=3.0) + [fx.compressor(threshold=-24, ratio=3, attack=8, release=120,
                                                               automakeup='on'),
                                                 fx.chorus(mode='I', mix=0.2),
                                                 _eq(hp__freq=150, peak1__freq=350, peak1__gain=-2.0)], -4.2),
@@ -380,7 +380,7 @@ def funk_band(song, *, without=(), sounds=None, ids=None, keys: str = 'clav', ba
                              fx.saturator(mode='tube', drive=6, mix=0.5), fx.tremolo(rate=5.0, depth=0.2, stereo=90)],
                          sends={room: -12, plate: -18}, humanize=(3, 5, 73))
     b.track('gtr', lambda: guitar_di(FSBS_DI, 'funk_band', 'gtr'), pan=0.8, trim=-4.5,
-            fx=amp('clean', drive=5) + [fx.compressor(threshold=-28, ratio=5, attack=3, release=80,
+            fx=amp('clean', gain=2.0) + [fx.compressor(threshold=-28, ratio=5, attack=3, release=80,
                                                      automakeup='on'),
                                        _eq(hp__freq=200, peak1__freq=350, peak1__gain=-3.0, peak2__freq=1800,
                                            peak2__gain=1.0, peak3__freq=4000, peak3__gain=-3.0, peak3__q=0.7),

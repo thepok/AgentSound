@@ -1,7 +1,7 @@
 # Production roles
 
-A song is produced by six roles, each described by a plain Markdown brief in `roles/<role>.md` (a seventh, the
-film director, makes the song's making-of film after delivery). The files are
+A song is produced by six roles, each described by a plain Markdown brief in `roles/<role>.md` (a song with a sung
+vocal adds the lyricist; the film director makes the song's making-of film after delivery). The files are
 tool-agnostic: a single agent can work through them in order, several agents can each be given one file as their
 brief, or a person can follow them. Each file starts with the same header block (Role, When to use, Inputs,
 Deliverable), then the mission, the method with this repo's commands, a checklist distilled from
@@ -13,6 +13,7 @@ Deliverable), then the mission, the method with this repo's commands, a checklis
 |---|---|---|---|
 | producer | `roles/producer.md` | the song from wish to delivery; runs the other roles; the brief and the log | `BRIEF.md` (+ `METADATA` / `COVER`, delivery) |
 | arranger | `roles/arranger.md` | form, harmony, hook, transitions; the parts, performed by the players (pianist, drummer, bassist, guitarist, horn lines) | `ARRANGEMENT.md`, sections + parts in `song.py` |
+| lyricist | `roles/lyricist.md` | the words of a sung vocal (`agentsound.singer`): original lyrics, the hook line, stress on the beats, singable vowels on long / high notes, rhyme scheme | `LYRICS.md`, the `lyrics=` strings in `song.py` |
 | sound-designer | `roles/sound-designer.md` | every sound, layer and hero sound; each part's own chain, rooms and sends | sounds / chains in `song.py`, `SOUND.md` |
 | mix-engineer | `roles/mix-engineer.md` | the balance vs the lead, carving (ducks, dips), rides per section (`agentsound.mixer`) | module-level `MIX` in `song.py`, `MIX.md` |
 | mastering-engineer | `roles/mastering-engineer.md` | tone balance, loudness for the platform, peaks, width, mono (`agentsound.mastering`) | master chain in `song.py`, `out/master/`, `MASTER.md` |
@@ -25,6 +26,7 @@ Deliverable), then the mission, the method with this repo's commands, a checklis
 wish ─> producer: BRIEF.md
           └─> arranger: ARRANGEMENT.md + sections        (2 Arrangement)
                └─> arranger: parts via the players       (3 Composition / players)
+                    └─> lyricist: LYRICS.md              (3b a sung vocal only: the words on the vocal line)
                     └─> sound-designer: SOUND.md         (4 Sound design, overlaps 3)
                          └─> mix-engineer: MIX + MIX.md  (5 Mix)
                               └─> mastering-engineer: master chain + MASTER.md   (6 Master)

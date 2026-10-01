@@ -46,7 +46,8 @@ __all__ = ['TUNINGS', 'KINDS', 'TECHNIQUES', 'PATTERNS', 'STYLES', 'LEAD_STYLES'
            'shape', 'shapes', 'voice_lead', 'best_capo', 'strum', 'chuck', 'strum_pattern', 'arpeggio', 'travis',
            'chug', 'skank', 'scratch', 'let_ring', 'hammer_chord', 'slide_chord', 'bass_run', 'choke', 'build',
            'bend', 'prebend', 'vibrato', 'slide', 'hammer_on', 'pull_off', 'trill', 'double_stop', 'rake',
-           'harmonic', 'tremolo_pick', 'lick', 'arrange', 'lead', 'vocabulary']
+           'harmonic', 'tremolo_pick', 'lick', 'arrange', 'lead', 'vocabulary', 'riff', 'pedal', 'hits', 'build_up',
+           'double', 'cell']
 
 _EPS = 1e-6
 
@@ -1966,6 +1967,12 @@ class Arrangement:
     def count(self, kind: str, name: str | None = None) -> int:
         return sum(1 for _, _, k, n in self.moves if k == kind and (name is None or n == name))
 
+    def cell(self, grid='1/16', **kw) -> str:
+        """The part's rhythm as a cell string ('x..x..x.': where a stroke starts) - for the drummer
+        (drummer.DrumMotif.make(cell=...)) and the bassist (kick=): agentsound.guitar_riff.cell."""
+        from .guitar_riff import cell as _c
+        return _c(self, grid, **kw)
+
 
 # ------------------------------------------------------------------------------------------------ the rhythm arranger
 
@@ -2836,3 +2843,45 @@ def vocabulary(style: str = 'rock', **kw):
         perf = soloist.solo(s, lead, gtr.vocabulary('rock'), at=solo, prog=PROG, motif=HOOK, seed=7)"""
     from .guitar_vocab import vocabulary as _v
     return _v(style, **kw)
+
+
+# ------------------------------------------------------------------------------------------------ riffs and the wall
+# The riff player and the double-tracked wall live in agentsound/guitar_riff.py (they build on this module).
+
+def riff(spec, **kw) -> Arrangement:
+    """A rock riff written as steps on a grid ('E> . E G . A . G | E - - x D> - B A'), played at the section's
+    energy: a verse palm-muted single notes, a pre-chorus chugged power chords, a chorus open ringing power chords
+    with the octave (agentsound.guitar_riff.riff: kind=, palm=, end=, into=, memory=, take()). """
+    from .guitar_riff import riff as _r
+    return _r(spec, **kw)
+
+
+def pedal(moving, **kw) -> str:
+    """An open-string pedal riff spec (palm-muted pedal chugs against accented moving notes): guitar_riff.pedal."""
+    from .guitar_riff import pedal as _p
+    return _p(moving, **kw)
+
+
+def hits(cell_, root, bpm, **kw) -> Clip:
+    """Stops / hits in unison with the drums on a cell string ('x..x..x...x.x...'): guitar_riff.hits."""
+    from .guitar_riff import hits as _h
+    return _h(cell_, root, bpm, **kw)
+
+
+def build_up(root, dur, bpm, **kw) -> Clip:
+    """The pre-chorus chug build (8ths -> 16ths, crescendo, the palm lifting, an open last chord): guitar_riff."""
+    from .guitar_riff import build_up as _b
+    return _b(root, dur, bpm, **kw)
+
+
+def double(part, tracks, at=0.0, **kw) -> list:
+    """Play a part as separate performances on 2+ tracks (the wall): takes, drifting timing, tuning drift per take
+    (guitar_riff.double)."""
+    from .guitar_riff import double as _d
+    return _d(part, tracks, at, **kw)
+
+
+def cell(part, grid='1/16', **kw) -> str:
+    """The rhythm of a part as a cell string ('x..x..x.') for the drummer / bassist (guitar_riff.cell)."""
+    from .guitar_riff import cell as _c
+    return _c(part, grid, **kw)

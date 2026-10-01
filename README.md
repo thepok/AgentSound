@@ -6,7 +6,7 @@ a coding agent (Claude Code, or any agent that can run a shell and look at image
 it composes `songs/<slug>/song.py`, renders it, reads the loudness arc, spectrum, stereo image, click zooms and note
 dynamics, fixes what it hears and hands over a tagged mp3 / wav with cover art and credits. Parts are *played*, not
 triggered: virtual players (pianist, drummer, bassist, guitarist, hornist, jazz comping, articulation for sampled
-solo instruments) with real moves, budgets and limits; calibrated "hero" sounds carry the leads; production roles
+solo instruments, a singer that sings lyrics with a licensed DiffSinger voicebank) with real moves, budgets and limits; calibrated "hero" sounds carry the leads; production roles
 (producer -> arranger -> sound designer -> mix -> mastering -> A&R) give the agent a studio workflow; and every
 finished song can get a generated making-of film. Everything renders offline and deterministically (same code +
 seed = the same bits).
@@ -21,6 +21,9 @@ seed = the same bits).
 - ffmpeg on `PATH` (mp3 encoding, decoding reference tracks).
 - Optional, for making-of films: Node >= 22, Chrome or Edge, ffmpeg; narration with Breeze TTS 2 in WSL
   (research / non-commercial licence) or the built-in Windows voices.
+- Optional, for sung vocals (`agentsound.singer`): WSL with a Python venv holding onnxruntime(-gpu) + numpy + pyyaml
+  (`~/services/singing`) and a licensed DiffSinger voicebank in `assets/voices/<id>/` (Hanami, TIGER; not bundled) -
+  see docs/COMPOSE_API.md "Vocals".
 
 **Build and test**
 
@@ -52,8 +55,13 @@ licence warnings (CC-BY needs credit; NC / no-redistribution packs are for priva
 see [assets/dx7/README.md](assets/dx7/README.md). Without them DX7 voices (and the DX7-based `synthwave/` patches,
 including the template's e-piano) are unavailable and the tests skip their DX7 checks; everything else works.
 
+**Voicebanks** (sung vocals): `python -m agentsound voicebanks` lists the licensed DiffSinger voices of
+`assets/voices/manifest.json` (url, licence, range, modes) and whether they are installed; the voices are downloaded
+from their official sources by hand (their licences forbid redistribution), never committed. No cloning of real
+singers: only licensed voicebanks, synthetic voices or the user's own voice.
+
 **License**: MIT ([LICENSE](LICENSE)). Bundled third-party components (nlohmann/json, the MSFA DX7 core, GeneralUser
-GS) and what is used but not shipped are listed in [THIRD_PARTY.md](THIRD_PARTY.md).
+GS, CMUdict) and what is used but not shipped are listed in [THIRD_PARTY.md](THIRD_PARTY.md).
 
 ## Overview
 
@@ -132,6 +140,8 @@ are the phrase loops of a slow piece.
 | `mix` | the mix engineer: findings + plan; `--auto` renders, measures, writes `out/mixer/MIX.py` |
 | `master` | the mastering engineer: match / `--render` the post-pass / `--check` delivery targets |
 | `voices` / `speak` | Windows text-to-speech voices / speak a line to WAV (for the vocoder) |
+| `voicebanks` | the singing voicebanks (`assets/voices/manifest.json`): installed?, licence, range, modes; `--check` loads them in the WSL backend |
+| `lyrics` | how lyrics are sung: words -> syllables (phonemes, stress) -> notes (`--voice` adds a voicebank's dictionary) |
 | `makingof` | the making-of film of a built song: `out/making-of.mp4` from its `film.py` (`--draft` writes a first one, `--script`, `--stills`, `--preview`, `--tts breeze\|sapi\|none`) - see "The making-of film" |
 
 The engine executable has its own commands too: `render`, `validate`, `params`, `dx7`, `sf2`, `zoom`, `clicks`,
@@ -158,11 +168,11 @@ file analysis, comparison), `art/` (covers + a public-domain stroke font), `io/`
 
 | family | types |
 |---|---|
-| dynamics | `compressor` (sidechain; `band` > 0 = a keyed dynamic EQ - what `song.carve` uses), `ducker` (keyed or tempo pump), `limiter` (true-peak lookahead; master only), `saturator`, `bitcrush` |
+| dynamics | `compressor` (sidechain; `band` > 0 = a keyed dynamic EQ - what `song.carve` uses), `ducker` (keyed or tempo pump), `limiter` (true-peak lookahead; master only), `saturator`, `bitcrush`, `deesser` (sung vocals: split-band or wide sibilance reduction above `freq`, listen mode) |
 | tone / utility | `eq` (7 bands), `filter` (lp / bp / hp / ladder), `utility` (gain, pan, polarity, mono; the hero `air` stage and mixer rides are utilities), `width` (M/S + monobass) |
 | modulation | `chorus` (Juno I / II), `ensemble` (string machine), `dimension` (Dimension-D), `microshift` (pitch doubler), `flanger`, `phaser`, `tremolo`, `vowel` (formant filter), `wah` (pedal / auto-wah) |
 | time / space | `delay` (tempo-synced, ping-pong, ducking), `reverb` (plate hall room chamber cathedral), `gatedreverb` (keyable 80s gate), `shimmer`, `convolver` (impulse-response WAV: halls, rooms, plates, churches, guitar cabinets) |
-| colour | `tape` (cassette .. 30 ips: saturation, head bump, wow / flutter, hiss), `exciter`, `amp` (tube guitar amp head: 1-4 cascaded preamp stages, Tube Screamer boost, Marshall / Fender tone stack, presence / resonance, a sagging push-pull power amp; 4x oversampled + ADAA; a cab IR `convolver` after it) |
+| colour | `tape` (cassette .. 30 ips: saturation, head bump, wow / flutter, hiss), `exciter`, `amp` (tube guitar amp head: 1-4 cascaded preamp stages, Tube Screamer boost, Marshall / Fender tone stack, presence / resonance, a sagging push-pull power amp, `mix`: the time-aligned DI blended under it (a bass rig); 4x oversampled + ADAA; a cab IR `convolver` after it - the one amp of every DI guitar and the rock bass: `sampled_guitars.amp(kind)`, `bass_rig()`) |
 | voice | `vocoder` (channel vocoder 8-40 bands or LPC talkbox; the sidechain is the speech modulator, required) |
 
 **Mixer / routing**: tracks -> insert chain -> gain -> pan -> post-fader sends -> output (a bus or the master); buses
@@ -193,7 +203,7 @@ to -18 LUFS on its audition phrase and carrying its sends. `python -m agentsound
 | `hero/` | 19 | the hero presets (below) + three legacy names |
 | `bus/` | 35 | return / group chains: hall, plate, echo, gated, shimmer, tape echo, `hero_plate`, 22 convolution spaces `bus/ir_*` |
 | `gm/` | 11 | calibrated GeneralUser GS presets |
-| `cab/` | 5 | guitar amp / cabinet chains (IR) for DI guitars |
+| `cab/` | 5 | guitar amp / cabinet chains for DI guitars: the engine's tube `amp` (clean blues crunch rock metal voicings) + the cabinet IR |
 | `master/` | 4 | master chains (synthwave, dreamwave, darksynth, audition) |
 
 **Other sources**: `inst.dx7('NAME')` (256 ROM voices, `dx7 [search]`), `inst.sf2('Preset')` (GeneralUser GS 2.0.3,
@@ -205,12 +215,13 @@ reported), `inst.kit(dir)` (any drum one-shots, Hydrogen, DrumGizmo -> GM keys w
 
 **Hero sounds** (`hero()`, `agentsound.heroes`): THE way to put a hook or solo in front. `hero(track, family=...)`
 replaces the sound by the family's build (source + optional takes / octave layers + a shared chain `heroes.ORDER`:
-tone -> catch -> comp -> amp -> drive -> tape -> presence -> exciter -> chorus / double / width / dimension -> echo ->
+tone -> catch -> comp -> deess -> amp -> drive -> tape -> presence -> exciter -> chorus / double / width / dimension -> echo ->
 `air`) and applies logged, switchable
 mix rules: plate / echo space, bed duck, `carve` (keyed dynamic EQ on the bed), presence dips on competitors, rides in
 the hook sections, echo throws on phrase ends. Presets (`heroes.presets()`): `sax`, `piano`, `piano_pop`,
 `piano_strings`, `piano_synth`, `guitar`, `guitar_clean`, `guitar_heavy`, `synth`, `darksynth`, `strings`, `brass`,
-`woodwind`, `voice`, `organ`, `generic`. `heroes.air(track, points)` writes breath after the compressor;
+`woodwind`, `voice`, `vocal` (a sung lead vocal of `singer`: de-esser, vocal compressor, presence, plate and echo
+throws), `organ`, `generic`. `heroes.air(track, points)` writes breath after the compressor;
 `hero.play(track, clip, at)` plays with the family's player.
 
 **Sample packs**: `assets/samples/manifest.json` lists 261 packs (url, license, attribution, category, genres; 67 of
@@ -233,11 +244,13 @@ playability checks, and a log (`.moves`, `.budget`, `.summary()`).
 | `drummer` | `drummer.arrange(song, style=, kit=)`, `Memory`, `Kit.of(...)`, moves (tom_run, build, stop ...); solo: `perform(steps)`, `vocabulary()` (for `soloist.solo`), `rudiment`, `pattern`, `Hands`, `DrumMotif`, `SOLO_MOVES`, `feet`, `choke`, `hat_lane` | a whole form: grooves per style and section role, budgeted fills, crashes, builds, stops, endings (a hit grabbed by a choke); four limbs with speed limits; kick locked to the bass. A drum SOLO: a stroke language (stickings, accents, ghosts, flams, drags, buzz, kit voices), the hands' physics (a weaker hand, stick heights, rebounds, up-strokes, reach, sticking-aware speed limits), the PAS rudiments orchestrated around the kit, feet ostinatos and double bass, the live hi-hat openness lane, cymbal chokes, per-hand samples, and solo moves (motif and its development, tom melodies, call and response, 3 over 4, fives, quintuplets, half / double time, linear, hand-hand-foot triplets, speed bursts, press rolls, the gated tom break, silences, the big finish) played in order by `perform()` or by `soloist.solo()` |
 | `bassist` | `bassist.arrange(prog, bpm=, style=, kick=)`, `Memory`, `touch`, moves (slide, approach, octave_pop ...) | styles rock pop country funk motown disco ballad reggae tumbao synth walking; kick lock / interlock; fingering and tempo limits |
 | `guitarist` | `guitarist.arrange(...)` (rhythm), `guitarist.lead(...)` (`gestures=True`: fretwork bends / vibrato), `guitarist.vocabulary(style)` (the solo vocabulary), `Fretboard`, `shapes`, `Memory` | real chord shapes, strum / pick patterns per style and section, palm mutes / dead notes, double-tracked takes; lead bends, vibrato, slides, hammer-ons |
+| `guitar_riff` | `guitarist.riff(spec, bpm=, section=)`, `pedal`, `hits`, `build_up`, `double(part, (gtr_l, gtr_r), at)`, `cell` | the rock riff player: riffs written as steps ('E> - . E . . G> -'), played by the section's energy (verse palm-muted single notes, pre-chorus chugged power chords, chorus open power chords + octave), stops in unison with the drums, the pre-chorus chug build; the double-tracked wall: two real takes (drifting timing, tuning drift, other round robins, two guitars / amps) |
 | `fretwork` | `fretwork.bend`, `prebend`, `ghost_bend`, `unison_bend`, `oblique_bend`, `vibrato` (`VIBRATOS`), `hammer_on`, `trill`, `legato_run`, `slide`, `slide_in` / `slide_out`, `picked_run`, `tremolo_pick`, `sweep`, `rake`, `pinch`, `palm_mute`, `whammy_dive` / `whammy_scoop` / `whammy_vibrato`, `feedback`, `wah` / `wah_talk`, `pick_scrape`, `squeak`; `render(track, parts, at)` | the lead guitarist's hands inside and between notes (a guitar hero's micro-performance, like the hornist's breath): bends that rise fast, overshoot and settle, pre-bends, unison bends (the held string on a twin track / the sampler's per-note `bendfollow`), finger vibrato that only goes UP (down from a bent pitch), legato without the pick, alternate picking with accents, sweeps, pinch harmonics and controlled feedback (the sampler's `harmonic`), palm mutes, whammy, wah, pick scrapes |
 | `soloist` | `soloist.solo(song, track, vocab, at=, arc=, motif=, budget=, prog=)`, `Move`, `Vocabulary`, `Ctx`, `Part`, `Budget`, `ARCS`, `develop` / `vary`, material lines (`answer_line`, `sequence_line`, `run_line`, ...) | the instrument-agnostic SOLO: a dramatic arc (statement -> call / response -> varied repetition -> speed burst -> climax -> resolution) over any player's vocabulary (`guitarist.vocabulary`, `hornist.vocabulary`), motivic development of the song's hook, planned space, one ornament budget, dynamics never flat (`songs/_demo_soloist`: the same arc on the sax and the guitar) |
 | `hornist` | `hornist.arrange(melody, bpm, family=, style=, section=)`, `hornist.vocabulary(family, style=)` (the solo vocabulary), `Memory`, `.place(track, at)`, moves (push, pulse, swell, bloom, taper, vibrato, scoop, fall, shake, lean_in, turn_away, bell_swing ...) | the wind player (sax, trumpet, trombone, flute, clarinet, bowed strings): breath INSIDE held notes (air pushes / swells on the post-compressor `air` stage or live `dynamics`), air-coupled vibrato, budgeted pitch spice, mic technique (bell toward / away from the mic via a `mic` EQ + reverb sends) |
 | `jazz` | `jazz.band`, `chorus`, `comp`, `walking_bass` (straight / 3/4 too), `brushes`, `brush_colour`, `ride_pattern`, `bombs`, `last_stir`, `slides`, `horn_line`, `solo_line`, `paraphrase`, `block_chords`, `Feel` | the jazz vocabulary: rootless / shell / quartal voicings, comping cells, walking lines, brush kits, horn phrasing (scoops, falls, swells, vibrato) |
 | `articulation` | `perform`, `legato`, `expression`, `vibrato`, `throws`, `auto_articulate` | sampled solo instruments played: live dynamics, legato, portamento, keyswitches, echo throws |
+| `singer` | `singer.sing(song_or_track, line, lyrics, at=, voice=, style='pop'\|'ballad'\|'rock', seed=, moves=, pitch='hybrid')`, `double`, `harmony`, `Memory`, `check`, `voice`; `lyrics` (`align`, `check`, `g2p`, `syllabify`), `voicebank` (`voices`, `get`, `check_prompt`) | a SUNG lead vocal with lyrics from the score, rendered by a licensed DiffSinger voicebank (Hanami, TIGER) in WSL and played back as takes: consonants before the beat, vowels held, glides, scoops, late growing vibrato, falls (budgeted), audible breaths, voice colour (soft / power modes) following the dynamics, timing feel; doubles and harmonies are sung again (not copied / shifted); the robotic baseline `moves=False` for A/B; the vocal checks (intelligibility 2.5-6 kHz, buried, harsh). Consent rule: no cloning of real singers (`songs/_demo_vocal`) |
 
 Shared feel (`humanize`): `touch(clip, lo, hi)` writes phrase-shaped melody velocities, `bass_touch` the same for bass
 lines, grooves, swing, `jazz_groove` / lay-back per part. Shared performance layers: `gesture` (the moves INSIDE a note
@@ -336,6 +349,7 @@ distribution, punch, tails, prioritised fixes naming the tracks. References stay
 |---|---|---|
 | producer | [roles/producer.md](roles/producer.md) | `BRIEF.md` (brief + log), METADATA / COVER, delivery |
 | arranger | [roles/arranger.md](roles/arranger.md) | `ARRANGEMENT.md`, sections + parts via the players |
+| lyricist | [roles/lyricist.md](roles/lyricist.md) | a sung vocal's words: `LYRICS.md`, the `lyrics=` of `singer.sing` |
 | sound designer | [roles/sound-designer.md](roles/sound-designer.md) | sounds, layers, heroes, chains, `SOUND.md` |
 | mix engineer | [roles/mix-engineer.md](roles/mix-engineer.md) | `MIX` in song.py, `MIX.md` |
 | mastering engineer | [roles/mastering-engineer.md](roles/mastering-engineer.md) | master chain, `out/master/`, `MASTER.md` |
@@ -404,24 +418,26 @@ Also user-facing: `delivery` (mp3 tags, cover, credits.txt, the CC-BY / BY-SA / 
 agentsound/            Python compose layer (stdlib only)
   song.py theory.py voicing.py figures.py patterns.py midifx.py humanize.py automation.py modulation.py vamod.py tempo.py
   articulation.py pianist.py romantic.py drummer.py bassist.py guitarist.py jazz.py heroes.py
-  gesture.py budget.py fretwork.py soloist.py guitar_vocab.py horn_vocab.py   lanes, budgets, solos
+  gesture.py budget.py fretwork.py soloist.py guitar_vocab.py guitar_riff.py horn_vocab.py   lanes, budgets, solos, riffs
   makingof/            the making-of film (facts, players' logs, narration, timeline, web/ renderer)
   sfz.py kits.py organ.py speech.py            sample importers, TTS
+  singer.py lyrics.py voicebank.py voicebank_runner/   the sung vocal (the runner runs in WSL: onnxruntime)
   patches/             the sound library (one module per family, registered lazily)
   bands.py bandlib/    band presets (one file per genre family)
   mixer.py mastering.py compare.py delivery.py library.py catalog.py cli.py
 engine/                C++ engine (see section 2)
 docs/ roles/ recipes/  references, role briefs, genre guides
 songs/<slug>/song.py   one song each (_template, _demo_*, _bands/<preset> are system songs); out/ is git-ignored
-assets/                dx7/ (ROM cartridges: not bundled, see its README), soundfonts/ (GeneralUser GS), samples/manifest.json
+assets/                dx7/ (ROM cartridges: not bundled, see its README), soundfonts/ (GeneralUser GS), samples/manifest.json,
+                       voices/manifest.json (the singing voicebanks: not bundled)
 tests/                 C++ tests (test_*.cpp, ctest) and tests/python (unittest)
 ```
 
 Python helper modules (`catalog.HELPER_MODULES`, listed with every public function by `catalog helpers`): `theory`,
 `patterns`, `humanize`, `automation`, `modulation`, `midifx`, `vamod`, `jazz`, `pianist`, `romantic`, `drummer`, `bassist`,
 `guitarist`, `sfz`, `kits`, `organ`, `articulation`, `speech`, `tempo`, `song`, `mixer`, `mastering`, `heroes`,
-`gesture`, `fretwork`, `soloist`, `guitar_vocab`, `horn_vocab`, `budget`, `voicing`, `notation`, `figures`,
-`bandlib.scoring` (the orchestrator's desk, used as `orch.Score` / `orch.Choir` ...).
+`gesture`, `fretwork`, `soloist`, `guitar_vocab`, `guitar_riff`, `horn_vocab`, `budget`, `voicing`, `notation`, `figures`,
+`bandlib.scoring` (the orchestrator's desk, used as `orch.Score` / `orch.Choir` ...), `singer`, `lyrics`, `voicebank`.
 
 | to add | do |
 |---|---|

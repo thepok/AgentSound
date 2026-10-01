@@ -18,9 +18,10 @@ from agentsound import articulation as art, bands
 
 ANALYSIS = {'profile': 'rock'}                       # = b.analysis
 b = bands.rock_band(s)                               # or bands.make('rock_band', s, keys='piano', gain='high')
-riff = Clip([...]).chordify('power')                 # power chords from roots E2..A3
-for gtr, ms in ((b.gtr_l, 11), (b.gtr_r, 13)):       # the SAME part on both sides: two guitars, two amps
-    gtr.loop(riff.articulate('palm', span=(0, 8)).strum(ms=ms, bpm=s.tempo, direction='alternate'), verse)
+from agentsound import guitarist as gtr
+RIFF = 'E> - . E . . G> - - . A - G E - . | D> - . B - . A - . . E . G A# B> -'     # steps on a 16th grid
+gtr.double(gtr.riff(RIFF, bpm=s.tempo, grid='1/16', section=verse), (b.gtr_l, b.gtr_r), verse)   # quiet: palm-muted
+gtr.double(gtr.riff(RIFF, bpm=s.tempo, grid='1/16', section=chorus), (b.gtr_l, b.gtr_r), chorus) # open power + 8va
 b.lead.play(art.legato(line).glide(110, where=art.leaps(3)), chorus)
 art.vibrato(b.lead, line, chorus, depth=28, rate=5.6)
 print(b.describe())                                  # roles, buses and how to play them (b.notes)
@@ -28,36 +29,56 @@ print(b.describe())                                  # roles, buses and how to p
 
 | preset | roles | sounds | demo |
 |---|---|---|---|
-| `rock_band` (options `keys='organ'\|'piano'`, `gain='crunch'\|'high'`, `kit='big_rusty'\|'unruly'\|'red_zeppelin'`) | drums, bass, gtr_l, gtr_r, lead, keys | Karoryfer Big Rusty kit (close + OH mics, 14 layers x 4 RR) into a drum bus with parallel compression and the Voxengo drum room; picked Growlybass through a tube drive; **gtr_l** FreePats FSBS DI -> Marshall 4x12 Greenback IR (hard left), **gtr_r** Emily SG DI -> 2x12 V30 crunch (hard right), `gain='high'`: metal 4x12 + a hotter crunch; lead FSBS DI -> driven Marshall, mono legato, dotted-8th echo + 224XL plate; setBfree rock organ with a Leslie-style tremolo (or the Salamander grand) | `songs/_bands/rock_band` (126 BPM E minor: -9.6 LUFS, verse -9.7 / chorus -8.5, LRA 4.8, width 26 %, 0 warnings) |
+| `rock_band` (options `keys='organ'\|'piano'`, `gain='crunch'\|'high'`, `kit='big_rusty'\|'unruly'\|'red_zeppelin'`) | drums, bass, gtr_l, gtr_r, lead, keys | Karoryfer Big Rusty kit (close + OH mics, 14 layers x 4 RR, velocity-calibrated) with a slow-attack punch compressor into a drum bus with New York parallel compression + tape and the Voxengo drum room (crushed); picked Growlybass into an SVT-style DI + tube amp rig; **gtr_l** FreePats FSBS DI -> the tube amp as a cranked Plexi -> Marshall 4x12 Greenback IR (hard left), **gtr_r** Emily SG DI -> two-stage crunch -> 2x12 V30 (hard right), `gain='high'`: metal 4x12 + a hotter crunch; lead FSBS DI -> driven Marshall, mono legato, dotted-8th echo + 224XL plate; setBfree rock organ with a Leslie-style tremolo (or the Salamander grand) | `songs/_bands/rock_band` (126 BPM E minor; after the rock pass: -9.6 LUFS, LRA 4.5, width 26 %; warns of the intro riff's kick + bass unison and flat dynamics of its narrow-velocity gtr_r / band lead) |
 | `indie_band` (`keys='wurli'\|'organ'`, `kit='big_rusty'\|'unruly'\|...`) | drums, bass, gtr_l, gtr_r, lead, keys | Big Rusty kit (or `kit='unruly'`: the small dry garage kit, thin below 60 Hz) in the 224XL room; Fashionbass; **gtr_l** clean jangle (FSBS single-coil -> clean 1x12, compressor, chorus), **gtr_r** crunch (Emily SG -> 1x12 H30 edge of breakup); Shinyguitar archtop lead (pickup) through a blues amp with a 110 ms slapback; Greg Sullivan Wurlitzer through a small amp with tremolo | `songs/_bands/indie_band` (152 BPM D major: -9.6 LUFS, LRA 3.9, width 30 %, 0 warnings) |
 | `power_ballad` (`kit=...`) | piano, strings, pad, drums, bass, lead | Salamander grand, VPO string section, Juno pad, Big Rusty kit in the big 224XL room + rich plate, fingered Growlybass, a singing FSBS lead (Marshall, quarter-note echo, 224XL hall) | `songs/_bands/power_ballad` (76 BPM A major: -10.0 LUFS, LRA 4.4, 0 warnings) |
 
 What the presets do for you, and what you still decide:
 
-- **Guitars are DI samples through amps** (`rock.amp(kind)`: a bright shelf (the amp's bright cap / a treble booster)
-  -> eq -> saturator = the amp -> convolver = the speaker cabinet -> eq -> a scooped tone stack; kinds `clean blues
-  crunch rock metal lead`, the `cab/*` patches; `amp(kind, drive=, tone=, bright=)`). A DI straight into saturator +
-  cab is dull and boxy; the voicing gives it the bite of the FreePats FSBS 'dist' sets (the same guitar through a real
-  amp rack). The DI sets are level-matched into the amp (`rock.DI_LEVEL`: Emily / Shiny are recorded ~13 dB quieter
-  than FSBS), so a 'crunch' crunches whichever guitar plays it. Every rhythm guitar is keyswitched
-  (`rock.di_guitar`): `open` (default), **`palm mute`** (the chug: dies in ~0.3 s, keeps its pick attack) and
-  **`dead note`** (real muted-string scratches from Emilyguitar, 5 sets x 5 round robins spread over the neck;
-  borrowed for FSBS) - `clip.articulate('palm', span=(a, b))`, `.articulate('dead', where=lambda n: n.dur < 0.15)`.
-  Write
-  power chords with `chordify('power')`, strum every chord (`clip.strum(ms=8..16, bpm=s.tempo)`), keep chugs short
-  (0.3-0.45 beats). Each guitar track has its own humanize seed, so one part on both is two takes.
+- **Guitars are DI samples through ONE amp** (`rock.amp(kind)` = `patches.sampled_guitars.amp`: the engine's tube
+  `amp` - cascaded triode preamp stages, the Marshall / Fender tone stack, a sagging push-pull power amp - into the
+  `cab/*` cabinet IR and a mic roll-off; kinds `clean blues crunch rock metal lead` (`space_ir.AMPS`), any knob:
+  `amp('crunch', gain=6.5, mid=7)`). Measured against the old one-saturator amp on the same riff: the low mids are
+  back (+3 dB at 315-630 Hz, the Sweet Child chorus wants them), odd-harmonic crunch instead of the hollow fuzz. The DI
+  sets are level-matched into the amp (`rock.DI_LEVEL`: Emily / Shiny are recorded ~13 dB quieter than FSBS). Every
+  rhythm guitar is keyswitched (`rock.di_guitar`): `open` (default), **`palm mute`** and **`dead note`** (real
+  muted-string scratches from Emilyguitar, 5 sets x 5 round robins spread over the neck; borrowed for FSBS) -
+  `clip.articulate('palm', span=(a, b))`, `.articulate('dead', where=lambda n: n.dur < 0.15)`. No installed pack has DI
+  palm-mute samples, so the palm mute is an emulation measured against the real amped chugs of
+  `sampleradar-heavy-metal-guitar` (`sampled_guitars.PALM`: as loud as the open chord, the 80-315 Hz thump kept, a pick
+  envelope, -22 dB at 200 ms through the amp, as bright as the open chord: the tight chug).
+- **Riffs: the riff player** (`guitarist.riff(spec, bpm=, section=)`, docs/COMPOSE_API.md "Riffs and the wall"): write
+  the riff once as steps (`'E> - . E . . G> -'`: note, `-` hold, `.` rest, `x` dead scratch; `>` accent, `!` let ring,
+  `p` palm, `^` a choked hit) and let the section's energy play it - verse: palm-muted single notes; pre-chorus: power
+  chords, the short notes chugged, accents open; chorus: power chords + octave ringing. `end='choke' | 'slide' |
+  'build'` (or `into=` a bigger section) for the fill; `gtr.pedal([...])` an open-string pedal riff; `gtr.hits(cell,
+  'E', bpm)` the stops in unison with the drums; `gtr.build_up('E', 4, bpm)` the pre-chorus chug build; `part.cell()`
+  the riff's rhythm for the drummer (`DrumMotif.make(cell=...)`) and the bassist (`kick=`).
+- **The wall: `guitarist.double(part, (b.gtr_l, b.gtr_r), at)`** - two PERFORMANCES, not a copy: other takes (`take(k)`:
+  new timing / velocity noise), each take's timing drifting +-7 ms around the beat on a smooth curve (rushing and
+  dragging), a slow tuning drift per take (+-4 ct on 'instrument.pitchbend', a different offset per take), other round
+  robins (the tracks' sampler seeds) and two different guitars into two different amps / cabs (gtr_l FSBS -> Plexi 4x12,
+  gtr_r Emily -> crunch 2x12). Width per octave on the-drummer-speaks: 45-54 % at 250-500 Hz in the choruses.
 - **Basses** are keyswitched too (`rock.BASS_ARTICULATIONS`): `sustain`, **`staccato`** (the fretting hand lifting),
   `mute`. Write them where they sound (E1 = the low string): Growlybass samples sound an octave under their keys and
   the preset transposes them back.
 - **Kits** are GM-mapped (36 kick, 38 snare, 37 side stick, 40 rimshot, 42 / 44 / 46 hats, 49 / 57 crash, 51 / 59 ride,
   53 bell, toms 50 48 45 43 41 - `rock.remap_keys` copies the Karoryfer toms onto 48 / 50). Velocity picks one of up to
-  14 layers: ghosts 30-50, backbeat 100-127. `tom_fill()`, `snare_roll()`, `crash()` work as written.
+  14 layers: ghosts 30-50, backbeat 100-127. Big Rusty is velocity-calibrated (`kits.velocity_map`,
+  `sampled_drums.BIG_RUSTY_VELOCITY`): the snare rises smoothly from ghost to rimshot and the toms sit 1-2.5 dB over it
+  at every velocity (before: snare layers 2-4 at one level, toms 5-8 dB over the snare). `tom_fill()`, `snare_roll()`,
+  `crash()` work as written. The kit's chain: eq -> **`punch`** (a 25 ms-attack 3:1 compressor: the stick passes, the
+  ring is held) -> the drum bus (**`crush`**: New York parallel compression 6:1 mixed in at 35 %, **`tape`**
+  saturation, eq) + the room (the Voxengo drum room IR + **`room_crush`**: the room compressed 6:1 at 50 %, the big
+  rock room between the hits).
 - **Levels**: each role's balance sits in its last effect (`fx.trim.gain`), so `gain_db` and `gainDb` automation
   (loud-quiet dynamics: `t.automate('gainDb', per_section({verse: -4, chorus: 0}))`) start from 0 dB. Dry track levels
   on the demos: drums -20.5, bass -22, each rhythm guitar -23.5, lead -19.5, organ -26 LUFS. The rock_band master glues
   only above -12 dB, so a lighter verse stays lighter (demo: verse -9.7, chorus -8.5 LUFS).
 - **Sends** (set, automate them): `room` (drums -5, guitars -13), `plate`, `echo` (the lead: `send.echo` throws),
-  `drum_bus`. The bass ducks 5 dB under the kick (a short duck; the kick eq leaves 150 Hz to the bass). Master: eq,
+  `drum_bus`. The bass is an SVT-style rig (`sampled_guitars.bass_rig`: the tube amp growls in the mids, the
+  time-aligned DI carries the lows and the pick) and ducks 5 dB under the kick (a short duck; the kick eq leaves 150 Hz
+  to the bass). Master: eq,
   2:1 glue, tape, width 1.12 with the lows mono below 150 Hz, limiter at -1.2 dBTP - set only when the song has no
   master chain yet (`rock.master_chain`: a second preset on the same song, or your own `s.master`, keeps the first;
   `b.info['master']` says 'set' / 'kept').
@@ -164,21 +185,19 @@ master's air shelf), 0 clicks.
 
 ## Guitars
 
-- **Rhythm wall**: two rhythm guitars playing the same part, panned hard left / right (±0.8…1.0). They must be
-  two *performances*: separate tracks with different `humanize` seeds (timing 5–10 ms, velocity ±10), slightly
-  different voicings (one in open position, one an octave up or with a different inversion), or two different
-  guitar sample sets. The small differences make the width (an identical copy panned left and right is mono).
-- **Palm-muted 8ths** in verses (short notes: `staccato('1/16')`, lower velocity), open ringing chords in choruses,
-  accents with the snare, stops with the band.
+- **Rhythm wall**: two rhythm guitars playing the same riff, panned hard left / right (+-0.8...1.0), as two
+  *performances*: `guitarist.double(part, (gtr_l, gtr_r), at)` (drifting timing, tuning drift, other takes and round
+  robins) on two different guitars / amps (the band presets). An identical copy panned left and right is mono.
+- **Palm-muted** riffs in verses (the riff player at verse energy: single notes, palm-muted), open ringing power chords
+  + octave in choruses, accents with the snare, stops with the band (`guitarist.hits` on the drummer's cell).
 - **Clean guitars**: arpeggiated chords (`arpeggiate('up', rate='1/8')`) in the quiet sections, chorus / delay /
   plate on them.
 - **Lead**: the melody or solo in the middle of the stereo image, pentatonic / blues phrasing, bends (automate
   the instrument `pitchbend` by +2 semitones into a note), slides (`glide` on a mono / legato lead), vibrato (a
   pitch LFO at 5–6 Hz on long notes), double stops, octave melodies; a delay (1/4 or dotted 1/8) and a plate.
-- **Tone in the engine**: sampled distorted guitars (`freepats-fsbs-dist2`) need only EQ; clean / DI samples become
-  amps with `saturator` (`mode='tube'` 12–18 dB crunch, `'hard'` 24–36 dB high gain) followed by a cabinet EQ
-  (high-pass 80–100 Hz, low-pass 5–6 kHz at 24 dB/oct, −3 dB at 400–600 Hz, +2 dB at 2–3 kHz). When the
-  convolver effect is merged, use a real cabinet IR instead of the EQ: `jester-emerald-ir-pack` (Marshall 1960AX
+- **Tone in the engine**: DI guitars through `sampled_guitars.amp(kind)` (the tube amp + a cabinet IR, above);
+  pre-amped sets (`freepats-fsbs-dist1` / `dist2`: sampled/dist_guitar, fuzz_guitar) need only EQ. Cabinet IRs (the
+  `cab/*` patches; `amp(kind, cab=...)` mixes any voicing with any cab): `jester-emerald-ir-pack` (Marshall 1960AX
   Greenback 4x12), `jester-brutal-ir-pack` (V30 4x12), `kalthallen-cabs-free`, the `overdriven-*` 1x12 / 2x12 packs,
   `david-fau-casquel-guitar-irs`; FSBS direct (DI) guitars are made for this.
 

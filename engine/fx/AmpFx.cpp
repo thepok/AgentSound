@@ -42,7 +42,7 @@ namespace {
 
 enum AmpParam {
     kAGain, kAStages, kABoost, kATight, kABright, kABass, kAMid, kATreble, kAStack, kAPresence, kAResonance,
-    kAMaster, kASag, kAOutput
+    kAMaster, kASag, kAOutput, kAMix
 };
 
 const std::vector<ParamSpec>& ampSpecs() {
@@ -80,6 +80,11 @@ const std::vector<ParamSpec>& ampSpecs() {
             "quieter, then recovers as the note rings (compression with a bloom). 0 = a stiff solid-state supply, "
             "0.3 = a lead amp, 0.7-1 = spongy vintage."),
         num("output", -36, 12, 0, "dB", "Output level (after the power amp; a cranked amp sits around -16 dBFS RMS, peaks near -9 dBFS at 0 dB: +6 dB for a hot track)."),
+        num("mix", 0, 1, 1, "",
+            "Amp / DI blend: 1 = the amp only (default); below 1 the clean input (the DI, time-aligned with the "
+            "oversampled amp path, at its input level) is mixed in: out = amp * mix + DI * (1 - mix). A bass rig "
+            "(SVT-style DI + amp): 0.4-0.6 with 'tight' 150-300 - the DI carries the lows and the attack, the amp "
+            "the growl. The DI is not scaled by 'output'."),
     };
     return s;
 }
@@ -212,8 +217,9 @@ public:
         }
         mono_ = true;
         const int knobs[] = {kAGain, kABoost, kATight, kABright, kABass, kAMid, kATreble, kAPresence, kAResonance,
-                             kAMaster, kASag, kAOutput};
+                             kAMaster, kASag, kAOutput, kAMix};
         for (int i = 0; i < kKnobs; ++i) knob_[i].prepare(sr_, kGlideTau, get(knobs[i]));
+        dnDry1_.reset(); dnDry2_.reset();
         dcR_ = std::exp(-2.0 * dsp::kPi * 5.0 / sr_);
         ctl_ = 0;
         updateCoefs();
@@ -223,7 +229,7 @@ public:
     void process(float* left, float* right, int frames, const float*, const float*) override {
         if (changed()) {
             const int knobs[] = {kAGain, kABoost, kATight, kABright, kABass, kAMid, kATreble, kAPresence, kAResonance,
-                                 kAMaster, kASag, kAOutput};
+                                 kAMaster, kASag, kAOutput, kAMix};
             for (int i = 0; i < kKnobs; ++i) knob_[i].setTarget(get(knobs[i]));
         }
         const bool monoBlock = mono_ && std::memcmp(left, right, sizeof(float) * static_cast<std::size_t>(frames)) == 0;
@@ -253,6 +259,13 @@ public:
             up1_.up(hb1_, hb::d2(left[n], right[n]), a0, a1);
             up2_.up(hb2_, a0, u[0], u[1]);
             up2_.up(hb2_, a1, u[2], u[3]);
+            const double mix = knob_[12].value();
+            hb::D2 dry{};
+            if (mix < 1.0 - 1e-9 || knob_[12].moving()) {   // the DI through the same half-bands: phase-aligned
+                const hb::D2 g0 = dnDry2_.down(hb2_, u[0], u[1]);
+                const hb::D2 g1 = dnDry2_.down(hb2_, u[2], u[3]);
+                dry = dnDry1_.down(hb1_, g0, g1);
+            }
             for (auto& v : u) {
                 const double y0 = tick(ch_[0], v[0]);
                 v[1] = monoBlock ? y0 : tick(ch_[1], v[1]);
@@ -267,19 +280,19 @@ public:
                 const double y = x - s.dcX + dcR_ * s.dcY;     // DC blocker (5 Hz)
                 s.dcX = x;
                 s.dcY = y;
-                (c == 0 ? left : right)[n] = static_cast<float>(y * outG);
+                (c == 0 ? left : right)[n] = static_cast<float>(y * outG * mix + dry[c] * (1.0 - mix));
             }
         }
         if (monoBlock) ch_[1] = ch_[0];
         for (auto& c : ch_) c.flushAll();
-        up1_.flush(); up2_.flush(); dn1_.flush(); dn2_.flush();
+        up1_.flush(); up2_.flush(); dn1_.flush(); dn2_.flush(); dnDry1_.flush(); dnDry2_.flush();
         pos_ += static_cast<std::uint64_t>(frames);
     }
 
     double tailSeconds() const override { return 0.01; }
 
 private:
-    static constexpr int kKnobs = 12;   // gain boost tight bright bass mid treble presence resonance master sag output
+    static constexpr int kKnobs = 13;   // gain boost tight bright bass mid treble presence resonance master sag output mix
 
     // One 4x sample through boost -> preamp -> tone stack -> power amp.
     double tick(Chan& s, double x) const noexcept {
@@ -427,6 +440,8 @@ private:
     hb::HalfBand<kN2>::Coefs hb2_{};
     hb::HalfBand<kN1> up1_, dn1_;
     hb::HalfBand<kN2> up2_, dn2_;
+    hb::HalfBand<kN1> dnDry1_;       // the DI (mix < 1): downsampled like the amp path, so the two stay aligned
+    hb::HalfBand<kN2> dnDry2_;
     Chan ch_[2];
     Coefs c_;
     Smooth2 knob_[kKnobs];

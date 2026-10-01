@@ -157,7 +157,7 @@ double truePeak(const std::vector<float>& x, std::size_t a, std::size_t b) {
 void testFactoryAndSpecs() {
     std::printf("\n== factory & param specs ==\n");
     const auto types = as::dynamicsEffectTypes();
-    check(types.size() == 9, "9 effect types");
+    check(types.size() == 10, "10 effect types");
     check(as::createDynamicsEffect("reverb") == nullptr, "unknown type -> nullptr");
     check(as::dynamicsEffectAcceptsSidechain("compressor") && as::dynamicsEffectAcceptsSidechain("ducker") &&
               !as::dynamicsEffectAcceptsSidechain("eq") && !as::dynamicsEffectAcceptsSidechain("limiter"),

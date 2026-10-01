@@ -25,6 +25,8 @@ A hero is three things, and the wrapper does all of them from one table (PRESETS
        catch     a fast peak compressor that only reaches the hardest hits (pianos)
        comp      the bloom: 2-3:1 with a 15-30 ms attack (note attacks and accents pass: the dynamics ear stays
                  quiet), 3-9 dB of gain reduction on a hook - the level nearly constant, long notes bloom
+       deess     the de-esser (sung vocals: s / t / sh peaks down 4-8 dB above 6-8 kHz, after the compressor that
+                 brought them up, before the presence boost)
        amp       family-specific fx (the clean guitar's amp)
        drive     saturator: harmonics = density and edge at the same loudness
        tape      15 ips tape: glue, rounded peaks
@@ -73,12 +75,13 @@ from .theory import ComposeError
 
 # ------------------------------------------------------------------------------------------------ the chain
 
-STAGES = {'tone': 'eq', 'catch': 'compressor', 'comp': 'compressor', 'amp': None, 'drive': 'saturator',
+STAGES = {'tone': 'eq', 'catch': 'compressor', 'comp': 'compressor', 'deess': 'deesser', 'amp': None,
+          'drive': 'saturator',
           'tape': 'tape', 'air': 'utility', 'presence': 'eq', 'exciter': 'exciter', 'chorus': 'chorus',
           'double': 'microshift', 'width': 'width', 'dimension': 'dimension', 'echo': 'delay'}
 """Stage -> engine fx type (None: a list of fx given by the preset)."""
-ORDER = ('tone', 'catch', 'comp', 'amp', 'drive', 'tape', 'presence', 'exciter', 'chorus', 'double', 'width',
-         'dimension', 'echo', 'air')
+ORDER = ('tone', 'catch', 'comp', 'deess', 'amp', 'drive', 'tape', 'presence', 'exciter', 'chorus', 'double',
+         'width', 'dimension', 'echo', 'air')
 """The shared hero chain in signal order (a preset may reorder: the darksynth drives before its eq; 'air' is always
 last)."""
 DYNAMIC_STAGES = ('catch', 'comp', 'amp', 'drive', 'tape')
@@ -284,6 +287,8 @@ def infer(sound) -> Preset:
     """The preset for a sound: a registered hero patch -> its preset; else the words of its patch name ('violin' ->
     strings, 'trumpet' -> brass ...); a va / dx7 instrument -> synth; else generic."""
     _load()
+    if getattr(sound, '_singer', None) and 'vocal' in PRESETS:     # a sung vocal track (agentsound.singer)
+        return PRESETS['vocal']
     name = _sound_name(sound)
     if name:
         for p in PRESETS.values():
@@ -547,6 +552,9 @@ class HeroInfo:
         if not self.options.get('throws') or not self.echo:
             return
         notes = sorted(t._notes, key=lambda n: n.start)
+        if getattr(t, '_singer', None):         # a sung vocal: its phrases as sung, not the takes' trigger notes
+            from .singer import phrase_notes
+            notes = phrase_notes(t)
         if not notes:
             self.compile_log.append("throws: the track plays nothing")
             return
@@ -651,7 +659,8 @@ def hero(sound=None, family=None, *, genre=None, bed=(), competitors=(), section
     Instrument, family=...) -> a Patch.
     family: a preset / family / alias - 'sax', 'piano', 'piano_pop', 'piano_strings', 'guitar', 'guitar_clean',
     'guitar_heavy', 'synth', 'darksynth', 'piano_synth', 'strings' (violin), 'brass' (trumpet), 'woodwind' (flute),
-    'voice' (choir), 'organ', 'generic'; None: inferred from the sound (heroes.infer).
+    'voice' (choir), 'vocal' (a sung lead vocal: agentsound.singer), 'organ', 'generic'; None: inferred from the
+    sound (heroes.infer).
     genre: a mixer profile ('pop', 'rock', 'film', 'synthwave', 'jazz', 'classical' ...): its bed duck, lead ride and
     dip depths win over the preset's. bed: tracks / buses that duck and get carved under the hero; competitors:
     tracks that get a static presence dip; sections: the hook sections the hero is ridden up in (None: the sections

@@ -150,6 +150,7 @@ class Library(unittest.TestCase):
 
 PRESETS = {'sax', 'piano', 'piano_pop', 'piano_strings', 'guitar', 'guitar_clean', 'guitar_heavy', 'synth',
            'darksynth', 'piano_synth', 'strings', 'brass', 'woodwind', 'voice', 'organ', 'generic'}
+TRACK_ONLY = {'vocal'}   # presets without a library patch: they wrap a track's own sound (a sung vocal: agentsound.singer)
 FAMILIES = {'sax', 'piano', 'guitar', 'synth', 'piano_synth', 'strings', 'brass', 'woodwind', 'voice', 'organ',
             'generic'}
 
@@ -163,8 +164,8 @@ LEGACY = {
     'sampled/hero_piano': 'eeaa092142450e02',
     'sampled/hero_piano_pop': 'ac2ecfbba6c4c5eb',
     'layered/hero_piano_strings': 'fed7abfc43adc3a3',
-    'layered/hero_guitar': '8c1c62bbb46f3c3a',
-    'sampled/hero_guitar_clean': '6642d2f797248196',
+    'layered/hero_guitar': 'b910a718a4ce7859',            # v2: the tube amp (Plexi lead), the rock pass
+    'sampled/hero_guitar_clean': 'dca2f3cf759eb65c',      # the tube amp's blues voicing (the rock pass)
     'layered/hero_guitar_heavy': 'ac1f1426caa05162',      # v2: the tube amp + neck pickup (kestrel-bay TONE.md)
     'hero/synth_lead': '9fd515a86ade6c09',
     'hero/synth_piano': '51b64ff5ea088fe4',
@@ -216,7 +217,7 @@ def _engine():
 
 class WrapperPresets(unittest.TestCase):
     def test_presets_register(self):
-        self.assertEqual(set(heroes.presets()), PRESETS)
+        self.assertEqual(set(heroes.presets()), PRESETS | TRACK_ONLY)
         self.assertEqual({heroes.get_preset(n).family for n in PRESETS}, FAMILIES)
         for n in PRESETS:
             with self.subTest(preset=n):

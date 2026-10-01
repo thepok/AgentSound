@@ -16,6 +16,8 @@ python -m agentsound dx7 [search]                     # DX7 ROM voice names
 python -m agentsound sf2 [search] [--samples]         # SoundFont presets (bank:program) / raw samples
 python -m agentsound voices                           # Windows text-to-speech voices (for the vocoder)
 python -m agentsound speak "neon lights" --out x.wav [--voice zira] [--rate -2] [--ssml]
+python -m agentsound voicebanks [--check]                # the singing voicebanks (licence, range, modes), the WSL backend
+python -m agentsound lyrics "Hold - on to the night"     # how lyrics are sung: words -> syllables -> notes
 python -m agentsound master songs/neon-arcade [--ref ref.opus] [--platform streaming] [--render] [--check]   # mastering
 ```
 
@@ -197,6 +199,17 @@ fx.convolver(ir='samples/<pack>/Hall.wav')          # impulse response (IR WAV):
 fx('eq', {'low.gain': 2, 'high.gain': 1.5})         # dict form for any param name
 ```
 
+**Guitar and bass amps.** Every DI guitar of the library runs ONE amp: `agentsound.patches.sampled_guitars.amp(kind=
+'rock', *, cab=None, mic=None, **knobs)` -> `[amp, convolver, eq 'mic']` - the engine's tube `amp` (cascaded triode
+stages, the TMB tone stack, a sagging push-pull power amp; docs/PARAMS.md) with a voicing (`AMPS`: clean - one-stage
+Fender, blues - edge of breakup, crunch - two-stage British at gain 5, rock - a cranked Plexi, metal - TS boost + four
+stages, scooped, lead - the hot-rodded lead channel), any knob changed (`gain=`, `mid=`, `presence=`, `master=`,
+`sag=`, `boost=`, `tight=` ...), into its cabinet IR (the `cab/*` patches; `cab=` any of them) and a mic roll-off.
+The band presets (`bandlib.rock.amp` is the same function), the amped `sampled/*_guitar` patches and the guitar heroes
+use it. The bass rig: `sampled_guitars.bass_rig(mix=0.35, lp=4500, **knobs)` -> `[amp, eq 'cab']` - an SVT-style head
+whose `mix` blends the time-aligned DI under the amp (the DI carries the lows and the pick, the amp growls in the mids:
+`tight` 180 Hz) - the rock_band bass. `fx.amp(..., mix=0.5)` is that blend on any amp.
+
 The Python layer passes params through; the engine validates them strictly (`python -m agentsound params va`).
 `sidechain` and `name` are the only reserved FX keywords (`name` labels an effect for automation).
 The va's `mods` param is the one structured param: a list of modulation routes (see VA modulation matrix).
@@ -352,18 +365,19 @@ classical: no ride). The mixer treats a hero track as the lead (`mixer.infer_rol
 |---|---|---|---|---|---|
 | `sax` | Weresax alto + 2 MTG alto takes (-10 / -10.5 dB, +9 / -8 ct, 17 / 26 ms) + muted MTG tenor -12 st | -2.5 dB 650 Hz, -4 dB 1.3 kHz; 3:1 -31 dB 25 ms; tube 9 dB; +2 dB 3 kHz, +3 dB 8 kHz; exciter | hero_plate -14, hall -16, echo -24 -> -5 | 2.5 / 4 @ 2.5 kHz / +2 / -2 | -2.6 |
 | `piano` (`piano_pop`, `piano_strings`) | Salamander key split (hammers 0.5 / 0.15; + VPO strings -14 dB 70 ms) | -3 dB 280 Hz, +2.5 dB 2 kHz, +3 dB 10 kHz; catch 3:1 5 ms; glue rms 2:1 30 ms; tape; width 1.2; Dimension-D | plate -7, hall -16, echo -60 -> -3 | 2.5 / 2 @ 2.5 kHz / +1 / -2 | 2.2 (3.2, 2.6) |
-| `guitar` (`guitar_clean`, `guitar_heavy`) | FSBS Strat DI in 5 velocity zones through Plexi / 4x12 (clean: one sampler + combo; heavy v2: a neck-pickup DI in 4 zones through the engine's tube `amp` (3 stages, TS push, mid 7, presence 8) + 4x12 IR, + amped lead double -7 dB; its eq only hp 80 / lp 7.5 kHz, tape without drive) | hp 150, -3.5 dB 3.8 kHz, lp 6.8 kHz; tape; microshift 7 ct; own dotted-8th echo | hall -12, plate -18; throws on fx.echo.mix | 2.5 / 2.5 @ 2 kHz / +1 / -2 | -1.0 (-6.9, -3.8) |
+| `guitar` (`guitar_clean`, `guitar_heavy`) | FSBS Strat DI (rolled-back pickup) in 5 velocity zones through the tube `amp` as a cranked Plexi lead channel (2 stages, TS push, master 6) / 4x12 (clean: one sampler + the tube amp's blues voicing + 1x12; heavy v2: a neck-pickup DI in 4 zones through the engine's tube `amp` (3 stages, TS push, mid 7, presence 8) + 4x12 IR, + amped lead double -7 dB; its eq only hp 80 / lp 7.5 kHz, tape without drive) | hp 90, -1 dB 260 Hz, lp 7.5 kHz; tape without drive; microshift 7 ct; own dotted-8th echo | hall -12, plate -18; throws on fx.echo.mix | 2.5 / 2.5 @ 2 kHz / +1 / -2 | -4.5 (-9.4, -3.8) |
 | `synth` (`darksynth`) | two-saw voice + square octave -9 dB (G#4 up) + supersaw halo -10 dB (dark: sync lead + driven saw octave) | -3 dB 420 Hz, -4.5 dB 3.6 kHz, +2.5 dB 9.5 kHz; rms 2:1 25 ms; tape; Juno I; microshift 9 ct (dark: tube 8 dB first) | plate -12, hall -14, echo -11 -> -4 | 2.5 / 2 @ 1.8 kHz / +1 / -2 | 1.9 (4.6) |
 | `piano_synth` | piano_lead + poly saw voice -6 dB (velcurve 1.6) | -1.5 dB 3.3 kHz, +1.5 dB 9.5 kHz; tape; microshift 7 ct | plate -12, hall -14, echo -12 -> -4 | 2.5 / 2 @ 1.8 kHz / +1 / -2 | -1.5 |
 | `strings` (violin) | sampled/solo_violin (VSCO 2); takes: VPO violins -12 dB; octave: SSO cello | -1.5 dB 500 Hz / 1.1 kHz / 3.8 kHz; 1.8:1 -21 dB 25 ms; tape; +1.5 dB 2.8 kHz, +2 dB 9 kHz | hero_plate -16, hall -9, echo -28 -> -12 | 1.5 / 3 @ 2.8 kHz / +1 / -1.5 | -1.1 |
 | `brass` (trumpet) | sampled/solo_trumpet (VSCO 2); takes: VPO (Iowa) trumpet x2; octave: SSO trombone | -1.5 dB 420 Hz, -2 dB 1.2 kHz, -1.5 dB 4.8 kHz; 2:1 -23 dB 20 ms; tube 6 dB; +1.5 dB 2.8 kHz, +2 dB 8.5 kHz; exciter | hero_plate -14, hall -14, echo -24 -> -8 | 2 / 3 @ 2.2 kHz / +1.5 / -2 | -1.8 |
 | `woodwind` (flute) | sampled/solo_flute (VSCO 2); takes: SSO flute; octave: clarinet | hp 200, -1.5 dB 450 Hz; 1.8:1 -21 dB 25 ms; tape; +1 dB 3 kHz, +2.5 dB 9 kHz | hero_plate -14, hall -10, echo -24 -> -9 | 2 / 3 @ 2.2 kHz / +1 / -1.5 | -0.7 |
 | `voice` (choir) | sampled/choir (VPO "ah") | -2 dB 300 Hz; 2:1 -21 dB 15 ms; tube 5 dB; +2 dB 3.2 kHz, +3 dB 10 kHz; exciter; vocal doubler 9 ct | hero_plate -12, hall -14, echo -20 -> -6 | 2.5 / 3 @ 3 kHz / +1.5 / -2 | -2.5 |
+| `vocal` (a sung vocal) | the vocal track's own takes (agentsound.singer; no library patch) | hp 90, -2 dB 280 Hz, -1 dB 1 kHz; 3:1 -22 dB 8 ms; deesser 7 kHz -8 dB; tube 3 dB; +2 dB 3.5 kHz, +2.5 dB 11 kHz | hero_plate -12, echo -20 -> -6 | 2.5 / 3 @ 3 kHz / +1.5 / -2.5 | 0 |
 | `organ` | sampled/tonewheel_organ (+ its Leslie) | -2 dB 250 Hz, +1 dB 800 Hz; 2:1 -21 dB; tube 8 dB; +1.5 dB 2.5 / 8 kHz | hall -14, echo -26 -> -10 (no plate) | 2 / 2.5 @ 1.5 kHz / +1 / -2 | -0.2 |
 | `generic` | sampled/solo_cello (any other sound) | hp 60, -2 dB 300 Hz; 1.8:1 -21 dB 20 ms; tape; +1.5 dB 2.8 kHz, +2 dB 9 kHz | hero_plate -16, hall -12, echo -24 -> -8 | 2.5 / 3 @ 2.5 kHz / +1 / -2 | -1.6 |
 
-Aliases: violin / fiddle -> strings, trumpet -> brass, flute -> woodwind, choir / vocal / vox -> voice, hammond / b3
--> organ, synth_lead -> synth, synth_piano -> piano_synth, darksynth_lead -> darksynth. `heroes.presets()`,
+Aliases: violin / fiddle -> strings, trumpet -> brass, flute -> woodwind, choir / aah -> voice, vox / lead_vocal /
+sung -> vocal (a vocal track of agentsound.singer infers it), hammond / b3 -> organ, synth_lead -> synth, synth_piano -> piano_synth, darksynth_lead -> darksynth. `heroes.presets()`,
 `heroes.get_preset(name)` (`.chain`, `.mix`, `.space`, `.play`, `.measured`), `heroes.PRESETS`. Generic vs
 family-specific: the stage vocabulary and order, `heroes.MIX_DEFAULTS` / `SPACE_DEFAULTS`, the mix / ride / throw
 logic are shared; frequencies, amounts, sources, sends and mix depths are per preset.
@@ -604,6 +618,13 @@ ped = s.track('pedal', inst.organ('samples/lars-palo-burea-church', stops=['Subb
 vc = s.track('cello', inst.multisample('samples/philharmonia-all/cello', match=['_1_', 'arco-normal'], release=0.4))
 ```
 
+**Velocity calibration** of a sampled kit: `kits.velocity_map(ins, {key: [(velocity, dB), ...]})` re-levels its
+velocity layers per key in place (each layer's gain and velcurve follow the correction at its own edges) - for packs
+whose layers were recorded at one level or whose pieces are out of balance. `sampled/big_rusty_kit` and the band
+presets' Big Rusty use `patches.sampled_drums.BIG_RUSTY_VELOCITY`: snare and toms measured layer by layer and put on the
+kick's natural curve (the snare's layers 2-4 sat within 4 dB, the toms 5-8 dB over the snare at the same velocity;
+now the snare rises smoothly and the toms sit 1-2.5 dB over it at every velocity).
+
 **inst.kit(source, map=None, ...)** - `source`: a folder (searched recursively; folder names count as hints:
 tidal-style `bd/ sd/ hh/ oh/ cp/ cr/ lt/ mt/ ht`), a Hydrogen kit (folder with `drumkit.xml`), a DrumGizmo kit (its
 folder or kit `.xml`), or a list of WAV files.
@@ -681,6 +702,127 @@ Library patches built this way (lazy: a missing pack fails at use with its fetch
 `sampled/studio_kit room_kit forzee_kit pacific_kit`, Fairlight CMI `sampled/fairlight_orch5 fairlight_choir
 fairlight_aahs fairlight_strings fairlight_brass`, organ `sampled/church_organ church_organ_full church_organ_flutes
 organ_pedal` (agentsound/patches/sampled_kits.py, sampled_synths.py).
+
+## Vocals: the singer (`agentsound.singer`, `agentsound.lyrics`, `agentsound.voicebank`)
+
+A SUNG lead vocal with lyrics, driven from the score: a licensed DiffSinger voicebank sings the line, a player with
+micro-performance (like the hornist) shapes it, and the vocal is produced like a record's lead vocal. Rule from the
+user's feedback: realism first - never "a child pressing key by key".
+
+```python
+from agentsound import singer
+mem = singer.Memory()                                   # the spice budget (falls, doits, big scoops) song-wide
+vox = singer.sing(s, MELODY, "City lights are calling out -, each window gold and blue.", at=verse,
+                  voice='hanami', style='pop', seed=3, memory=mem)      # creates track 'vocal'
+hero(vox.track, family='vocal', bed=[pad], competitors=[piano])          # the vocal chain + mix rules
+for d in (singer.double(vox, pan=-0.55), singer.double(vox, pan=0.55)):  # doubles: SUNG again, other takes
+    hero(d.track, family='vocal', ride=False, throws=False, duck=False, carve=False, dips=False)
+harm = singer.harmony(vox, steps=2, key='C major')                       # a third above, sung (not shifted)
+print(vox.describe())                                                    # the moves, beat by beat
+```
+
+**The line**: a Clip, a notation `Line` or a notation string (`'E4/4^vib G4/8 A4 C5/2.^peak'`: its `^scoop ^fall ^doit
+^bend ^vib ^shake` gestures become the singer's moves at those notes, `^peak` notes its hook peaks). Its top note per
+onset is sung. Velocities: `vel=(lo, hi)` humanize.touch phrase arcs (default: the style's), `vel=False` keeps the
+line's.
+
+**The lyrics** (`agentsound.lyrics`) - one token per note, whitespace between tokens (the syntax `notation` attaches):
+
+| token | sings |
+|---|---|
+| `word` | one note per syllable (`tonight` takes two notes) |
+| `to-geth-er` | a word split by hand, one piece per note (when the dictionary disagrees, the pieces win, piece by piece, with a warning) |
+| `-` | melisma: the previous vowel continues on this note (a run) |
+| `_` | hold: the previous syllable continues (a tie) |
+| `word{hh ah l ow}` | the phonemes by hand (ARPAbet, stress digits optional) |
+| `,` `.` `!` `?` after a word | a phrase mark: a preferred breath spot |
+
+G2P: CMUdict (bundled, `third_party/cmudict`, with lexical stress), then the voicebank's own dictionary, then
+letter-to-sound rules (a warning names the guess). Syllables by the maximal-onset principle. `lyrics.align(line, text)`
+-> one `Sung` per note; `lyrics.check(line, text)` -> the lyricist's warnings (a stressed syllable on a weaker beat
+than an unstressed one, a closed vowel - ih, uh - on a long or top note, a run on a closed vowel, G2P guesses);
+`python -m agentsound lyrics "..." [--voice hanami]` prints words -> syllables -> notes. The lyricist role:
+`roles/lyricist.md`.
+
+**sing() options**: `voice` (a voicebank id), `style` (`pop`, `ballad`, `rock`; any STYLES key as an override:
+`vib_ct=35`, `fall=0` ...), `mode` (a fixed voice mode: `'core'` / `'soft'` / `'power'` or a bank speaker such as
+`'tiger_glam'`; default: the dynamics blend core / soft / power per frame), `transpose`, `moves=False` (the robotic
+baseline), `pitch` (`'hybrid'` default: the voicebank's own pitch predictor - transitions learned from the recorded
+singer - with the player's moves on top, its own wobble smoothed under a planned vibrato; `'player'`: the player's
+synthetic curve; `'model'`: the predictor alone), `memory`, `peaks`, `take` / `seed` (another take sings the same part
+with other human variation), `formant` (semitones of the bank's gender / key-shift embedding), `offset_ms` (a double's
+lag), `track_id`, `pan`, `gain_db`, `split_s` (rests at least this long start a new take file, default 0.6 s).
+
+**The moves** (`singer.MOVES`, logged in `vox.moves`, printed by the build as `singer ...` lines):
+
+| move | what the singer does |
+|---|---|
+| consonants | before the beat: the onset cluster ends where the vowel starts (on the beat + the timing feel); its length is the voicebank's duration-model prediction x the style's `cons`, at most `cons_share` of the note before |
+| hold / link | the vowel holds through long notes, the coda closes at the end; a word-final consonant links onto a vowel-initial next word in legato ("hol-don") |
+| glide | portamento between notes (S-curve 40-180 ms, faster in runs, overshoot on leaps up); in `hybrid` the model's own |
+| scoop | into phrase openers, leaps up, hook peaks (40-120 cents; big ones on the SPICE budget) |
+| vibrato | late onset (~0.3 s), grows over ~0.5 s, 5-6 Hz with wobble; deeper on peaks; long notes (>= 1.2 s) nearly always |
+| fall / doit | phrase ends (SPICE budget: `spice_every` bars apart, song-wide with a Memory) |
+| release / taper | the phrase end: the air runs out, the pitch sags a little |
+| swell / messa_di_voce / accents | the air over held peaks and long notes; note-to-note dynamics from the velocities |
+| breath | an audible breath (the bank's `AP`) in every gap >= 0.25 s, deeper before long phrases |
+| colour | the voice mode follows the dynamics: soft = the bank's soft mode (breathier), loud / high = its power mode |
+| timing / drift | the style's lay-back + correlated jitter on the vowel onsets; a few cents of slow pitch drift |
+
+**How it renders**: when the song compiles (a compile hook, so the tempo map is final), every phrase not yet cached
+is rendered in two batched WSL calls per voicebank (duration prediction, then synthesis; `pitch='hybrid'`/`'model'`
+adds the pitch model) and cached by a hash of everything that shapes it in `<song folder>/samples/vocals/<voice>/`
+(git-ignored; `<take>.json` holds the spec and the timeline: tokens, frames, pitch / gain / voice-mode curves). One
+WAV per phrase (its breath and consonants included) is a one-shot sampler zone; one note triggers it at the right
+moment (a take that would start before beat 0 starts at 0 and skips its head: zone `offset`). The trigger notes last
+as long as the sung phrase, so the hero's echo throws find the phrase ends. `singer.voice(bank)` is the vocal track's
+instrument when you create the track yourself (`s.track('vocal', singer.voice('hanami'))`); its level is the voice's
+calibration (manifest `level_db`: the part lands near -18 LUFS like a library patch).
+
+**The vocal hero** (`hero(track, family='vocal')`, `agentsound/patches/hero_vocal.py`): high-pass 90 Hz, -2 dB mud at
+280 Hz, 3:1 vocal compressor (8 ms), the `deesser` (engine effect: split band above 7 kHz, up to -8 dB; a male voice:
+`deess={'freq': 5500}`), a touch of tube, +2 dB presence at 3.5 kHz, a +2.5 dB air shelf, the breath stage; the vocal
+plate, echo throws on phrase ends; the bed ducks and steps out of 3 kHz, competitors -2.5 dB at 3 kHz.
+
+**The ears**: the build prints `vocals ...` lines (`singer.check(report)`): intelligibility (the lead vocal owns >= 40 %
+of the mix's 2.5-6 kHz presence band), a competitor masking the words there, the vocal buried under another track in
+a section it sings, harshness (> 22 % of the vocal's energy at 2.5-6 kHz), the report's masking warnings that name
+it. The report's note-dynamics line for a vocal track reads "too few notes" (it sees one trigger per phrase): the
+dynamics live inside the takes.
+
+**Voices** (`python -m agentsound voicebanks [--check]`, `assets/voices/manifest.json`):
+
+| id | voice | modes (core / soft / power + others) | range | licence |
+|---|---|---|---|---|
+| `hanami` | Hoshino Hanami ~AI❤dol~ v1.0 (Lotte V): natural pop soprano, 2 h of English | Root / Nectar / Fragrance | F3-A5 | voicebank: commercial use OK, credit Lotte V, no reupload; its vocoder CC BY-NC-SA 4.0 (non-commercial) |
+| `tiger` | TIGER v106 (tigermeat): male pop / rock | tiger_fresh / tiger_disco / tiger_electric + vinyl, glam, mystic, royal | A2-C#5 | non-commercial only (CC BY-NC-ND 4.0 + Commons Clause; a commercial licence is sold by the rights holder) |
+
+The credits find the voicebank's `SOURCE.json` next to the takes: `out/credits.txt` names the voice and its terms,
+and the build warns "non-commercial voice" like an NC sample pack.
+
+**THE CONSENT RULE**: no cloning of real singers. A voice is used only when its manifest entry says what gives the
+right to synthesise it (`consent`: `licensed` - a voicebank whose voice provider licensed it for synthesis -,
+`synthetic`, or `own` - the user's own voice); `voicebank.check_prompt(path, kind, source)` applies the same rule to a
+zero-shot singer's reference recording (`licensed-render` of a manifest voice, `synthetic`, `own`).
+
+**Setup** (once; nothing of it is in git):
+1. The voicebank: download it from its official source (the manifest's `url`; Hanami: the link on
+   https://diffsinger.miraheze.org/wiki/Hanami_Hoshino, TIGER: its GitHub release) and unpack it so that
+   `assets/voices/<id>/dsconfig.yaml` exists (`$AGENTSOUND_VOICES` points elsewhere, e.g. one copy for every git
+   worktree).
+2. The backend in WSL (`~/services/singing`, `$AGENTSOUND_SINGING_DIR`; distro `$AGENTSOUND_SINGING_DISTRO`, default
+   Ubuntu): `uv venv --python 3.12 ~/services/singing/.venv && uv pip install --python ~/services/singing/.venv/bin/python
+   "onnxruntime-gpu[cuda,cudnn]" numpy pyyaml`. The runner is `agentsound/voicebank_runner/ds_runner.py` (called
+   from the repo; the voicebanks are OpenUtau DiffSinger packages - ONNX acoustic / duration / pitch models and their
+   own vocoder - so it drives the ONNX graphs directly, the way OpenUtau does). It uses the GPU (CUDA) unless other
+   processes hold more than 3 GB of it (a Breeze narration), then the CPU; `$AGENTSOUND_SINGING_PROVIDER=cpu` forces
+   the CPU (~3.5x slower, ~6 s per take, but bit-reproducible takes: the diffusion's noise is seeded per job, which
+   onnxruntime honours only on the CPU). Either way the cached takes make every later render identical.
+3. `python -m agentsound voicebanks --check`.
+
+Complete example with A/B files: `songs/_demo_vocal` (`python songs/_demo_vocal/make_ab.py`: `vocal_demo.mp3` produced
+over a band, `vocal_dry.mp3`, `ab_robotic.mp3` vs `ab_singer.mp3`, `ab_pitch_model.mp3`, `ab_player_pitch.mp3`,
+`ab_tiger.mp3`).
 
 ## Vocoder and speech (robot voices, no singer)
 
@@ -2080,6 +2222,42 @@ bpm, strings=3)` (dead strings, then the note), `harmonic(pitch, dur, bpm, art=)
 flageolets on G#5-G7), `tremolo_pick(pitch, dur, bpm, rate=12)`, `lick(chord, dur, bpm, notes=5)` (pentatonic,
 hammer / pull pairs, landing on a chord tone). Bends move every sounding note of a track: keep them on a
 monophonic lead track (the rock_band / power_ballad / pop_band `lead` roles are mono='legato').
+
+**Riffs and the wall** (`agentsound/guitar_riff.py`, re-exported here). A rock part is a RIFF, not a strummed
+progression: `riff(spec, *, bpm, energy=None, section=None, kind=None, grid='1/8', tuning='standard', palm=None,
+vel=None, strum_ms=None, timing_ms=4, seed=0, take=None, length=None, at=None, end=None, into=None, memory=None,
+fill_every=4)` -> `Arrangement` (`.take(n)`, `.cell()`, `.moves`). The spec is one step per grid cell: a note name
+(`E`, `F#`, `Bb`; without an octave the lowest such pitch on the low string - E2..D#3, in drop D from D2 -; or `D3`),
+`-` hold, `.` rest (both hands damp), `x` a dead scratch; marks `>` accent, `!` let ring, `p` palm mute, `^` a choked
+hit. The SAME riff is played by the section's energy (`RIFF_LEVELS`): below 0.5 (a verse) single notes, all
+palm-muted but `!`; below 0.75 (a pre-chorus) power chords, the short notes chugged, accents and long notes open;
+above (a chorus) power chords + octave ringing open, only repeated short notes chugged - `kind=` ('single' 'power'
+'power8' 'octave') and `palm=` override. Downstrokes on the beat grid, upstrokes on the off 16ths, a chug takes the two
+low strings, velocities by the beat (downbeat > beat > & > e/a, accents at the top of the range), human timing.
+`end=` 'choke' / 'slide' / 'build' / 'ring' (or `into=` a bigger section: one is chosen, budgeted with `memory=` like
+the rhythm hand's fills). The vocabulary around it: `pedal(moving, pedal_note='E', rhythm='PPM', bars=2)` -> a spec
+(an open-string pedal chugging against accented moving notes), `hits(cell, root, bpm, grid='1/16', kind='power8')` ->
+stops in unison with the drums on the drummer's cell (`'x..x..x...x.x...'`: 'x' choked, 'X' ringing),
+`build_up(root, dur, bpm)` -> the pre-chorus chug build (8ths -> 16ths, crescendo, the palm lifting, an open last
+chord), `cell(part, grid)` -> the part's rhythm as a cell string (for `drummer.DrumMotif.make(cell=...)` and the
+bassist's `kick=`). `double(part, tracks, at, drift_ms=7, drift_every=2, jitter_ms=2.5, vel=5, cents=4, seed=0)` plays a
+part as separate PERFORMANCES on 2+ tracks - the double-tracked wall: an Arrangement is re-played per track
+(`take(k)`), a Clip re-performed; each take drifts +-drift_ms around the beat on a smooth curve (rushing / dragging,
+not a fixed offset), +-jitter_ms per stroke, its own velocities and a slow tuning drift (an 'instrument.pitchbend'
+lane, +-cents, a different offset per take); the tracks' own sampler seeds pick other round robins and the band
+presets' gtr_l / gtr_r are two different guitars into two different amps:
+
+```python
+part = gtr.riff('E> - . E . . G> - - . A - G E - . | D> - . B - . A - . . E . G A# B> -', bpm=116, grid='1/16',
+                section=verse, length=16)              # verse: palm-muted single notes; chorus: open power8
+gtr.double(part, (b.gtr_l, b.gtr_r), verse)          # the wall: two takes, hard left / right
+drummer.DrumMotif.make(cell=part.cell(), ...)         # the drums on the riff's rhythm
+```
+
+Palm mutes on the DI guitars are an emulation (no installed pack has DI palm-mute samples: FSBS, Emily, Black and
+Green, Shiny), measured against real amped chugs (sampleradar-heavy-metal-guitar): `sampled_guitars.PALM` - a resonant
+900 Hz low-pass with a pick envelope, a 0.2 s decay, no sustain: about as loud and as bright as the open chord, the thump kept,
+-4 / -22 dB at 100 / 200 ms through a driven amp (the real chugs: -4..-16 / -21..-35).
 
 Reused: `humanize.touch` (lead dynamics), `articulation.vibrato_points` / `articulation._mark` / `available` (vibrato,
 articulation and glide marks, the guitar's keyswitch names), `patterns` (Clip, Note, the progression loop), `theory`

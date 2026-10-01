@@ -13,6 +13,7 @@ AR.md.
 """
 from agentsound import *
 from agentsound import bands, bassist, drummer, mastering, patches, soloist
+from agentsound import guitarist as gt
 from agentsound.humanize import touch
 from agentsound.patches import hero_guitar as hg
 
@@ -24,7 +25,7 @@ COVER = {'style': 'rock'}
 # solo (they are the whole band there: the climax lands near the band's level), the bass ducked deeper under the kick,
 # less sub on the kit, the lead's presence peak tamed
 MIX = {
-    'trim': {'drums': 2.0, 'bass': 1.5},
+    'trim': {'drums': 2.0, 'bass': 1.0},
     'ride': {'lead': {'B2': -1.5}, 'drums': {'solo': 3.5}},
     'duck': [{'targets': ['bass'], 'key': 'drums', 'pitches': 'kick', 'depth': 4, 'attack': 2, 'release': 110}],
     'eq': {'drums': [{'freq': 42, 'gain': -2.5, 'q': 0.8}], 'lead': [{'freq': 3300, 'gain': -2.0, 'q': 1.0}]},
@@ -33,6 +34,8 @@ MIX = {
 BPM = 116
 HANDS = 'master'                        # one drummer through the song: an even weak hand, consistent heights, fast
 RIFF_CELL = 'x..x..x...x.x...'          # the riff's rhythm = the drum solo's motif
+# the guitars' riff on the riff player's 16th grid (guitarist.riff): E2 G2 A2 / D3 B2 A2 ... A#2 B2
+RIFF_SPEC = 'E> - . E . . G> - - . A - G E - . | D> - . B - . A - . . E . G A# B> -'
 
 # the drum solo (40 bars): the drummer keeps time while the band's chord rings away (4 bars, by hand), then
 # soloist.solo plays the body (34 bars, the 'classic' arc: statement -> answer -> develop -> burst -> climax ->
@@ -112,13 +115,17 @@ def build() -> Song:
                 sections=[a, b_, b2, a3])
 
     # ------------------------------------------------------------------ the riff (bass + two guitars in unison)
+    # the guitars play the riff through the riff player (guitarist.riff: the same steps at each section's energy -
+    # palm-muted single notes under the head, chugged power chords in the intro / A3, open ringing power chords +
+    # octave in the riff section and the ending) as a double-tracked wall (guitarist.double: two takes, drifting
+    # timing, a tuning drift per take, the two different guitars / amps of the preset)
     rb = riff_notes()
-    rg = riff_notes(12, vel=112).chordify('power').articulate('palm', where=lambda n: n.dur < 0.5)
-    riff_spans = [(intro.bar(2), 1), (a.bar(0), 2), (a.bar(8), 2), (riff.start, 2), (a3.bar(0), 2), (end.start, 1)]
-    for at, times in riff_spans:
+    riff_spans = [(intro.bar(2), 1, 0.62), (a.bar(0), 2, 0.45), (a.bar(8), 2, 0.45), (riff.start, 2, 0.9),
+                  (a3.bar(0), 2, 0.62), (end.start, 1, 0.9)]
+    for k, (at, times, energy) in enumerate(riff_spans):
         b.bass.play(rb.articulate('staccato', where=lambda n: n.dur < 0.5), at, times=times)
-        for gtr, ms in ((b.gtr_l, 9), (b.gtr_r, 12)):
-            gtr.play(rg.strum(ms=ms, bpm=BPM, direction='alternate'), at, times=times)
+        part = gt.riff(RIFF_SPEC, bpm=BPM, energy=energy, grid='1/16', length=8 * times, seed=40 + k)
+        gt.double(part, (b.gtr_l, b.gtr_r), at, seed=k)
 
     # ------------------------------------------------------------------ harmony outside the riff
     prog_a = s.prog('C D Em B7')                  # A bars 5-8 (and 13-16)
@@ -130,33 +137,25 @@ def build() -> Song:
         bassist.arrange(prog_b, bpm=BPM, key=s.key, style='rock', part=part, kick='x.....x.x.......',
                         seed=5 if sec is b_ else 6).place(b.bass, sec)
 
-    def open_chords(roots, rhythm, vel):
-        notes = []
-        for bar, r in enumerate(roots):
-            i = 0
-            while i < len(rhythm):
-                if rhythm[i] == 'x':
-                    j = i + 1
-                    while j < len(rhythm) and rhythm[j] == '_':
-                        j += 1
-                    notes.append((bar * 4 + i * 0.5, (j - i) * 0.5 - 0.06, note(r), vel))
-                    i = j
-                else:
-                    i += 1
-        return Clip(notes, length=len(roots) * 4).chordify('power')
-
-    turn = open_chords(['C3', 'D3', 'E2', 'B2'], 'x___x_x_', 96)
-    chorus = open_chords(['C3', 'D3', 'E2', 'E2', 'C3', 'D3', 'B2', 'B2'], 'x___x_x_', 106)
-    for gtr, ms in ((b.gtr_l, 11), (b.gtr_r, 14)):
-        for at in (a.bar(4), a.bar(12), a3.bar(4)):
-            gtr.play(turn.strum(ms=ms, bpm=BPM, direction='alternate'), at)
-        gtr.play(chorus.strum(ms=ms, bpm=BPM, direction='alternate'), b_)
-        gtr.play(chorus.strum(ms=ms + 2, bpm=BPM, direction='alternate'), b2)
-        gtr.play(open_chords(['E2'], 'x_______', 112).strum(ms=ms + 14, bpm=BPM), solo.start)      # rings away
-        gtr.play(open_chords(['B2'], 'x_______', 108).strum(ms=ms + 6, bpm=BPM), end.bar(2))
-        gtr.play(open_chords(['E2'], 'x_', 116).strum(ms=ms + 4, bpm=BPM), end.bar(3))
-        # loud-quiet: the riff under the head sits back, the choruses open up
-        gtr.automate('gainDb', per_section({intro: -2, a: -6, b_: -1, riff: 0, solo: -2, b2: 0, a3: -4, end: 0},
+    # the changes on the riff player's grid: a held chord, hits on 3 and 4 (the turn drives, the chorus rings open)
+    turn = 'C> - - - C - C - | D> - - - D - D - | E> - - - E - E - | B> - - - B - B -'
+    chorus = turn.replace('E> - - - E - E - | B> - - - B - B -',
+                          'E> - - - E - E - | E> - - - E - E - | C> - - - C - C - | D> - - - D - D - | '
+                          'B> - - - B - B - | B> - - - B - B -')
+    for k, at in enumerate((a.bar(4), a.bar(12), a3.bar(4))):
+        gt.double(gt.riff(turn, bpm=BPM, energy=0.6 if at != a3.bar(4) else 0.7, seed=60 + k), (b.gtr_l, b.gtr_r),
+                  at, seed=10 + k)
+    gt.double(gt.riff(chorus, bpm=BPM, energy=0.85, seed=70), (b.gtr_l, b.gtr_r), b_, seed=20)
+    gt.double(gt.riff(chorus, bpm=BPM, energy=0.95, seed=71), (b.gtr_l, b.gtr_r), b2, seed=21)
+    # the band's last chords: the solo's first chord rings away, the ending's B and the final E
+    gt.double(gt.riff('E>! - - - - - - -', bpm=BPM, energy=0.9, grid='1/2', seed=80), (b.gtr_l, b.gtr_r),
+              solo.start, seed=30)
+    gt.double(gt.riff('B>! - - - - - - -', bpm=BPM, energy=0.9, grid='1/8', seed=81), (b.gtr_l, b.gtr_r),
+              end.bar(2), seed=31)
+    gt.double(gt.riff('E>! -', bpm=BPM, energy=0.95, grid='1/2', seed=82), (b.gtr_l, b.gtr_r), end.bar(3), seed=32)
+    for gtr in (b.gtr_l, b.gtr_r):
+        # loud-quiet: the riff under the head sits back (palm-muted single notes), the choruses open up
+        gtr.automate('gainDb', per_section({intro: -2, a: -4, b_: -1, riff: 0, solo: -2, b2: 0, a3: -3, end: 0},
                                            glide=0.5))
 
     # the bass: the solo's first chord rings, the ending

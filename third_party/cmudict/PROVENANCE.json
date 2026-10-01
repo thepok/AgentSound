@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "component": "CMU Pronouncing Dictionary (CMUdict)",
+  "upstream": {"name": "cmudict (PyPI package 1.1.3, data of github.com/cmusphinx/cmudict)", "url": "https://pypi.org/project/cmudict/1.1.3/"},
+  "license": "BSD-2-Clause (Copyright (C) 1993-2015 Carnegie Mellon University)",
+  "licenseFile": "third_party/cmudict/LICENSE",
+  "auditDate": "2026-10-01",
+  "use": "agentsound.lyrics: English words -> ARPAbet phonemes with lexical stress (the singer's G2P); bundled so a song's syllables are the same on every machine",
+  "files": [
+    {"upstreamPath": "cmudict/data/cmudict.dict", "localPath": "third_party/cmudict/cmudict.dict", "license": "BSD-2-Clause", "localChanges": "None."},
+    {"upstreamPath": "cmudict/data/LICENSE", "localPath": "third_party/cmudict/LICENSE", "license": "BSD-2-Clause", "localChanges": "None."}
+  ]
+}

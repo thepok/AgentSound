@@ -241,9 +241,10 @@ def apply_analysis(render: dict, song_analysis=None, profile: str | None = None,
 
 
 def hero_lines(song) -> list[str]:
-    """What the hero wrapper did in the song (agentsound.heroes: sound, space, duck, carve, dips, rides, throws)."""
-    from . import heroes
-    return [f"hero      {x}" for x in heroes.log_lines(song)]
+    """What the hero wrapper did in the song (agentsound.heroes: sound, space, duck, carve, dips, rides, throws),
+    and what the singer sang (agentsound.singer: voice, style, moves)."""
+    from . import heroes, singer
+    return [f"hero      {x}" for x in heroes.log_lines(song)] + [f"singer    {x}" for x in singer.log_lines(song)]
 
 
 def compile_song(song, song_py: Path | None = None) -> dict:
@@ -719,6 +720,9 @@ def _render_and_report(song, render: dict, out_dir: Path, json_name: str, args, 
     for line in image_lines(rdir / 'report.json'):
         print(line)
     print(summarize_report(rdir / 'report.json', hide=getattr(song, '_ghosts', {})))
+    from . import singer
+    for line in singer.report_lines(song, rdir / 'report.json'):
+        print(line)
     return 0
 
 
@@ -1310,6 +1314,70 @@ def cmd_voices(args) -> int:
     return 0
 
 
+def cmd_voicebanks(args) -> int:
+    from . import voicebank as vb
+    try:
+        vs = vb.voices()
+    except vb.VoicebankError as e:
+        raise CliError(str(e)) from None
+    if args.json:
+        print(json.dumps(vs, indent=1, ensure_ascii=False))
+        return 0
+    from .delivery import license_class
+    for v in vs:
+        cls = license_class(v.get('license', ''))
+        print(f"{v['id']:<8} {'installed' if v['installed'] else 'MISSING  '} {v.get('gender', ''):<7} "
+              f"{'-'.join(v.get('range', [])):<8} modes {', '.join(f'{k}={m}' for k, m in v.get('modes', {}).items())}")
+        print(f"         {v['title']}  [{cls}{' - NON-COMMERCIAL' if cls == 'nc' else ''}]  consent: {v['consent']}")
+        print(f"         licence: {v.get('license', '?')}")
+        if not v['installed']:
+            print(f"         install: download {v.get('url')} (official source: {v.get('page')}), unpack so that "
+                  f"{v['path']}/dsconfig.yaml exists")
+    print(f"voices folder: {vb.voices_dir()} ($AGENTSOUND_VOICES); singing backend: WSL {vb.SINGING_DIR}/.venv "
+          f"($AGENTSOUND_SINGING_DIR); use: singer.sing(s, line, lyrics, voice='<id>')")
+    if args.check:
+        ok, why = vb.runner_ok()
+        print(f"backend: {'ok' if ok else 'UNAVAILABLE - ' + why}")
+        if ok:
+            for v in vs:
+                if not v['installed']:
+                    continue
+                bank = vb.get(v['id'])
+                try:
+                    info = vb.run(bank, [{'op': 'info'}], work=REPO / '.scratch' / 'voicebanks', log=None)[0]
+                except vb.VoicebankError as e:
+                    print(f"{v['id']}: FAILED - {e}")
+                    continue
+                print(f"{v['id']}: {len(info['phonemes'])} phonemes, speakers {', '.join(info['speakers'])}, "
+                      f"{info['sample_rate']} Hz, models {', '.join(k for k, x in info['has'].items() if x)}")
+    return 0
+
+
+def cmd_lyrics(args) -> int:
+    from . import lyrics as ly
+    from . import voicebank as vb
+    extra = None
+    if args.voice:
+        b = vb.get(args.voice)
+        extra = b.dictionary() if b.installed() else None
+    if not ly.cmudict_path().is_file():
+        print(f"(no CMUdict at {ly.cmudict_path()}: words are guessed by letter-to-sound rules)")
+    try:
+        for t in ly.parse(args.text):
+            if t.kind != 'word':
+                print(f"{t.text:<16} {t.kind}: 1 note")
+                continue
+            ph, src = (t.phonemes, 'hand') if t.phonemes is not None else ly.g2p(t.text, extra)
+            syl = ly.syllabify(ph, t.text, src)
+            if t.pieces and len(t.pieces) != len(syl):
+                print(f"{t.text:<16} ERROR: split into {len(t.pieces)} pieces but it has {len(syl)} syllables")
+                continue
+            print(f"{t.text + t.mark:<16} {len(syl)} note(s)  {' . '.join(str(x) for x in syl):<40} ({src})")
+    except ly.LyricsError as e:
+        raise CliError(str(e)) from None
+    return 0
+
+
 def cmd_speak(args) -> int:
     from . import speech
     try:
@@ -1636,6 +1704,17 @@ def build_parser() -> argparse.ArgumentParser:
     v = sub.add_parser('voices', help='list the installed Windows text-to-speech voices (for speech.words / speak)')
     v.add_argument('--json', action='store_true')
     v.set_defaults(func=cmd_voices)
+
+    vbp = sub.add_parser('voicebanks', help='the singing voicebanks (assets/voices/manifest.json): installed?, '
+                                            'licence, range, modes; --check runs the WSL backend')
+    vbp.add_argument('--check', action='store_true', help='check the WSL singing backend and load every bank')
+    vbp.add_argument('--json', action='store_true')
+    vbp.set_defaults(func=cmd_voicebanks)
+
+    ly = sub.add_parser('lyrics', help='how lyrics are sung: words -> syllables (phonemes, stress) -> notes')
+    ly.add_argument('text', help="lyrics in the singer's syntax ('Hold - on to the night', to-geth-er, word{ph ...})")
+    ly.add_argument('--voice', help="also use this voicebank's own dictionary (e.g. hanami)")
+    ly.set_defaults(func=cmd_lyrics)
 
     k = sub.add_parser('speak', help='render text with a Windows voice to a WAV (trimmed, -18 dBFS: vocoder-ready)')
     k.add_argument('text', help="the words, or SSML with --ssml")

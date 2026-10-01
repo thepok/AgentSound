@@ -59,7 +59,7 @@ class TestSpaceIrPatches(unittest.TestCase):
         cabs = patches.list('cab/')
         self.assertGreaterEqual(len(cabs), 5)
         for name in cabs:
-            self.assertEqual([f.type for f in patches.get(name).fx], ['eq', 'saturator', 'convolver', 'eq'], name)
+            self.assertEqual([f.type for f in patches.get(name).fx], ['amp', 'convolver', 'eq'], name)
 
     def test_224xl_file_order_and_missing_packs(self):
         tmp = Path(tempfile.mkdtemp())

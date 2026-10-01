@@ -1759,6 +1759,115 @@ private:
 };
 
 // =============================================================================================
+// deesser: split-band sibilance control for vocals. A high-pass detector at `freq` (stereo
+// linked, peak) drives a gain reduction (threshold, ratio, at most `range` dB) with a fast
+// attack and a short release; split mode turns down only the band above `freq`
+// (y = x + (g - 1) * (x - lowpass(x)): bit-transparent while nothing is reduced), wide mode the whole
+// signal. listen = the detected band alone, for tuning freq / threshold.
+// =============================================================================================
+
+class Deesser final : public FxBase {
+    enum { Freq, Threshold, Ratio, Range, Attack, Release, Mode, Listen, kCount };
+
+    static std::vector<ParamSpec> specs() {
+        return {
+            num("freq", 2000, 16000, 6500, "Hz",
+                "Where sibilance starts: the detector's high-pass and (split mode) the edge of the band that is turned "
+                "down. Female / bright voices 6-8 kHz, male voices 4.5-6 kHz; harsh 'sh' / 'ch' 3.5-5 kHz.", false),
+            num("threshold", -60, 0, -28, "dB",
+                "Sibilance level (dBFS, peak in the band above freq) where reduction starts: set it so the s / t / sh "
+                "peaks go 3-6 dB over it and the vowels stay under."),
+            num("ratio", 1, 20, 6, ":1", "How hard the band is pushed down above the threshold: 4-8 natural, 10-20 hard."),
+            num("range", 0, 24, 8, "dB", "The most it ever takes off (6-10 keeps the s alive; more lisps)."),
+            num("attack", 0.1f, 20, 0.8f, "ms", "Clamp time: 0.3-2 ms catches the front of an s (no lookahead)."),
+            num("release", 5, 500, 60, "ms", "Recovery: 40-100 ms; longer dulls the vowel after the consonant."),
+            choice("mode", {"split", "wide"}, 0,
+                   "split: only the band above freq is turned down (the vowel stays bright); wide: the whole signal "
+                   "dips (gentler on the tone, audible as level on loud s)."),
+            toggle("listen", false, "Outputs the detected band (above freq) instead of the signal: tuning aid."),
+        };
+    }
+
+public:
+    Deesser() : FxBase("deesser", specs(), kCount) {}
+
+    void prepare(const RenderContext& ctx) override {
+        fs_ = ctx.sampleRate;
+        thrG_.prepare(fs_, kShapeTau, p(Threshold), 1e-4f);
+        ratioG_.prepare(fs_, kShapeTau, p(Ratio), 1e-5f);
+        rangeG_.prepare(fs_, kShapeTau, p(Range), 1e-4f);
+        listenG_.prepare(fs_, kGainTau, pc(Listen) ? 1.0f : 0.0f, 1e-6f);
+        for (int c = 0; c < 2; ++c) {
+            det_[c].reset();
+            band_[c].reset();
+            low_[c].reset();
+        }
+        red_ = 0.0f;
+        markSeen();
+        updateStatic();
+    }
+
+    void process(float* left, float* right, int frames, const float*, const float*) override {
+        if (paramsChanged()) {
+            thrG_.setTarget(p(Threshold));
+            ratioG_.setTarget(p(Ratio));
+            rangeG_.setTarget(p(Range));
+            listenG_.setTarget(pc(Listen) ? 1.0f : 0.0f);
+            updateStatic();
+        }
+        for (int i = 0; i < frames; ++i) {
+            const float thr = thrG_.next(), ratio = ratioG_.next(), range = rangeG_.next();
+            const double dl = det_[0].process(left[i], coef_);
+            const double dr = det_[1].process(right[i], coef_);
+            const float e = static_cast<float>(std::max(dl * dl, dr * dr));
+            const float levelDb = 3.01029995664f * std::log2(std::max(e, 1e-12f));   // 10*log10
+            const float over = levelDb - thr;
+            float want = 0.0f;
+            if (over > -kKnee) {          // soft knee 4 dB wide around the threshold
+                const float o = over < kKnee ? (over + kKnee) * (over + kKnee) / (4.0f * kKnee) : over;
+                want = std::min(o * (1.0f - 1.0f / ratio), range);
+            }
+            red_ = dsp::flush(want + (red_ - want) * (want > red_ ? attCoeff_ : relCoeff_));
+            const float g = dbToLin(-red_);
+            const float lx = listenG_.next();
+            const double bl = band_[0].process(left[i], coef_), br = band_[1].process(right[i], coef_);
+            double yl, yr;
+            if (wide_) {
+                yl = left[i] * g;
+                yr = right[i] * g;
+            } else {     // the high band as x - lowpass(x): it sums back to x exactly and stays in phase above freq
+                const double ll = low_[0].process(left[i], lowCoef_), lr = low_[1].process(right[i], lowCoef_);
+                yl = left[i] + (g - 1.0f) * (left[i] - ll);
+                yr = right[i] + (g - 1.0f) * (right[i] - lr);
+            }
+            if (lx != 0.0f) {      // listen: crossfade to the detected band (click-free when switched)
+                yl += lx * (g * bl - yl);
+                yr += lx * (g * br - yr);
+            }
+            left[i] = static_cast<float>(yl);
+            right[i] = static_cast<float>(yr);
+        }
+    }
+
+private:
+    static constexpr float kKnee = 2.0f;
+
+    void updateStatic() noexcept {
+        attCoeff_ = onePoleCoeff(fs_, p(Attack) * 0.001);
+        relCoeff_ = onePoleCoeff(fs_, p(Release) * 0.001);
+        coef_ = svfDesign(SvfMode::High, fs_, p(Freq), 0.70710678);
+        lowCoef_ = svfDesign(SvfMode::Low, fs_, p(Freq), 0.70710678);
+        wide_ = pc(Mode) == 1;
+    }
+
+    Glide thrG_, ratioG_, rangeG_, listenG_;
+    float attCoeff_{0.0f}, relCoeff_{0.0f}, red_{0.0f};
+    bool wide_{false};
+    SvfCoef coef_{}, lowCoef_{};
+    Svf det_[2]{}, band_[2]{}, low_[2]{};
+};
+
+// =============================================================================================
 // utility: gain, balance, polarity, mono
 // =============================================================================================
 
@@ -1838,11 +1947,13 @@ std::unique_ptr<Effect> createDynamicsEffect(std::string_view type) {
     if (type == "width") return std::make_unique<Width>();
     if (type == "bitcrush") return std::make_unique<Bitcrush>();
     if (type == "utility") return std::make_unique<Utility>();
+    if (type == "deesser") return std::make_unique<Deesser>();
     return nullptr;
 }
 
 std::vector<std::string> dynamicsEffectTypes() {
-    return {"eq", "filter", "compressor", "ducker", "saturator", "limiter", "width", "bitcrush", "utility"};
+    return {"eq", "filter", "compressor", "ducker", "saturator", "limiter", "width", "bitcrush", "utility",
+            "deesser"};
 }
 
 bool dynamicsEffectAcceptsSidechain(std::string_view type) { return type == "compressor" || type == "ducker"; }

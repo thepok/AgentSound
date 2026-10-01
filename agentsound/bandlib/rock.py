@@ -6,9 +6,9 @@ piano, drum room, plate and a lead delay. recipes/rock.md ('Band presets') shows
   indie_band    drums, bass, gtr_l, gtr_r, lead, keys     indie / garage / alt rock: clean + crunch (profile rock)
   power_ballad  drums, bass, piano, strings, pad, lead    80s power ballad (profile rock)
 
-The guitars are DI (direct, un-amped) sample sets played through an amp chain in the track (amp()): a bright shelf
-(the bright cap / treble booster) -> eq -> saturator (the amp) -> convolver (the speaker cabinet IR) -> eq (the cab
-patches of agentsound/patches/space_ir.py) -> a scooped tone stack. The DI sets are level-matched into the amp
+The guitars are DI (direct, un-amped) sample sets played through an amp chain in the track (amp() =
+patches.sampled_guitars.amp: the engine's tube amp - preamp stages, tone stack, power amp - into the cabinet IR of the
+cab/* patches of agentsound/patches/space_ir.py and a mic roll-off). The DI sets are level-matched into the amp
 (DI_LEVEL). Every DI guitar here is a keyswitched instrument (di_guitar()): 'open' (default), 'palm mute' (a short
 thumping note that keeps its pick attack: the chug) and 'dead note' (real muted-string scratches from Emilyguitar),
 switched per note with clip.articulate('palm', ...) / 'dead'. The shared helpers (di_guitar, amp, the kit key remap,
@@ -24,6 +24,9 @@ from ..bands import Band
 from ..patches import FX, Instrument, fx, inst
 from ..patches import fx as _fx
 from .. import patches as _patches
+from ..patches import sampled_guitars as _sg
+from ..patches import sampled_drums as _sd
+from .. import kits as _kits
 from ..theory import ComposeError
 
 # ------------------------------------------------------------------------------------------------ helpers
@@ -43,16 +46,13 @@ def require(preset: str, role: str, *packs: str) -> None:
                                f"without=({role!r},))")
 
 
-# DI guitar articulations: zone overrides on top of the plain (open) notes. A palm mute is the picking hand resting
-# on the strings at the bridge: the note loses its upper harmonics and dies within a few hundred ms - into a
-# distorted amp that is the tight 'chug' (the pick attack stays: 1.6 kHz, not a muffled 900 Hz). A dead note
-# (fretting hand muting) is a percussive scratch with little pitch: real muted-string samples where a set has them
-# (real_dead_notes), else this filtered blip.
+# DI guitar articulations: zone overrides on top of the plain (open) notes - the library's (sampled_guitars PALM /
+# DEAD: the palm mute measured against real amped chugs - the thump kept, the pick, the short tight decay). A dead
+# note (fretting hand muting) is a percussive scratch with little pitch: real muted-string samples where a set has
+# them (real_dead_notes), else the filtered blip.
 GUITAR_ARTICULATIONS = {
-    'palm mute': {'filter': 'lpf_2p', 'cutoff': 1600.0, 'resonance': 3.0, 'filKeytrack': 40.0, 'filKeycenter': 52,
-                  'decay': 0.55, 'sustain': 0.0, 'release': 0.05, 'gain': 2.0},
-    'dead note': {'filter': 'bpf_2p', 'cutoff': 1600.0, 'resonance': 0.0, 'decay': 0.07, 'sustain': 0.0,
-                  'release': 0.02, 'gain': -3.0},
+    'palm mute': dict(_sg.PALM, gain=2.5),
+    'dead note': dict(_sg.DEAD, gain=-3.0),
 }
 
 
@@ -330,7 +330,8 @@ def rock_kit(which: str = 'big_rusty', level: float = 0.0) -> Instrument:
             continue
         if path == BIG_RUSTY:
             ins = inst.sfz(path, level=level + 1.0, mics={'oh': -2.0, 'top': 0.0, 'btm': -4.0})
-            return remap_keys(ins, {48: 47, 50: 47, 57: 49, 59: 51})
+            # snare and toms on one natural velocity curve (patches.sampled_drums.BIG_RUSTY_VELOCITY)
+            return _kits.velocity_map(remap_keys(ins, {48: 47, 50: 47, 57: 49, 59: 51}), _sd.BIG_RUSTY_VELOCITY)
         if path == UNRULY:
             # close kick mics up, overheads down (the default mic mix smears the kick wide: low-end correlation 0.5)
             # and a little close hat mic: a centred, punchier - but still small, dry, garage - kit (20" kick with
@@ -393,43 +394,46 @@ def piano(level: float = 0.0) -> Instrument:
 
 
 # ------------------------------------------------------------------------------------------------ amp chains
-
-
-# per amp kind: (bright: pre-amp treble shelf dB at freq, tone stack after the cab: low 120 Hz, low-mid 450 Hz,
-# presence 3 kHz). A DI guitar straight into saturator + cab IR is dull and boxy (measured on FSBS power chords:
-# lowmid 32 %, presence 5 % of the energy; the FreePats FSBS 'dist' sets - the same guitar through a real amp rack -
-# have lowmid 12 %, presence 16-19 %): the bright cap / treble booster before the drive and the scooped tone stack
-# after it give the amp its bite (FSBS 'rock': lowmid 8 %, presence 12 %).
-_VOICING = {'clean': (6.0, 2200.0, 1.0, -3.0, 2.0), 'blues': (8.0, 1800.0, 2.0, -3.0, 2.0),
-            'crunch': (10.0, 1800.0, 3.0, -4.0, 3.0), 'rock': (8.0, 1800.0, 3.0, -4.0, 3.0),
-            'metal': (6.0, 1800.0, 3.0, -4.0, 3.0), 'lead': (6.0, 1800.0, 1.0, -3.0, 2.0)}
-
-
-def amp(kind: str, *, drive: float | None = None, tone: float | None = None, bright: float | None = None) -> list:
-    """Amp + cabinet insert chain for a DI guitar: a bright shelf (the amp's bright cap / a treble booster, `bright`
-    dB), the cab/* chain of agentsound/patches/space_ir.py (eq -> saturator = the amp, `drive` / `tone` -> convolver =
-    the speaker cabinet IR -> eq) and a tone stack eq named 'tonestack' (bass, scooped low mids, presence): 'clean'
-    (cab/clean_1x12), 'blues' (cab/blues_1x12), 'crunch' (cab/crunch_2x12), 'rock' (cab/rock_4x12, Marshall
-    Greenbacks), 'metal' (cab/metal_4x12), 'lead' (cab/rock_4x12 driven harder, mids pushed)."""
-    name = {'clean': 'cab/clean_1x12', 'blues': 'cab/blues_1x12', 'crunch': 'cab/crunch_2x12',
-            'rock': 'cab/rock_4x12', 'metal': 'cab/metal_4x12', 'lead': 'cab/rock_4x12'}[kind]
-    sat = {}
-    if kind == 'lead':
-        sat = {'drive': 27.0, 'tone': 2.0}
-    if drive is not None:
-        sat['drive'] = drive
-    if tone is not None:
-        sat['tone'] = tone
-    b_db, b_f, lo, scoop, pres = _VOICING[kind]
-    if bright is not None:
-        b_db = bright
-    pre = [fx.eq({'high.freq': b_f, 'high.gain': b_db}, name='bright')] if b_db else []
-    stack = fx.eq({'low.freq': 120, 'low.gain': lo, 'peak1.freq': 450, 'peak1.gain': scoop, 'peak1.q': 0.8,
-                   'peak3.freq': 3000, 'peak3.gain': pres, 'peak3.q': 0.9}, name='tonestack')
-    return pre + _chain(name, **({'saturator': sat} if sat else {})) + [stack]
+# One amp for the whole library: agentsound.patches.sampled_guitars.amp(kind, **knobs) - the engine's tube 'amp'
+# (voicings: patches.space_ir.AMPS) -> the cab IR -> the mic. kinds clean blues crunch rock metal lead; knobs gain=,
+# bright=, mid=, presence=, master=, sag=, boost=, tight=, stages=, output=, mix= (docs/PARAMS.md 'amp').
+amp = _sg.amp
 
 
 # ------------------------------------------------------------------------------------------------ presets
+
+# The rock_band's drum and guitar production (measured against the band sections of Sweet Child O' Mine,
+# songs/the-drummer-speaks/ROCK.md):
+def PUNCH():
+    """The kit's punch: a slow-attack compressor on the kit track - the stick's transient passes (25 ms), the body
+    and the ring are held 3:1 - so kick and snare stay in front of a dense guitar wall (the chorus' snare punch was
+    7 dB over its surroundings vs 12 in the record)."""
+    return fx.compressor(threshold=-18, ratio=3, attack=25, release=70, knee=6, makeup=2.0, name='punch')
+
+
+def DRUM_BUS():
+    """The drum bus: New York parallel compression (6:1, 3 ms attack, crushed and mixed in at 35 %: weight and
+    sustain under the untouched transients), tape saturation (glue, the top rounded), a low-mid cleanup and a little
+    air."""
+    return [fx.compressor(threshold=-26, ratio=6, attack=10, release=100, knee=6, mix=0.35, makeup=8.0, keyhp=60,
+                          name='crush'),
+            fx.saturator(mode='tape', drive=4, mix=0.6, name='tape'),
+            _eq(hp__freq=28, peak1__freq=380, peak1__gain=-1.5, peak1__q=0.9, high__freq=10000, high__gain=1.0)]
+
+
+def ROOM_CRUSH():
+    """The room mics' crush on the room return (a compressor after the room IR: the room swells between the hits,
+    the classic big rock drum room), mixed in at 60 % so the room still decays."""
+    return fx.compressor(threshold=-30, ratio=6, attack=8, release=120, knee=6, mix=0.5, makeup=6.0,
+                         name='room_crush')
+
+
+def GTR_POST():
+    """The rhythm guitars after the amp: the lows under 100 Hz to the bass, the body (300 Hz) kept, the fizz above 9
+    kHz down."""
+    return fx.eq({'hp.freq': 100, 'peak1.freq': 300, 'peak1.gain': 1.0, 'peak1.q': 0.8, 'high.freq': 9000,
+                  'high.gain': -2.0}, name='post')
+
 
 ROCK_NOTES = """\
 How to play it (rock_band; recipe recipes/rock.md):
@@ -437,7 +441,7 @@ How to play it (rock_band; recipe recipes/rock.md):
           53 bell, toms 50/48 high .. 45 .. 43 .. 41 floor). Velocity 70-127 (14 layers: ghosts at 30-50). Humanized
           5 ms / +-8 already; change the pattern every 4-8 bars, tom_fill() into sections, crash() on downbeats.
   bass    E1-E3 roots in 8ths locked to the kick, velocity 90-115; clip.articulate('staccato', ...) for short punchy
-          notes (the sustained samples damped fast), 'mute' for thuds. Picked tone with a tube drive in the chain;
+          notes (the sustained samples damped fast), 'mute' for thuds. Picked, through a DI + tube amp rig;
           it ducks 5 dB under the kick.
   gtr_l / gtr_r   the double-tracked rhythm wall (hard left / right, two different guitars and amps). Play the SAME
           part on both (power chords: clip.chordify('power') on roots E2-A3, or 2-3 note voicings), each strummed
@@ -467,39 +471,37 @@ def rock_band(song, *, without=(), sounds=None, ids=None, keys: str = 'organ', g
     b = Builder(song, 'rock_band', without=without, sounds=sounds, ids=ids, analysis={'profile': 'rock'},
                 notes=ROCK_NOTES)
     s = song
-    room = b.bus('room', _patches.get('bus/ir_drum_room').fx if installed('voxengo-im-reverbs')
-                 else [fx.reverb(type='room', mix=1.0, decay=0.8, size=0.4, predelay=4, lowcut=180, highcut=9000)])
+    room = b.bus('room', (_patches.get('bus/ir_drum_room').fx if installed('voxengo-im-reverbs')
+                          else [fx.reverb(type='room', mix=1.0, decay=0.8, size=0.4, predelay=4, lowcut=180,
+                                          highcut=9000)]) + [ROOM_CRUSH()])
     plate = b.bus('plate', _patches.get('bus/ir_plate').fx if installed('little-devil-224xl-13-cd-plate-a')
                   else _patches.get('bus/plate').fx)
     echo = b.bus('echo', [fx.delay(mode='pingpong', balanced='off', time=0.75, feedback=0.28, mix=1.0,
                                    highcut=4200, lowcut=300, wow=0.15, duck=0.35),
                           _eq(hp__freq=250, lp__freq=6000)])
-    drum_bus = b.bus('drum_bus', [
-        fx.compressor(threshold=-22, ratio=4, attack=12, release=90, knee=6, mix=0.45, automakeup='on', keyhp=60),
-        fx.saturator(mode='tape', drive=3, mix=0.6),
-        _eq(hp__freq=28, peak1__freq=380, peak1__gain=-1.5, peak1__q=0.9, high__freq=10000, high__gain=1.0)])
-
+    drum_bus = b.bus('drum_bus', DRUM_BUS())
     b.track('drums', lambda: rock_kit(kit), output=drum_bus, trim=4.0,
             fx=[_eq(low__freq=70, low__gain=1.5, peak1__freq=420, peak1__gain=-2.0, peak1__q=1.0,
-                    peak2__freq=150, peak2__gain=-2.5, peak2__q=1.0, peak3__freq=4500, peak3__gain=1.0, peak3__q=0.8)],
+                    peak2__freq=150, peak2__gain=-2.5, peak2__q=1.0, peak3__freq=4500, peak3__gain=1.0, peak3__q=0.8),
+                PUNCH()],
             sends={room: -5, plate: -20}, humanize=(5, 8, 3))
-    b.track('bass', lambda: rock_bass('rock_band', 'pick'), trim=-3.0, pan=0.0,
-            fx=[_eq(hp__freq=35, peak1__freq=250, peak1__gain=-2.0, peak1__q=0.9, peak2__freq=900, peak2__gain=2.5,
-                    peak2__q=1.1, peak3__freq=60, peak3__gain=-2.5, peak3__q=1.2, low__freq=110, low__gain=1.5),
-                fx.saturator(mode='tube', drive=10, mix=0.55, tone=1.0),
-                fx.compressor(threshold=-22, ratio=4, attack=15, release=140, knee=6, automakeup='on'),
-                _eq(lp__freq=5500)],
+    # the bass: picked Growlybass into an SVT-style rig (sampled_guitars.bass_rig: the tube amp growls in the mids,
+    # the time-aligned DI under it carries the lows and the pick) - the old tube saturator at mix 0.55 left the DI
+    # nearly clean (centroid 383 vs the DI's 371 Hz); the rig: 553 Hz, +2.4 / +3.8 dB at 0.6-1.2 / 1.2-2.5 kHz
+    b.track('bass', lambda: rock_bass('rock_band', 'pick'), trim=-4.0, pan=0.0,
+            fx=[_eq(hp__freq=35, peak1__freq=250, peak1__gain=-2.0, peak1__q=0.9, peak2__freq=900, peak2__gain=1.0,
+                    peak2__q=1.1, peak3__freq=60, peak3__gain=-2.5, peak3__q=1.2, low__freq=100, low__gain=2.5)]
+            + _sg.bass_rig() +
+               [fx.compressor(threshold=-22, ratio=4, attack=15, release=140, knee=6, automakeup='on')],
             sends={room: -24}, humanize=(4, 6, 5))
     hi = gain == 'high'
     b.track('gtr_l', lambda: guitar_di(FSBS_DI, 'rock_band', 'gtr_l'), pan=-0.95,
-            trim=-3.8 if hi else -7.0,
-            fx=amp('metal' if hi else 'rock') + [_eq(hp__freq=100, peak1__freq=250, peak1__gain=-1.5,
-                                                     high__freq=9000, high__gain=-2.0)],
+            trim=-4.3 if hi else -7.5,
+            fx=amp('metal' if hi else 'rock') + [GTR_POST()],
             sends={room: -13}, humanize=(7, 9, 11))
     b.track('gtr_r', lambda: guitar_di(EMILY, 'rock_band', 'gtr_r'), pan=0.95,
-            trim=-4.4 if hi else -5.5,
-            fx=amp('crunch', drive=24 if hi else 17) + [_eq(hp__freq=100, peak1__freq=250, peak1__gain=-1.5,
-                                                            high__freq=9000, high__gain=-2.0)],
+            trim=-7.8 if hi else -8.9,
+            fx=amp('crunch', gain=6.5 if hi else 5.0) + [GTR_POST()],
             sends={room: -13}, humanize=(7, 9, 23))
     b.track('lead', lambda: guitar_di(FSBS_DI, 'rock_band', 'lead', articulations=(), mono='legato',
                                       legatotime=30, glideshape='fast'),
@@ -535,11 +537,13 @@ def rock_band(song, *, without=(), sounds=None, ids=None, keys: str = 'organ', g
 
 bands.register('rock_band', rock_band, genre='rock',
                roles=('drums', 'bass', 'gtr_l', 'gtr_r', 'lead', 'keys'),
-               description='classic / arena rock: Big Rusty kit (close + OH mics) in a drum room, picked Growlybass '
-                           'with tube drive, double-tracked DI guitars (FSBS Strat -> Marshall 4x12 L, Emily SG -> '
-                           '2x12 V30 R, level-matched amps with bright cap + tone stack) with palm mute / real dead '
+               description='classic / arena rock: Big Rusty kit (close + OH mics, velocity-calibrated, punch + '
+                           'NY parallel crush) in a crushed drum room, picked Growlybass through a DI + tube amp rig, '
+                           'double-tracked DI guitars (FSBS Strat -> tube Plexi -> Marshall 4x12 L, Emily SG -> tube '
+                           'crunch -> 2x12 V30 R; guitarist.riff / double for the wall) with palm mute / real dead '
                            'note articulations, a lead guitar (legato, delay + plate), Leslie organ or piano',
-               tuned='profile rock: songs/_bands/rock_band -9.6 LUFS, LRA 4.8, width 26 %, no warnings',
+               tuned='profile rock: songs/_bands/rock_band -9.6 LUFS, LRA 4.5, width 26 % (the rock pass: warnings - the '
+                     'intro riff kick + bass in unison, flat dynamics on its narrow-velocity gtr_r / band lead)',
                requires=('freepats-fsbs-direct', 'karoryfer-emilyguitar'))
 
 
@@ -613,7 +617,7 @@ def indie_band(song, *, without=(), sounds=None, ids=None, keys: str = 'wurli', 
                 _eq(lp__freq=6000)],
             sends={room: -24}, humanize=(5, 7, 6))
     b.track('gtr_l', lambda: guitar_di(FSBS_DI, 'indie_band', 'gtr_l'), pan=-0.9, trim=-4.8,
-            fx=amp('clean', drive=3) + [fx.compressor(threshold=-26, ratio=4, attack=5, release=120,
+            fx=amp('clean') + [fx.compressor(threshold=-26, ratio=4, attack=5, release=120,
                                                      automakeup='on'),
                                        fx.chorus(mode='I', mix=0.3),
                                        # the jangle lives in the sparkle, not in 1-2 kHz (honk)
@@ -621,8 +625,8 @@ def indie_band(song, *, without=(), sounds=None, ids=None, keys: str = 'wurli', 
                                            peak2__gain=-3.0, peak2__q=0.8, peak3__freq=4000, peak3__gain=1.0,
                                            high__freq=8000, high__gain=1.5)],
             sends={room: -12, plate: -18}, humanize=(7, 9, 12))
-    b.track('gtr_r', lambda: guitar_di(EMILY, 'indie_band', 'gtr_r'), pan=0.9, trim=-6.0,
-            fx=amp('blues', drive=13) + [_eq(hp__freq=100, peak1__freq=280, peak1__gain=-1.5, peak2__freq=1300,
+    b.track('gtr_r', lambda: guitar_di(EMILY, 'indie_band', 'gtr_r'), pan=0.9, trim=-7.5,
+            fx=amp('blues') + [_eq(hp__freq=100, peak1__freq=280, peak1__gain=-1.5, peak2__freq=1300,
                                               peak2__gain=-3.0, peak2__q=0.8, high__freq=9000, high__gain=-1.0)],
             sends={room: -12, plate: -22}, humanize=(7, 9, 24))
 
@@ -631,7 +635,7 @@ def indie_band(song, *, without=(), sounds=None, ids=None, keys: str = 'wurli', 
             return inst.sfz(SHINY, cc={100: 0}, level=DI_LEVEL[SHINY])
         return guitar_di(EMILY, 'indie_band', 'lead', articulations=())
     b.track('lead', shiny, trim=-7.0,
-            fx=amp('blues', drive=10, bright=3.0) + [
+            fx=amp('blues', gain=3.0, bright=3.0) + [
                 fx.compressor(threshold=-24, ratio=3, attack=8, release=120, automakeup='on'),
                 _eq(hp__freq=150, peak1__freq=350, peak1__gain=-2.0, peak2__freq=2000, peak2__gain=1.0, peak2__q=1.0,
                     peak3__freq=4000, peak3__gain=-3.0, peak3__q=0.8)],
@@ -740,7 +744,7 @@ def power_ballad(song, *, without=(), sounds=None, ids=None, kit: str = 'big_rus
     b.track('lead', lambda: guitar_di(FSBS_DI, 'power_ballad', 'lead', articulations=(), mono='legato',
                                       legatotime=40, glideshape='ease'),
             trim=-5.8,
-            fx=amp('lead', drive=24) + [fx.compressor(threshold=-24, ratio=3, attack=10, release=150,
+            fx=amp('lead', gain=6.5) + [fx.compressor(threshold=-24, ratio=3, attack=10, release=150,
                                                      automakeup='on'),
                                        _eq(peak1__freq=300, peak1__gain=-2.0, peak2__freq=1200, peak2__gain=-4.5,
                                            peak2__q=0.7,

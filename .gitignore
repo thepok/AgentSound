@@ -18,3 +18,10 @@ assets/dx7/*.SYX
 references/
 assets/refrences/
 assets/references/
+
+# DiffSinger voicebanks (python -m agentsound voicebanks): never committed - only the manifest; their licences
+# forbid redistribution. Rendered vocal takes are a per-song cache (songs/<slug>/samples/vocals/).
+assets/voices/*
+!assets/voices/manifest.json
+!assets/voices/README.md
+songs/**/samples/vocals/

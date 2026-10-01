@@ -1790,7 +1790,9 @@ void testSongAndPngs(const std::string& outDir) {
     bool kickBass = false;
     for (const auto& s : r["suggestions"]) kickBass = kickBass || s.get<std::string>().find("sidechain") != std::string::npos;
     std::printf("  summary: %s\n", r["summary"].get<std::string>().c_str());
-    check(kickBass, "synthetic song: a sidechain suggestion addresses kick vs bass");
+    // the synthetic bass is ducked ~10 dB under every kick: the low-end separation measures that duck (kick hits vs
+    // gaps), so no "duck the bass" suggestion (the old envelope-product measure read < 3 dB for any sustained bass)
+    check(!kickBass, "synthetic song: its bass is ducked under every kick - no kick-vs-bass sidechain suggestion");
 
     // Determinism: a second run gives the identical report.
     as::MixAnalyzer an2;

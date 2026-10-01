@@ -98,7 +98,7 @@ class Library(unittest.TestCase):
                 p = patches.get(f'sampled/{n}')
                 self.assertEqual(p.instrument.type, 'sampler')
                 self.assertIn('Measured -18.0 LUFS', p.notes)
-                self.assertTrue(p.notes.startswith('v1. '), p.notes[:40])
+                self.assertRegex(p.notes, r'^v\d+\. ', p.notes[:40])
                 self.assertTrue(p.sends)
                 self.assertTrue(_packs(p), 'no sample pack found for the patch')
                 self.assertIn(n, guitars.LEVELS)
@@ -221,7 +221,8 @@ class MultiOptions(unittest.TestCase):
             if z.get('trigger') == 'release':
                 self.assertNotIn('filter', z)
             else:
-                self.assertEqual((z['filter'], z['cutoff'], z['sustain']), ('lpf_2p', 1600.0, 0.0))
+                self.assertEqual((z['filter'], z['cutoff'], z['sustain']),
+                                 ('lpf_2p', guitars.PALM['cutoff'], 0.0))
             self.assertEqual(z['gain'], 2.0)
         self.assertFalse(any('filter' in z for z in zones if z['swLast'] == 0))
         for bad in ({'lo': 3}, {'gain': 3}, {'trigger': 'release'}, ['cutoff']):

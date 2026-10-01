@@ -9,7 +9,7 @@ the impulse-response packs of the sample library (python -m agentsound samples; 
              bus/ir_hall_large bus/ir_concert_hall bus/ir_church bus/ir_opera bus/ir_salon bus/ir_drum_room
                                                                           Voxengo IM Reverbs (modelled real spaces)
   cabinets   cab/clean_1x12 cab/blues_1x12 cab/crunch_2x12 cab/rock_4x12 cab/metal_4x12
-             DI guitar -> eq -> saturator (the amp) -> convolver (the cabinet) -> eq
+             DI guitar -> amp (the tube head: AMPS) -> convolver (the cabinet) -> eq (the mic)
 
 The Lexicon 224XL (1978-) is THE 80s digital reverb; the Little Devil sets capture it in true stereo (four mono
 files per preset: left / right input x left / right output), which the convolver plays as recorded. Every IR lives
@@ -40,7 +40,7 @@ Version: see VERSION (bump it when a sound changes audibly).
 from .. import library
 from . import Patch, fx, register
 
-VERSION = 3  # v2: bus/ir_ambience widened 1.5 (it was narrow from a centred source), gain re-matched
+VERSION = 4  # v4: the cab/* chains on the engine amp (was a saturator); v2: bus/ir_ambience widened 1.5 (it was narrow from a centred source), gain re-matched
 # v3: the 'gain estimated' 224XL returns re-measured with their packs installed (gains -1.9..+2.8 dB)
 
 
@@ -214,38 +214,62 @@ _return('bus/ir_drum_room', _files(_VOX, 'Nice Drum Room.wav'),
 # ---------------------------------------------------------------------------------------------- cabinets
 
 
-def _cab(name: str, ir, notes: str, *, hp: float, push: float, drive: float, bias: float, tone: float, lp: float,
-         gain: float):
+# The amp of each cabinet patch (the engine's 'amp': cascaded triode preamp stages, the TMB tone stack, a sagging
+# push-pull power amp - engine/fx/AmpFx.cpp) and its use. Measured on FSBS / Emily DI power chords and palm-muted
+# chugs (songs/the-drummer-speaks/ROCK.md): the old single tube waveshaper per cab gave a fizzy, hollow (even-
+# harmonic), mid-scooped rhythm tone that had to be filtered back; the cascade gives the odd-harmonic crunch, the
+# tone stack the mids. 'output' levels each amp so the chain keeps the DI's loudness (within ~0.5 LU on a power-chord
+# riff at velocity 105).
+AMPS = {
+    'clean': dict(stages=1, gain=1.5, bright=4.0, tight=70.0, bass=5.0, mid=4.0, treble=6.5, stack='american',
+                  presence=6.0, resonance=5.0, master=3.0, sag=0.2),
+    'blues': dict(stages=2, gain=3.5, bright=3.0, tight=80.0, bass=5.0, mid=6.0, treble=6.0, presence=6.0,
+                  resonance=5.5, master=5.0, sag=0.45),
+    'crunch': dict(stages=2, gain=5.0, bright=2.0, tight=100.0, bass=5.0, mid=6.5, treble=5.5, presence=5.5,
+                   resonance=5.5, master=6.0, sag=0.35),
+    'rock': dict(stages=2, gain=6.0, bright=2.5, tight=90.0, bass=5.5, mid=7.0, treble=6.0, presence=6.0,
+                 resonance=6.0, master=7.0, sag=0.4),
+    'metal': dict(stages=4, gain=7.0, boost=8.0, bright=2.0, tight=130.0, bass=6.0, mid=3.5, treble=6.5, presence=6.5,
+                  resonance=6.5, master=5.0, sag=0.15),
+    'lead': dict(stages=3, gain=7.0, boost=6.0, bright=3.0, tight=110.0, bass=5.0, mid=7.0, treble=7.0, presence=8.0,
+                 resonance=6.0, master=4.0, sag=0.3),
+}
+AMP_OUTPUT = {'clean': 5.6, 'blues': 6.2, 'crunch': 4.7, 'rock': 5.7, 'metal': 5.4, 'lead': 4.4}
+CABS = {'clean': 'cab/clean_1x12', 'blues': 'cab/blues_1x12', 'crunch': 'cab/crunch_2x12', 'rock': 'cab/rock_4x12',
+        'metal': 'cab/metal_4x12', 'lead': 'cab/rock_4x12'}
+
+
+def _cab(name: str, ir, notes: str, *, kind: str, lp: float, gain: float):
     register(Patch(name, fx=[
-        fx.eq({'hp.freq': hp, 'hp.slope': 24, 'peak2.freq': 800, 'peak2.gain': push, 'peak2.q': 0.7}),
-        fx.saturator(mode='tube', drive=drive, bias=bias, tone=tone),
+        fx.amp(**AMPS[kind], output=AMP_OUTPUT[kind], name='amp'),
         fx.convolver(ir=ir, mix=1.0, gain=gain),
-        fx.eq({'hp.freq': 70, 'lp.freq': lp, 'peak1.freq': 350, 'peak1.gain': -1.5, 'peak1.q': 0.8}),
+        fx.eq({'hp.freq': 70, 'lp.freq': lp, 'lp.slope': 24}, name='mic'),
     ], notes=_with_pack_note(notes, ir) + (
         f" Insert chain for a DI (direct, un-amped) electric guitar: s.track('gtr', <guitar>, "
-        f"fx=patches.get('{name}').fx). The saturator is the amp: .but_fx('saturator', drive=...) for "
-        f"more / less gain; the convolver is the speaker cabinet and mic.")))
+        f"fx=patches.get('{name}').fx) - or agentsound.patches.sampled_guitars.amp('{kind}', gain=...) (any amp voicing "
+        f"into any cab). The 'amp' effect is the head: .but_fx('amp', gain=..., mid=..., presence=...); the convolver is "
+        f"the speaker cabinet and mic, 'mic' its roll-off.")))
 
 
 _cab('cab/clean_1x12', _files('overdriven-uk-112-stealth-65-ssp1-v1-2', 'SSP1/DYN-57/OD-UK112-ST65-DYN-57-P10-30.wav'),
-     'v1. Clean combo: tube amp just breaking up (drive 4) into a 1x12 with a Jensen Tornado Stealth 65 (SM57): '
-     'round, full, soft top - jazz, funk, clean arpeggios, 80s chorus guitars.',
-     hp=70, push=0.0, drive=4, bias=0.1, tone=0.0, lp=9000, gain=-8.0)
+     'v2. Clean combo: a one-stage Fender-style amp just breaking up (gain 1.5, american stack) into a 1x12 with a '
+     'Jensen Tornado Stealth 65 (SM57): round, full, soft top - jazz, funk, clean arpeggios, 80s chorus guitars.',
+     kind='clean', lp=8000, gain=-8.0)
 _cab('cab/blues_1x12', _files('overdriven-112-celestion-h30-tubepreamp2-v1-2',
                               'TubePreamp2/DYN-57/OD-O112-H30-DYN-57-P05-30.wav'),
-     'v1. Edge-of-breakup British combo: tube drive 10 into a 1x12 Celestion G12H30 (SM57): blues, indie, '
-     'rhythm crunch.',
-     hp=80, push=2.0, drive=10, bias=0.15, tone=1.0, lp=8500, gain=-4.5)
+     'v2. Edge-of-breakup British combo: a two-stage amp at gain 3.5 with a spongy supply (sag 0.45) into a 1x12 '
+     'Celestion G12H30 (SM57): blues, indie, rhythm crunch that cleans up with a softer pick.',
+     kind='blues', lp=7000, gain=-4.5)
 _cab('cab/crunch_2x12', _files('overdriven-calif-212-v30-kt88-ssp1-v1-1', 'SSP1/DYN-57/OD-R212-V30-DYN-57-P10-00.wav'),
-     'v1. Crunch: tube drive 16 with a mid push into a 2x12 Celestion Vintage 30 (SM57): classic rock rhythm, '
-     'power chords, 80s rock.',
-     hp=90, push=3.0, drive=16, bias=0.2, tone=1.5, lp=8000, gain=-3.5)
+     'v2. Crunch: a two-stage British amp at gain 5, mids forward, the power amp joining in, into a 2x12 Celestion '
+     'Vintage 30 (SM57): classic rock rhythm, power chords, 80s rock.',
+     kind='crunch', lp=6000, gain=-3.5)
 _cab('cab/rock_4x12', _files('jester-emerald-ir-pack', 'Impulses/48kHz/1_Nacho_Guacamole_48.wav'),
-     'v1. Plexi-style rock: tube drive 20, mid push, into a Marshall 1960AX 4x12 with Celestion Greenbacks (SM57, '
-     'Jester Emerald pack, CC0): big, woody, the 70s-80s rock stack - riffs, leads, solos.',
-     hp=90, push=3.0, drive=20, bias=0.2, tone=1.0, lp=7500, gain=-5.5)
+     'v2. Plexi-style rock: a cranked two-stage Plexi (gain 6, master 7: the power amp saturates, mids 7) into a '
+     'Marshall 1960AX 4x12 with Celestion Greenbacks (SM57, Jester Emerald pack, CC0): big, woody, the 70s-80s rock '
+     'stack - riffs, leads, solos.',
+     kind='rock', lp=6000, gain=-5.5)
 _cab('cab/metal_4x12', _files('kalthallen-cabs-free', 'Kalthallen IRs/001a-SM57-V30-4x12.wav'),
-     'v1. High gain: tight low end (110 Hz high-pass, 4 dB mid push before the amp, like a boost pedal) into a '
-     'saturated tube amp (drive 28) and a 4x12 Celestion Vintage 30 (SM57, Kalthallen): modern rock and metal '
-     'rhythm.',
-     hp=110, push=4.0, drive=28, bias=0.1, tone=0.5, lp=7000, gain=-7.5)
+     'v2. High gain: a Tube Screamer boost (8 dB) and a tight input (130 Hz) into a four-stage modern preamp (gain '
+     '7, scooped mids 3.5) and a 4x12 Celestion Vintage 30 (SM57, Kalthallen): modern rock and metal rhythm.',
+     kind='metal', lp=6000, gain=-7.5)

@@ -7,7 +7,7 @@ sections; echo throws at its phrase ends).
 
 ```python
 MIX = {
-    'trim': {'drums': 2.0, 'bass': 1.5},
+    'trim': {'drums': 2.0, 'bass': 1.0},
     'ride': {'lead': {'B2': -1.5}, 'drums': {'solo': 3.5}},
     'duck': [{'targets': ['bass'], 'key': 'drums', 'pitches': 'kick', 'depth': 4, 'attack': 2, 'release': 110}],
     'eq': {'drums': [{'freq': 42, 'gain': -2.5, 'q': 0.8}], 'lead': [{'freq': 3300, 'gain': -2.0, 'q': 1.0}]},
@@ -17,7 +17,7 @@ MIX = {
 | move | why |
 |---|---|
 | drums +2.0 dB | `mix`: rhythm -5.1 / -5.6 dB under the lead in B / B2 (rock window -3.5..0): the groove has to carry |
-| bass +1.5 dB | low -6.5 / -5.8 in B2 / A3 (window -5..-1.5) |
+| bass +1.0 dB | low -6.5 / -5.8 in B2 / A3 (window -5..-1.5); +1.5 before the rock pass - the bass rig's growl reads louder (`mix` after it: low -2.4 / -2.1 / -1.2 / -2.6 dB in A / B / B2 / A3, no moves) |
 | drums +3.5 dB in the solo | the drums ARE the band in the solo; without it the solo's climax sat 6 LU under the band (solo -13.7 vs B2 -7.7 LUFS) - with it (the soloist's version, more space in the statement) -11.8 vs -8.5 (the soft start stays soft, the climax comes near the band's level, the band's return is still an event: +3.3 LU) |
 | bass ducked 4 dB more under the kick | the riff is a bass + kick unison (the kick locks to the bass): masking warned in A / A3 |
 | drums -2.5 dB at 42 Hz | sub +4.9 dB over the rock reference, 99 % from the 24" kick and 22" floor tom: now +3.2 |
@@ -42,3 +42,7 @@ Deliberate / open:
 - `node_hot` (info): the drums peak +3.5 dBFS before the master in the solo (float; the master limiter catches
   them).
 - The master's input: +0.3 LU from these moves (the master check: -10.4 LUFS-I).
+
+Rock pass (ROCK.md): the band's new sounds re-levelled to the old balance (guitar / bass trims in the preset), the bass
+trim +1.5 -> +1.0. `mix`: no moves; `masking` drums / bass now reads per section (A -0.9 dB: the riff's unison, they hit
+together - deliberate; A3 1.3; B no longer listed - the duck is measured), -10.0 LUFS-I, `master --check` all ok.
