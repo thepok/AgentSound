@@ -26,6 +26,12 @@ MOVES (MOVES; logged in .moves, budgeted song-wide with a Memory like the hornis
               at most `cons_share` of the note before; a word-final consonant links onto a vowel-initial next word
               ('hold on' -> 'hol-don') in legato
   hold        the vowel holds through a long note; the coda closes at its end
+  diction     word-final consonants are sung and audible: they close the word at the END of its last note (after a
+              run / hold), never shorter than a minimum per class (DICTION: stops, sibilants, nasals ...; a legato
+              cluster is never squeezed to nothing); a stop before a rest gets a short silent closure and a released
+              burst (a faded release vowel: "out" -> ou-t(h), not an unreleased ou(t)); the phrase-end release /
+              taper / fall act on the vowel and end where the coda starts, the coda keeps the vowel's level (+ a few dB
+              of consonant lift, a vocal engineer's clip-gain ride). singer.diction() reports codas that end too short
   glide       portamento between notes: an S-curve of 40-180 ms starting before the next onset (faster in a melisma),
               a small overshoot on leaps up that settles
   scoop       into phrase openers, leaps up and hook peaks: starts 40-120 cents flat and rises (big ones: SPICE)
@@ -68,12 +74,45 @@ from .budget import Budget
 from .patterns import Clip, as_clip, seed_int
 from .theory import ComposeError
 
-__all__ = ['STYLES', 'MOVES', 'FORMAT', 'Memory', 'Vocal', 'voice', 'sing', 'double', 'harmony', 'render',
-           'phrase_notes', 'check', 'report_lines', 'log_lines', 'SingerError']
+__all__ = ['STYLES', 'MOVES', 'FORMAT', 'DICTION', 'Memory', 'Vocal', 'voice', 'sing', 'double', 'harmony', 'render',
+           'phrase_notes', 'check', 'diction', 'report_lines', 'log_lines', 'SingerError']
 
-FORMAT = 3                      # bump when the rendering below changes (new cache keys)
-MOVES = ('consonants', 'hold', 'glide', 'scoop', 'vibrato', 'fall', 'doit', 'release', 'swell', 'messa_di_voce',
-         'taper', 'accents', 'breath', 'colour', 'timing', 'drift', 'link')
+FORMAT = 4                      # bump when the rendering below changes (new cache keys)
+MOVES = ('consonants', 'hold', 'diction', 'glide', 'scoop', 'vibrato', 'fall', 'doit', 'release', 'swell',
+         'messa_di_voce', 'taper', 'accents', 'breath', 'colour', 'timing', 'drift', 'link')
+
+_CLASS = {**{p: 'stop' for p in ('p', 'b', 't', 'd', 'k', 'g')}, 'ch': 'affricate', 'jh': 'affricate',
+          **{p: 'sibilant' for p in ('s', 'z', 'sh', 'zh')}, **{p: 'fricative' for p in ('f', 'v', 'th', 'dh', 'hh')},
+          **{p: 'nasal' for p in ('m', 'n', 'ng')}, 'l': 'liquid', 'r': 'liquid', 'w': 'glide', 'y': 'glide'}
+DICTION = {
+    # class: (min s before a rest, min s in legato, max s before a rest, warn below s, lift dB rest, lift dB legato)
+    'stop':      (0.060, 0.045, 0.090, 0.040, 6.0, 3.0),
+    'affricate': (0.080, 0.055, 0.160, 0.050, 3.0, 1.5),
+    'sibilant':  (0.100, 0.060, 0.200, 0.050, 2.0, 1.0),
+    'fricative': (0.080, 0.050, 0.180, 0.040, 3.0, 1.5),
+    'nasal':     (0.070, 0.045, 0.250, 0.035, 0.0, 0.0),
+    'liquid':    (0.060, 0.040, 0.250, 0.030, 0.0, 0.0),
+    'glide':     (0.040, 0.030, 0.200, 0.025, 0.0, 0.0),
+}
+"""Word-final consonants (codas) per class: the shortest a coda is sung before a rest / in a legato cluster, the
+longest a coda before a rest may get (a stop held longer renders as an unreleased closure), the length under which
+singer.diction() warns, and the consonant lift (dB over the vowel's own level) before a rest / in legato."""
+CLOSURE_S = 0.035               # the silent closure before a final stop (rest): the model then releases the burst
+RELEASE = {'unvoiced': (0.04, 6.0, -14.0, 0.0), 'voiced': (0.025, -10.0, -26.0, -8.0)}
+"""The released burst of a final stop before a rest: a short release vowel after it (RELEASE_VOWEL) - length s, gain
+from / to (dB vs the word's vowel), and a fade over the stop's own last 35 ms (dB). Unvoiced p t k: the vowel only
+carries the aspiration (ou-t(h)); voiced b d g: short and low, the stop's voiced tail faded, so it never becomes a
+sung schwa (loud-uh). Measured on Hanami: the burst of a phrase-final t went from -51 dBFS / unreleased to -30 dBFS."""
+RELEASE_VOWEL = 'ah'
+_VOICED_STOPS = ('b', 'd', 'g')
+ONSET_MIN_S = 0.03              # an onset consonant in a legato cluster is never squeezed below this
+LEGATO_SHARE = 0.6              # a legato cluster may take up to this share of the note before it to keep its minimums
+
+
+def _cls(p: str) -> str:
+    return _CLASS.get(p, 'glide')
+
+
 SR = 44100
 HOP = 512
 HYBRID_SCOOP = 0.6
@@ -418,6 +457,12 @@ def _plan(notes, phrases, S, song, sd, memory, moves_on, gestures, base):
                                             delay=round(jit(S['vib_delay'], 0.2), 3),
                                             grow=round(jit(S['vib_grow'], 0.2), 3), wobble=S['wobble'])
                         log.append((round(n.start, 4), 'vibrato', p['vibrato']))
+            # diction: a word-final consonant closes the word at the end of its last note (a run's / hold's last)
+            if n.word_end and n.syl.coda:
+                nx = notes[i + 1] if i + 1 < len(notes) else None
+                at_rest = last or nx is None or secs(nx.start) - secs(n.start + n.dur) >= 0.08
+                p['diction'] = dict(coda=' '.join(n.syl.coda), word=n.syl.word, at='rest' if at_rest else 'legato')
+                log.append((round(n.start, 4), 'diction', p['diction']))
             # the air over held notes
             if d_s >= 1.0 and (is_peak or n.hook) and rng.random() < S['swell']:
                 p['swell'] = dict(lo=-round(jit(2.0), 2), peak=round(jit(1.6), 2), end=-round(jit(1.0), 2),
@@ -557,9 +602,23 @@ def _phrase_spec(vo: Vocal, ph: list) -> dict:
                        ws=n.word_start, we=n.word_end, w=s.word, st=s.stress, hook=n.hook,
                        plan={k: v for k, v in vo.plan[i].items()}))
     S = vo.params
+    # the rest after the phrase (s): room for a final stop's release before the next phrase's breath
+    k = vo.phrases.index(ph) if ph in vo.phrases else -1
+    z = vo.notes[ph[-1]]
+    rest = 9.0
+    if 0 <= k < len(vo.phrases) - 1:
+        rest = song.seconds(vo.notes[vo.phrases[k + 1][0]].start) - song.seconds(z.start + z.dur)
     return dict(format=FORMAT, bank=vo.bank.id, bank_sha=vo.bank.entry.get('sha256', ''), style=vo.style,
                 params=S, notes=ns, seed=vo.seed, take=vo.take, formant=vo.formant, moves=vo.moves_on,
-                pitch=vo.pitch_mode, mode=vo.mode)
+                pitch=vo.pitch_mode, mode=vo.mode, rest_after=round(min(9.0, rest), 4),
+                release_vowel=RELEASE_VOWEL if RELEASE_VOWEL in _bank_phonemes(vo.bank) else None)
+
+
+def _bank_phonemes(bank) -> set:
+    try:
+        return bank.phonemes if bank.installed() else set()
+    except (OSError, ValueError):
+        return set()
 
 
 def _key(spec: dict) -> str:
@@ -624,7 +683,7 @@ def _groups(ns: list) -> list:
     for n in ns:
         if n['k'] == 'syllable' or not out:
             out.append(dict(t=n['t'], end=n['t'] + n['d'], m=n['m'], on=list(n['on']), nu=n['nu'], co=list(n['co']),
-                            notes=[n], we=n['we'], ws=n['ws']))
+                            notes=[n], we=n['we'], ws=n['ws'], w=n.get('w', '')))
         else:
             out[-1]['notes'].append(n)
             out[-1]['end'] = n['t'] + n['d']
@@ -739,6 +798,48 @@ def _timeline(spec: dict, cons: list, bank) -> dict:
         add(p, t, t + d)
         t += d
     # the syllables
+    dic: list = []                  # diction: the codas (+ a final stop's release) with their lift and vowel span
+    rel_v = spec.get('release_vowel')
+
+    def close(g, co, cl, V, end, after):
+        """The vowel + its coda before a rest: the coda ends at `end` (the end of the word's last note), each
+        consonant within its class's min / max, at most half the note; a final stop gets a silent closure before
+        it and (moves on) a released burst after it. Returns the time after the last token."""
+        lens = []
+        for p, x in zip(co, cl):
+            mn, _, mx = DICTION[_cls(p)][:3]
+            lens.append(min(max(x, mn), max(mn, mx)))
+        stop = g['we'] and bool(co) and _cls(co[-1]) == 'stop'
+        closure = CLOSURE_S if stop and (len(co) == 1 or _cls(co[-2]) in ('sibilant', 'fricative')) else 0.0
+        total = sum(lens) + closure
+        lim = 0.5 * max(0.05, end - V)
+        if total > lim:
+            lens = [x * lim / total for x in lens]
+            closure *= lim / total
+        c0 = end - sum(lens) - closure
+        g['vend'] = c0
+        add(g['nu'], V, c0)
+        tt = c0
+        rs, ra, rb, fade = RELEASE['voiced' if co and co[-1] in _VOICED_STOPS else 'unvoiced']
+        released = stop and mv and rel_v and min(rs, 0.25 * after) >= 0.015
+        for j, (p, d) in enumerate(zip(co, lens)):
+            if closure and j == len(co) - 1:
+                add('SP', tt, tt + closure)
+                tt += closure
+            add(p, tt, tt + d)
+            if g['we']:
+                dic.append(dict(word=g['w'], ph=p, cls=_cls(p), a=round(tt, 5), b=round(tt + d, 5), at='rest',
+                                lift=DICTION[_cls(p)][4] if mv else 0.0, vowel=(V, c0),
+                                fade=fade if released and j == len(co) - 1 else 0.0))
+            tt += d
+        if released:
+            r = min(rs, 0.25 * after)
+            add(rel_v, tt, tt + r)
+            dic.append(dict(word=g['w'], ph=rel_v, cls='release', a=round(tt, 5), b=round(tt + r, 5), at='rest',
+                            lift=ra, to=rb, vowel=(V, c0)))
+            tt += r
+        return tt
+
     for k, g in enumerate(groups):
         nxt = groups[k + 1] if k + 1 < len(groups) else None
         V = g['V']
@@ -751,30 +852,34 @@ def _timeline(spec: dict, cons: list, bank) -> dict:
             Vn = nxt['V']
             gap = nxt['t'] - end
             if gap < 0.08:                        # legato: the cluster sits before the next vowel
-                room = (Vn - V) * (S['cons_share'] if mv else 0.6)
+                share = S['cons_share'] if mv else 0.6
+                room = (Vn - V) * share
                 tot = sum(cl) + sum(ol)
                 f = min(1.0, room / tot) if tot > 0 else 1.0
-                cl = [x * f for x in cl]
-                ol = [x * f for x in ol]
+                # never squeezed to nothing: a coda keeps its class's legato minimum, an onset ONSET_MIN_S - the
+                # cluster may then take up to LEGATO_SHARE of the note
+                cl = [max(x * f, DICTION[_cls(p)][1]) for p, x in zip(co, cl)]
+                ol = [max(x * f, ONSET_MIN_S) for x in ol]
+                tot = sum(cl) + sum(ol)
+                lim = (Vn - V) * max(share, LEGATO_SHARE)
+                if tot > lim > 0:
+                    cl = [x * lim / tot for x in cl]
+                    ol = [x * lim / tot for x in ol]
                 c0 = Vn - sum(cl) - sum(ol)
+                g['vend'] = c0
                 add(g['nu'], V, c0)
                 tt = c0
-                for p, d in zip(co + on, cl + ol):
+                for j, (p, d) in enumerate(zip(co + on, cl + ol)):
                     add(p, tt, tt + d)
+                    if j < len(co) and g['we']:
+                        dic.append(dict(word=g['w'], ph=p, cls=_cls(p), a=round(tt, 5), b=round(tt + d, 5),
+                                        at='legato', lift=DICTION[_cls(p)][5] if mv else 0.0, vowel=(V, c0)))
                     tt += d
             else:                                 # a rest: the coda closes the note, the onset leads the next
-                cmax = 0.35 * max(0.05, end - V)
-                f = min(1.0, cmax / sum(cl)) if cl and sum(cl) > 0 else 1.0
-                cl = [x * f for x in cl]
-                c0 = end - sum(cl)
-                add(g['nu'], V, c0)
-                tt = c0
-                for p, d in zip(co, cl):
-                    add(p, tt, tt + d)
-                    tt += d
                 f2 = min(1.0, 0.8 * gap / sum(ol)) if ol and sum(ol) > 0 else 1.0
                 ol = [x * f2 for x in ol]
                 o_start = Vn - sum(ol)
+                tt = close(g, co, cl, V, end, o_start - end)
                 bp = nxt['notes'][0]['plan'].get('breath') if mv else None
                 rest = o_start - tt
                 if bp and rest >= S['breath_min_s'] - 0.02:
@@ -784,20 +889,12 @@ def _timeline(spec: dict, cons: list, bank) -> dict:
                     add('SP', o_start - 0.06, o_start)
                 elif rest > 0:
                     add('SP', tt, o_start)
-                tt = o_start
+                tt = max(tt, o_start)
                 for p, d in zip(on, ol):
                     add(p, tt, tt + d)
                     tt += d
         else:
-            cmax = 0.35 * max(0.05, end - V)
-            f = min(1.0, cmax / sum(cl)) if cl and sum(cl) > 0 else 1.0
-            cl = [x * f for x in cl]
-            c0 = end - sum(cl)
-            add(g['nu'], V, c0)
-            tt = c0
-            for p, d in zip(co, cl):
-                add(p, tt, tt + d)
-                tt += d
+            tt = close(g, co, cl, V, end, float(spec.get('rest_after', 9.0)))
             add('SP', tt, tt + 0.35)
     # frames (from the file start)
     t0 = toks[0][1]
@@ -812,10 +909,23 @@ def _timeline(spec: dict, cons: list, bank) -> dict:
     else:
         moves, vmask = [0.0] * len(ftime), [0] * len(ftime)
     midi = _pitch_curve(spec, groups, ftime, rng, mv, S, moves)
-    gain, mix = _air_and_colour(spec, groups, ftime, toks, t0, mv, S, bank, rng)
+    for e in dic:                                             # the frames each coda / release really gets
+        i = next(i for i, (p, a, b) in enumerate(toks) if p == e['ph'] and abs(a - e['a']) < 1e-4)
+        e['f'] = (bounds[i], bounds[i + 1])
+        va, vb_ = (max(0, min(nf, round((x - t0) / FR))) for x in e['vowel'])
+        e['vf'] = (va, max(va + 1, vb_))
+    gain, mix = _air_and_colour(spec, groups, ftime, toks, t0, mv, S, bank, rng, dic)
+    diction = []
+    for e in dic:
+        fa, fb = e['f']
+        va, vb_ = e['vf']
+        vg = sorted(gain[va:vb_]) or [0.0]
+        level = sum(gain[fa:fb]) / max(1, fb - fa) - vg[len(vg) // 2]
+        diction.append(dict(word=e['word'], ph=e['ph'], cls=e['cls'], at=e['at'], a=e['a'], b=e['b'],
+                            ms=round((fb - fa) * FR * 1000, 1), lift=e['lift'], level_db=round(level, 2)))
     return {'phonemes': [p for p, _, _ in toks], 'durations': durs, 'offset_s': t0, 'frames': nf, 'midi': midi,
             'vowels': [round(g['V'], 5) for g in groups], 'moves': [round(x, 4) for x in moves], 'vibmask': vmask,
-            'gain': gain, 'mix': mix,
+            'gain': gain, 'mix': mix, 'diction': diction,
             'tokens': [(p, round(a, 4), round(b, 4)) for p, a, b in toks]}
 
 
@@ -921,6 +1031,12 @@ def _hybrid(model: list, plan: dict) -> list:
     return [round(out[f] + moves[f], 4) for f in range(nf)]
 
 
+def _vend(g: dict) -> float:
+    """Where a syllable group's vowel ends (its coda starts; the timeline sets it), else the end of its last note.
+    A phrase end's fall / doit / release / taper end here, so they shape the vowel and leave the consonant alone."""
+    return max(g['V'] + 0.05, g['vend']) if 'vend' in g else g['end']
+
+
 def _gestures(groups, segs, S) -> list:
     """The planned moves as gesture.Gesture objects in phrase seconds (gesture.py at bpm=60)."""
     out = []
@@ -944,12 +1060,14 @@ def _gestures(groups, segs, S) -> list:
                 kw = {k: v[k] for k in ('depth', 'hz', 'delay', 'grow', 'wobble') if k in v}
                 out.append(G.vibrato(st, max(0.06, vend - st), 60, shape='centre', lane='bend',
                                      seed=int(st * 1000) + gi, **kw))
+            # the phrase-end moves act on the vowel: they end where the coda starts (never on the consonant)
+            ve = _vend(g)
             if 'fall' in p:
-                out.append(G.fall(g['end'], 60, semis=p['fall']['semis'], ms=p['fall'].get('ms', 220.0), air=0.0))
+                out.append(G.fall(ve, 60, semis=p['fall']['semis'], ms=p['fall'].get('ms', 220.0), air=0.0))
             if 'doit' in p:
-                out.append(G.doit(g['end'], 60, semis=p['doit']['semis'], ms=p['doit'].get('ms', 160.0), air=0.0))
+                out.append(G.doit(ve, 60, semis=p['doit']['semis'], ms=p['doit'].get('ms', 160.0), air=0.0))
             if 'release' in p:
-                out.append(G.breath_release(g['end'], 60, db=0.0, ms=p['release']['ms'], drop=p['release']['drop']))
+                out.append(G.breath_release(ve, 60, db=0.0, ms=p['release']['ms'], drop=p['release']['drop']))
             if 'bend' in p:
                 out.append(G.bend(st, dur, 60, semis=p['bend']['semis']))
             if 'shake' in p:
@@ -957,14 +1075,38 @@ def _gestures(groups, segs, S) -> list:
     return out
 
 
-def _air_and_colour(spec, groups, ftime, toks, t0, mv, S, bank, rng):
+def _diction_gain(dic, nf, a_db) -> list:
+    """Diction over the codas (frames from _timeline): the coda keeps its vowel's level (the median of a_db over
+    the vowel - a release / taper / swell end never reaches it; a_db is set so in place, so the colour follows) and
+    gets its class's lift (a final stop's voiced tail faded by its 'fade' over the last 35 ms); a final stop's release
+    vowel goes from its 'lift' to its 'to' (RELEASE). Returns the lift per frame."""
+    lift = [0.0] * nf
+    nfade = max(1, round(0.035 / FR))
+    for e in dic:
+        va, vb_ = e['vf']
+        v = sorted(a_db[va:vb_]) or [0.0]
+        ref = v[len(v) // 2]
+        fa, fb = max(0, e['f'][0]), min(nf, e['f'][1])
+        n = max(1, fb - fa)
+        for f in range(fa, fb):
+            a_db[f] = ref
+            if e['cls'] == 'release':
+                lift[f] = e['lift'] + (e['to'] - e['lift']) * (f - fa + 1) / n
+            else:
+                j = f - (fb - min(nfade, n))
+                lift[f] = e['lift'] + (e.get('fade', 0.0) * (j + 1) / min(nfade, n) if j >= 0 else 0.0)
+    return lift
+
+
+def _air_and_colour(spec, groups, ftime, toks, t0, mv, S, bank, rng, dic=()):
     """Gain (dB per frame) and the voice-mode blend ({speaker: [weight per frame]})."""
     nf = len(ftime)
     core = bank.mode('core')
     mode = spec.get('mode')
     if mode:
         sp = bank.mode(mode)
-        return [0.0] * nf, {sp: 1.0}
+        lift = _diction_gain(dic, nf, [0.0] * nf) if mv else [0.0] * nf
+        return [round(x, 3) for x in lift], {sp: 1.0}
     if not mv:
         return [0.0] * nf, {core: 1.0}
     # air moves (dB) from gesture.py
@@ -982,9 +1124,9 @@ def _air_and_colour(spec, groups, ftime, toks, t0, mv, S, bank, rng):
             if 'messa_di_voce' in p:
                 gs.append(G.messa_di_voce(st, d, 60, **p['messa_di_voce'], bright=0.0))
             if 'taper' in p:
-                gs.append(G.taper(st, max(0.05, g['end'] - st), 60, **p['taper'], bright=0.0))
+                gs.append(G.taper(st, max(0.05, _vend(g) - st), 60, **p['taper'], bright=0.0))
             if 'release' in p:
-                gs.append(G.breath_release(g['end'], 60, db=p['release']['db'], ms=p['release']['ms'], drop=0.0))
+                gs.append(G.breath_release(_vend(g), 60, db=p['release']['db'], ms=p['release']['ms'], drop=0.0))
     notes = [(g['V'] if j == 0 else n['t'], max(0.05, n['d']), n['v']) for g in groups for j, n in enumerate(g['notes'])]
     if S['accent'] and notes:
         gs.append(G.accents(notes, 60, db_per_vel=S['accent'], limit=5.0))
@@ -992,6 +1134,7 @@ def _air_and_colour(spec, groups, ftime, toks, t0, mv, S, bank, rng):
     a_db = [0.0] * nf
     for f, t in enumerate(ftime):
         a_db[f] = sum(s(t) for s in air if s.t0 - 1e-6 <= t <= s.t1 + 1e-6)
+    lift = _diction_gain(dic, nf, a_db)
     # level relative to the part's mean velocity (dB), for the colour
     vel_db = [0.0] * nf
     import bisect
@@ -1006,7 +1149,7 @@ def _air_and_colour(spec, groups, ftime, toks, t0, mv, S, bank, rng):
             fa, fb = int((a - t0) / FR), int((b - t0) / FR)
             for f in range(max(0, fa), min(nf, fb + 1)):
                 br[f] = S['breath_db']
-    gain = [round(a_db[f] + br[f], 3) for f in range(nf)]
+    gain = [round(a_db[f] + br[f] + lift[f], 3) for f in range(nf)]
     # colour: soft when quiet, power when loud / high
     soft_n = bank.mode('soft')
     pow_n = bank.mode('power')
@@ -1268,15 +1411,63 @@ def check(report, vocals=None, *, presence_min: float = 40.0, rival: float = 0.6
     return out
 
 
+def diction(target) -> list[dict]:
+    """The singer's diction check on the rendered takes (a Song, a vocal track or a Vocal; after a build / compile):
+    every word-final consonant (the timeline's 'diction' list) must last at least its class's warn length
+    (DICTION: a stop 40 ms, a sibilant 50 ms ...) and must not sit more than 3 dB under its vowel (a release or taper
+    swallowing it). Findings [{'severity', 'code', 'node', 'message'}] - 'coda_short' / 'coda_buried' - and an 'info'
+    'diction' summary per part (how many codas, the shortest)."""
+    if isinstance(target, Vocal):
+        parts = [target]
+    elif getattr(target, '_singer', None):
+        parts = list(target._singer['parts'])
+    else:
+        parts = [vo for t in getattr(target, 'tracks', {}).values() if getattr(t, '_singer', None)
+                 for vo in t._singer['parts']]
+    out = []
+    for vo in parts:
+        tid = vo.track.id
+        codas = []
+        for r in vo.rendered:
+            try:
+                tl = json.loads(Path(r['path']).with_suffix('.json').read_text(encoding='utf-8'))['timeline']
+            except (OSError, ValueError, KeyError):
+                continue
+            codas += [c for c in tl.get('diction', []) if c['cls'] != 'release']
+        for c in codas:
+            lim = DICTION.get(c['cls'], DICTION['glide'])[3] * 1000
+            where = f"{c['word']!r} /{c['ph']}/ ({'before a rest' if c['at'] == 'rest' else 'legato'})"
+            if c['ms'] < lim - 1e-6:
+                out.append(dict(severity='warn', code='coda_short', node=tid,
+                                message=f"{tid!r}: the word-final {where} lasts {c['ms']:.0f} ms (< {lim:.0f} ms for a "
+                                        f"{c['cls']}): it will not be heard - give the word a longer last note or a "
+                                        f"gap after it"))
+            if c.get('level_db', 0.0) < -3.0:
+                out.append(dict(severity='warn', code='coda_buried', node=tid,
+                                message=f"{tid!r}: the word-final {where} sits {c['level_db']:.1f} dB under its vowel "
+                                        f"(a release / taper over the consonant)"))
+        if codas:
+            short = min(codas, key=lambda c: c['ms'])
+            out.append(dict(severity='info', code='diction', node=tid,
+                            message=f"{tid!r}: {len(codas)} word-final consonants sung, the shortest {short['word']!r} "
+                                    f"/{short['ph']}/ {short['ms']:.0f} ms"))
+    return out
+
+
 def report_lines(song, report) -> list[str]:
-    """The vocal checks (check()) of a build, as printable lines (none when the song sings nothing)."""
+    """The vocal checks (check() + diction()) of a build, as printable lines (none when the song sings nothing)."""
     ids = [t.id for t in song.tracks.values() if getattr(t, '_singer', None) and not re.search(r'_(dbl|harm)', t.id)]
     if not ids:
         return []
     try:
         fs = check(report, ids)
     except (OSError, ValueError):
-        return []
+        fs = None
+    dic = [f for f in diction(song) if f['node'] in ids]
+    lines = [f"vocals    [{f['severity']}] {f['message']}" for f in dic if f['severity'] != 'info']
+    lines += [f"vocals    diction: {f['message']}" for f in dic if f['severity'] == 'info']
+    if fs is None:
+        return lines
     if not fs:
-        return [f"vocals    {', '.join(ids)}: intelligible (presence band owned), not buried, no harshness"]
-    return [f"vocals    [{f['severity']}] {f['message']}" for f in fs]
+        return [f"vocals    {', '.join(ids)}: intelligible (presence band owned), not buried, no harshness"] + lines
+    return [f"vocals    [{f['severity']}] {f['message']}" for f in fs] + lines

@@ -897,6 +897,32 @@ class BassLine:
         return track
 
 
+class Player:
+    """A bassist through a whole song: arrange() per section with one Memory (fills and flashy moves budgeted
+    song-wide), each line placed on the track (slides as glides / bends: BassLine.place).
+
+        bp = bassist.Player(b.bass, bpm=BPM, key=s.key, style='synth', kick='x...x...x...x...')
+        bp.play(P_verse * 2, verse1, 'verse', seed=1, kick='x.......x.x.....', interlock=True)
+        bp.play(P_chorus, chorus1, 'chorus', seed=3)
+
+    play(prog, at, part=None, **arrange options) - every option per call or as a Player default; returns the
+    BassLine (also in .lines)."""
+
+    def __init__(self, track, *, bpm, key=None, memory: Memory | None = None, **defaults):
+        self.track, self.bpm, self.key = track, bpm, key
+        self.memory = memory if memory is not None else Memory()
+        self.defaults = defaults
+        self.lines: list = []
+
+    def play(self, prog, at, part=None, *, key=None, **kw) -> 'BassLine':
+        opts = dict(self.defaults, **kw)
+        ln = arrange(prog, bpm=self.bpm, key=key if key is not None else self.key, part=part, memory=self.memory,
+                     at=at, **opts)
+        ln.place(self.track, at)
+        self.lines.append(ln)
+        return ln
+
+
 def _find_art(names, words):
     low = [(n, n.lower()) for n in names]
     for w in words:

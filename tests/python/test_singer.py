@@ -33,6 +33,9 @@ young  Y AH1 NG
 lights  L AY1 T S
 are  AA1 R
 so  S OW1
+out  AW1 T
+loud  L AW1 D
+and  AH0 N D
 """
 
 
@@ -345,6 +348,134 @@ class SingerRender(_Env):
         self.assertEqual([n.pitch for n in h.notes][:2], [67, 71])            # E4 G4 -> G4 B4 (a third up)
         self.assertNotEqual(singer._key(singer._phrase_spec(d, d.phrases[0])),
                             singer._key(singer._phrase_spec(vo, vo.phrases[0])))
+
+
+def _timeline(vo, k=0, pred=6.0):
+    """The timeline of phrase k with a flat duration-model prediction (frames per phoneme)."""
+    spec = singer._phrase_spec(vo, vo.phrases[k])
+    job = singer._dur_job(spec)
+    return spec, singer._timeline(spec, singer._cons_lengths(job, [pred] * len(job['phonemes']), spec),
+                                  vb.get('hanami'))
+
+
+# 'out' runs over two notes ('-' melisma) to a phrase end, 'loud' is held ('_') to a phrase end; a rest between
+CODA_LINE = Clip([(0, 1, 'E4', 90), (1, 1, 'G4', 90), (2, 1, 'E4', 90),
+                  (5, 1, 'E4', 90), (6, 1, 'G4', 90), (7, 1, 'G4', 90)], length=12)
+CODA_TEXT = 'so out -, so loud _.'
+
+
+class Diction(_Env):
+    """Word-final consonants: at the end of the word's last note (after a run / hold), never too short, a final stop
+    released, not under the phrase-end release / taper, not covered by the next breath; the diction check."""
+
+    def _sing(self, s, **kw):
+        s._singer_dir = self.tmp
+        return singer.sing(s, CODA_LINE, CODA_TEXT, at=0, seed=5, release=1.0, taper=1.0, fall=1.0, spice_every=1,
+                           **kw)
+
+    def test_align_codas_after_melisma_and_hold(self):
+        sung = lyrics.align(CODA_LINE, CODA_TEXT)
+        self.assertEqual([x.kind for x in sung], ['syllable', 'syllable', 'melisma', 'syllable', 'syllable', 'hold'])
+        self.assertEqual([x.word_end for x in sung], [True, False, True, True, False, True])
+        self.assertEqual(sung[2].syllable.coda, ('t',))                     # the run carries the coda of 'out'
+        self.assertEqual(sung[5].syllable.coda, ('d',))
+        self.assertEqual((sung[2].mark, sung[5].mark), (',', '.'))
+
+    def test_final_stop_at_the_end_of_the_run_released(self):
+        s = _song()
+        vo = self._sing(s)
+        self.assertEqual(len(vo.phrases), 2)
+        self.assertIn('diction', {n for _, n, _ in vo.moves})
+        for k, (word, stop, last) in enumerate((('out', 't', 2), ('loud', 'd', 5))):
+            spec, tl = _timeline(vo, k)
+            n = vo.notes[last]
+            end = s.seconds(n.start + n.dur) - s.seconds(vo.notes[vo.phrases[k][0]].start)
+            toks = tl['tokens']
+            i = max(j for j, t in enumerate(toks) if t[0] == stop)
+            self.assertAlmostEqual(toks[i][2], end, places=3)                # the coda closes the LAST note
+            self.assertEqual(toks[i - 1][0], 'SP')                             # a silent closure before the stop
+            self.assertEqual(toks[i + 1][0], 'ah')                             # ... and a released burst after it
+            self.assertGreater(toks[i + 1][1], end - 1e-6)                     # (in the rest after the note)
+            self.assertEqual(toks[i - 2][0], 'aw')
+            c = next(c for c in tl['diction'] if c['ph'] == stop)
+            self.assertEqual((c['word'], c['cls'], c['at']), (word, 'stop', 'rest'))
+            self.assertGreaterEqual(c['ms'], singer.DICTION['stop'][3] * 1000)
+            self.assertLessEqual(toks[i][2] - toks[i][1], singer.DICTION['stop'][2] + 0.012)   # no long closure
+            # the phrase-end release / taper act on the vowel: the coda keeps the vowel's level + its lift
+            self.assertGreaterEqual(c['level_db'], singer.DICTION['stop'][4] - (0.5 if stop == 't' else 3.0))
+            t0, nf = tl['offset_s'], tl['frames']
+            fr = lambda t: max(0, min(nf - 1, int((t - t0) / singer.FR)))
+            vowel_end = tl['gain'][fr(toks[i - 2][2]) - 1]
+            coda = tl['gain'][fr((toks[i][1] + toks[i][2]) / 2)]
+            self.assertLess(vowel_end, coda - 4.0)                             # the release ended on the vowel
+            # the fall ends on the vowel too: the pitch at the vowel end is already down
+            if 'fall' in vo.plan[last]:
+                self.assertLess(tl['midi'][fr(toks[i - 2][2]) - 1], vo.notes[last].pitch - 0.5)
+
+    def test_the_next_breath_never_covers_the_coda(self):
+        s = _song()
+        s._singer_dir = self.tmp
+        for rest in (1.0, 0.25):                                              # 0.6 s, then 0.15 s (split_s=0.1)
+            line = Clip([(0, 1, 'E4', 90), (1, 1, 'G4', 90), (2 + rest, 1, 'E4', 90), (3 + rest, 1, 'G4', 90)],
+                        length=8)
+            vo = singer.sing(s, line, 'so out, so out', at=0, seed=2, split_s=0.1, track_id=f'v{int(rest * 100)}')
+            self.assertEqual(len(vo.phrases), 2)
+            _, a = _timeline(vo, 0)
+            _, b = _timeline(vo, 1)
+            i = next(j for j, t in enumerate(a['tokens']) if t[0] == 't')
+            coda_end = max(t[2] for t in a['tokens'][i:i + 2] if t[0] != 'SP')          # the stop / its release
+            self.assertAlmostEqual(a['tokens'][i][2], s.seconds(2.0), places=3)          # the note end
+            nxt0 = s.seconds(2 + rest)                                                     # phrase 2, song time
+            first = next(t for t in b['tokens'] if t[0] not in ('SP',))                   # its breath / onset
+            self.assertGreaterEqual(nxt0 + first[1], coda_end - 1e-6)
+            self.assertLessEqual(coda_end - s.seconds(2.0), 0.25 * s.seconds(rest) + 1e-6)  # the release fits
+
+    def test_legato_codas_keep_a_minimum(self):
+        s = _song()
+        s._singer_dir = self.tmp
+        line = Clip([(0, 0.5, 'E4', 90), (0.5, 0.5, 'G4', 90), (1, 2, 'E4', 90)], length=4)
+        vo = singer.sing(s, line, 'and so on', at=0, seed=2)
+        _, tl = _timeline(vo, pred=30.0)                                      # long predictions: squeezed
+        n, d = [c for c in tl['diction'] if c['word'] == 'and']
+        self.assertEqual((n['ph'], d['ph'], d['at']), ('n', 'd', 'legato'))
+        self.assertGreaterEqual(d['ms'], singer.DICTION['stop'][1] * 1000 - 12)
+        self.assertGreaterEqual(n['ms'], singer.DICTION['nasal'][1] * 1000 - 12)
+        _, tl = _timeline(vo, pred=0.4)                                       # tiny predictions: raised
+        d = next(c for c in tl['diction'] if c['ph'] == 'd')
+        self.assertGreaterEqual(d['ms'], singer.DICTION['stop'][1] * 1000 - 12)
+        ph = [t[0] for t in tl['tokens']]
+        i = ph.index('d')
+        self.assertEqual(ph[i + 1], 's')                                      # no closure / release in legato
+
+    def test_robot_has_minimums_but_no_moves(self):
+        s = _song()
+        vo = self._sing(s, moves=False, track_id='robot')
+        spec, tl = _timeline(vo, 0, pred=0.4)
+        self.assertEqual(len(set(tl['gain'])), 1)                            # one level, no lift
+        self.assertNotIn('ah', [t[0] for t in tl['tokens']])                 # no release vowel
+        t = next(c for c in tl['diction'] if c['ph'] == 't')
+        self.assertGreaterEqual(t['ms'], singer.DICTION['stop'][3] * 1000)
+
+    def test_diction_check(self):
+        s = _song()
+        s._singer_dir = self.tmp
+        line = Clip([(0, 0.25, 'E4', 90), (0.25, 0.25, 'G4', 90), (0.5, 2, 'E4', 90)], length=4)
+        vo = singer.sing(s, line, 'and so on', at=0, seed=2)                  # 'and' on a 0.15 s note: too short
+        calls = []
+        with mock.patch.object(vb, 'run', _fake_run(calls)), mock.patch.object(vb, 'runner_ok', lambda: (True, '')):
+            s.compile()
+        fs = singer.diction(s)
+        self.assertTrue(any(f['code'] == 'coda_short' and "'and'" in f['message'] for f in fs))
+        self.assertTrue(any(f['code'] == 'diction' for f in fs))
+        self.assertEqual(singer.diction(vo), fs)
+        self.assertTrue(any('coda_short' not in x and 'lasts' in x for x in
+                            singer.report_lines(s, self.tmp / 'missing.json')))
+        # a coda swallowed by a release (an older take / a hand-made gesture): buried
+        p = Path(vo.rendered[0]['path']).with_suffix('.json')
+        meta = json.loads(p.read_text(encoding='utf-8'))
+        meta['timeline']['diction'][0].update(level_db=-7.0, ms=80.0)
+        p.write_text(json.dumps(meta), encoding='utf-8')
+        self.assertTrue(any(f['code'] == 'coda_buried' for f in singer.diction(vo)))
 
 
 class VocalEars(unittest.TestCase):

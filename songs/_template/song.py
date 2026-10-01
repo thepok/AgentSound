@@ -13,14 +13,15 @@ ANALYSIS = {'profile': 'synthwave'}                  # the report judges against
 def build() -> Song:
     s = Song('Template', tempo=108, key='A minor', seed=1)
 
-    # Arrangement (bars). Positions: sec.start / sec.bar(n) (0-based, -1 = last bar) / sec.beat(-2).
-    intro = s.section('intro', bars=4)
-    verse = s.section('verse', bars=16)
-    chorus = s.section('chorus', bars=16)
-    outro = s.section('outro', bars=4)
+    # Arrangement (bars) with each section's harmony (sec.prog: the section plans below play it; a shorter
+    # progression repeats). Positions: sec.start / sec.bar(n) (0-based, -1 = last bar) / sec.beat(-2).
+    prog = s.prog('i VI III VII')                            # Am F C G, one bar each
+    intro = s.section('intro', bars=4, prog=prog)
+    verse = s.section('verse', bars=16, prog=prog)
+    chorus = s.section('chorus', bars=16, prog=prog)
+    outro = s.section('outro', bars=4, prog=prog)
 
     # Material
-    prog = s.prog('i VI III VII')                            # Am F C G, one bar each
     beat = drums({'kick': 'x...x...x...x...', 'snare': '....x.......x...',
                   'hat': 'x.x.x.x.x.x.x.x.', 'ohh': '..............x.'})
     lift = drums({'kick': 'x...x...x...x...', 'snare': '....x.......x...', 'clap': '....x.......x...',
@@ -42,14 +43,13 @@ def build() -> Song:
     arps = s.track('arp', 'synthwave/arp_pluck', gain_db=-2, pan=0.3)
     lead = s.track('lead', 'synthwave/supersaw_lead', gain_db=2)
 
-    # Parts
-    pad.loop(prog.block(voicing='spread', register=('C3', 'C5')), intro, verse, chorus, outro)
-    kit.loop(beat, verse, vel=0.85).loop(lift, chorus)                  # the verse holds back, the chorus hits
-    kit.play(snare_roll(4, build=True), verse.bar(-1), replace=True)
-    kit.play(crash(), chorus)
-    bass.loop(prog.bass('octave', rate='1/8'), verse, vel=0.85).loop(prog.bass('octave', rate='1/8'), chorus)
-    arps.loop(prog.arp('updown', rate='1/16', octaves=2, register=('C4', 'C5')), intro, verse, chorus, outro)
-    keys.loop(prog.block(voicing='drop2', rhythm='x..x..x.', register=('C4', 'C5')), verse, chorus)
+    # Parts: per section from its progression; any option may be a per-section dict {section: value, '*': default}
+    pad.chords(s.sections, voicing='spread', register=('C3', 'C5'))
+    kit.plan({verse: beat.velocity(0.85), chorus: lift},     # the verse holds back, the chorus hits
+             fills={verse: (16, snare_roll(4, build=True))}, crashes=[chorus])
+    bass.bassline('octave', verse, chorus, rate='1/8', scale={verse: 0.85})
+    arps.arp('updown', s.sections, rate='1/16', octaves=2, register=('C4', 'C5'))
+    keys.chords(verse, chorus, voicing='drop2', rhythm='x..x..x.', register=('C4', 'C5'))
     lead.play(hook.clip(octave=4), chorus, times=4)
 
     # Production moves: kick pump (bass deeper than the bed), the arp fading in and out, the intro filter

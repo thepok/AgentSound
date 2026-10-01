@@ -19,11 +19,8 @@ Build: python -m agentsound build songs/ghosts-of-ocean-drive
 Compare: python -m agentsound compare songs/ghosts-of-ocean-drive --section chorus2
          --ref "<refs>/The Midnight - Sunset (Official Audio) [URma_gu1aNE].opus" --ref-start 1:51 --ref-end 2:21
 """
-import math
-
 from agentsound import *
 from agentsound import bands, bassist, drummer, hornist, mastering, pianist
-from agentsound.humanize import touch
 
 BPM = 104
 ANALYSIS = {'profile': 'synthwave'}
@@ -108,20 +105,6 @@ def build() -> Song:
     s = Song('Ghosts of Ocean Drive', tempo=BPM, key='B minor', seed=1986, tail=8.0)
     key, up = s.key, Key('C# minor')
 
-    # ------------------------------------------------------------------ form: 124 bars, ~4:46
-    intro = s.section('intro', 8)          # pad + glass arp opening, the hook cell teased far away
-    verse1 = s.section('verse1', 16)       # drums (half), bass, e-piano, the verse tune on the hero piano
-    pre1 = s.section('pre1', 8)            # the ladder: Em G A F#7, strings swell, drum build, riser, a breath
-    chorus1 = s.section('chorus1', 16)     # the hook, four on the floor, claps
-    inter = s.section('interlude', 4)      # the hook cell once more over the groove (the lamplight rule)
-    verse2 = s.section('verse2', 8)        # the verse again, the pluck arp joins, busier drums
-    pre2 = s.section('pre2', 8)
-    chorus2 = s.section('chorus2', 16)     # + choir, strings, brass stabs, the hook harmonized
-    brk = s.section('breakdown', 8)        # drums gone, the hook at half speed in new colours (E major), shimmer
-    solo = s.section('solo', 8)            # the hero sax over the chorus changes, landing on G#7
-    chorus3 = s.section('chorus3', 16)     # a whole step up (C# minor): everything, the pianist's climax
-    outro = s.section('outro', 8)          # back in B minor, the sax sings the cell, the beat strips away
-
     # ------------------------------------------------------------------ harmony
     P_intro = s.prog('Gmaj7:2 A6:2 Bm9:2 Asus4 A')
     P_verse = s.prog('i VI III VII i VI iv VII')                  # Bm G D A | Bm G Em A
@@ -136,6 +119,20 @@ def build() -> Song:
     # the outro's G arrives a step down instead of a tritone away from C#m
     P_up = (P_chA + s.prog('VI VII i III VI VII i VI')).transpose(2)   # A B C#m E | A B F#m G# | A B C#m E | A B C#m A
     P_outro = s.prog('G A Bm D Gmaj7:2 Bm9:2')
+
+    # ------------------------------------------------------------------ form: 124 bars, ~4:46
+    intro = s.section('intro', 8, prog=P_intro)          # pad + glass arp opening, the hook cell teased far away
+    verse1 = s.section('verse1', 16, prog=P_verse * 2)   # drums (half), bass, e-piano, the verse tune on the hero piano
+    pre1 = s.section('pre1', 8, prog=P_pre)              # the ladder: Em G A F#7, strings swell, drum build, riser, a breath
+    chorus1 = s.section('chorus1', 16, prog=P_chorus)    # the hook, four on the floor, claps
+    inter = s.section('interlude', 4, prog=P_inter)      # the hook cell once more over the groove (the lamplight rule)
+    verse2 = s.section('verse2', 8, prog=P_verse)        # the verse again, the pluck arp joins, busier drums
+    pre2 = s.section('pre2', 8, prog=P_pre)
+    chorus2 = s.section('chorus2', 16, prog=P_chorus)    # + choir, strings, brass stabs, the hook harmonized
+    brk = s.section('breakdown', 8, prog=P_break)        # drums gone, the hook at half speed in new colours (E major)
+    solo = s.section('solo', 8, prog=P_solo)             # the hero sax over the chorus changes, landing on G#7
+    chorus3 = s.section('chorus3', 16, prog=P_up)        # a whole step up (C# minor): everything, the pianist's climax
+    outro = s.section('outro', 8, prog=P_outro)          # back in B minor, the sax sings the cell, the beat strips away
 
     hook_a, hook_b = s.motif(bars(*HOOK_A)), s.motif(bars(*HOOK_B))
     hook = hook_a + hook_b                                         # 16 bars
@@ -185,79 +182,37 @@ def build() -> Song:
     sax.send(s.buses['hero_plate'], -11)     # its own big plate 3 dB wetter (was -14): an epic, wider solo image
 
     # ------------------------------------------------------------------ the hook instrument, played by a pianist
-    pmem = pianist.Memory()
-    pedal_pts = []
-
-    def top_leads(clip, factor):
-        """The melody on top leads: every note under the highest one struck with it (within ~35 ms: the pianist's
-        octave / sixth / third doubles, a rolled voicing) played softer."""
-        soft, group = set(), []
-        for n in sorted(clip, key=lambda n: n.start) + [None]:
-            if group and (n is None or n.start - group[0].start > 0.06):
-                top = max(g.pitch for g in group)
-                soft.update((g.start, g.pitch) for g in group if g.pitch < top)
-                group = []
-            if n is not None:
-                group.append(n)
-        return clip.map(lambda n: n._replace(vel=max(1, round(n.vel * factor))) if (n.start, n.pitch) in soft else n)
-
-    def piano(melody, prog, at, *, lo, hi, style='straight', density=0.5, octave=4, climax=False, k=None,
-              devices=None, lh=None, seed=0, lead_in=False, ornaments=None, until=None, doubles=None):
-        k = k or key
-        if isinstance(melody, str):
-            melody = s.motif(melody)
-        m = touch(melody.clip(octave=octave, gate=0.95) if hasattr(melody, 'clip') else melody, lo, hi)
-        arr = pianist.arrange(m, prog, bpm=BPM, key=k, style=style, density=density, seed=seed, climax=climax,
-                              devices=devices, lh=lh, memory=pmem, at=at, lead_in=lead_in,
-                              ornaments=ornaments or ORN)
-        rh, lh_ = arr.rh, arr.lh
-        if doubles is not None:
-            rh = top_leads(rh, doubles)
-        if until is not None:                       # the hook voice rests before the chorus (a hole to arrive in)
-            rh, lh_ = rh.slice(0, until), (lh_.slice(0, until) if len(lh_) else lh_)
-        lead.play(rh, at)
-        if len(lh_):
-            lead.play(lh_, at)
-        if until is None:
-            pedal_pts.extend(arr.pedal(prog, at))
-        else:
-            t_cut = (at.start if hasattr(at, 'start') else at) + until
-            pedal_pts.extend(p for p in arr.pedal(prog, at) if p[0] < t_cut)
-            pedal_pts.append((t_cut, 0.0))           # pedal up: the rest is a real rest
-        print(f'pianist {at if isinstance(at, (int, float)) else at.name}: {arr!r}')
-        return arr
-
     # a synthwave hook is sung, not decorated: restrikes and rolls (the piano's way to sustain), a rare crush or turn
     ORN = {'restrike': 3.0, 'roll': 1.5, 'crush': 0.6, 'turn': 0.4, 'trill': 0.3}
     HOOKDEV = {'octave': 3.0, 'sixths': 1.5, 'thirds': 1.5, 'drop2': 0.8, 'guide': 0.8, 'single': 0.4}
+    pp = pianist.Player(lead, bpm=BPM, key=key, ornaments=ORN, log=print)
     # intro: the cell, far away, twice (the second answered by the settle)
-    piano(bars(1, 2, 3), s.prog('Gmaj7 A6 Bm9'), intro.bar(3), lo=46, hi=70, style='sparse', density=0.3, seed=1)
+    pp.play(bars(1, 2, 3), s.prog('Gmaj7 A6 Bm9'), intro.bar(3), lo=46, hi=70, style='sparse', density=0.3, seed=1)
     # verses: the verse tune (lower, softer, single notes and guide tones - the hook's octaves are saved)
-    piano(VERSE + VERSE_END1 + ' | ' + VERSE + VERSE_END2, P_verse * 2, verse1, lo=52, hi=88, style='sparse',
-          density=0.35, seed=2)
-    piano(VERSE + VERSE_END2, P_verse, verse2, lo=56, hi=92, style='sparse', density=0.45, seed=3)
+    pp.play(VERSE + VERSE_END1 + ' | ' + VERSE + VERSE_END2, P_verse * 2, verse1, lo=52, hi=88, style='sparse',
+            density=0.35, seed=2)
+    pp.play(VERSE + VERSE_END2, P_verse, verse2, lo=56, hi=92, style='sparse', density=0.45, seed=3)
     # pre-chorus: the ladder, thirds and sixths growing; the hook voice then falls silent (pre1: its last bar, pre2:
     # the last two, where the brass hits take over) so each chorus arrives from a hole, not as the same piano busier
-    piano(PRE, P_pre, pre1, lo=60, hi=96, density=0.45, seed=4, devices={'thirds': 2, 'sixths': 2, 'guide': 1},
-          until=28)
-    piano(PRE, P_pre, pre2, lo=64, hi=100, density=0.55, seed=5, devices={'thirds': 2, 'sixths': 2, 'drop2': 1},
-          until=24)
+    pp.play(PRE, P_pre, pre1, lo=60, hi=96, density=0.45, seed=4, devices={'thirds': 2, 'sixths': 2, 'guide': 1},
+            until=28)
+    pp.play(PRE, P_pre, pre2, lo=64, hi=100, density=0.55, seed=5, devices={'thirds': 2, 'sixths': 2, 'drop2': 1},
+            until=24)
     # choruses: first statement a little softer, the second harmonized more, the last one up a step, climax; the
     # doubles under the melody at 75 % so the top note leads (A&R: the hook's top)
-    piano(hook, P_chorus, chorus1, lo=70, hi=108, density=0.45, seed=6, devices=HOOKDEV, doubles=0.75)
-    piano(bars(1, 2, 3, 4), P_inter, inter, lo=64, hi=98, density=0.4, seed=7, devices=HOOKDEV, doubles=0.75)
-    piano(hook, P_chorus, chorus2, lo=74, hi=112, density=0.6, seed=8, devices=HOOKDEV, doubles=0.75)
-    piano(s.motif(BREAK).stretch(2).clip(octave=4, gate=0.95), P_break, brk, lo=50, hi=86, style='ballad',
-          density=0.55, seed=9, lh='tenths')
-    piano(hook.clip(octave=4, gate=0.95).transpose(2), P_up, chorus3, lo=78, hi=118,
-          density=0.7, seed=10, climax=True, k=up, devices=HOOKDEV, doubles=0.75)
+    pp.play(hook, P_chorus, chorus1, lo=70, hi=108, density=0.45, seed=6, devices=HOOKDEV, doubles=0.75)
+    pp.play(bars(1, 2, 3, 4), P_inter, inter, lo=64, hi=98, density=0.4, seed=7, devices=HOOKDEV, doubles=0.75)
+    pp.play(hook, P_chorus, chorus2, lo=74, hi=112, density=0.6, seed=8, devices=HOOKDEV, doubles=0.75)
+    pp.play(s.motif(BREAK).stretch(2).clip(octave=4, gate=0.95), P_break, brk, lo=50, hi=86, style='ballad',
+            density=0.55, seed=9, lh='tenths')
+    pp.play(hook.clip(octave=4, gate=0.95).transpose(2), P_up, chorus3, lo=78, hi=118,
+            density=0.7, seed=10, climax=True, key=up, devices=HOOKDEV, doubles=0.75)
     # outro: the sax sings the cell (bars 1-3), the piano only answers it (bar 4), then the last chord
-    piano(bars(4), s.prog('D'), outro.bar(3), lo=50, hi=80, style='sparse', density=0.35, seed=11)
+    pp.play(bars(4), s.prog('D'), outro.bar(3), lo=50, hi=80, style='sparse', density=0.35, seed=11)
     last = Clip([(0, 8, p, v) for p, v in (('B2', 60), ('F#3', 54), ('D4', 52), ('C#5', 56), ('F#5', 62))],
                 length=8).strum(ms=40, bpm=BPM)
     lead.play(last, outro.bar(4))
-    pts = sorted({round(t, 4): (t, v) + tuple(c) for t, v, *c in pedal_pts}.values())
-    lead.automate('instrument.pedal', [p[:2] if i == 0 else p for i, p in enumerate(pts)])
+    pp.pedal()
 
     # ------------------------------------------------------------------ sax: the solo, and a farewell in the outro
     hmem = hornist.Memory()
@@ -322,26 +277,18 @@ def build() -> Song:
     print('drummer:', part.summary())
 
     # ------------------------------------------------------------------ bass: the bassist (synth octave pulse)
-    bmem = bassist.Memory()
-    FOUR, HALF = 'x...x...x...x...', 'x.......x.x.....'
-
-    def bline(prog, at, part_name, kick=FOUR, k=None, seed=0, **kw):
-        ln = bassist.arrange(prog, bpm=BPM, key=k or key, style='synth', part=part_name, kick=kick, memory=bmem,
-                             at=at, seed=seed, **kw)
-        ln.place(bass, at)
-        return ln
-
-    bline(P_verse * 2, verse1, 'verse', kick=HALF, seed=1, interlock=True)   # the bass answers the sparse kicks
-    bline(P_pre, pre1, 'pre', seed=2)
-    bline(P_chorus, chorus1, 'chorus', seed=3)
-    bline(P_inter, inter, 'chorus', seed=4)
-    bline(P_verse, verse2, 'verse', seed=5)
-    bline(P_pre, pre2, 'pre', seed=6)
-    bline(P_chorus, chorus2, 'chorus', seed=7)
+    bp = bassist.Player(bass, bpm=BPM, key=key, style='synth', kick='x...x...x...x...')
+    bp.play(P_verse * 2, verse1, 'verse', kick='x.......x.x.....', seed=1, interlock=True)  # answers the sparse kicks
+    bp.play(P_pre, pre1, 'pre', seed=2)
+    bp.play(P_chorus, chorus1, 'chorus', seed=3)
+    bp.play(P_inter, inter, 'chorus', seed=4)
+    bp.play(P_verse, verse2, 'verse', seed=5)
+    bp.play(P_pre, pre2, 'pre', seed=6)
+    bp.play(P_chorus, chorus2, 'chorus', seed=7)
     bass.play(P_break.bass('root', vel=70), brk)
-    bline(P_solo, solo, 'solo', seed=8)
-    bline(P_up, chorus3, 'chorus', k=up, seed=9)
-    bline(s.prog('G A Bm D'), outro, 'outro', seed=10, ending='ring', interlock=True)
+    bp.play(P_solo, solo, 'solo', seed=8)
+    bp.play(P_up, chorus3, 'chorus', key=up, seed=9)
+    bp.play(s.prog('G A Bm D'), outro, 'outro', seed=10, ending='ring', interlock=True)
 
     # ------------------------------------------------------------------ pads, strings, choir, brass
     keys.instrument.params['velsens'] = 0.85            # was 0.5: the velocity arcs must reach the level
@@ -349,39 +296,19 @@ def build() -> Song:
 
     def arc4(c, accents=(1.25, 0.78, 1.0, 0.84), grid='1/8', depth=0.35):
         """Played chords: accents on the beat, lighter off-beats, and a 4-bar arch (rise to bar 3, relax)."""
-        c = c.vel_pattern(list(accents), grid=grid)
-        return c.map(lambda n: n._replace(vel=max(30, min(120, round(
-            n.vel * (1 - depth / 2 + depth * math.sin(math.pi * ((n.start % 16) / 16) ** 0.8)))))))
+        return c.vel_pattern(list(accents), grid=grid).arch(4, depth)
 
-    spread = dict(voicing='spread', register=('C3', 'C5'))
-    pad.play(P_intro.block(**spread, vel=70), intro)
-    pad.play((P_verse * 2).block(**spread, vel=72), verse1)
-    pad.play(P_pre.block(**spread, vel=76), pre1)
-    pad.play(P_chorus.block(**spread, vel=80), chorus1)
-    pad.play(P_inter.block(**spread, vel=76), inter)
-    pad.play(P_verse.block(**spread, vel=74), verse2)
-    pad.play(P_pre.block(**spread, vel=78), pre2)
-    pad.play(P_chorus.block(**spread, vel=82), chorus2)
-    pad.play(P_break.block(**spread, vel=80), brk)
-    pad.play(P_solo.block(**spread, vel=80), solo)
-    pad.play(P_up.block(**spread, vel=84), chorus3)
-    pad.play(P_outro.block(**spread, vel=72), outro)
-
-    sv = dict(register=('A3', 'E5'), voices=4)
-    strings.play(P_pre.block(**sv, vel=64).crescendo(0.55, 1.0), pre1)
-    strings.play(P_pre.block(**sv, vel=70).crescendo(0.55, 1.0), pre2)
-    strings.play(P_chorus.block(**sv, vel=62).slice(32, 64), chorus1.bar(8))
-    strings.play(P_chorus.block(**sv, vel=80), chorus2)
-    strings.play(P_break.block(register=('F#3', 'C#5'), voices=4, vel=74), brk)
+    pad.chords(s.sections, voicing='spread', register=('C3', 'C5'),
+               vel={intro: 70, verse1: 72, pre1: 76, chorus1: 80, inter: 76, verse2: 74, pre2: 78, chorus2: 82,
+                    brk: 80, solo: 80, chorus3: 84, outro: 72})
+    strings.chords(pre1, pre2, chorus1, chorus2, brk, solo, chorus3, outro, voices=4,
+                   register={'*': ('A3', 'E5'), brk: ('F#3', 'C#5')}, crescendo={pre1: (0.55, 1.0), pre2: (0.55, 1.0)},
+                   vel={pre1: 64, pre2: 70, chorus1: 62, chorus2: 80, brk: 74, solo: 60, chorus3: 88, outro: 64},
+                   bars={chorus1: 8, solo: (0, 4)})
     # the solo: soft, wide strings under the sax, swelling in its second half (the build into chorus 3)
-    strings.play(P_solo.block(**sv, vel=60).slice(0, 16), solo)
-    strings.play(P_solo.block(**sv, vel=74).slice(16, 32).crescendo(0.6, 1.0), solo.bar(5))
-    strings.play(P_up.block(**sv, vel=88), chorus3)
-    strings.play(P_outro.block(**sv, vel=64), outro)
-
-    choir.play(P_chB.block(register=('C#3', 'C#5'), voices=4, vel=74), chorus2.bar(8))
-    choir.play(P_break.block(register=('C#3', 'C#5'), voices=4, vel=70), brk)
-    choir.play(P_up.block(register=('C#3', 'C#5'), voices=4, vel=82), chorus3)
+    strings.play(P_solo.block(register=('A3', 'E5'), voices=4, vel=74).slice(16, 32).crescendo(0.6, 1.0), solo.bar(5))
+    choir.chords(chorus2, brk, chorus3, register=('C#3', 'C#5'), voices=4, vel={chorus2: 74, brk: 70, chorus3: 82},
+                 prog={chorus2: P_chB}, bars={chorus2: 8})
 
     stab = dict(rhythm='..x...x.', register=('C4', 'C5'), voices=3, gate=0.5)
     brass.play(arc4(P_chorus.block(**stab, vel=80), accents=(1, 1.2, 1, 0.78), grid='1/4'), chorus2)
@@ -401,35 +328,26 @@ def build() -> Song:
     # the solo: long chords under the sax (was a 3-3-2 comp), the room is the sax's
     keys.play(arc4(P_solo.block(**ek, rhythm='x.......', vel=60), depth=0.6), solo)
 
-    glass.play(P_intro.arp('up', rate='1/8', register=(62, 74), vel=70), intro)
-    glass.play(P_break.arp('up', rate='1/8', register=(62, 76), vel=72), brk)
-    glass.play(P_chB.arp('updown', rate='1/8', register=(62, 76), vel=72), chorus2.bar(8))
-    glass.play(P_up.arp('updown', rate='1/8', register=(64, 78), vel=76), chorus3)
-    glass.play(P_outro.arp('up', rate='1/8', register=(62, 74), vel=66), outro)
+    glass.arp({'*': 'up', chorus2: 'updown', chorus3: 'updown'}, intro, brk, chorus2, chorus3, outro, rate='1/8',
+              register={'*': (62, 74), brk: (62, 76), chorus2: (62, 76), chorus3: (64, 78)},
+              vel={intro: 70, brk: 72, chorus2: 72, chorus3: 76, outro: 66}, prog={chorus2: P_chB}, bars={chorus2: 8})
     # the pluck arp: out of verse 2 and the solo (A&R), it enters in the second half of pre 2 as part of the build and
     # drives chorus 2 and 3
     arp.play(P_pre.arp('up', rate='1/16', register=('D4', 'D5'), vel=76).slice(16, 32).crescendo(0.6, 1.0),
              pre2.bar(5))
-    arp.play(P_chorus.arp('updown', rate='1/16', octaves=2, register=('B3', 'B4'), vel=84), chorus2)
-    arp.play(P_up.arp('updown', rate='1/16', octaves=2, register=('C#4', 'C#5'), vel=86), chorus3)
-    arp.play(P_chorus.arp('up', rate='1/8', register=('B3', 'B4'), vel=74), chorus1)
+    arp.arp({'*': 'updown', chorus1: 'up'}, chorus2, chorus3, chorus1, rate={'*': '1/16', chorus1: '1/8'},
+            octaves={chorus2: 2, chorus3: 2}, register={'*': ('B3', 'B4'), chorus3: ('C#4', 'C#5')},
+            vel={chorus2: 84, chorus3: 86, chorus1: 74})
 
     # ------------------------------------------------------------------ transitions
-    for sec in (pre1, pre2):
-        t0, drop_at = sec.bar(4), sec.end - 1
-        riser_t.note('B3', t0, drop_at - t0, 100)
-        riser_t.automate('instrument.cutoff', riser(drop_at, length=drop_at - t0, lo=300, hi=12000))
-    t0, drop_at = solo.bar(4), solo.end
-    riser_t.note('B3', t0, drop_at - t0, 96)
-    riser_t.automate('instrument.cutoff', riser(drop_at, length=drop_at - t0, lo=300, hi=10000))
+    riser_t.rise(pre1.end - 1, 15, pitch='B3', hpf=None)
+    riser_t.rise(pre2.end - 1, 15, pitch='B3', hpf=None)
+    riser_t.rise(chorus3, 16, pitch='B3', vel=96, cutoff=(300, 10000), hpf=None)
     impact.note('B1', chorus1.start, 4, 116).note('B1', chorus2.start, 4, 120).note('C#2', chorus3.start, 4, 124)
     down.note('B3', brk.start, 8, 110).note('B3', outro.start, 6, 90)
 
     # a one-beat breath before the first two choruses: only the tails (and the hero's own pickup, if any)
-    band = [kit, bass, pad, keys, strings, arp, glass, brass, choir]
-    for c in (chorus1, chorus2):
-        for t in band:
-            t.clear(c.start - 1, c.start)
+    s.breath(before=[chorus1, chorus2], tracks=[kit, bass, pad, keys, strings, arp, glass, brass, choir], cut=False)
 
     # ------------------------------------------------------------------ production moves
     s.sidechain(arp, glass, strings, key=kit, pitches='kick', depth=6, release=240)
@@ -443,12 +361,8 @@ def build() -> Song:
                                     (solo.start, lo, 'smooth'), (outro.start, -8, 'smooth')])
     for t in (pad, glass, strings):
         t.automate('gainDb', [(outro.bar(4), 0), (outro.end + 6, -30, 'smooth')])
-    for f in s.master.fx:
-        if f.type == 'width':
-            f.params['monobass'] = 150                      # the pad-only intro read < 0.8 correlation below 150 Hz
-    for f in bass.fx:
-        if f.type == 'ducker':
-            f.params.update(depth=9, threshold=-48)                          # preset 5: the kick punches through (punch 13 vs 19 dB)
+    s.master.fx['width'].set(monobass=150)                 # the pad-only intro read < 0.8 correlation below 150 Hz
+    bass.fx['ducker'].set(depth=9, threshold=-48)          # preset 5: the kick punches through (punch 13 vs 19 dB)
     # A&R revision, the 80s kick: the kit's console compressor opens later (10 -> 28 ms: the kick's first hit passes
     # before it clamps, then it holds the body and the room), a little less tape clip on the transients; with the Linn
     # kick layer (drums section) the low end is split: the kit -3 dB at 160 Hz (the kick's and toms' boom: drums 48 %
@@ -456,11 +370,8 @@ def build() -> Song:
     # 13.6 -> 18.0 dB (ref 18.9), 111-224 Hz +2.8 -> +2.0 dB. Tried first: the bass alone -3 dB at 140 Hz and a 70 Hz
     # kit shelf -3 -> -1.5 dB (the drums' share of the bass band 44-54 %: masking warnings in every section); a kit dip
     # at 125 Hz without the Linn layer (punch 13.3); a harder kit compressor 5:1 / 30 ms (12.5)
-    for f in kit.fx:
-        if f.type == 'compressor':
-            f.params.update(attack=28, ratio=3.0, release=120)
-        elif f.type == 'saturator':
-            f.params.update(drive=3.5)
+    kit.fx['compressor'].set(attack=28, ratio=3.0, release=120)
+    kit.fx['saturator'].set(drive=3.5)
     kit.add_fx(fx.eq({'peak2.freq': 160, 'peak2.gain': -3.0, 'peak2.q': 1.3}))
     bass.add_fx(fx.eq({'peak2.freq': 150, 'peak2.gain': -3.0, 'peak2.q': 1.1}))
     # the mastering engineer (MASTER.md; python -m agentsound master ... --ref Sunset 4:00-4:30 --section chorus2): a broad
@@ -469,13 +380,11 @@ def build() -> Song:
     # 120 ms, and the extra drive per section in MASTER_DRIVE (was +2 dB everywhere)
     mastering.apply(s, eq={'peak1.freq': 1250.0, 'peak1.gain': -1.0, 'peak1.q': 0.7},
                     limiter={'ceiling': -1.2, 'release': 120.0})
-    # the energy arc: the master limiter's drive per section (the preset's 3.5 dB is the chorus-1 level); the verses
-    # and the breakdown hold back, the last chorus pushes (the arrangement makes the rest of the difference)
-    drive = [(intro, 3.0), (verse1, 2.0), (pre1, 2.6), (chorus1, 3.8), (inter, 3.0), (verse2, 2.2), (pre2, 2.8),
-             (chorus2, 4.1), (brk, 1.8), (solo, 2.9), (chorus3, 4.5), (outro, 2.8)]
-    drive = [(sec, g + MASTER_DRIVE.get(sec.name, MASTER_DRIVE['other'])) for sec, g in drive]
-    pts = [(0, drive[0][1])]
-    for sec, g in drive[1:]:
-        pts += [(sec.start - 1, pts[-1][1]), (sec.start, g, 'smooth')]
-    s.master.automate('fx.limiter.gain', pts)
+    # the energy arc: the master limiter's drive per section (the preset's 3.5 dB is the chorus-1 level), gliding
+    # over a beat into each; the verses and the breakdown hold back, the last chorus pushes (the arrangement makes
+    # the rest of the difference)
+    drive = {intro: 3.0, verse1: 2.0, pre1: 2.6, chorus1: 3.8, inter: 3.0, verse2: 2.2, pre2: 2.8, chorus2: 4.1, brk: 1.8,
+             solo: 2.9, chorus3: 4.5, outro: 2.8}
+    s.master.lane('fx.limiter.gain', {sec: g + MASTER_DRIVE.get(sec.name, MASTER_DRIVE['other'])
+                                      for sec, g in drive.items()}, glide=1)
     return s

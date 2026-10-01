@@ -532,17 +532,43 @@ def vibrato(track, clip, at=0.0, **kw):
 
 # ----------------------------------------------------------------------------------------------- all at once
 
-def perform(track, clip, at=0.0, *, tie: bool = True, overlap: float = 0.03, articulations='auto', short=0.5,
-            accent_vel: int = 112, glide_leaps: int | None = None, glide_ms: float = 110.0, shapes='auto',
-            vib: bool | dict = True, humanize_ms: float = 6.0, late_ms: float = 0.0, bow_seconds: float | None = None,
-            seed=0) -> Clip:
+# A player's habits for perform(preset=...): defaults the call's own options override (a vib dict merges).
+PRESETS = {
+    # a tenor / alto lead: glides into leaps of a fourth and more, plays a little late, delayed vibrato
+    'sax': dict(glide_leaps=5, glide_ms=90, humanize_ms=8, late_ms=6, vib={'depth': 16, 'rate': 5.0, 'delay': 0.4}),
+    # a softer, lazier alto (dreamwave): glides only into leaps of a fifth, later, the vibrato growing in
+    'alto': dict(glide_leaps=7, glide_ms=90, humanize_ms=7, late_ms=10,
+                 vib={'depth': 16, 'rate': 5.0, 'delay': 0.4, 'grow': 0.6}),
+    # a solo violin over a section: a bow change every 4 s of tied line, a wide, quick vibrato
+    'violin': dict(bow_seconds=4, humanize_ms=8, vib={'depth': 20, 'rate': 5.4}),
+}
+
+
+def perform(track, clip, at=0.0, *, preset=None, **options) -> Clip:
     """Play a written line on a track like a player. tie: legato phrases (overlapping notes -> legato transitions on
     a mono='legato' sampler); bow_seconds: a bow change / breath after that much tied line (None: off);
     articulations: 'auto' = auto_articulate() when the instrument has keyswitches, a name for every note, None =
     leave the marks as they are; glide_leaps: portamento (glide_ms) into leaps of at least that many semitones;
     humanize_ms / late_ms: a player's timing (humanize_starts); shapes: dynamics shapes (expression(); 'auto' swells
     long notes, None: none); vib: delayed vibrato on long notes (True, a dict of vibrato_points() options, False).
-    Returns the clip as played (placed at `at`)."""
+    preset= a name of PRESETS ('sax', 'alto', 'violin') or a dict of these options: the defaults of this call (its
+    own options win; a vib dict merges into the preset's). Returns the clip as played (placed at `at`)."""
+    if preset is not None:
+        base = PRESETS.get(preset) if isinstance(preset, str) else preset
+        if not isinstance(base, dict):
+            raise ComposeError(f"perform(preset={preset!r}): the presets are {', '.join(PRESETS)}, or a dict of "
+                               f"perform() options")
+        opts = dict(base)
+        for k, v in options.items():
+            opts[k] = dict(opts[k], **v) if k == 'vib' and isinstance(v, dict) and isinstance(opts.get(k), dict) else v
+        options = opts
+    return _perform(track, clip, at, **options)
+
+
+def _perform(track, clip, at=0.0, *, tie: bool = True, overlap: float = 0.03, articulations='auto', short=0.5,
+             accent_vel: int = 112, glide_leaps: int | None = None, glide_ms: float = 110.0, shapes='auto',
+             vib: bool | dict = True, humanize_ms: float = 6.0, late_ms: float = 0.0, bow_seconds: float | None = None,
+             seed=0) -> Clip:
     bpm = track._song.tempo
     c = as_clip(clip)
     if articulations == 'auto':            # on the written durations, before the phrases are tied
@@ -568,20 +594,39 @@ def perform(track, clip, at=0.0, *, tie: bool = True, overlap: float = 0.03, art
     return c
 
 
-def throws(track, clip, at=0.0, *, bus='echo', base: float | None = None, throw: float = -8.0,
-           min_rest: float = 0.75, min_dur: float = 0.5) -> list:
+def throws(track, clip=None, at=0.0, *, bus='echo', base: float | None = None, throw: float = -8.0,
+           min_rest: float = 0.75, min_dur: float = 0.5, spans=None, start=0.0, hold: bool = False) -> list:
     """Delay throws at phrase ends (the producer's hand on the echo send): 'send.<bus>' rises from `base` (default:
     the track's static send to that bus, else -60) to `throw` dB over the last note of every phrase - a note of at
     least `min_dur` beats followed by `min_rest` beats of rest, or the line's last note - and falls back when the
     note ends (at the latest just before the next phrase starts), so only the held phrase ends echo into the gap.
     A send lane replaces the static send: automate every stretch of the track through this (or give `base`).
-    Returns the phrase-end notes that got a throw."""
-    c = as_clip(clip)
-    a0 = _pos(at)
+    Returns the phrase-end notes that got a throw.
+    spans=[(position, beats), ...] instead of a clip: the throws written where you want them - the send sits at
+    `base` from `start` and jumps to `throw` for each span (hold=True writes each jump as the old value again + the
+    new one: the same sound); returns the points."""
     bid = getattr(bus, 'id', bus)
     if base is None:
         base = float(getattr(track, 'sends', {}).get(bid, -60.0))
     base, throw = _num(base, 'throws base', -60, 12), _num(throw, 'throws throw', -60, 12)
+    if spans is not None:
+        if clip is not None:
+            raise ComposeError("throws(): give a clip (its phrase ends get the throws) or spans=, not both")
+        from .sections import lane_points
+        song = track._song
+        marks = [(start, base)]
+        for sp in spans:
+            if not isinstance(sp, (tuple, list)) or len(sp) != 2:
+                raise ComposeError(f"throws(spans=...): spans are (position, beats), got {sp!r}")
+            a = song._at(sp[0])
+            marks += [(a, throw), (a + _num(sp[1], 'throws span beats', 0), base)]
+        pts = lane_points(song, marks, hold=hold, what=f"track {track.id!r} throws")
+        track.automate(f'send.{bid}', pts)
+        return pts
+    if clip is None:
+        raise ComposeError("throws(): give the line (a clip) or spans=")
+    c = as_clip(clip)
+    a0 = _pos(at)
     ns = sorted(c, key=lambda n: n.start)
     starts = sorted({round(n.start, 6) for n in ns})
     ends, pts = [], []

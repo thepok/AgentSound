@@ -18,14 +18,14 @@ ANALYSIS = {'profile': 'synthwave'}                  # the report judges against
 
 def build() -> Song:
     s = Song('Lush Demo', tempo=108, key='A minor', seed=7, tail=6)
-    intro = s.section('intro', bars=4)
-    verse = s.section('verse', bars=8)
-    chorus = s.section('chorus', bars=8)
-    brk = s.section('break', bars=4)
-    final = s.section('final', bars=8)
+    VERSE = s.prog('i9 VImaj7 IIIadd9 VIIsus4')              # Am9 Fmaj7 Cadd9 Gsus4
+    CHORUS = s.prog('VI VII i i')                             # F G Am Am: the lift into the tonic
+    intro = s.section('intro', bars=4, prog=VERSE)
+    verse = s.section('verse', bars=8, prog=VERSE)
+    chorus = s.section('chorus', bars=8, prog=CHORUS)
+    brk = s.section('break', bars=4, prog=VERSE)
+    final = s.section('final', bars=8, prog=CHORUS)
 
-    verse_prog = s.prog('i9 VImaj7 IIIadd9 VIIsus4')         # Am9 Fmaj7 Cadd9 Gsus4
-    chorus_prog = s.prog('VI VII i i')                        # F G Am Am: the lift into the tonic
     hook = s.motif('5:1/4. 4:1/8 3:1/4 5:1/4 | 4:1/4. 3:1/8 2:1/4 4:1/4 | 5:1/8 8:1/4 7:1/8 5:1/4 3:1/4 | 5:1/2. r:1/4 '
                    '| 5:1/4. 4:1/8 3:1/4 5:1/4 | 4:1/4. 5:1/8 7:1/4 9:1/4 | 8:1/2. 7:1/8 5:1/8 | 8:1/2 r:1/2')
     answer = s.motif('r:1 | r:1/2 5:1/8 6:1/8 8:1/4 | r:1 | r:1/2 9:1/8 8:1/8 7:1/4 '
@@ -51,31 +51,21 @@ def build() -> Song:
     bells = s.track('bells', 'synthwave/dx_bells', gain_db=-2, pan=0.15)
     whoosh = s.track('riser', 'synthwave/noise_riser', gain_db=-4)
 
-    # Parts
-    pad.loop(verse_prog.block(voicing='spread', register=('C3', 'C5')), intro, verse)
-    pad.loop(chorus_prog.block(voicing='spread', register=('C3', 'C5')), chorus, final)
-    pad.play(verse_prog.block(voicing='spread', register=('C3', 'C5')), brk)
-    strings.loop(verse_prog.block(register=('A3', 'A5'), voices=3), verse.bar(4), bars=4, vel=0.8)   # the verse builds
-    strings.loop(chorus_prog.block(register=('A3', 'A5'), voices=3), chorus, final)
-    keys.loop(verse_prog.block(voicing='drop2', rhythm='x..x..x.', register=('C4', 'C5')), verse)
-    keys.play(verse_prog.block(voicing='drop2', rhythm='x.......', register=('C4', 'C5'), vel=72), brk)
-    keys.loop(chorus_prog.block(voicing='drop2', rhythm='x..x..x.', register=('C4', 'C5')), chorus, final)
-    arps.loop(verse_prog.arp('updown', rate='1/16', octaves=2, register=('C4', 'C5')), intro, verse)
-    arps.loop(chorus_prog.arp('updown', rate='1/16', octaves=2, register=('C4', 'C5')), chorus, final)
-    bass.loop(verse_prog.bass('octave', rate='1/8'), verse, vel=0.85)
-    bass.loop(chorus_prog.bass('octave', rate='1/8'), chorus, final)
-    kit.loop(beat, verse, vel=0.85)                               # the verse holds back, the chorus hits
-    kit.loop(beat_chorus, chorus, final)
-    kit.play(snare_roll(4, build=True), verse.bar(-1), replace=True)
-    kit.play(crash(), chorus).play(crash(), final)
+    # Parts: each section's progression (sec.prog) played per section; a per-section dict overrides one option
+    pad.chords(s.sections, voicing='spread', register=('C3', 'C5'))
+    strings.chords(verse, chorus, final, register=('A3', 'A5'), voices=3, bars={verse: 4}, scale={verse: 0.8})  # builds
+    keys.chords(verse, brk, chorus, final, voicing='drop2', register=('C4', 'C5'), rhythm={'*': 'x..x..x.', brk: 'x.......'},
+                vel={brk: 72})
+    arps.arp('updown', intro, verse, chorus, final, rate='1/16', octaves=2, register=('C4', 'C5'))
+    bass.bassline('octave', verse, chorus, final, rate='1/8', scale={verse: 0.85})
+    kit.plan({verse: beat.velocity(0.85), chorus: beat_chorus, final: beat_chorus},   # the verse holds back
+             fills={verse: snare_roll(4, build=True)}, crashes=[chorus, final])
     lead.play(hook.clip(octave=4), chorus)
     lead.play(hook.clip(octave=4), final)
     bells.play(hook.clip(octave=5, vel=70), final)                # the last chorus: bells double the hook
     bells.play(answer.clip(octave=4, vel=84), verse)
     bells.play(hook.clip(octave=5, vel=80).slice(0, 16), brk)
-    whoosh.note('A3', brk.start, brk.length)
-    whoosh.automate('instrument.cutoff', riser(final, length=brk.length, lo=300, hi=12000))
-    whoosh.automate('instrument.hpf', riser(final, length=brk.length, lo=20, hi=1500))
+    whoosh.rise(final, brk.length, pitch='A3')                    # a riser through the break into the final
 
     # Production moves: kick pump, the intro filter opening, the shimmer blooming in the intro and the break.
     s.sidechain(bass, key=kit, pitches='kick', depth=9, release=200)

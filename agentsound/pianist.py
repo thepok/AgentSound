@@ -1045,14 +1045,94 @@ def left_hand(prog, bpm, *, style: str = 'guide', register=('C3', 'C4'), density
 
 # ------------------------------------------------------------------------------------------------ pedal
 
-def pedal(prog, at=0.0, *, dry=(), lift: float = 0.1, end=None) -> list:
+def top_leads(clip, factor: float, window: float = 0.06):
+    """The melody on top leads: every note struck under the highest one of its onset (within `window` beats: the
+    octave / sixth / third doubles, a rolled voicing) played at `factor` x its velocity."""
+    c = as_clip(clip)
+    soft, group = set(), []
+    for n in sorted(c, key=lambda n: n.start) + [None]:
+        if group and (n is None or n.start - group[0].start > window):
+            top = max(g.pitch for g in group)
+            soft.update((g.start, g.pitch) for g in group if g.pitch < top)
+            group = []
+        if n is not None:
+            group.append(n)
+    return c.map(lambda n: n._replace(vel=max(1, round(n.vel * factor))) if (n.start, n.pitch) in soft else n)
+
+
+class Player:
+    """A pianist through a whole song: arrange() per section with one Memory (the ornament budget song-wide), the
+    melody touched (humanize.touch lo..hi), both hands played, the harmony pedal collected and written once.
+
+        pp = pianist.Player(lead, bpm=BPM, key=s.key, ornaments=ORN)
+        pp.play(VERSE, P_verse, verse1, lo=52, hi=88, style='sparse', density=0.35, seed=2)   # a str: degrees
+        pp.play(hook, P_chorus, chorus1, lo=70, hi=108, devices=HOOKDEV, doubles=0.75)
+        pp.play(PRE, P_pre, pre1, lo=60, hi=96, until=28)        # the hook voice rests from beat 28 (pedal up)
+        pp.pedal()                                               # the pedal lane, once
+
+    play(melody, prog, at, *, lo, hi, key=None, octave=4, gate=0.95, until=None, **arrange options): melody is a
+    degree string (key.motif(...).clip(octave, gate)), a Motif or a Clip; until= cuts both hands there (beats into
+    the part) and lifts the pedal; every arrange() option can be given per call or as a Player default. Returns the
+    Arrangement (also in .arrangements)."""
+
+    def __init__(self, track, *, bpm, key=None, lh_track=None, memory: Memory | None = None, log=None, **defaults):
+        self.track, self.lh_track, self.bpm, self.key = track, lh_track, bpm, key
+        self.memory = memory if memory is not None else Memory()
+        self.defaults = defaults
+        self.log = log
+        self.arrangements: list = []
+        self._pedal: list = []
+
+    def play(self, melody, prog, at, *, lo, hi, key=None, octave: int = 4, gate: float = 0.95, until=None, **kw):
+        from .humanize import touch
+        k = key if key is not None else self.key
+        if isinstance(melody, str):
+            melody = _key(k).motif(melody)
+        m = melody.clip(octave=octave, gate=gate) if hasattr(melody, 'clip') and not isinstance(melody, Clip) \
+            else melody
+        opts = dict(self.defaults, **kw)
+        arr = arrange(touch(m, lo, hi), prog, bpm=self.bpm, key=k, memory=self.memory, at=at, **opts)
+        rh, lh = arr.rh, arr.lh
+        if until is not None:
+            rh, lh = rh.slice(0, until), (lh.slice(0, until) if len(lh) else lh)
+        self.track.play(rh, at)
+        if len(lh):
+            (self.lh_track or self.track).play(lh, at)
+        pts = arr.pedal(prog, at)
+        if until is not None:
+            t = self.track._song.at(at, until)
+            pts = [p for p in pts if p[0] < t] + [(t, 0.0)]
+        self._pedal.extend(pts)
+        self.arrangements.append(arr)
+        if self.log:
+            self.log(f"pianist {getattr(at, 'name', at)}: {arr!r}")
+        return arr
+
+    def pedal_points(self) -> list:
+        """The collected pedal points, one per beat (rounded to 1e-4: the later call wins), sorted."""
+        return sorted({round(t, 4): (t, v) + tuple(c) for t, v, *c in self._pedal}.values())
+
+    def pedal(self, *, before=None, then=()):
+        """Write the collected pedal on the track ('instrument.pedal', the first point plain): points before
+        `before` (a position) only, then the points `then` (an ending's own pedal)."""
+        pts = self.pedal_points()
+        if before is not None:
+            b = self.track._song._at(before)
+            pts = [p for p in pts if p[0] < b] + list(then)
+        else:
+            pts += list(then)
+        self.track.automate('instrument.pedal', [p[:2] if i == 0 else p for i, p in enumerate(pts)])
+        return self.track
+
+
+def pedal(prog, at=0.0, *, dry=(), lift: float = 0.1, end=None, early: float = 0.0) -> list:
     """Sustain-pedal points for 'instrument.pedal': up at every chord change of `prog` (placed at `at`), down again
     `lift` beats later, and UP during the `dry` windows ((start, end) beats relative to `at`: trills, runs,
     repeated notes - a pianist clears the pedal so fast figures don't smear), down again after them while the chord
-    lasts. Returns absolute points."""
+    lasts; up at the end (`end`, default the progression's end) - `early` beats before it. Returns absolute points."""
     p = _as_prog(prog, None, 4.0)
     a = _pos(at)
-    stop = p.length if end is None else _pos(end) - a
+    stop = (p.length if end is None else _pos(end) - a) - early
     starts = sorted({st for st, _, c in p if c is not None and st < stop - _EPS})
     wins = sorted((float(s), float(e)) for s, e in dry if e > s)
 
@@ -1324,7 +1404,7 @@ def arrange(melody, prog, *, bpm, key=None, style: str = 'straight', density: fl
             climax: bool = False, lead_in: bool = False, section_end: bool = True, inner: float | None = None,
             lh_vel: float = 58, lh_register=('C3', 'C4'), ceiling='C7', fast_every: float | None = None,
             spice_every: float | None = None, same_every: float = 32.0, memory: Memory | None = None,
-            at=None, meter=None, lh_answers: float | None = None) -> Arrangement:
+            at=None, meter=None, lh_answers: float | None = None, doubles: float | None = None) -> Arrangement:
     """A pianist's arrangement of a melody over changes -> Arrangement (.rh, .lh, .pedal(prog, at), .moves).
 
     The melody stays on top; per phrase (split at rests of an 8th or more; a line longer than ~6 beats changes
@@ -1362,7 +1442,8 @@ def arrange(melody, prog, *, bpm, key=None, style: str = 'straight', density: fl
     style: STYLES ('straight', 'ballad', 'bar', 'lush', 'sparse'); density 0..1 scales how much is harmonized,
     embellished and filled; devices= / ornaments= / fills= override the style's weights; voices, roll (ms range),
     anticipate, delay, fill, embellish, quick, inner, fast_every, spice_every override single settings.
-    Deterministic by seed."""
+    doubles= a velocity factor for the notes struck under the melody's top note (top_leads(): the octave / sixth /
+    third doubles softer, so the melody leads; 0.75 for a hook in octaves). Deterministic by seed."""
     if style not in STYLES:
         raise ComposeError(f"pianist style must be one of {', '.join(STYLES)}, got {style!r}")
     S = dict(STYLES[style])
@@ -1651,6 +1732,8 @@ def arrange(melody, prog, *, bpm, key=None, style: str = 'straight', density: fl
                             anticipate=antic, rh=rh_clip, seed=seed_int(seed) + 7, length=L, meter=meter,
                             answers=lh_answers)
     mel_clip = Clip._raw([Note(n[0], n[1], n[2], n[3]) for n in mel], L)
+    if doubles is not None:
+        rh_clip = top_leads(rh_clip, doubles)
     arr = Arrangement(rh_clip, lh_clip, mel_clip, sorted(moves), sorted(dry))
     arr.harmonized = (n_harm[0] + n_kept) / max(1, len(mel))
     arr.budget = budget

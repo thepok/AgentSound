@@ -96,8 +96,13 @@ it. Add new findings here instead of losing them in a report.
   - Breaths are the bank's `AP` token at `breath_db` -4 dB (pop): level and colour unverified; a phrase start right
     after a short gap may sound gasped.
   - Consonants: lengths are the duration model's predictions x the style's `cons`, squeezed to <= 45 % of the note
-    before; fast lines (8ths at 120+ BPM) may lose consonants. Hanami's readme: a short `t` / `d` becomes a flap by
-    itself - not checked.
+    before (word-final codas keep `singer.DICTION` minimums, onsets 30 ms, a cluster may take up to 60 %); very fast
+    lines can still end under the minimums (`singer.diction()` warns `coda_short`). Hanami's readme: a short `t` / `d`
+    becomes a flap by itself - not checked.
+  - Word-final stops in LEGATO before a consonant-initial word ("night belongs", "hold me") stay unreleased, as in
+    connected English (measured on Hanami: the burst ~29 dB under the vowel; a closure or more lift did not release
+    them reliably). Before a rest they are released (closure + release vowel). If such a word must be crisp, leave a
+    short gap after it (>= 80 ms: the rest path) - or find a model-side fix.
   - Vocoder buzz / metallic edges on long high notes (the banks' own vocoders) - unknown until heard.
 - **Vocal note dynamics in the report.** The vocal track plays one trigger note per phrase (the takes), so
   `nodes[].dynamics` reads "too few notes" and `flat_dynamics` never judges a sung line. The sung notes (one per
@@ -135,13 +140,32 @@ it. Add new findings here instead of losing them in a report.
   (`voicing.Harmony`, `figures`, `orch.Score` / `Choir` / `bed`, `voicing.fugue`, `s.arc`; byte-identical: unbowed
   953 -> 598, lux-perpetua 759 -> 513 (+ score.py 233 -> 193), ashes-and-chandeliers 870 -> 711). What is left of
   those three is note data, comments and the songs' own decisions; unbowed / lux keep `follow=False` (their written
-  re-attacks) - switching them to `follow=True` is a musical change to judge by ear. Open:
-  - *pop / synthwave*: section plans (one dict per section: which parts play, their energy, the fill into the
-    next) instead of per-section play() blocks; lanes (cutoff / send / gainDb rides per section, today hand-written
-    `energy()` / `pts` lists in midnight-interstate, skyline-heartbeat, children-of-neon, orbital-station,
-    polaroid-summer); transitions (riser + reverse cymbal + impact + downlifter + `s.breath` as one call); a drum plan
-    (grooves per section with fills at the ends - what `drums({...})` tables + `fill()` loops do by hand); the robot
-    voice (speech.words + the vocoder chord + the frozen vowel in one helper).
+  re-attacks) - switching them to `follow=True` is a musical change to judge by ear. The pop / synthwave package is
+  done (`agentsound.sections`: `s.section(prog=)`, `track.chords / arp / bassline / plan / rise / lane / levels`,
+  `s.transitions`, `speech.voice` + `Words.robot`, `art.perform(preset=)`, `art.throws(spans=)`, `pianist.Player` /
+  `top_leads` / `arrange(doubles=)`, `bassist.Player`, `s.beat_at`, `s.breath(cut=)`; byte-identical: chrome-leviathan
+  569 -> 482, children-of-neon 565 -> 493, skyline-heartbeat 521 -> 429, midnight-interstate 464 -> 380,
+  ghosts-of-ocean-drive 481 -> 390, polaroid-summer 454 -> 380, orbital-station 433 -> 419, matryoshka 408 -> 341,
+  `_demo_lush` 89 -> 79, `_demo_vocoder` 80 -> 73; `_template` shows the idiom). What it left as written, each a
+  musical change to judge by ear before adopting the library's way:
+  - children-of-neon's sustain pedal lifts only at every 4th chord change (its `pedal()` helper reads
+    `Harmony.items` - chord lengths in beats - and multiplies by 4 again); `pianist.pedal(prog, at, lift=0.12,
+    early=0.06)` is the per-chord pedal it meant.
+  - ghosts-of-ocean-drive: the solo's swelling strings and pre 2's pluck arp play bars 4-8 of their progression a bar
+    late (`P.slice(16, 32)` at bar 5; the arp runs a bar into chorus 2 until the breath clears it) - `bars=4` in a
+    section plan would put them on their chords.
+  - orbital-station's `arp_line` (close position with the root folded into G2-F#3, accents truncated with `int()`):
+    `patterns.arp(pattern=, accent=)` voice-leads in a register and rounds the accent (+1 velocity on some notes); a
+    root-position voicing for `arp()` would let the song use it.
+  - The filter lanes of chrome-leviathan / midnight-interstate and the masters' gainDb / width lanes stay explicit
+    point lists (as section lanes they read no shorter: their jumps sit on beats that already carry a point);
+    skyline-heartbeat's lead vibrato (a pitch-bend LFO whose depth follows the long notes) and the songs' scoops with a
+    lead-in point (`(t - 0.05, 0)`) are their own shapes (`jazz.scoop` starts on the note).
+  - A section key change applied to every pitched part (`s.modulate(final, +2)`) was not added: the songs write the
+    transposed progression (`P_chorus.transpose(2)`) with its own registers and `transpose=` their lines - voicing a
+    transposed progression in the same register is not the same as transposing the voiced chords, and speech /
+    fx-hit samplers must not move.
+  Open:
   - *orchestra, leftovers*: a harp arpeggio figure (ashes' masque harp), staggered choir entries that climb by scale
     steps (ashes' ascent: `voicing.imitation` places cells, not a held note climbing bar by bar), the lux storm's
     interleaved 16ths (violins I / II from one velocity stream - a two-voice `storm16` that takes a velocity function),

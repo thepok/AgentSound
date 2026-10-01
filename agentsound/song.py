@@ -297,6 +297,27 @@ class _Node:
             self._mods.append((target, m, win, origin))
         return self
 
+    def lane(self, target: str, spec, *, base: float = 0.0, glide: float = 0.0, curve: str = 'smooth',
+             default=None, drops=(), drop: float = -60.0, hold: bool = False, end: bool = False):
+        """A section lane on `target` (agentsound.sections): spec {section: value | (from, to[, curve]) |
+        [(bar, value[, curve]), ...]} - each section starts at its value (a jump, or a glide of `glide` beats with
+        `curve`), a tuple moves across the section, marks move inside it (no curve: a jump) - or a list of
+        (position, value[, curve]) marks (the first is where the lane starts, the rest jump unless a curve is
+        given). base is added to every value; default = the value of the sections the dict leaves out (None: they
+        continue); drops = sections whose last beat falls to `drop`; hold=True writes each jump as the old value
+        again at the jump + the new one (s.arc's way, the same sound); end=True holds the last value to the song end.
+            pad.lane('instrument.cutoff', {'intro': (300, 900, 'exp'), 'chorus': 1600, 'outro': (2000, 300, 'exp')})
+            piano.lane('send.hall', [(0, 3), (theme, 0, 'smooth'), (verse, -1)], base=-9)"""
+        from .sections import lane_points
+        return self.automate(target, lane_points(self._song, spec, base=base, glide=glide, curve=curve,
+                                                 default=default, drops=drops, drop=drop, hold=hold, end=end,
+                                                 what=f"{self.kind} {self.id!r} lane {target!r}"))
+
+    def levels(self, spec, **opts):
+        """The section lane of the node's level: lane('gainDb', spec, ...) - dB on its gain_db (the fader as set):
+            kit.levels({'verse': [(0, -7), (8, -5)], 'build': (-3, 0), 'final': 0.5}, default=0, drops=['build'])"""
+        return self.lane('gainDb', spec, **opts)
+
     def _check_target(self, target) -> None:
         if not isinstance(target, str) or not _TARGET_RE.match(target):
             hint = ''
@@ -471,6 +492,61 @@ class Track(_Node):
             pts += [(s0 - g, 0.0), (s0, d, 'smooth'), (e0 - g, d), (e0, 0.0, 'smooth')]
         return self.automate(target, pts)
 
+    # --- section plans (agentsound.sections): parts from each section's progression, per-section overrides
+    def chords(self, *sections, **opts):
+        """Block chords from each section's progression (sec.prog, or prog=): prog.block(**opts) placed as the
+        section's part (a shorter part repeats, a longer one is cut at the section end). Any option may be a
+        per-section dict {section | name: value, '*': default}. Placement options: bars=(a, b) (only those bars of
+        the part, at bar a), transpose=, scale= (velocity factor), crescendo=(from, to), then= (functions clip ->
+        clip), prog= (another progression).
+            pad.chords(intro, verse, chorus, voicing='spread', register=('C3', 'C5'), vel={'*': 80, chorus: 84})"""
+        from .sections import _harmony_parts
+        _harmony_parts(self, 'chords', sections, (), opts)
+        return self
+
+    def arp(self, mode='up', *sections, **opts):
+        """An arpeggio from each section's progression: prog.arp(mode, **opts) (patterns.arp: rate, octaves,
+        register, vel, gate, pattern, accent ...), placed like chords() (bars=, transpose=, scale=, crescendo=,
+        then=, prog=; any option per section): arp.arp('updown', verse, chorus, rate='1/16', octaves=2)."""
+        from .sections import _harmony_parts
+        _harmony_parts(self, 'arp', sections, (mode,), opts)
+        return self
+
+    def bassline(self, style='octave', *sections, **opts):
+        """A bass line from each section's progression: prog.bass(style, **opts) (patterns.bassline: rate, low,
+        vel, gate, pattern ...), placed like chords(): bass.bassline('octave', verse, chorus, rate='1/8', gate=0.85,
+        prog={verse: s.prog('F#m')}, bars={verse: (0, 8)})."""
+        from .sections import _harmony_parts
+        _harmony_parts(self, 'bassline', sections, (style,), opts)
+        return self
+
+    def plan(self, plan: dict, *, fills=None, crashes=None, crash=None, keep=None, phrase: float = 8,
+             fill_every: float = 0, same_every: float = 0):
+        """Loops per section, then fills and crashes (a drum part, or any looped part):
+          plan     {section: clip | [clip, (bar, clip), (bar, clip, bars)]} - each clip loops from its bar to the
+                   next entry (or for `bars`, or to the section end); clip None = rest
+          fills    {section: clip | (every_bars, clip) | (every_bars, clip, last)} - a fill ending on every phrase
+                   end (default every 8 bars; `last` into the section end) - or {position: clip}; a fill replaces
+                   what it covers, or only the pieces of (clip, pieces); keep= pieces stay under every fill
+                   (keep=('kick',)). Song-wide rules for the planned sections without their own: fills['section']
+                   (into each section's end) and fills['phrase'] (every `phrase` bars), spaced by the players'
+                   Budget: fill_every bars between two fills, same_every bars between two of one rule
+          crashes  {position: vel} or [positions] (crash= the velocity or a clip, default crash())
+            kit.plan({verse: [groove, (8, groove_b)], chorus: chorus_groove}, fills={verse: tom_fill(1),
+                     chorus: (8, tom_fill(2))}, crashes={verse: 112, chorus: 118, chorus.bar(8): 108})
+            kit.plan({...}, fills={'section': tom_fill(2), 'phrase': snare_roll(1)}, phrase=4, fill_every=8)"""
+        from .sections import _drum_plan
+        _drum_plan(self, plan, fills=fills, crashes=crashes, crash=crash, keep=keep, phrase=phrase,
+                  fill_every=fill_every, same_every=same_every)
+        return self
+
+    def rise(self, end, length=16, **opts):
+        """A riser into `end` (a Section start / position): one note `length` beats before it (dur= its length,
+        pitch=, vel=) with cutoff=(lo, hi) / hpf=(lo, hi) opening into `end` (None leaves a lane out). See
+        sections.rise: riser.rise(chorus, 16, pitch='A3'); rev.rise(chorus, 2, cutoff=(2500, 16000), hpf=None)."""
+        from .sections import rise
+        return rise(self, end, length, **opts)
+
     def _prep(self, what, transpose, vel) -> Clip:
         try:
             c = as_clip(what)
@@ -605,10 +681,12 @@ class Song:
         return self.time_sig
 
     # --- time
-    def section(self, name: str, bars: float, meter=None) -> Section:
+    def section(self, name: str, bars: float, meter=None, *, prog=None) -> Section:
         """Append a section of `bars` bars after the previous one; returns it (with .start/.end in beats).
         meter=(3, 4) / '6/8' gives it its own meter (default: the song's); beats stay quarter notes, so a 3/4
-        bar is 3 beats and a 6/8 bar 3 beats (two dotted quarters)."""
+        bar is 3 beats and a 6/8 bar 3 beats (two dotted quarters). prog= its harmony (a progression spec in the
+        song key, or a Progression; it may be shorter than the section: the section plans repeat it) -> sec.prog,
+        which track.chords() / arp() / bassline() play."""
         if not isinstance(name, str) or not name.strip():
             raise ComposeError(f"section name must be a non-empty string, got {name!r}")
         if any(s.name == name for s in self.sections):
@@ -619,6 +697,11 @@ class Song:
         m = self.time_sig if meter is None else _tempo.parse_meter(meter, f"section {name!r} meter")
         start = self.sections[-1].end if self.sections else 0.0
         s = Section(name, start, b, _tempo.beats_per_bar(m), m)
+        if prog is not None:
+            try:
+                s.prog = prog if isinstance(prog, Progression) else self.prog(prog, meter=meter)
+            except ComposeError as e:
+                raise ComposeError(f"section {name!r} prog: {e}") from None
         self.sections.append(s)
         return s
 
@@ -712,6 +795,16 @@ class Song:
         if self._tempo_plan.empty():
             return b * 60.0 / self.tempo
         return self.tempo_map().seconds_at(b)
+
+    def beat_at(self, seconds: float, before=None) -> float:
+        """The beat at a song time (the inverse of seconds()); before= a position: the beat `seconds` before it -
+        a reversed cymbal of 4.3 s peaking on the chorus: cym.note(88, s.beat_at(4.3, before=chorus))."""
+        t = _num(seconds, 'beat_at seconds')
+        if before is not None:
+            t = self.seconds(before) - t
+        if self._tempo_plan.empty():
+            return t * self.tempo / 60.0
+        return self.tempo_map().beat_at(t)
 
     # --- tempo (agentsound/tempo.py; the render JSON gets a "tempoMap" once any of these is used)
     def tempo_at(self, beat) -> float:
@@ -919,10 +1012,11 @@ class Song:
             return self._at(x[0]) + _num(x[1], f"position {x!r}: beats after")
         return _num(x, 'position (beats)')
 
-    def breath(self, before, beats: float = 1.0, *, keep=(), tracks=None) -> 'Song':
+    def breath(self, before, beats: float = 1.0, *, keep=(), tracks=None, cut: bool = True) -> 'Song':
         """A drop: everything stops for `beats` beats before each position of `before` (Sections / beats) - notes
         starting there are removed and notes still sounding are ended (track.clear(cut=True)) - except the tracks in
-        keep= (risers, impacts, a voice); tracks= names the ones to stop instead.
+        keep= (risers, impacts, a voice); tracks= names the ones to stop instead. cut=False only removes the notes
+        starting in the gap (a drum part's last hits ring out).
             s.breath(before=[chorus1, chorus2, final], beats=1, keep=[riser, impact])"""
         pos = list(before) if isinstance(before, list) else [before]
         b = _num(beats, 'breath beats', 0)
@@ -939,8 +1033,15 @@ class Song:
         for p in pos:
             x = self._at(p)
             for t in sel:
-                t.clear(x - b, x, cut=True)
+                t.clear(x - b, x, cut=cut)
         return self
+
+    def transitions(self, *, riser=None, reverse=None, impact=None, down=None, pitch='C4'):
+        """The fx-hit set (agentsound.sections.Transitions): tracks (a Track, a patch name, True = the library's
+        synthwave hit, None) and .into(section, riser=16, reverse=2, impact=('D2', 120), down=('A3', 8, 100),
+        breath=1, keep=[...]) - the moves into a section in one call."""
+        from .sections import Transitions
+        return Transitions(self, riser=riser, reverse=reverse, impact=impact, down=down, pitch=pitch)
 
     def ending(self, at, *, chords=(), bass=None, drums=None, rit=None, to: float = 0.72, hold: float | None = 2.0,
                seconds: float | None = None, length: float | None = None, roll_bpm: float | None = None,

@@ -204,19 +204,12 @@ def build() -> Song:
                   gain_db=-8, sends={hall: -12})
 
     # the station's voice: Windows TTS through the robot choir (cached in samples/speech/)
-    vox = speech.words(['signal detected', 'signal lost'], voice='zira', rate=-3)
-    voice = s.track('voice', vox.instrument())
+    vox = speech.voice(s, ['signal detected', 'signal lost'], voice='zira', rate=-3)
     robot = s.track('robot', 'synthwave/vocoder_choir', gain_db=-1, sends={hall: -6, echo: -9, shimmer: -12})
-    speech.vocode(robot, voice)
 
     def rev(note, peak_at, secs):
         """A reversed cymbal whose swell peaks exactly at `peak_at` (seconds through the tempo map)."""
-        t_end = s.seconds(peak_at)
-        lo, hi = peak_at - 16.0, peak_at
-        for _ in range(40):
-            mid = (lo + hi) / 2
-            lo, hi = (mid, hi) if t_end - s.seconds(mid) > secs else (lo, mid)
-        cym.note(note, hi, 1.0, vel=100)
+        cym.note(note, s.beat_at(secs, before=peak_at), 1.0, vel=100)
 
     # ================================================================== INTRO: the signal
     arp.play(arp_line(P_INTRO, vel=78), intro)
@@ -225,10 +218,9 @@ def build() -> Song:
         bells.note('B5', intro.bar(bb), 4, vel=62 if bb < 5 else 70)
     impact.note('E1', intro.start, 4, vel=100)
     bass.note('E1', intro.bar(4), 16, vel=84)
-    choir.play(Clip([(0, 16, p, 72) for p in ('E3', 'B3', 'D4', 'G4')], length=16), intro.bar(4))
+    choir.play(hold('E3 B3 D4 G4', 16, 72), intro.bar(4))
     # "signal detected": the robot sings it on an Em9 voicing
-    voice.play(vox.clip({0: 'signal detected'}), intro.bar(4))
-    robot.play(Clip([(0, 7, p, 90) for p in ('E3', 'G3', 'B3', 'D4', 'F#4')], length=8), intro.bar(4))
+    vox.robot(robot, say={intro.bar(4): 'signal detected'}, chords={intro.bar(4): ('E3 G3 B3 D4 F#4', 7, 90)})
     ping.note('A5', intro.bar(2, beat=2.5), 0.25, vel=60)
     ping.note('E5', intro.bar(6, beat=1.5), 0.25, vel=56)
 
@@ -267,7 +259,7 @@ def build() -> Song:
     kit.play(drop(drums({'hat': 'xooox.oox.oox.oo', 'kick': 'x.o.....x.o.....'}, vel=78).loop(16)
                   .crescendo(0.7, 1.0)), approach.bar(4), replace=True)
     kit.play(snare_roll(7, build=True, vel=(30, 116)), approach.bar(6))
-    riser_t.note('E3', approach.bar(4), 15)
+    riser_t.rise(approach.beat(-1), 15, pitch='E3', cutoff=(300, 11000), hpf=(20, 1200))
     rev(REV_LONG, approach.beat(-1), REV_LONG_S)
     ping.note('E5', approach.beat(-1), 0.5, vel=78)                 # the only sound in the drop
 
@@ -321,7 +313,7 @@ def build() -> Song:
     kit.play(snare_roll(14, build=True, vel=(28, 120)), ascent)
     kit.play(tom_fill(1, vel=(100, 124)), ascent.beat(-2), replace=True)
     kit.clear(ascent.beat(-1), ascent.end)
-    riser_t.note('E3', ascent.start, 15)
+    riser_t.rise(ascent.beat(-1), 15, pitch='E3', cutoff=(300, 11000), hpf=(20, 1200))
     rev(REV_LONG, ascent.beat(-1), REV_LONG_S)
     ping.note('F#5', ascent.beat(-1), 0.5, vel=74)
 
@@ -361,13 +353,12 @@ def build() -> Song:
     arp.play(arp_line('F#m9:2 Dmaj7#11:2 Bm9:2', vel=80), outro)
     arp.note('F#3', outro.bar(6), 1.0, vel=76)                       # the arp's last note, into the echoes
     pad.play(pads(P_OUTRO, vel=72), outro)
-    choir.play(Clip([(0, 8, p, 70) for p in ('C#4', 'E4', 'A4', 'C#5')], length=8), outro.bar(6))
-    orch.play(Clip([(0, 8, p, 70) for p in ('F#2', 'C#3', 'A3', 'E4', 'G#4')], length=8), outro.bar(6))
+    choir.play(hold('C#4 E4 A4 C#5', 8, 70), outro.bar(6))
+    orch.play(hold('F#2 C#3 A3 E4 G#4', 8, 70), outro.bar(6))
     bass.play(bassline(prog(P_OUTRO), 'root', low='E1', vel=86).legato(), outro)
     bells.play(cell.clip(octave=4, vel=78), outro, transpose=UP)     # the signal, one last time
     bells.note('C#6', outro.bar(6), 8, vel=60).note('F#5', outro.bar(6), 8, vel=54)
-    voice.play(vox.clip({0: 'signal lost'}), outro.bar(2))
-    robot.play(Clip([(0, 7, p, 84) for p in ('D3', 'F#3', 'A3', 'C#4', 'G#4')], length=8), outro.bar(2))
+    vox.robot(robot, say={outro.bar(2): 'signal lost'}, chords={outro.bar(2): ('D3 F#3 A3 C#4 G#4', 7, 84)})
     cym.note(57, outro, 4, vel=90)
     fall.note('F#3', outro.start, 8, vel=96)
     impact.note('F#1', outro.bar(6), 4, vel=78)
@@ -399,9 +390,6 @@ def build() -> Song:
     pad.automate('fx.room.peak1.gain', [(weightless.bar(4) - 1, 0.0), (weightless.bar(4), -5.0, 'smooth'),
                                         (weightless.end - 0.5, -5.0), (weightless.end, 0.0, 'smooth')])
     pad.automate('fx.width.width', [(intro.start, 0.45), (intro.bar(3), 0.45), (intro.bar(5), 0.8, 'smooth')])  # opens with the bass
-    for when in (approach, ascent):
-        riser_t.automate('instrument.cutoff', riser(when.beat(-1), length=15, lo=300, hi=11000))
-        riser_t.automate('instrument.hpf', riser(when.beat(-1), length=15, lo=20, hi=1200))
     # shimmer blooms in the intro, the breakdown and the ending; stays low under the full sections
     pad.automate('send.shimmer', hold(intro.start, drift.bar(8), -8), hold(drift.bar(8), weightless.start, -16),
                  hold(weightless.start, ascent.start, -7), hold(ascent.start, outro.start, -16),
@@ -419,9 +407,7 @@ def build() -> Song:
     riser_t.automate('gainDb', [(approach.beat(-1), 0), (approach.beat(-0.9), -60),
                                 (ascent.start, -60), (ascent.start + 0.01, 0),
                                 (ascent.beat(-1), 0), (ascent.beat(-0.9), -60)])
-    limiter = s.master.fx[-1]
-    assert limiter.type == 'limiter'
-    limiter.params['gain'] = 2.9                                    # +1.4 dB: the choruses sit at the reference
+    s.master.fx['limiter'].set(gain=2.9)                            # +1.4 dB: the choruses sit at the reference
     end = outro.bar(6)
     s.master.automate('fx.final.peak2.gain', [(horizon.start - 1, 0.0), (horizon.start - 0.5, -3.0),
                                               (horizon.end - 1, -3.0), (horizon.end, 0.0, 'smooth')])

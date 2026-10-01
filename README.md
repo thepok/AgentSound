@@ -123,6 +123,18 @@ lh=..., dyn=..., meter='12/8', pickup='1/8').perform(s, rh_track, lh_track)` - t
 ornaments in real time, singing line, melody rubato, pedal) on top of `notes(expand=False)`; `Score.rubato` / `touch`
 are the phrase loops of a slow piece.
 
+**Section plans** (the pop / synthwave package, `sections`, docs/COMPOSE_API.md "Section plans"): sections carry
+their harmony (`s.section('chorus', 16, prog=CHORUS)`) and the parts are written per section, every option a
+default with per-section overrides (`{chorus: 86, '*': 80}`): `pad.chords(...)`, `arp.arp(mode, ...)`,
+`bass.bassline(style, ...)` (`bars=` windows, `then=`, `crescendo=`, `transpose=`, `scale=`, `prog=`, `cut=`);
+`kit.plan({sec: [groove, (8, groove_b)]}, fills=..., crashes=..., keep=('kick',))` (fills per section, at positions or
+as song-wide rules spaced by the players' fill budget); section lanes `track.levels({...})` / `node.lane(target,
+{...} | marks, glide=, default=, drops=, hold=, end=)`; `track.rise(chorus, 16)` and
+`s.transitions(riser=, reverse=, impact=, down=).into(chorus, ..., breath=1)`; the robot voice in one call
+(`speech.voice(s, words)` + `vox.robot(carrier, say=..., chords=...)`); `art.perform(preset='sax')`,
+`art.throws(spans=)`, `pianist.Player` / `top_leads` / `arrange(doubles=)`, `bassist.Player`, `s.beat_at(seconds,
+before=)`, `s.breath(cut=False)`.
+
 **CLI** (`python -m agentsound <command>`):
 
 | command | does |
@@ -250,7 +262,7 @@ playability checks, and a log (`.moves`, `.budget`, `.summary()`).
 | `hornist` | `hornist.arrange(melody, bpm, family=, style=, section=)`, `hornist.vocabulary(family, style=)` (the solo vocabulary), `Memory`, `.place(track, at)`, moves (push, pulse, swell, bloom, taper, vibrato, scoop, fall, shake, lean_in, turn_away, bell_swing ...) | the wind player (sax, trumpet, trombone, flute, clarinet, bowed strings): breath INSIDE held notes (air pushes / swells on the post-compressor `air` stage or live `dynamics`), air-coupled vibrato, budgeted pitch spice, mic technique (bell toward / away from the mic via a `mic` EQ + reverb sends) |
 | `jazz` | `jazz.band`, `chorus`, `comp`, `walking_bass` (straight / 3/4 too), `brushes`, `brush_colour`, `ride_pattern`, `bombs`, `last_stir`, `slides`, `horn_line`, `solo_line`, `paraphrase`, `block_chords`, `Feel` | the jazz vocabulary: rootless / shell / quartal voicings, comping cells, walking lines, brush kits, horn phrasing (scoops, falls, swells, vibrato) |
 | `articulation` | `perform`, `legato`, `expression`, `vibrato`, `throws`, `auto_articulate` | sampled solo instruments played: live dynamics, legato, portamento, keyswitches, echo throws |
-| `singer` | `singer.sing(song_or_track, line, lyrics, at=, voice=, style='pop'\|'ballad'\|'rock', seed=, moves=, pitch='hybrid')`, `double`, `harmony`, `Memory`, `check`, `voice`; `lyrics` (`align`, `check`, `g2p`, `syllabify`), `voicebank` (`voices`, `get`, `check_prompt`) | a SUNG lead vocal with lyrics from the score, rendered by a licensed DiffSinger voicebank (Hanami, TIGER) in WSL and played back as takes: consonants before the beat, vowels held, glides, scoops, late growing vibrato, falls (budgeted), audible breaths, voice colour (soft / power modes) following the dynamics, timing feel; doubles and harmonies are sung again (not copied / shifted); the robotic baseline `moves=False` for A/B; the vocal checks (intelligibility 2.5-6 kHz, buried, harsh). Consent rule: no cloning of real singers (`songs/_demo_vocal`) |
+| `singer` | `singer.sing(song_or_track, line, lyrics, at=, voice=, style='pop'\|'ballad'\|'rock', seed=, moves=, pitch='hybrid')`, `double`, `harmony`, `Memory`, `check`, `diction`, `voice`; `lyrics` (`align`, `check`, `g2p`, `syllabify`), `voicebank` (`voices`, `get`, `check_prompt`) | a SUNG lead vocal with lyrics from the score, rendered by a licensed DiffSinger voicebank (Hanami, TIGER) in WSL and played back as takes: consonants before the beat, vowels held, word-final consonants sung and audible (at the end of the word's last note, minimum lengths, a final stop released, never under the phrase-end release), glides, scoops, late growing vibrato, falls (budgeted), audible breaths, voice colour (soft / power modes) following the dynamics, timing feel; doubles and harmonies are sung again (not copied / shifted); the robotic baseline `moves=False` for A/B; the vocal checks (intelligibility 2.5-6 kHz, buried, harsh, diction: word-final consonants too short / buried). Consent rule: no cloning of real singers (`songs/_demo_vocal`) |
 
 Shared feel (`humanize`): `touch(clip, lo, hi)` writes phrase-shaped melody velocities, `bass_touch` the same for bass
 lines, grooves, swing, `jazz_groove` / lay-back per part. Shared performance layers: `gesture` (the moves INSIDE a note
@@ -435,7 +447,7 @@ tests/                 C++ tests (test_*.cpp, ctest) and tests/python (unittest)
 
 Python helper modules (`catalog.HELPER_MODULES`, listed with every public function by `catalog helpers`): `theory`,
 `patterns`, `humanize`, `automation`, `modulation`, `midifx`, `vamod`, `jazz`, `pianist`, `romantic`, `drummer`, `bassist`,
-`guitarist`, `sfz`, `kits`, `organ`, `articulation`, `speech`, `tempo`, `song`, `mixer`, `mastering`, `heroes`,
+`guitarist`, `sfz`, `kits`, `organ`, `articulation`, `speech`, `tempo`, `song`, `sections`, `mixer`, `mastering`, `heroes`,
 `gesture`, `fretwork`, `soloist`, `guitar_vocab`, `guitar_riff`, `horn_vocab`, `budget`, `voicing`, `notation`, `figures`,
 `bandlib.scoring` (the orchestrator's desk, used as `orch.Score` / `orch.Choir` ...), `singer`, `lyrics`, `voicebank`.
 

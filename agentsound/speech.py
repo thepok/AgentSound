@@ -440,10 +440,51 @@ class Words:
         return Clip(notes, length=length)
 
 
+    def robot(self, carrier, say=None, chords=None, *, vel: int = 127, chord_vel: int = 96, **vocoder):
+        """The robot voice in one call (on a Words made by speech.voice(): its .track speaks): say = {position: text |
+        {beat: text} | (text_or_events, vel)} - the words spoken there (vel 127 = the calibrated level) - chords =
+        {position: (pitches, beats[, vel]) | Clip | Progression} - what the carrier (a vocoder track, e.g.
+        'synthwave/vocoder_choir') sings under them (pitches: hold() notation 'C#3 G#3 C#4' or a list, at
+        chord_vel) - then speech.vocode(carrier, voice, **vocoder) (shift=, unvoiced=, ...). Freeze a vowel with a
+        'fx.vocoder.hold' lane on the carrier. Returns the carrier.
+            vox = speech.voice(s, ['chrome leviathan', 'it wakes'], voice='onecore:Stefan', rate=-3)
+            robot = s.track('robot', 'synthwave/vocoder_choir', gain_db=-9)
+            vox.robot(robot, say={intro.bar(2): 'chrome leviathan'}, chords={intro.bar(2): ('C#3 G#3 C#4', 7.5)})"""
+        voice = getattr(self, 'track', None)
+        if voice is None:
+            raise SpeechError("Words.robot(): the words have no voice track - make them with speech.voice(song, ...)")
+        for at, ev in (say or {}).items():
+            v = vel
+            if isinstance(ev, tuple):
+                if len(ev) != 2:
+                    raise SpeechError(f"robot(say=...): (text or {{beat: text}}, vel), got {ev!r}")
+                ev, v = ev
+            voice.play(self.clip({0: ev} if isinstance(ev, str) else ev, vel=v), at)
+        from .notation import hold as _hold
+        for at, ch in (chords or {}).items():
+            if isinstance(ch, tuple):
+                if len(ch) not in (2, 3):
+                    raise SpeechError(f"robot(chords=...): (pitches, beats[, vel]), got {ch!r}")
+                ch = _hold(ch[0], ch[1], ch[2] if len(ch) == 3 else chord_vel)
+            carrier.play(ch, at)
+        return vocode(carrier, voice, **vocoder)
+
+
 def words(items, *, voice=None, rate: float = 0, volume: float = 100, root='C2', cache_dir=None) -> Words:
     """A word sampler (see Words): each entry of `items` is spoken once and mapped to its own key from root."""
     return Words(items, voice=voice, rate=rate, volume=volume, root=root,
                  cache_dir=cache_dir if cache_dir is not None else _caller_dir() / 'samples' / 'speech')
+
+
+def voice(song, items, *, id: str = 'voice', voice=None, rate: float = 0, volume: float = 100, root='C2',
+          cache_dir=None, **track_options) -> Words:
+    """speech.words() + its sampler track in one call: Words with .track (the voice, a one-shot sampler; muted by
+    vocode()), then words.robot(carrier, say=, chords=) lets a vocoder speak them.
+        vox = speech.voice(s, ['until the credits roll'], voice='zira', rate=-3)"""
+    w = Words(items, voice=voice, rate=rate, volume=volume, root=root,
+              cache_dir=cache_dir if cache_dir is not None else _caller_dir() / 'samples' / 'speech')
+    w.track = song.track(id, w.instrument(), **track_options)
+    return w
 
 
 # --------------------------------------------------------------------------------------------- audition

@@ -32,32 +32,9 @@ DRUMS_UP = 1.0     # the kit forward against the wall (the backbeat was buried: 
 MUSIC_DOWN = 1.0
 
 
-def drop(tracks, start, end):
-    """Silence tracks in [start, end): notes ringing into it are cut, notes starting inside it removed."""
-    for t in tracks:
-        a = max(0.0, start - 16)
-        keep = t.clip(a, start).slice(0, start - a)
-        t.clear(a, end)
-        if len(keep):
-            t.play(keep, a)
-
-
 def build() -> Song:
     s = Song('Until the Credits Roll', tempo=BPM, key='E minor', seed=7, tail=7.0)
     key = s.key
-
-    # ------------------------------------------------------------------ form: 123 bars, ~4:10 + ring-out
-    intro = s.section('intro', 8)
-    verse1 = s.section('verse1', 16)
-    pre1 = s.section('pre1', 8)
-    chorus1 = s.section('chorus1', 16)
-    verse2 = s.section('verse2', 8)
-    pre2 = s.section('pre2', 8)
-    chorus2 = s.section('chorus2', 16)
-    breakdown = s.section('breakdown', 10)
-    lift = s.section('lift', 8)
-    final = s.section('final', 16)
-    outro = s.section('outro', 9)
 
     # ------------------------------------------------------------------ harmony
     P_intro = s.prog('C D G Em')                          # the chorus chords, foreshadowed
@@ -70,6 +47,19 @@ def build() -> Song:
     P_lift = s.prog('Am Em/B C D Am Em/B C C#')
     P_final = P_chorus.transpose(UP)
     P_outro = s.prog('D E A F#m D E F#:3')                 # F# minor ... ends on F# MAJOR (Picardy)
+
+    # ------------------------------------------------------------------ form: 123 bars, ~4:10 + ring-out
+    intro = s.section('intro', 8, prog=P_intro)
+    verse1 = s.section('verse1', 16, prog=P_verse)
+    pre1 = s.section('pre1', 8, prog=P_pre)
+    chorus1 = s.section('chorus1', 16, prog=P_chorus)
+    verse2 = s.section('verse2', 8, prog=P_verse)
+    pre2 = s.section('pre2', 8, prog=P_pre)
+    chorus2 = s.section('chorus2', 16, prog=P_chorus)
+    breakdown = s.section('breakdown', 10, prog=P_break)
+    lift = s.section('lift', 8, prog=P_lift)
+    final = s.section('final', 16, prog=P_final)
+    outro = s.section('outro', 9, prog=P_outro)
 
     # ------------------------------------------------------------------ melody (degrees of E minor, 8 = E5 at octave 4)
     H = {
@@ -150,25 +140,22 @@ def build() -> Song:
 
     # mix moves on top of the preset (from the loudness-matched compare against "Sunset"): the kick hits stick
     # out more (slower kit-compressor attack, deeper bass/pad pump, a little less limiting), more 60-90 Hz weight
-    def fxp(node, kind, **params):
-        next(f for f in node.fx if f.type == kind).params.update(params)
-
-    fxp(kit, 'compressor', attack=25, ratio=2.5)
-    fxp(kit, 'eq', **{'hp.freq': 25, 'low.gain': 1.0, 'peak3.freq': 80, 'peak3.gain': 2.5, 'peak3.q': 1.2,
+    kit.fx['compressor'].set(attack=25, ratio=2.5)
+    kit.fx['eq'].set({'hp.freq': 25, 'low.gain': 1.0, 'peak3.freq': 80, 'peak3.gain': 2.5, 'peak3.q': 1.2,
                       'high.gain': 0.0, 'lp.freq': 13000, 'peak2.freq': 3500, 'peak2.gain': -1.5, 'peak2.q': 0.9})
-    fxp(kit, 'saturator', drive=2.5)                          # the tape clip rounded the kick's attack off
+    kit.fx['saturator'].set(drive=2.5)                        # the tape clip rounded the kick's attack off
     kit.gain_db += 2.0
     kit.instrument.lazy['gains'].update(snare=2.5, clap=0.0)   # the backbeat forward (snare punch 8 vs 13 dB)
-    fxp(bass, 'ducker', depth=14, hold=60, release=160, curve=0.5)
+    bass.fx['ducker'].set(depth=14, hold=60, release=160, curve=0.5)
     bass.gain_db -= 2.5                                        # was the loudest part (-17 dB RMS), over the kit
-    bass.fx[2].params.update({'hp.freq': 27})                 # the preset's bass high-pass: let 27-32 Hz through
-    fxp(b.gated, 'gatedreverb', width=0.9)                    # 1.2 read correlation -0.17 (the burst cancels in mono)
-    fxp(lead, 'eq', **{'peak3.gain': 0.0})                    # the preset's +2 dB presence lift read 'harsh' here
-    fxp(keys, 'eq', **{'peak3.gain': -2.0})                   # the e-piano steps out of the snare's presence band
-    fxp(pad, 'ducker', depth=7)
+    bass.fx[2].set({'hp.freq': 27})                           # the preset's bass high-pass: let 27-32 Hz through
+    b.gated.fx['gatedreverb'].set(width=0.9)                  # 1.2 read correlation -0.17 (the burst cancels in mono)
+    lead.fx['eq'].set({'peak3.gain': 0.0})                    # the preset's +2 dB presence lift read 'harsh' here
+    keys.fx[0].set({'peak3.gain': -2.0})                      # the e-piano steps out of the snare's presence band
+    pad.fx['ducker'].set(depth=7)
     bass.add_fx(fx.eq({'peak2.freq': 80, 'peak2.gain': 3.5, 'peak2.q': 1.3}))    # weight at 60-90 Hz, not at 45
-    next(f for f in s.master.fx if f.type == 'limiter').params.update(gain=5.2)
-    fxp(s.master, 'eq', **{'high.gain': 3.0})                  # the preset's +5.5 dB shelf read +3 dB air here
+    s.master.fx['limiter'].set(gain=5.2)
+    s.master.fx['eq'].set({'high.gain': 3.0})                  # the preset's +5.5 dB shelf read +3 dB air here
 
     perc = s.track('perc', 'sampled/forzee_kit', output=dbus, gain_db=-5, sends={plate: -18},   # crash, tambourine
                    fx=[fx.eq({'high.freq': 9000, 'high.gain': -6})])
@@ -191,8 +178,7 @@ def build() -> Song:
     impact = s.track('impact', 'synthwave/impact', gain_db=1, fx=[fx.eq({'high.freq': 8000, 'high.gain': -5})])
     down = s.track('down', 'synthwave/downlifter', gain_db=-7)
     # the robot: Windows TTS (cached in samples/speech/) keys a vocoder choir that sings the chords
-    vox = speech.words(['until the credits roll'], voice='zira', rate=-3)
-    voice = s.track('voice', vox.instrument())
+    vox = speech.voice(s, ['until the credits roll'], voice='zira', rate=-3)
     robot = s.track('robot', 'synthwave/vocoder_choir', output=music, gain_db=0, sends={hall: -7, shimmer: -12})
 
     # ------------------------------------------------------------------ drums
@@ -201,7 +187,6 @@ def build() -> Song:
     H8 = 'o.X.o.X.o.X.o.X.'
     H16 = 'xoXoxoXoxoXoxoXo'
     SN = '....X.......X...'
-    kit_v1a = drums({'kick': KH, 'hat': H8, 'snare': SN})
     kit_v1b = drums({'kick': KH + K4, 'hat': H8 + 'o.X.o.X.o.X.o...', 'ohh': '.' * 16 + '..............x.',
                      'snare': SN + '....X.....o.X..o'})
     kit_v2 = drums({'kick': K4 + 'X...X...X...X..x', 'hat': 'x.Xox.Xox.Xox.Xo' * 2,
@@ -212,116 +197,68 @@ def build() -> Song:
                      'snare': SN + '....X.......X.oo', 'clap': SN * 2})
     tamb_a = drums({'tamb': '....x.......x...'})
     tamb_b = drums({'tamb': 'o.x.o.x.o.x.o.x.'})
+    SC = ('snare', 'clap')                              # a snare / clap fill: the kick and hats keep going
 
-    def fill(clip, at):
-        """A snare/clap fill: replaces only the snare and clap of the groove (kick and hats keep going)."""
-        kit.clear(at, at + clip.length, pitches=['snare', 'clap'])
-        kit.play(clip, at)
-
-    def toms(at, length, vel=(96, 124)):
-        """A tom fill over the kick: hats, snare and clap make room, the kick keeps driving."""
-        kit.clear(at, at + length, pitches=['hat', 'ohh', 'snare', 'clap'])
-        kit.play(tom_fill(length, vel=vel), at)
-
-    # intro: hats creep in over the last 4 bars, a tom fill into the verse
-    kit.loop(drums({'hat': '..o...o...o...o.'}), intro.bar(4), bars=3)
-    kit.play(drums({'hat': '..o...o...o.....', 'tom_hi': '............x...', 'tom_mid': '.............x..',
-                    'tom_lo': '..............xx'}), intro.bar(7))
-    # verse 1: half-time kick, then four on the floor in its second half
-    kit.loop(drums({'kick': KH, 'hat': H8, 'snare': SN}), verse1, bars=8).loop(kit_v1b, verse1.bar(8), bars=8)
-    fill(drums({'snare': '....X.......oxxX'}), verse1.bar(15))
-    # pre 1: 8th hats -> 16ths, snare on every beat, build roll, 1-beat drop
-    kit.loop(drums({'kick': K4, 'hat': H8, 'snare': SN}), pre1, bars=4)
-    kit.loop(drums({'kick': K4, 'hat': H16, 'snare': 'x...X...x...X...', 'clap': SN}), pre1.bar(4), bars=2)
-    kit.play(drums({'kick': K4, 'hat': 'xoXoxoXoxoXo....'}), pre1.bar(6))
-    kit.play(drums({'kick': K4}), pre1.bar(7))
-    fill(snare_roll(7, build=True, vel=(40, 110)), pre1.bar(6))
-    # chorus 1: the tambourine joins at the half
-    kit.loop(kit_ch, chorus1)
-    fill(drums({'snare': '....X.......xxxx', 'clap': SN}), chorus1.bar(7))
-    perc.loop(tamb_a, chorus1.bar(8), bars=8)
-    # verse 2: busier hats, kick pickup, ghost snares
-    kit.loop(kit_v2, verse2)
-    fill(drums({'snare': '....X.......xxXX'}), verse2.bar(7))
-    # pre 2: tambourine, toms instead of the snare roll
-    kit.loop(kit_v2, pre2, bars=5)
-    kit.play(drums({'kick': K4, 'hat': H16, 'snare': 'X.x.X.x.X.x.X.x.', 'clap': SN}), pre2.bar(5))
-    kit.play(drums({'kick': K4, 'hat': 'xoXoxoXo........', 'snare': 'x.x.X.x.xxxxXXXX'}), pre2.bar(6))
-    kit.play(drums({'kick': 'X...X...X.......'}), pre2.bar(7))
+    kit.plan({
+        # intro: hats creep in over the last 4 bars, a tom fill into the verse
+        intro: [(4, drums({'hat': '..o...o...o...o.'})), (7, drums({'hat': '..o...o...o.....', 'tom_hi': '............x...',
+                                                                   'tom_mid': '.............x..', 'tom_lo': '..............xx'}))],
+        verse1: [drums({'kick': KH, 'hat': H8, 'snare': SN}), (8, kit_v1b)],   # half-time kick, then four on the floor
+        # pre 1: 8th hats -> 16ths, snare on every beat, build roll, 1-beat drop
+        pre1: [drums({'kick': K4, 'hat': H8, 'snare': SN}), (4, drums({'kick': K4, 'hat': H16, 'snare': 'x...X...x...X...',
+                                                                        'clap': SN})),
+               (6, drums({'kick': K4, 'hat': 'xoXoxoXoxoXo....'})), (7, drums({'kick': K4}))],
+        chorus1: kit_ch, verse2: kit_v2,                   # verse 2: busier hats, kick pickup, ghost snares
+        pre2: [kit_v2, (5, drums({'kick': K4, 'hat': H16, 'snare': 'X.x.X.x.X.x.X.x.', 'clap': SN})),
+               (6, drums({'kick': K4, 'hat': 'xoXoxoXo........', 'snare': 'x.x.X.x.xxxxXXXX'})),
+               (7, drums({'kick': 'X...X...X.......'}))],  # pre 2: toms instead of the snare roll
+        chorus2: kit_ch,
+        breakdown: (6, drums({'kick': 'x.........x.....', 'hat': '..x...x...x...x.'})),   # no drums for 6 bars
+        # lift: half-time -> four on the floor -> roll + toms (no drop: the key change arrives on a fill)
+        lift: [drums({'kick': 'x.........x.....', 'hat': 'x.x.x.x.x.x.x.x.', 'snare': '........X.......'}),
+               (4, drums({'kick': K4, 'hat': H16, 'snare': SN, 'clap': SN})), (7, drums({'kick': K4}))],
+        final: kit_fin,
+        # outro: groove for 4 bars, a build through the ritardando, one last hit on the F# major chord
+        outro: [drums({'kick': K4, 'hat': H8, 'snare': SN}), (4, drums({'kick': K4, 'hat': H16, 'snare': SN, 'clap': SN})),
+                (5, drums({'kick': K4}), 1)]},
+        # tom fills over the kick (hats, snare and clap make room) only into the phrase turns
+        fills={verse1.bar(15): (drums({'snare': '....X.......oxxX'}), SC),
+               pre1.bar(6): (snare_roll(7, build=True, vel=(40, 110)), SC),
+               chorus1.bar(7): (drums({'snare': '....X.......xxxx', 'clap': SN}), SC),
+               verse2.bar(7): (drums({'snare': '....X.......xxXX'}), SC), chorus2.bar(7, 3): tom_fill(1),
+               lift.bar(6): (drums({'snare': 'X.x.X.x.X.xxXxxx', 'clap': SN}), SC),
+               lift.bar(7): (snare_roll(2, vel=(60, 112)), SC), final.bar(7, 2): tom_fill(2, vel=(96, 126)),
+               final.bar(15, 2): tom_fill(2, vel=(96, 126)), outro.bar(5): (snare_roll(2, build=True, vel=(60, 112)), SC)},
+        keep=('kick',))
     kit.play(tom_fill(2.5, vel=(90, 124)), pre2.bar(7))
-    perc.loop(tamb_a, pre2, bars=6)
-    # chorus 2: tambourine 8ths, a tom fill at the half
-    kit.loop(kit_ch, chorus2)
-    toms(chorus2.bar(7, 3), 1)
-    perc.loop(tamb_b, chorus2)
-    # breakdown: no drums for 6 bars, then a soft half-time pulse returns under the sax peak
-    kit.loop(drums({'kick': 'x.........x.....', 'hat': '..x...x...x...x.'}), breakdown.bar(6), bars=4)
     kit.play(drums({'snare': '............x...'}), breakdown.bar(9))
-    # lift: half-time -> four on the floor -> roll + toms (no drop: the key change arrives on a fill)
-    kit.loop(drums({'kick': 'x.........x.....', 'hat': 'x.x.x.x.x.x.x.x.', 'snare': '........X.......'}), lift, bars=4)
-    kit.loop(drums({'kick': K4, 'hat': H16, 'snare': SN, 'clap': SN}), lift.bar(4), bars=3)
-    fill(drums({'snare': 'X.x.X.x.X.xxXxxx', 'clap': SN}), lift.bar(6))
-    kit.play(drums({'kick': K4}), lift.bar(7))
-    fill(snare_roll(2, vel=(60, 112)), lift.bar(7))
     kit.play(tom_fill(2, vel=(96, 126)), lift.bar(7, 2))
-    perc.loop(tamb_a, lift.bar(4), bars=4)
-    # final chorus: everything; tom fills only into the phrase turns (bars 8 and 16), kick kept under them
-    kit.loop(kit_fin, final)
-    toms(final.bar(7, 2), 2, vel=(96, 126))
-    toms(final.bar(15, 2), 2, vel=(96, 126))
-    perc.loop(tamb_b, final)
-    # outro: groove for 4 bars, a build through the ritardando, one last hit on the F# major chord
-    kit.loop(drums({'kick': K4, 'hat': H8, 'snare': SN}), outro, bars=4)
-    kit.play(drums({'kick': K4, 'hat': H16, 'snare': SN, 'clap': SN}), outro.bar(4))
-    kit.play(drums({'kick': K4}), outro.bar(5))
-    fill(snare_roll(2, build=True, vel=(60, 112)), outro.bar(5))
     kit.play(tom_fill(1, vel=(100, 126)), outro.bar(5, 3))
     kit.note('kick', outro.bar(6), 1, 124)
-    perc.loop(tamb_a, outro, bars=4)
-    # crashes on the section downbeats (a real cymbal: the pop kit has none)
-    for at in (verse1.start, chorus1.start, chorus1.bar(8), verse2.start, chorus2.start, chorus2.bar(8),
-               breakdown.start, lift.bar(4), final.start, final.bar(8), outro.start, outro.bar(6)):
-        perc.play(crash(118), at)
+    # the tambourine from chorus 1's second half; crashes on the section downbeats (a real cymbal: the pop kit has none)
+    perc.plan({chorus1: (8, tamb_a), pre2: (0, tamb_a, 6), chorus2: tamb_b, lift: (4, tamb_a), final: tamb_b,
+               outro: (0, tamb_a, 4)}, crash=118,
+              crashes=[verse1, chorus1, chorus1.bar(8), verse2, chorus2, chorus2.bar(8), breakdown, lift.bar(4), final,
+                       final.bar(8), outro, outro.bar(6)])
 
     # ------------------------------------------------------------------ bass
-    oc8 = dict(rate='1/8', gate=0.85)
-    bass.loop(s.prog('Em').bass('octave', **oc8), verse1, bars=8)                       # tonic pedal
-    bass.loop(P_verse.bass('octave', **oc8), verse1.bar(8), bars=8)                      # released
-    bass.play(P_pre.bass('octave', **oc8).slice(0, 24), pre1)
-    bass.play(P_pre.bass('pulse', rate='1/16', gate=0.8).slice(24, 28), pre1.bar(6))     # drive into the drop
-    bass.play(P_pre.bass('pulse', rate='1/16', gate=0.8).slice(28, 31), pre1.bar(7))
-    bass.play(P_chorus.bass('octave', **oc8), chorus1)
-    bass.play(P_verse.bass(pattern='R_roR_roR_roR_ro', rate='1/16', gate=0.9) * 2, verse2)   # gallop
-    bass.play(P_pre.bass('octave', **oc8).slice(0, 24), pre2)
-    bass.play(P_pre.bass('pulse', rate='1/16', gate=0.8).slice(24, 31), pre2.bar(6))
-    bass.play(P_chorus.bass(pattern='R_roR_roR_roR_ro', rate='1/16', gate=0.9), chorus2)        # gallop chorus
-    sub.play(P_break.bass('root', low='E1'), breakdown)
-    bass.play(P_lift.bass('octave', **oc8).slice(0, 24), lift)
-    bass.play(P_lift.bass('pulse', rate='1/16', gate=0.8).slice(24, 32), lift.bar(6))      # C -> C#: the push
-    bass.play(P_final.bass('octave', rate='1/16', gate=0.85), final)                     # 16ths: the top gear
-    bass.play(P_outro.bass('octave', **oc8).slice(0, 24), outro)
+    bass.loop(s.prog('Em').bass('octave', rate='1/8', gate=0.85), verse1, bars=8)                   # tonic pedal
+    bass.bassline('octave', verse1, pre1, chorus1, pre2, lift, outro, rate='1/8', gate=0.85,       # released
+                  bars={verse1: 8, pre1: (0, 6), pre2: (0, 6), lift: (0, 6), outro: (0, 6)})
+    bass.bassline('pulse', pre1, pre2, lift, rate='1/16', gate=0.8, bars={pre1: (6, 7), pre2: (6, 7.75), lift: 6})
+    bass.bassline('pulse', pre1, rate='1/16', gate=0.8, bars=(7, 7.75))   # drive into the drop; lift: C -> C# push
+    bass.bassline('octave', verse2, chorus2, pattern='R_roR_roR_roR_ro', rate='1/16', gate=0.9)          # gallop
+    bass.bassline('octave', final, rate='1/16', gate=0.85)                                               # top gear
+    sub.bassline('root', breakdown, low='E1')
     sub.play(s.prog('F#:3').bass('root', low='E1'), outro.bar(6))
 
     # ------------------------------------------------------------------ pad, strings, choir
-    pad_v = dict(voicing='spread', register=('C3', 'C5'), voices=4, vel=80)
-    pad.play(P_intro.block(**pad_v) * 2, intro)
-    pad.loop(P_verse.block(**pad_v), verse1, verse2)
-    pad.play(P_pre.block(**pad_v), pre1).play(P_pre.block(**pad_v), pre2)
-    pad.play(P_chorus.block(**pad_v), chorus1).play(P_chorus.block(**pad_v), chorus2)
-    pad.play(P_break.block(**pad_v), breakdown)
-    pad.play(P_lift.block(**pad_v), lift)
-    pad.play(P_final.block(**pad_v), final)
-    pad.play(P_outro.block(**pad_v), outro)
-
-    str_v = dict(register=(62, 79), voices=3, vel=76)
-    strings.play(P_intro.block(**str_v).slice(0, 16), intro.bar(4))
-    strings.play(P_pre.block(**str_v).slice(16, 32), pre1.bar(4))
-    strings.play(P_pre.block(**str_v), pre2)
-    ch_str = P_chorus.block(register=(64, 81), voices=3, vel=80)
-    strings.play(ch_str.slice(32, 64), chorus1.bar(8)).play(ch_str, chorus2).play(ch_str, final, transpose=UP)
-    strings.play(P_break.block(register=(64, 81), voices=3, vel=70), breakdown)
-    strings.play(P_lift.block(**str_v), lift)
-    strings.play(P_outro.block(register=(62, 79), voices=3, vel=80), outro)
+    pad.chords(s.sections, voicing='spread', register=('C3', 'C5'), voices=4, vel=80)
+    big = (chorus1, chorus2, final, breakdown)
+    strings.chords(intro, pre1, pre2, chorus1, chorus2, final, breakdown, lift, outro, voices=3,
+                   register={'*': (62, 79), **dict.fromkeys(big, (64, 81))}, bars={intro: 4, pre1: 4, chorus1: 8},
+                   vel={'*': 76, chorus1: 80, chorus2: 80, final: 80, breakdown: 70, outro: 80},
+                   prog={final: P_chorus}, transpose={final: UP})
     # the descant: above the hook, moving against it
     desc = ['E6', 'D6', 'D6', 'B5', 'G6', 'F#6', 'D6', 'E6', 'E6', 'F#6', 'G6', 'E6', 'G6', 'F#6', 'F#6', 'D#6']
     descant = Clip([(i * 4, 4, p, 84) for i, p in enumerate(desc)], length=64)
@@ -329,41 +266,33 @@ def build() -> Song:
     descant_f = Clip([(i * 4, 4, p, 90) for i, p in enumerate(desc)], length=64)
     violin.play(descant.slice(32, 64), chorus2.bar(8))
     violin.play(descant_f, final, transpose=UP)
-
-    ch_v = dict(voicing='spread', register=('C3', 'C5'), voices=4, vel=84)
-    choir.play(P_chorus.block(**ch_v).slice(32, 64), chorus2.bar(8))
-    choir.play(P_final.block(**ch_v), final)
-    choir.play(P_outro.block(**ch_v).slice(12, 36), outro.bar(3))
+    choir.chords(chorus2, final, outro, voicing='spread', register=('C3', 'C5'), voices=4, vel=84,
+                 bars={chorus2: 8, outro: 3})
 
     # ------------------------------------------------------------------ keys / arps
     ep = dict(step='1/16', register=(57, 74), voices=4, vel=92)
-    keys.loop(P_verse.block(rhythm='x.....x.....x...', **ep), verse1, bars=8)
-    keys.loop(P_verse.block(rhythm='x..x..x...x..x..', **ep), verse1.bar(8), bars=8)
+    keys.chords(verse1, pre1, verse2, **ep, bars={verse1: (0, 8)}, crescendo={pre1: (0.45, 0.9)},
+                rhythm={verse1: 'x.....x.....x...', pre1: 'x.x.x.x.x.x.x.x.', verse2: '..x..x..x...x.x.'})
+    keys.chords(verse1, **ep, rhythm='x..x..x...x..x..', bars=8)
     # the e-piano answers the verse melody in its rests (the hook cell's shape)
     for bb, rep in ((3, 'r:2 12:1/4 11:1/8 12:1/8'), (7, 'r:2 11:1/4 9:1/8 11:1/8'),
                     (11, 'r:2 12:1/4 11:1/8 12:1/8')):
         keys.play(s.motif(rep).clip(octave=4, vel=100), verse1.bar(bb))
-    keys.play(P_pre.block(rhythm='x.x.x.x.x.x.x.x.', **ep).crescendo(0.45, 0.9), pre1)
-    keys.loop(P_verse.block(rhythm='..x..x..x...x.x.', **ep), verse2)
-    keys.play(P_chorus.block(rhythm='x..x..x.', step='1/8', register=(60, 76), voices=4, vel=84), chorus2)
-    keys.play(P_break.arp('updown', rate='1/8', register=(60, 79), gate=0.9, vel=80), breakdown)
-    keys.play(P_final.block(rhythm='x..x..x.', step='1/8', register=(62, 78), voices=4, vel=86), final)
+    keys.chords(chorus2, final, rhythm='x..x..x.', step='1/8', register={chorus2: (60, 76), final: (62, 78)},
+                vel={chorus2: 84, final: 86})
+    keys.arp('updown', breakdown, rate='1/8', register=(60, 79), gate=0.9, vel=80)
 
-    arp_t.play(P_intro.arp('up', rate='1/16', register=(57, 76), vel=84), intro.bar(4))
-    arp_t.loop(P_verse.arp('updown', rate='1/16', register=(57, 76), vel=86), verse2)
-    arp_t.play(P_pre.arp('up', rate='1/16', octaves=2, register=(57, 72), vel=86), pre2)
-    arp_t.play(P_chorus.arp('up', rate='1/16', register=(57, 76), gate=0.5, vel=88), chorus1)
-    arp_t.play(P_chorus.arp('updown', rate='1/16', octaves=2, register=(57, 72), vel=90), chorus2)
-    arp_t.play(P_lift.arp('up', rate='1/16', octaves=2, register=(59, 74), vel=88), lift)
-    arp_t.play(P_final.arp('updown', rate='1/16', octaves=2, register=(59, 74), vel=92), final)
-    arp_t.play(P_outro.arp('up', rate='1/16', register=(59, 78), vel=84).slice(0, 24), outro)
-    arp2.play(P_chorus.arp('down', rate='1/8', register=(67, 84), gate=0.5, vel=84).slice(32, 64), chorus2.bar(8))
-    arp2.play(P_final.arp('down', rate='1/8', register=(69, 86), gate=0.5, vel=88), final)
-
-    glass.play(P_intro.arp('up', rate='1/8', register=(64, 79), vel=80) * 2, intro)
-    glass.loop(P_verse.arp('down', rate='1/8', register=(64, 76), vel=76), verse1.bar(8), bars=8)
-    glass.play(P_break.arp('up', rate='1/8', register=(64, 79), vel=78), breakdown)
-    glass.play(P_outro.arp('up', rate='1/8', register=(64, 79), vel=80).slice(0, 24), outro)
+    two = (pre2, chorus2, lift, final)                    # the arp's two-octave sections
+    arp_t.arp({'*': 'up', verse2: 'updown', chorus2: 'updown', final: 'updown'}, intro, verse2, pre2, chorus1, chorus2,
+              lift, final, outro, rate='1/16', octaves=dict.fromkeys(two, 2), gate={chorus1: 0.5},
+              register={'*': (57, 76), pre2: (57, 72), chorus2: (57, 72), lift: (59, 74), final: (59, 74), outro: (59, 78)},
+              vel={intro: 84, verse2: 86, pre2: 86, chorus1: 88, chorus2: 90, lift: 88, final: 92, outro: 84},
+              bars={intro: 4, outro: (0, 6)})
+    arp2.arp('down', chorus2, final, rate='1/8', gate=0.5, register={chorus2: (67, 84), final: (69, 86)},
+             vel={chorus2: 84, final: 88}, bars={chorus2: 8})
+    glass.arp({'*': 'up', verse1: 'down'}, intro, verse1, breakdown, outro, rate='1/8',
+              register={'*': (64, 79), verse1: (64, 76)}, vel={intro: 80, verse1: 76, breakdown: 78, outro: 80},
+              bars={verse1: 8, outro: (0, 6)})
 
     # ------------------------------------------------------------------ brass: stabs answer the hook's gaps
     def stabs(prog, rhythm, vel=106):
@@ -419,49 +348,37 @@ def build() -> Song:
 
     # the sax: verse 2 melody (an octave under the verse-1 lead), answers in chorus 2, the breakdown solo,
     # the outro phrase - played, not triggered: legato, glides into leaps, swells and delayed vibrato
-    def blow(clip, at, **kw):
-        art.perform(sax, clip, at, glide_leaps=5, glide_ms=90, humanize_ms=8, late_ms=6,
-                    vib={'depth': 16, 'rate': 5.0, 'delay': 0.4}, **kw)
-
-    blow(verse_a.clip(octave=3, vel=96), verse2)
+    art.perform(sax, verse_a.clip(octave=3, vel=96), verse2, preset='sax')
     for bar in (1, 9):
-        blow(sax_lick.clip(octave=3, vel=114), chorus2.bar(bar, 2))     # a shout, not an aside
-    blow(solo_m.clip(octave=3, vel=104), breakdown.bar(2))
-    blow(sax_outro.clip(octave=3, vel=100), outro, seed=3)
+        art.perform(sax, sax_lick.clip(octave=3, vel=114), chorus2.bar(bar, 2), preset='sax')   # a shout, not an aside
+    art.perform(sax, solo_m.clip(octave=3, vel=104), breakdown.bar(2), preset='sax')
+    art.perform(sax, sax_outro.clip(octave=3, vel=100), outro, preset='sax', seed=3)
     sax.clear(outro.bar(4), outro.end)
 
     # the robot says the title: in the breakdown (over Em9, before the sax), and over the final F# major chord
-    voice.play(vox.clip({0: 'until the credits roll'}), breakdown.start + 0.5)
-    voice.play(vox.clip({0: 'until the credits roll'}), outro.bar(6, 1))
-    robot.play(Clip([(0, 7.5, p, 84) for p in ('E3', 'B3', 'D4', 'G4', 'F#4')], length=8), breakdown.start)
-    robot.play(Clip([(0, 12, p, 86) for p in ('F#3', 'C#4', 'F#4', 'A#4')], length=12), outro.bar(6))
-    speech.vocode(robot, voice)
+    vox.robot(robot, say={breakdown.start + 0.5: 'until the credits roll', outro.bar(6, 1): 'until the credits roll'},
+              chords={breakdown: ('E3 B3 D4 G4 F#4', 7.5, 84), outro.bar(6): ('F#3 C#4 F#4 A#4', 12, 86)})
     ln = vox.beats('until the credits roll', BPM)
     robot.automate('fx.vocoder.hold', [(breakdown.start, 0), (breakdown.start + 0.5 + ln - 0.35, 1, 'step'),
                                        (breakdown.start + 7.5, 0, 'step'),
                                        (outro.bar(6, 1) + ln - 0.35, 1, 'step')])
 
     # ------------------------------------------------------------------ transitions / fx
-    riser_gain = []
+    gain = []
     for sec in (pre1, pre2, lift):
         drop_at = sec.end - 1 if sec is not lift else sec.end
-        riser_t.note('E3', sec.start, drop_at - sec.start, 100)
-        riser_t.automate('instrument.cutoff', riser(drop_at, length=drop_at - sec.start, lo=300, hi=12000))
-        riser_t.automate('instrument.hpf', riser(drop_at, length=drop_at - sec.start, lo=20, hi=1500))
-        riser_gain += [(sec.start, -9, 'step'), (drop_at, -7, 'linear'), (drop_at + 0.125, -58, 'linear')]  # on gain_db
-    riser_gain[0] = riser_gain[0][:2]
-    riser_t.automate('gainDb', riser_gain)
+        riser_t.rise(drop_at, drop_at - sec.start, pitch='E3')
+        gain += [(sec, -9), (drop_at, -7, 'linear'), (drop_at + 0.125, -58, 'linear')]      # dB on its gain_db
+    riser_t.levels(gain)
     impact.note('E1', chorus1.start, 4, 120).note('E1', chorus2.start, 4, 120)
     impact.note('F#1', final.start, 4, 124).note('F#1', outro.bar(6), 12, 124)
     down.note('E3', verse2.start, 6, 100).note('E3', breakdown.start, 8, 110)
 
     # the 1-beat drop before chorus 1 and 2: only the lead pickup sings
-    band = [kit, perc, bass, sub, pad, strings, violin, keys, arp_t, arp2, glass, brass, brass2, soft, harm, saw,
-            choir, bells, sax]
-    drop(band, chorus1.start - 1, chorus1.start)
-    drop(band, chorus2.start - 1, chorus2.start)
-    # the final F# major chord rings alone after the last hit
-    drop([kit, arp_t, keys, glass], outro.bar(6, 1), outro.end)
+    s.breath(before=[chorus1, chorus2], tracks=[kit, perc, bass, sub, pad, strings, violin, keys, arp_t, arp2, glass,
+                                                 brass, brass2, soft, harm, saw, choir, bells, sax])
+    for t in (kit, arp_t, keys, glass):                      # the final F# major chord rings alone after the last hit
+        t.clear(outro.bar(6, 1), outro.end, cut=True)
 
     # ------------------------------------------------------------------ the ending: slow into the last chord
     s.ritardando((outro.bar(4), outro.bar(6)), to=0.8, a_tempo=False)
@@ -475,11 +392,8 @@ def build() -> Song:
                 vib += [(a, 0.0, 'step'), (min(a + 0.8, e - 0.05), 0.2, 'linear'), (e, 0.2, 'step'),
                         (e + 0.05, 0.0, 'linear')]
     lead.modulate('instrument.pitchbend', lfo('sine', rate='5.5hz', depth=vib, base=0))
-    throws = [(0, -12)]
-    for sec in (chorus1, chorus2, final):
-        for at, ln_ in ((12, 2.5), (29, 2), (44, 2.5), (62, 2)):
-            throws += [(sec.start + at, -3, 'step'), (sec.start + at + ln_, -12, 'step')]
-    lead.automate('send.echo', throws)
+    art.throws(lead, spans=[((sec, at), ln_) for sec in (chorus1, chorus2, final)
+                            for at, ln_ in ((12, 2.5), (29, 2), (44, 2.5), (62, 2))], base=-12, throw=-3)
 
     # ------------------------------------------------------------------ production moves
     s.sidechain(strings, arp_t, arp2, sub, key=kit, pitches='kick', depth=5, release=190)
@@ -498,24 +412,18 @@ def build() -> Song:
                    hold(chorus2.start, lift.start, 800), exp_ramp(lift.start, final.start - 0.5, 800, 1600),
                    hold(final.start, outro.end, 900))
 
-    # energy arc (gainDb): the band sits back in the verses, the builds rise, each chorus steps forward
-    def arc(node, base, marks):
-        pts = []
-        for m in marks:
-            at, off = (m[0].start if isinstance(m[0], Section) else m[0]), m[1]
-            pts.append((at, base + off, m[2]) if len(m) > 2 else (at, base + off, 'step'))
-        pts[0] = pts[0][:2]
-        node.automate('gainDb', pts)
-
-    arc(dbus, DRUMS_UP, [(intro, -4), (verse1, -5), (verse1.bar(8), -4, 'step'), (pre1, -3.5), (chorus1.start - 1, -2.5, 'linear'),
-                  (chorus1, -0.5), (verse2, -4.5), (pre2, -3), (chorus2.start - 1, -2, 'linear'), (chorus2, 0),
-                  (breakdown, -6), (lift, -5), (lift.bar(4), -3, 'linear'), (final.start - 0.5, -1, 'linear'), (final, 0.5), (outro, -1)])
-    arc(music, -MUSIC_DOWN, [(intro, -5), (intro.bar(3), -2.5, 'smooth'), (verse1, -5.5), (verse1.bar(8), -4.5, 'step'),
-                   (pre1, -4), (chorus1.start - 1, -3, 'linear'), (chorus1, -0.5), (verse2, -5), (pre2, -3.5),
-                   (chorus2.start - 1, -2.5, 'linear'), (chorus2, 0), (breakdown, -7), (breakdown.bar(6), -5, 'smooth'),
-                   (lift, -5.5), (lift.bar(4), -3.5, 'linear'), (final.start - 0.5, -1, 'linear'), (final, 0.5), (outro, -1),
-                   (outro.bar(6), 0.5), (outro.bar(7), -1, 'smooth'), (outro.end, -14, 'smooth')])   # the credits fade
-    arc(lead, 0, [(pre1, 0), (final, 1.0), (outro, 0)])             # 'gainDb' lanes: dB on the track's gain_db
-
-    arc(soft, 0, [(verse1, 0), (final, -10), (outro, 0)])                  # the octave-up double sits under the hook
+    # energy arc (gainDb lanes of marks: dB on each node's gain_db; without a curve a jump): the band sits back in
+    # the verses, the builds rise, each chorus steps forward
+    dbus.levels([(intro, -4), (verse1, -5), (verse1.bar(8), -4), (pre1, -3.5), (chorus1.start - 1, -2.5, 'linear'),
+                 (chorus1, -0.5), (verse2, -4.5), (pre2, -3), (chorus2.start - 1, -2, 'linear'), (chorus2, 0),
+                 (breakdown, -6), (lift, -5), (lift.bar(4), -3, 'linear'), (final.start - 0.5, -1, 'linear'),
+                 (final, 0.5), (outro, -1)], base=DRUMS_UP)
+    music.levels([(intro, -5), (intro.bar(3), -2.5, 'smooth'), (verse1, -5.5), (verse1.bar(8), -4.5), (pre1, -4),
+                  (chorus1.start - 1, -3, 'linear'), (chorus1, -0.5), (verse2, -5), (pre2, -3.5),
+                  (chorus2.start - 1, -2.5, 'linear'), (chorus2, 0), (breakdown, -7), (breakdown.bar(6), -5, 'smooth'),
+                  (lift, -5.5), (lift.bar(4), -3.5, 'linear'), (final.start - 0.5, -1, 'linear'), (final, 0.5),
+                  (outro, -1), (outro.bar(6), 0.5), (outro.bar(7), -1, 'smooth'), (outro.end, -14, 'smooth')],
+                 base=-MUSIC_DOWN)                                                   # ... and the credits fade
+    lead.levels([(pre1, 0), (final, 1.0), (outro, 0)])
+    soft.levels([(verse1, 0), (final, -10), (outro, 0)])                # the octave-up double sits under the hook
     return s
