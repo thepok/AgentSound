@@ -682,11 +682,21 @@ def brushes(band, bars, style: str = 'medium', **kw) -> Clip:
     (stir, tap) velocity factors (1.9, 0.8) lift the sweeps and soften the taps / digs / slaps; the sweep length
     (jazz.swirly_sweep: a stir about every second) keeps the 'shhh' continuous under the taps - the groove itself
     (the presets' drum faders are set for it). Every jazz.brushes option
-    works (vel=, ride=, fills=, kick=, kit=, sweep= ...)."""
+    works (vel=, ride=, fills=, kick=, kit=, sweep= ...), straight=True too (the even-8th colour - ghosts, kick='even',
+    hat8, ride, digs - is written at its own velocities, only the groove under it is levelled)."""
     info = band.info if isinstance(getattr(band, 'info', None), dict) else {
         'kit': band.kit, 'sweep': band.sweep, 'stir': band.stir}
     kit = kw.setdefault('kit', info.get('kit', _jz.GM_BRUSH))
     kw.setdefault('sweep', info.get('sweep'))
+    if kw.pop('straight', False):
+        from ..patterns import _straight_brush_args
+        opts = dict(taps=True, kick=None, hat=True, ride=False, fills=True, phrase=8, fill=None, vel=1.0, seed=0,
+                    beats_per_bar=4, ghosts=0.0, hat8=0.0, digs=None)
+        unknown = set(kw) - set(opts) - {'kit', 'sweep'}
+        if unknown:
+            raise ComposeError(f"brushes(straight=True): unknown option {sorted(unknown)[0]!r}")
+        base, colour = _straight_brush_args(bars, style, {**opts, **kw})
+        return brushes(band, bars, style, **base) | _jz.brush_colour(bars, style, **colour)
     c = _jz.brushes(bars, style, **kw)
     fs, ft = info.get('stir', (1.0, 1.0))
     if fs == 1.0 and ft == 1.0:
@@ -703,7 +713,10 @@ def brushes(band, bars, style: str = 'medium', **kw) -> Clip:
 def pedal(tracks, prog, at=0.0, *, lift: float = 0.1, end=None) -> list:
     """Sustain pedal that follows the harmony (legato pedalling) on one or more piano tracks (the comping and the
     right hand share one pedal): up at every chord change of `prog` (a Progression placed at `at`, a beat or a
-    Section), down again `lift` beats later, up at the end (the progression's end or `end`). Returns the points."""
+    Section), down again `lift` beats later, up at the end (the progression's end or `end`). A form section
+    (song.form) or Part stands for both: pedal([b.comp], head). Returns the points."""
+    if getattr(prog, 'prog', None) is not None and not isinstance(prog, str):
+        prog, at = prog.prog, prog
     p = _as_prog(prog, None, 4.0)
     a = float(getattr(at, 'start', at))
     starts = sorted({a + st for st, _, c in p if c is not None})

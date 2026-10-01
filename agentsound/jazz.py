@@ -39,9 +39,9 @@ from .humanize import (BASS_ACCENTS, LAYBACK_MS, Groove, backbeat, bass_touch, j
 from . import pianist as _pianist
 from .modulation import lfo as _lfo
 from .patches import fx, inst
-from .patterns import (BRUSH_STYLES, COMP_CELLS, COMP_STYLES, FILL_KINDS, GM_BRUSH, RIDE_PATTERNS, SWIRLY_BRUSH,
-                       WALK_FEELS, Clip, Note, _as_prog, _vel, as_clip, beats, brush_fill, brushes, comp, ride_pattern,
-                       seed_int, walking_bass)
+from .patterns import (BRUSH_COLOUR, BRUSH_STYLES, COMP_CELLS, COMP_STYLES, FILL_KINDS, GM_BRUSH, RIDE_PATTERNS, SWIRLY_BRUSH,
+                       STRAIGHT_FEELS, WALK_FEELS, Clip, Note, _as_prog, _vel, as_clip, beats, brush_colour, brush_fill,
+                       brushes, comp, ride_pattern, seed_int, walking_bass)
 from .theory import (BLOCK_STYLES, CHORD_KINDS, CHORD_SCALES, JAZZ_VOICINGS, LH_REGISTER, LOW_INTERVAL_LIMITS,
                      UPPER_STRUCTURES, Chord, ComposeError, Key, Progression, available_tensions, block, check_voicing,
                      chord_kind, chord_scale, chord_scale_name, guide_tones, jazz_voice, jazz_voicings, mud, note,
@@ -54,20 +54,22 @@ __all__ = [
     'rootless', 'shell', 'quartal', 'so_what', 'block', 'upper_structure', 'jazz_voice', 'jazz_voicings',
     'check_voicing', 'block_chords',
     # patterns
-    'COMP_STYLES', 'COMP_CELLS', 'comp', 'WALK_FEELS', 'walking_bass', 'GM_BRUSH', 'SWIRLY_BRUSH', 'BRUSH_STYLES',
-    'FILL_KINDS', 'RIDE_PATTERNS', 'brushes', 'brush_fill', 'ride_pattern',
+    'COMP_STYLES', 'COMP_CELLS', 'comp', 'WALK_FEELS', 'STRAIGHT_FEELS', 'walking_bass', 'GM_BRUSH', 'SWIRLY_BRUSH',
+    'BRUSH_STYLES', 'BRUSH_COLOUR', 'FILL_KINDS', 'RIDE_PATTERNS', 'brushes', 'brush_colour', 'brush_fill', 'ride_pattern',
     # feel
     'swing_ratio', 'LAYBACK_MS', 'layback_ms', 'lay_back', 'jazz_groove', 'backbeat', 'phrases', 'phrase_dynamics',
     'touch', 'bass_touch', 'BASS_ACCENTS', 'Feel',
     # horn expression
     'Expression', 'scoop', 'fall', 'swell', 'vibrato', 'breathe', 'legato_phrases', 'HornLine', 'horn_line',
-    'EXPRESSION_PARAMS',
+    'EXPRESSION_PARAMS', 'slide', 'slides',
     # melody
     'paraphrase', 'solo_line',
     # the pianist's hands (agentsound.pianist)
     'pianist', 'MOVES', 'PIANIST_STYLES',
     # band
     'Band', 'band', 'JAZZ_PROGRESSIONS', 'SAMPLED_SOUNDS', 'SFZ_SOUNDS', 'PIANO_WIDTH', 'sampled', 'swirly_sweep',
+    # the chorus player and the ending's drums
+    'chorus', 'each', 'last_stir', 'bombs',
 ]
 
 _EPS = 1e-6
@@ -244,6 +246,67 @@ def scoop(at, cents: float = -80.0, length='1/16') -> list:
     c = _num(cents, 'scoop cents', -300, 300)
     # the leading 0 keeps the lane at pitch before the scoop (before a lane's first point its first value holds)
     return [(a, 0.0), (a, c / 100.0, 'step'), (a + L, 0.0, 'smooth')]
+
+
+def slide(at, semitones: float = -2.0, length: float = 0.2, early: float = 0.01, settle: float = 0.03) -> list:
+    """Pitch-bend points of a bass slide into a note at `at`: the lane rests at 0 until `settle` beats before the
+    note, jumps to `semitones` (a whole step under: -2) `early` beats before it and slides up to pitch over `length`
+    beats - a fretless-style slide an upright bassist plays into a solo note."""
+    a = _pos(at)
+    st = _num(semitones, 'slide semitones', -24, 24)
+    if length <= 0 or not 0 <= early < settle:
+        raise ComposeError("slide needs length > 0 and 0 <= early < settle")
+    return [(a - settle, 0.0, 'step'), (a - early, st, 'step'), (a + length, 0.0, 'smooth')]
+
+
+def slides(section, spec, length: float = 0.2, **kw) -> list:
+    """slide() points for several notes of a section: spec [(bar, beat, semitones), ...] (bar 0-based in the
+    section, beat inside the bar): bass.automate('instrument.pitchbend', jazz.slides(bass_solo, [(1, 0, -2), ...]))."""
+    pts: list = []
+    for item in spec:
+        if not isinstance(item, (tuple, list)) or len(item) != 3:
+            raise ComposeError(f"slides: items are (bar, beat, semitones), got {item!r}")
+        bar, beat, st = item
+        pts += slide(section.bar(bar) + beat if hasattr(section, 'bar') else _pos(section) + bar + beat, st,
+                     length, **kw)
+    return pts
+
+
+def last_stir(kit, length: float = 8.0, *, crash: int = 28, kick: int = 30, sweeps=(56, 44, 32), every: float = 2.0,
+              last: float | None = None, crash_len: float | None = None) -> Clip:
+    """The drummer's last chord -> Clip of `length` beats: a soft crash ringing the whole length (`crash`
+    velocity, 0 = none), a feathered kick under it, and brush stirs every `every` beats at the `sweeps` velocities
+    (dying away), the last one `last` beats long (default `every`). kit: the brush keymap (band.info['kit'])."""
+    kit = dict(kit)
+    out = []
+    if crash:
+        out.append((0, length if crash_len is None else crash_len, kit['crash'], crash))
+    if kick:
+        out.append((0, 0.5, kit['kick'], kick))
+    for i, v in enumerate(sweeps):
+        out.append((i * every, every if i < len(sweeps) - 1 or last is None else last, kit['sweep'], v))
+    return Clip(out, length=length)
+
+
+def bombs(bars, kit=None, *, seed=0, density: float = 0.3, vel: int = 58, phrase: int = 4,
+          beats_per_bar: float = 4.0) -> Clip:
+    """The drummer comping under a solo -> Clip: soft kick 'bombs' and snare digs (kit['dig'], else the slap) on
+    the upbeats (`density` = the chance per bar), and the set-up into every `phrase` bars: kick + dig on the last
+    &. kit: the brush keymap (band.info['kit'] / band.kit). Seeded."""
+    kit = dict(GM_BRUSH if kit is None else kit)
+    dig = kit['dig'] if 'dig' in kit else kit['slap']
+    bpb = float(beats_per_bar)
+    rng = random.Random(seed_int(seed))
+    out = []
+    for b in range(int(bars)):
+        t0 = bpb * b
+        if b % phrase == phrase - 1:                      # set up the next phrase: & of the last beat, kick + dig
+            out.append((t0 + bpb - 0.5, 0.3, kit['kick'], vel + rng.randint(0, 10)))
+            out.append((t0 + bpb - 0.5, 0.3, dig, vel - 12 + rng.randint(0, 8)))
+        elif rng.random() < density:
+            pos = rng.choice((1.5, bpb - 1.5, bpb - 0.5, 2.0))
+            out.append((t0 + pos, 0.3, dig if rng.random() < 0.6 else kit['kick'], vel - 10 + rng.randint(0, 12)))
+    return Clip(out, length=bpb * int(bars))
 
 
 def fall(end, semitones: float = -3.0, length='1/8', back=None) -> list:
@@ -1013,3 +1076,192 @@ def band(s, *, sax: bool = False, piano=None, bass=None, drums=None, horn=None, 
                 sweep=swirly_sweep(s.tempo, s.beats_per_bar) if swirly else None,
                 stir=(1.9, 0.8) if swirly else (1.0, 1.0),
                 horn=horn_opts, sounds={r: d for r, d in desc.items() if r != 'sax' or sax})
+
+
+# ------------------------------------------------------------------------------------------------ the chorus player
+
+class each(tuple):
+    """Per-part values for jazz.chorus options: vel=jazz.each(50, 52, 54, 56) - one per part of the section."""
+
+    def __new__(cls, *values):
+        return super().__new__(cls, values)
+
+
+_DEFAULT = object()
+_comp = comp
+
+
+def _band_track(band, role: str):
+    roles = getattr(band, 'roles', None)
+    if isinstance(roles, dict):
+        return roles.get(role)
+    return getattr(band, role, None)
+
+
+def _merge(base, over, names=()):
+    """Layer chorus options: the call's keys replace the defaults' (an ornaments= dict replaces, it is not added
+    to); part dicts (keys in `names` or ints) merge key by key."""
+    if isinstance(base, str):
+        base = {'feel': base}
+    if isinstance(over, str):
+        over = {'feel': over}
+    if not isinstance(base, dict) or not isinstance(over, dict):
+        return over
+    out = dict(base)
+    for k, v in over.items():
+        part = k in names or (isinstance(k, int) and not isinstance(k, bool))
+        out[k] = {**out[k], **v} if part and isinstance(out.get(k), dict) and isinstance(v, dict) else v
+    return out
+
+
+def _part_opts(spec, parts, i: int, what: str):
+    """The options of part i: the shared keys (each(...) = one value per part) + the part's own dict (by name or
+    index). None when the instrument rests in that part (part: None / False). Seeds: a shared seed= counts up per
+    part (seed + i); a part's own seed= is taken as it is."""
+    if spec is None or spec is False:
+        return None
+    if isinstance(spec, str):
+        spec = {'feel': spec}
+    if not isinstance(spec, dict):
+        raise ComposeError(f"chorus {what}= must be a dict of options (or None), got {spec!r}")
+    p = parts[i]
+    names = {q.name for q in parts}
+    top = {}
+    for k, v in spec.items():
+        if k in names or (isinstance(k, int) and not isinstance(k, bool)):
+            continue
+        if isinstance(v, each):
+            if len(v) != len(parts):
+                raise ComposeError(f"chorus {what} {k}=each(...) gives {len(v)} values for {len(parts)} parts")
+            v = v[i]
+        top[k] = v
+    own: dict = {}
+    for key in (i, p.name):
+        if key in spec:
+            if spec[key] is None or spec[key] is False:
+                return None
+            if not isinstance(spec[key], dict):
+                raise ComposeError(f"chorus {what}[{key!r}] must be a dict of options or None (rest), "
+                                   f"got {spec[key]!r}")
+            own.update(spec[key])
+    out = dict(top)
+    if 'seed' in top and 'seed' not in own:
+        out['seed'] = seed_int(top['seed']) + i
+    out.update(own)
+    return out
+
+
+def _melody_of(melody, sec, parts, i: int):
+    if melody is None:
+        return None
+    p = parts[i]
+    if isinstance(melody, dict):
+        for key in (p.name, i):
+            if key in melody:
+                return as_clip(melody[key])
+        return None
+    if isinstance(melody, (list, tuple)):
+        return as_clip(melody[i]) if i < len(melody) and melody[i] is not None else None
+    if len(parts) == 1:
+        return as_clip(melody)
+    return as_clip(melody).slice(p.start - sec.start, p.end - sec.start)
+
+
+def chorus(band, section, melody=None, *, piano=None, comp=None, bass=_DEFAULT, drums=None, memory=None,
+           defaults=None, bpm=None, key=None, lh_pedal: bool = True, pedal_end=None, record=None) -> dict:
+    """One chorus of a piano trio / quartet over a form section (song.form: its .parts with their changes) - the
+    players of this module and agentsound.pianist, part by part, nothing of its own:
+      piano   pianist.arrange options (each part's melody harmonized, decorated, filled: the right hand on
+              band.piano, the left hand on band.comp, the harmony pedal on the piano) + touch=(lo, hi) (jazz.touch
+              on the melody first), pedal=False (no right-hand pedal: dry lines), bpm=
+      comp    jazz.comp options (comping on band.comp) + answer=True (the part's melody: comp in its rests; False:
+              none), roll=(lo, hi) ms with roll_seed= (an int or a shared random.Random) and direction=
+      bass    walking_bass options on band.bass (a string = feel=; straight=True: the straight-8th lines); None:
+              no bass (default 'walk' - the swing walk; defaults= {'bass': ...} sets the song's)
+      drums   brushes options for the whole section (bandlib.jazz.brushes: keyed and levelled for the band's kit),
+              [(bars, options), ...] blocks in a row, or part keys: one block per part
+    Every option dict takes shared keys (each(a, b, c, d) = one value per part; a shared seed= counts up per part:
+    seed + index) and part keys ('A2': {...}, or the part index) that override them; a part key of None rests there.
+    defaults= {'piano': {...}, 'comp': ..., 'bass': ..., 'drums': ...}: the song's options under the call's.
+    melody: {part: clip} / a list per part / one clip over the section (sliced per part). memory: the pianist's
+    song-wide pianist.Memory (the ornament budget). lh_pedal: the harmony pedal on band.comp over the section
+    (bandlib.jazz.pedal) when the left hand played; pedal_end ends both pedals early (into an ending). Order: the
+    piano parts, the comping, the left-hand pedal, the bass, the drums. Returns {part: Arrangement}; record= a
+    dict that also gets them as 'section:part'."""
+    from .bandlib import jazz as _jb
+    if not getattr(section, 'parts', None):
+        raise ComposeError(f"chorus(): section {getattr(section, 'name', section)!r} has no parts - make the "
+                           f"sections with song.form('head:AABA ...', parts={{...}})")
+    d = defaults or {}
+    unknown = set(d) - {'piano', 'comp', 'bass', 'drums'}
+    if unknown:
+        raise ComposeError(f"chorus defaults: unknown role {sorted(unknown)[0]!r} (piano, comp, bass, drums)")
+
+    parts = list(section.parts)
+    names = {p.name for p in parts}
+
+    def layered(role, given):
+        if given is None or given is False:
+            return None
+        return _merge(d[role], given, names) if d.get(role) is not None else given
+    piano, comp = layered('piano', piano), layered('comp', comp)
+    bass = d.get('bass', 'walk') if bass is _DEFAULT else layered('bass', bass)
+    rh_t, lh_t, bass_t, drums_t = (_band_track(band, r) for r in ('piano', 'comp', 'bass', 'drums'))
+    song = next(t for t in (rh_t, lh_t, bass_t, drums_t) if t is not None)._song
+    key = song.key if key is None else key
+    bpm = song.tempo if bpm is None else bpm
+    out: dict = {}
+    for i, part in enumerate(parts):
+        o = _part_opts(piano, parts, i, 'piano')
+        if o is None:
+            continue
+        mel = _melody_of(melody, section, parts, i)
+        if mel is None:
+            raise ComposeError(f"chorus(): the piano needs a melody for part {part.name!r} of {section.name!r}")
+        t = o.pop('touch', None)
+        if t is not None:
+            mel = touch(mel, **t) if isinstance(t, dict) else touch(mel, *t)
+        ped = o.pop('pedal', True)
+        arr = _pianist.arrange(mel, part.prog, bpm=o.pop('bpm', bpm), key=key, memory=memory, at=part.start, **o)
+        arr.place(rh_t, lh_t, pedal=ped, end=pedal_end)
+        out[part.name] = arr
+        if record is not None:
+            record[f"{section.name}:{part.name}"] = arr
+    comped = False
+    for i, part in enumerate(parts):
+        o = _part_opts(comp, parts, i, 'comp')
+        if o is None:
+            continue
+        ans = o.pop('answer', True)
+        ans = _melody_of(melody, section, parts, i) if ans is True else None if ans is False else ans
+        roll, rseed, direction = o.pop('roll', None), o.pop('roll_seed', 0), o.pop('direction', 'up')
+        rbpm = o.pop('bpm', bpm)
+        c = _comp(part.prog, answer=ans, **o)
+        if roll is not None:
+            c = c.roll(roll, seed=rseed, bpm=rbpm, direction=direction)
+        lh_t.play(c, part.start)
+        comped = True
+    if lh_pedal and (out or comped) and lh_t is not None:
+        _jb.pedal([lh_t], section.prog, section, end=pedal_end)
+    for i, part in enumerate(parts):
+        o = _part_opts(bass, parts, i, 'bass')
+        if o is None:
+            continue
+        o.setdefault('key', key)
+        bass_t.play(walking_bass(part.prog, **o), part.start)
+    if drums is not None and drums is not False:
+        if isinstance(drums, list):
+            blocks = [(n, o) for n, o in drums]
+        elif isinstance(drums, dict) and any(k in names or (isinstance(k, int) and not isinstance(k, bool))
+                                             or isinstance(v, each) for k, v in drums.items()):
+            blocks = [(p.bars, _part_opts(drums, parts, i, 'drums')) for i, p in enumerate(parts)]
+        else:
+            blocks = [(section.bars, drums)]
+        at = 0.0
+        for n, o in blocks:
+            if o is not None:
+                o = dict(_merge(d['drums'], o, names) if d.get('drums') else o)
+                o.setdefault('beats_per_bar', section.beats_per_bar)
+                drums_t.play(_jb.brushes(band, n, **o), section.bar(at))
+            at += n
+    return out

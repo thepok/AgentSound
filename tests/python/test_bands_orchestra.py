@@ -250,8 +250,10 @@ class TestChamberOrchestra(_PresetCase):
         send = dict(b.violas._auto)['send.hall']
         self.assertEqual([p[1] for p in send[-4:]], [base, base + 3, base + 3, base])
         self.assertEqual(send[-1][0], 7.75)
+        orch.ring(b, 1, length=2, roles=['violas'], back=3)          # given back inside the bloom: cut short
+        self.assertEqual([p[0] for p in dict(b.violas._auto)['send.hall'][-4:]], [1, 3, 2.75, 3])
         with self.assertRaises(ComposeError):
-            orch.ring(b, 1, length=2, roles=['violas'], back=3)
+            orch.ring(b, 1, length=2, roles=['violas'], back=1)      # back must come after the bloom's start
         for r in b.roles:
             b[r].note(60 if r != 'basses' else 40, a.start, 2)
         s.compile()

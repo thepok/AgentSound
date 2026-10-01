@@ -358,13 +358,16 @@ def _shape(kind: str, d: float) -> list[tuple[float, float, str]]:
 
 
 def expression_points(clip, shapes='auto', *, lo: float = 0.2, hi: float = 1.0, long=1.5, accent_vel: int = 112,
-                      at=0.0) -> list:
+                      at=0.0, follow=None, follow_step: float = 1.0, follow_min: float = 1.0) -> list:
     """Automation points (beat, value 0..1, curve) for the sampler's 'dynamics' from a line: each note sits at its
     velocity's level (lo + (hi - lo) x vel / 127) shaped by `shapes`: one of SHAPES for every note, a list (per note
     in time order, None = flat), a dict {note index: shape}, a function Note -> shape, or 'auto' (notes of at least
     `long` beats swell, accents (vel >= accent_vel) get 'accent', the rest flat). A shape is cut where the next note
     starts; a note tied to the one before (overlapping it: a legato line) continues from where that one ended and
     moves to its own level / shape (no step at a legato transition), a note after a rest starts at its level.
+    follow: a function of the song beat -> a level (a velocity: a whole piece's dynamics map, orch.Score.level):
+    a note of `follow_min` beats or more whose level changes inside it by more than 3 % FOLLOWS it (a held chord
+    through a written crescendo grows; points every `follow_step` beats) instead of its shape.
     Positions: the clip's own + at (a beat or Section)."""
     c = as_clip(clip)
     a0 = _pos(at)
@@ -394,7 +397,18 @@ def expression_points(clip, shapes='auto', *, lo: float = 0.2, hi: float = 1.0, 
         keys = [(off, b * f, curve) for off, f, curve in _shape(kind, n.dur)]
         prev_n = firsts[k - 1] if k > 0 else None
         tied = prev_n is not None and last is not None and prev_n.start + prev_n.dur > n.start + _EPS
-        if tied and kind in ('flat', 'swell', 'cresc', 'dim'):
+        followed = False
+        if follow is not None and n.dur >= follow_min - _EPS:
+            ref = follow(a0 + n.start) or 1e-9
+            xs = sorted({min(n.dur, j * follow_step) for j in range(1, int(n.dur / follow_step) + 1)} | {n.dur})
+            rs = [(x, follow(a0 + n.start + x) / ref) for x in xs]
+            if max(abs(r - 1.0) for _, r in rs) > 0.03:
+                followed = True
+                lvl = lambda r: lo + (hi - lo) * min(127.0, n.vel * r) / 127.0  # noqa: E731
+                keys = [(0.0, last[0] if tied else b, 'linear' if tied else 'step')] +                     [(x, lvl(r), 'linear') for x, r in rs]
+        if followed:
+            pass
+        elif tied and kind in ('flat', 'swell', 'cresc', 'dim'):
             settle = min(0.3, 0.3 * n.dur)
             if kind == 'flat':      # glide from the line's level to the note's own
                 keys = [(0.0, last[0], 'linear'), (settle, b, 'smooth')]

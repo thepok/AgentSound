@@ -537,5 +537,25 @@ class Helpers(unittest.TestCase):
         self.assertEqual(sum(1 for tgt, _ in t2._auto if tgt == 'instrument.pitchbend'), 2)
 
 
+class WrittenOrnaments(unittest.TestCase):
+    """notes(expand=False): the ornaments as written, for a player that realizes them its own way (romantic.score)."""
+
+    def test_listed_not_played(self):
+        line = notes('unit=1/8 F5:3^tr(lower=-1) G5:2 [C6 C7]:1!^roll(60) {F5 G5 F5 E5}:3^fig(even)', expand=False)
+        self.assertEqual([(n.start, n.pitch) for n in line], [(1.5, 79)])          # the ornaments' notes left out
+        self.assertEqual([(o['kind'], o['start'], o['dur'], o['pitches'], o['args'], o['kw']) for o in line.ornaments],
+                         [('trill', 0.0, 1.5, [77], [], {'lower': -1}), ('roll', 2.5, 0.5, [84, 96], [60], {}),
+                          ('fig', 3.0, 1.5, [77, 79, 77, 76], ['even'], {})])
+        self.assertEqual(line.ornaments[1]['vel'], round(96 * 1.2))
+        moved = line.shift(2.0)
+        self.assertEqual([o['start'] for o in moved.ornaments], [2.0, 4.5, 5.0])
+        self.assertEqual(moved.ornaments[0]['notes'][0].start, 2.0)
+        expanded = notes('unit=1/8 F5:3^tr(lower=-1) G5:2', bpm=60)                 # the default: played
+        self.assertGreater(len(expanded), 2)
+        self.assertEqual(expanded.ornaments, [])
+        with self.assertRaisesRegex(ComposeError, 'real time'):
+            notes('F5/2^tr')
+
+
 if __name__ == '__main__':
     unittest.main()

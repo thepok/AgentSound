@@ -255,13 +255,10 @@ def score_downbeats():
     spec.loader.exec_module(m)
     out = []
     for k in range(1, 35):
-        t0 = m.bar_start(k)
-        ev = next((e for e in m.SCORE[k] if abs(e[1] - t0) < 1e-6 and e[0] in ('note', 'trill', 'turn', 'fig')), None)
-        if ev is None:
-            out.append(None)
-            continue
-        p = ev[3][0] if ev[0] == 'fig' else ev[3]
-        out.append(note(p) % 12)
+        t0 = m.SCORE.bar(k)
+        ev = next((e for e in m.SCORE.in_bar(k) if abs(e.at - t0) < 1e-6 and e.kind in ('note', 'trill', 'turn', 'fig')),
+                  None)
+        out.append(None if ev is None else note(ev.pitch) % 12)
     return out
 
 

@@ -8,6 +8,8 @@ church organ - each a seated, balanced ensemble in one shared hall (a convolutio
     orch.dynamics(b, orch.STRINGS, [(verse.start, 'p'), (verse.bar(7), 'ff', 'smooth')])   # a tutti crescendo
     b.cellos.play(line.articulate('pizzicato'), verse)                                     # or plain notes
     ANALYSIS = b.analysis                             # {'profile': 'classical'} ('film' for film_orchestra)
+    sc = orch.Score(s, b, DYNAMICS); sc.add(...); sc.double(...); sc.hits(...); sc.perform()   # the whole piece's
+    # parts with one dynamics map, doublings, hits, natural brass, beds, the choir (bandlib/scoring.py, orch.*)
 
 Presets (bands.list('orchestra'); bands.get(name) / band.describe() for the details):
   string_quartet      violin1 violin2 viola cello: solo players (mono legato), live dynamics, keyswitched articulations
@@ -72,7 +74,11 @@ from ..patterns import Clip, as_clip
 from ..theory import ComposeError
 
 __all__ = ['DYN', 'STRINGS', 'WOODWINDS', 'BRASS', 'PERCUSSION_KEYS', 'dyn', 'dynamics', 'perform', 'ring', 'rebow',
-           'lead', 'installed']
+           'lead', 'installed',
+           # the orchestrator's desk (bandlib/scoring.py): a whole piece's parts + one dynamics map, doublings, hits
+           'VEL', 'PHRASING', 'FALLBACK', 'TUTTI_ROLES', 'WINDS8_ROLES', 'UNISON_OCTAVES', 'natural_brass',
+           'timpani_tuning', 'Score', 'Choir', 'bed', 'double', 'colla_parte', 'hits', 'unison', 'sing', 'swells',
+           'BED']
 
 SSO = 'samples/sso/Sonatina Symphonic Orchestra/'
 SSO_STR = SSO + 'Strings - Performance/'
@@ -1153,14 +1159,14 @@ def ring(band: Band, at, length=2.0, db: float = 4.0, roles=None, back=None, bac
     """Let the hall ring (the recipe's 'automate the room'): raise the hall send of every role (or `roles`) by `db`
     over `length` beats from `at` (a beat or Section) - on the last chord before a general pause or the end, so the
     tail blooms into the silence. It stays raised, unless `back` (a beat or Section: where the music goes on after a
-    mid-song fermata) gives it back: the send returns to its seat over the `back_beats` before it."""
+    mid-song fermata) gives it back: the send returns to its seat over the `back_beats` before it (a `back` inside
+    the bloom cuts it short: the send falls from where it got)."""
     a0 = float(getattr(at, 'start', at))
     bus = band.buses['hall']
     target = 'send.' + str(getattr(bus, 'id', 'hall'))
     b0 = None if back is None else float(getattr(back, 'start', back))
-    if b0 is not None and b0 - float(back_beats) <= a0 + float(length) + 1e-9:
-        raise ComposeError(f"ring: back={b0:g} must come after the bloom ({a0:g} + length {float(length):g} + "
-                           f"back_beats {float(back_beats):g})")
+    if b0 is not None and b0 <= a0 + 1e-9:
+        raise ComposeError(f"ring: back={b0:g} must come after the bloom's start ({a0:g})")
     for r in (_roles(band, roles) if roles is not None else list(band.roles)):
         base = band.info['seating'][r]['hall_send']
         top = min(6.0, base + db)
@@ -1216,14 +1222,15 @@ def rebow(clip, bpm: float, max_seconds: float = 6.0, gap_ms: float = 30.0) -> C
 def perform(band: Band, role: str, clip, at=0.0, *, shapes='auto', lo: float = 0.0, hi: float = 1.0,
             humanize_ms: float = 8.0, seed=0, articulations='auto', short=0.5, accent_vel: int = 112,
             glide_leaps: int | None = None, glide_ms: float = 120.0, vib: bool | dict | None = None,
-            bow_seconds: float | None = None) -> Clip:
+            bow_seconds: float | None = None, follow=None) -> Clip:
     """Play a part on a role the way the section / player would; returns the notes as played (in song beats: the
     part is placed at `at` first, so a note on the section's downbeat can still start early):
       sustaining roles: articulations by note length ('auto': short -> staccato / spiccato, vel >= accent_vel ->
         marcato, the rest sustain, from what the role has; a name for every note; None = leave the marks), long notes
         started band.info['lead_ms'][role] early, a section's timing (humanize_ms), and the velocities written as the
         dynamics lane (lo + (hi - lo) x vel / 127: 40 p, 78 mf, 95 f, 115 ff) with shapes ('auto': long notes swell,
-        or SHAPES / a list / dict per note: art.expression);
+        or SHAPES / a list / dict per note: art.expression; follow= a function beat -> level (a Score's
+        dynamics map: held notes follow a written crescendo inside them);
       solo players (string_quartet) also: legato phrases, a glide into leaps >= glide_leaps, a delayed vibrato
         (vib: True / False / options), bow changes after bow_seconds of tied line;
       struck roles (timpani, percussion, harp, celesta, drums), synths and custom sounds without a dynamics lane
@@ -1265,7 +1272,7 @@ def perform(band: Band, role: str, clip, at=0.0, *, shapes='auto', lo: float = 0
     t.play(c, 0)
     if shapes is not None and getattr(t.instrument, 'type', '') == 'sampler':
         long = max(2.0, 2.5 * bpm / 60.0)       # 'auto' swells notes of 2.5 s and more (a messa di voce)
-        art.expression(t, c, 0, shapes, lo=lo, hi=hi, accent_vel=accent_vel, long=long)
+        art.expression(t, c, 0, shapes, lo=lo, hi=hi, accent_vel=accent_vel, long=long, follow=follow)
     depth = info.get('vibrato', {}).get(role, 0.0)
     if vib is None:
         vib = bool(depth) and mono
@@ -1307,3 +1314,7 @@ bands.register('church_organ', church_organ, genre='orchestra',
                description="Lars Palo pipe organ registrations (soft / principal chorus / full organ + pedal) in a "
                            "big church; organ='burea' | 'pitea'",
                tuned='classical profile; songs/_bands/church_organ', requires=('lars-palo-burea-church',))
+
+# the orchestrator's desk: Score (parts + one dynamics map, perform), doublings, hits, brass, unison, beds, the choir
+from .scoring import (BED, FALLBACK, PHRASING, TUTTI_ROLES, UNISON_OCTAVES, VEL, WINDS8_ROLES, Choir,  # noqa: E402
+                      Score, bed, colla_parte, double, hits, natural_brass, sing, swells, timpani_tuning, unison)

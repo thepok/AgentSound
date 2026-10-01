@@ -86,12 +86,22 @@ class Section:
     """A named span of bars in its meter (.meter, e.g. (3, 4); .beats_per_bar quarter-note beats per bar).
     start/end/length are beats. Created by song.section()."""
 
-    __slots__ = ('name', 'start', 'bars', 'beats_per_bar', 'meter')
+    __slots__ = ('name', 'start', 'bars', 'beats_per_bar', 'meter', 'prog', 'parts')
 
     def __init__(self, name: str, start: float, bars: float, beats_per_bar: float, meter: tuple | None = None):
         self.name, self.start, self.bars, self.beats_per_bar = name, float(start), float(bars), float(beats_per_bar)
         self.meter = meter if meter is not None else ((int(beats_per_bar), 4) if float(beats_per_bar).is_integer()
                                                       else _tempo._partial_meter(beats_per_bar, f"section {name!r}"))
+        self.prog: Progression | None = None      # the changes (song.form): the parts' progressions in a row
+        self.parts: tuple = ()                    # song.form: the Parts (A1 A2 B A3 ...) with their progressions
+
+    def part(self, name) -> 'Part':
+        """The part `name` ('A2'; an int = its index) of a form section."""
+        for i, p in enumerate(self.parts):
+            if p.name == name or (isinstance(name, int) and not isinstance(name, bool) and i == name):
+                return p
+        raise ComposeError(f"section {self.name!r} has no part {name!r}; parts: "
+                           f"{', '.join(p.name for p in self.parts) or 'none (song.form gives sections parts)'}")
 
     @property
     def length(self) -> float:
@@ -129,7 +139,34 @@ class Section:
 
     def __repr__(self) -> str:
         m = '' if self.meter == (4, 4) else f", {self.meter[0]}/{self.meter[1]}"
-        return f"Section({self.name!r}, bars={self.bars:g}{m}, beats {self.start:g}..{self.end:g})"
+        p = f", parts {' '.join(x.name for x in self.parts)}" if self.parts else ''
+        return f"Section({self.name!r}, bars={self.bars:g}{m}, beats {self.start:g}..{self.end:g}{p})"
+
+
+class Part:
+    """One part of a form section (song.form): name ('A1'), index in the section, bar (0-based, in the section),
+    start / end / length (beats), bars, prog (its Progression) and section. A position like a Section start:
+    track.play(clip, part.start)."""
+
+    __slots__ = ('name', 'index', 'bar', 'start', 'prog', 'section')
+
+    def __init__(self, name: str, index: int, bar: float, start: float, prog: Progression, section: Section):
+        self.name, self.index, self.bar, self.start, self.prog, self.section = name, index, bar, start, prog, section
+
+    @property
+    def length(self) -> float:
+        return self.prog.length
+
+    @property
+    def end(self) -> float:
+        return self.start + self.prog.length
+
+    @property
+    def bars(self) -> float:
+        return self.prog.length / self.section.beats_per_bar
+
+    def __repr__(self) -> str:
+        return f"Part({self.name!r} of {self.section.name!r}, bar {self.bar:g}, {self.bars:g} bars)"
 
 
 # -------------------------------------------------------------------------------------- nodes
@@ -420,6 +457,20 @@ class Track(_Node):
                        for n in self._notes]
         return self
 
+    def feature(self, *sections, db: float = 2.0, glide: float = 1.0, target: str = 'gainDb'):
+        """A spotlight lane: the track steps up `db` dB for each section (its solo) and back after it, gliding in
+        over the `glide` beats before the section start / end ('gainDb' is dB on the track's gain_db):
+        bass.feature(bass_solo, db=2)."""
+        d = _num(db, 'feature db', -24, 24)
+        g = _num(glide, 'feature glide (beats)', 0.0)
+        spans = sorted(self._song._span(x, 'feature') for x in sections)
+        if not spans:
+            raise ComposeError("feature() needs at least one section")
+        pts: list = [(0, 0.0)] if spans[0][0] - g > 0 else []
+        for s0, e0 in spans:
+            pts += [(s0 - g, 0.0), (s0, d, 'smooth'), (e0 - g, d), (e0, 0.0, 'smooth')]
+        return self.automate(target, pts)
+
     def _prep(self, what, transpose, vel) -> Clip:
         try:
             c = as_clip(what)
@@ -570,6 +621,65 @@ class Song:
         s = Section(name, start, b, _tempo.beats_per_bar(m), m)
         self.sections.append(s)
         return s
+
+    def form(self, spec: str, parts: dict | None = None, *, meter=None) -> tuple:
+        """The form in one line, the changes attached: sections in a row, each `name:what` - what is a number of
+        bars ('intro:4'; its prog is parts['intro'] if given) or its parts: letters ('head:AABA' - the k-th A is
+        parts['A<k>'] when given, else parts['A']) or names joined by ',' ('out:B,A3o'). parts = {name: a
+        progression spec (song.prog in `meter`) or a Progression}. Every section gets .prog (its parts' changes in
+        a row) and .parts (Part: name, index, bar, start, end, prog), so the players need no progression argument
+        (jazz.chorus(band, head, ...), part.prog). Returns the sections in order:
+            intro, head, solo, out, end = s.form('intro:4 head:AABA solo:AABA out:B,A3 end:2', parts=CHANGES)"""
+        if not isinstance(spec, str) or not spec.split():
+            raise ComposeError(f"form() takes a string like 'intro:4 head:AABA end:2', got {spec!r}")
+        progs = {}
+        for k, v in (parts or {}).items():
+            try:
+                progs[k] = v if isinstance(v, Progression) else self.prog(v, meter=meter)
+            except ComposeError as e:
+                raise ComposeError(f"form(): part {k!r}: {e}") from None
+        made = []
+        for tok in spec.split():
+            name, sep, what = tok.partition(':')
+            if not sep or not name or not what:
+                raise ComposeError(f"form(): {tok!r} must be name:bars or name:PARTS ('head:AABA', 'out:B,A3')")
+            bpb = self.beats_per_bar if meter is None else _tempo.beats_per_bar(_tempo.parse_meter(meter, 'form meter'))
+            if re.fullmatch(r'\d+(?:\.\d+)?', what):
+                bars = float(what)
+                plist = [(name, progs[name])] if name in progs else []
+                if plist and plist[0][1].length > bars * bpb + 1e-9:
+                    raise ComposeError(f"form(): parts[{name!r}] holds {plist[0][1].length / bpb:g} bars, the "
+                                       f"section {bars:g}")
+            else:
+                if ',' in what or '+' in what:
+                    labels = [x for x in re.split(r'[,+]', what) if x]
+                elif re.fullmatch(r'[A-Z]+', what):
+                    seen: dict = {}
+                    labels = []
+                    for ch in what:
+                        seen[ch] = seen.get(ch, 0) + 1
+                        labels.append(f"{ch}{seen[ch]}" if f"{ch}{seen[ch]}" in progs else ch)
+                else:
+                    labels = [what]
+                missing = [x for x in labels if x not in progs]
+                if missing:
+                    raise ComposeError(f"form(): section {name!r} needs part {missing[0]!r}; parts: "
+                                       f"{', '.join(progs) or 'none (give parts={...})'}")
+                plist = [(x, progs[x]) for x in labels]
+                bars = sum(p.length for _, p in plist) / bpb
+            sec = self.section(name, bars, meter=meter)
+            at, out = 0.0, []
+            for i, (lab, p) in enumerate(plist):
+                out.append(Part(lab, i, at / bpb, sec.start + at, p, sec))
+                at += p.length
+            sec.parts = tuple(out)
+            if plist:
+                total = plist[0][1]
+                for _, p in plist[1:]:
+                    total = total + p
+                sec.prog = total
+            made.append(sec)
+        return tuple(made)
 
     def __getitem__(self, name: str) -> Section:
         for s in self.sections:
@@ -800,7 +910,7 @@ class Song:
         return self._at(pos) + _num(beats, 'at beats')
 
     def _at(self, x) -> float:
-        if isinstance(x, Section):
+        if isinstance(x, (Section, Part)):
             return x.start
         if isinstance(x, str):
             return self[x].start
@@ -832,12 +942,102 @@ class Song:
                 t.clear(x - b, x, cut=True)
         return self
 
+    def ending(self, at, *, chords=(), bass=None, drums=None, rit=None, to: float = 0.72, hold: float | None = 2.0,
+               seconds: float | None = None, length: float | None = None, roll_bpm: float | None = None,
+               pedal: bool = True, room=None, room_tracks=(), send: str = 'room', until=None) -> 'Song':
+        """The last chord of a ballad / jazz tune at `at` (a Section or position), in one call:
+          chords    [(track, clip, ms[, delay]), ...]: each chord rolled (clip.strum: `ms` per note, upwards, at
+                    roll_bpm - default the tempo at the ritardando's start x `to`) and placed `delay` beats after
+                    `at` (the right hand lands after the left hand's roll); with pedal=True each chord track's pedal
+                    lifts just before and goes down just after the chord (it rings in the pedal)
+          bass      (track, pitch, dur, vel): the bass's last note
+          drums     (track, clip): the cymbal / stir / soft kick under it (jazz.last_stir(kit, ...))
+          rit       where the ritardando into the chord starts (to=`to` x the tempo; it stays slow)
+          hold / seconds / length   the fermata on the chord (song.fermata)
+          room      (from_db, to_db): the chord tracks (and room_tracks) send more into `send` while it rings, from
+                    `at` to the end (`until`, default the section end)
+        Everything stays overridable: leave a part out and write it by hand.
+            s.ending(end, chords=[(b.comp, hold('Ab2 Eb3 G3', 7.9), 70), (b.piano, END_RH, 80, 0.25)],
+                     bass=(b.bass, 'Ab1', 7, 92), drums=(b.drums, jazz.last_stir(kit, 8, every=2, last=3)),
+                     rit=tag.bar(2), hold=2, length=4, room=(-13, -8))"""
+        from .automation import ramp as _ramp_pts
+        a = self._at(at)
+        if rit is not None and roll_bpm is None:
+            roll_bpm = self.tempo_at(self._at(rit)) * _num(to, 'ending to (factor)', 0.05, 1.0)
+        elif roll_bpm is None:
+            roll_bpm = self.tempo_at(a)
+        tracks = []
+        for ch in chords:
+            if not isinstance(ch, (tuple, list)) or len(ch) not in (3, 4):
+                raise ComposeError(f"ending(): chords are (track, clip, ms[, delay]), got {ch!r}")
+            t, clip, ms = ch[0], as_clip(ch[1]), ch[2]
+            c = clip.strum(ms=ms, bpm=roll_bpm)
+            if len(ch) == 4:
+                c = c.shift(ch[3])
+            t.play(c, a)
+            tracks.append(t)
+        if pedal:
+            for t in tracks:
+                t.automate('instrument.pedal', [(a - 0.05, 0.0, 'step'), (a + 0.02, 1.0, 'step')])
+        if bass is not None:
+            t, pitch, dur, vel = bass
+            t.note(pitch, a, dur=dur, vel=vel)
+        if drums is not None:
+            drums[0].play(drums[1], a)
+        if rit is not None:
+            self.ritardando((rit, a), to=to, a_tempo=False)
+        if hold is not None or seconds is not None or length is not None:
+            self.fermata(a, hold=None if seconds is not None else hold, seconds=seconds, length=length)
+        if room is not None:
+            end = self._at(until) if until is not None else (at.end if isinstance(at, (Section, Part)) else None)
+            if end is None:
+                raise ComposeError("ending(room=...): give until= (where the room ramp ends) for a beat position")
+            for t in list(dict.fromkeys(tracks + list(room_tracks))):
+                t.automate(f'send.{send}', _ramp_pts(a, end, room[0], room[1]))
+        return self
+
     # --- music helpers bound to the song key / meter
     def prog(self, spec, bars: float = 1, meter=None) -> Progression:
         """Progression in the song key; chord lengths in bars (of the song's meter, or meter=(3, 4) /
-        meter=waltz.meter for a section in another one): song.prog('i VI III VII')."""
+        meter=waltz.meter for a section in another one): song.prog('i VI III VII'). It is a voicing.Harmony (a
+        Progression that also voices itself: .voice(), .under(), .chorale(), .figure() ...)."""
+        from .voicing import Harmony
         bpb = self.beats_per_bar if meter is None else _tempo.beats_per_bar(_tempo.parse_meter(meter, 'prog meter'))
-        return Progression(spec, key=self.key, bars=bars, beats_per_bar=bpb)
+        return Harmony(spec, key=self.key, bars=bars, beats_per_bar=bpb)
+
+    def harmony(self, spec, at=0.0, *, key=None, bars: float = 1, meter=None):
+        """A voicing.Harmony in the song key (or key=): a progression string (lengths in bars) or a voicing table
+        [(dur, chord, top, bass[, {voice: pitch}])] (beats), placed at `at` (a beat or Section): its methods then
+        work in song beats - s.harmony(T1, t1).under(theme, voicing.STRINGS)."""
+        from .voicing import Harmony
+        bpb = self.beats_per_bar if meter is None else _tempo.beats_per_bar(_tempo.parse_meter(meter, 'harmony meter'))
+        return Harmony(spec, key=self.key if key is None else key, at=self._at(at), bars=bars, beats_per_bar=bpb)
+
+    def arc(self, rides: dict, *, within=None, glide: float = 0.5, default: float = 0.0, curve: str = 'smooth',
+            name: str = 'arc'):
+        """The conductor's arc: a gain ride per section on the master input (a utility `name` first in the master
+        chain, before any compressor / limiter) - soft passages up, early fortissimos under the climax - without
+        touching the written dynamics. rides {section name: dB} (others `default`); each section glides there over
+        the `glide` beats before it (`curve`); within {section name: [(beat in it, dB[, curve])]} adds points inside
+        a section (a subito p, a climb). The first section starts at its ride. Returns the master bus."""
+        from .patches import fx as _fx
+        within = within or {}
+        names = [x.name for x in self.sections]
+        unknown = [n for n in list(rides) + list(within) if n not in names]
+        if unknown:
+            raise ComposeError(f"arc: unknown section(s) {unknown}; sections: {', '.join(names)}")
+        self.master.add_fx(_fx.utility(gain=0.0, name=name), first=True)
+        pts: list = []
+        for i, sec in enumerate(self.sections):
+            g = rides.get(sec.name, default)
+            a = float(sec.start)
+            if i == 0:
+                pts.append((a, g))
+            else:
+                pts += [(a - glide, pts[-1][1]), (a, g, curve)]
+            pts += [(a + p[0],) + tuple(p[1:]) for p in within.get(sec.name, ())]
+        self.master.automate(f'fx.{name}.gain', sorted(pts, key=lambda p: p[0]))
+        return self.master
 
     def motif(self, spec, dur=0.5):
         """Motif in the song key: song.motif('1:1/8 3:1/8 5:1/4')."""

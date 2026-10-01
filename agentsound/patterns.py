@@ -1018,6 +1018,28 @@ class Motif:
     def retrograde(self) -> 'Motif':
         return Motif._of(self.key, self.events[::-1])
 
+    def head(self, n: int = 2) -> 'Motif':
+        """The first `n` notes (rests between them kept): the head of a subject, tossed between voices in an
+        episode."""
+        out, got = [], 0
+        for e in self.events:
+            if got >= n:
+                break
+            out.append(e)
+            got += e.step is not None
+        if not got:
+            raise ComposeError(f"head({n}): the motif has no notes")
+        return Motif._of(self.key, out)
+
+    def fragment(self, start: int, end: int | None = None) -> 'Motif':
+        """Notes start..end (indices of the notes, rests inside kept; Python slice rules): the tail of a subject,
+        a cell of it for a sequence."""
+        idx = [i for i, e in enumerate(self.events) if e.step is not None]
+        pick = idx[start:end]
+        if not pick:
+            raise ComposeError(f"fragment({start}, {end}): no notes there (the motif has {len(idx)})")
+        return Motif._of(self.key, self.events[pick[0]:pick[-1] + 1])
+
     def stretch(self, factor: float) -> 'Motif':
         return Motif._of(self.key, [e._replace(dur=e.dur * factor) for e in self.events])
 
@@ -1539,10 +1561,22 @@ def _pedal_spans(pedal, total: float) -> list[tuple[float, float, int]]:
 
 
 def walking_bass(prog, key=None, feel: str = 'four', low='E1', high='G3', seed=0, vel: float = 90,
-                 gate: float = 0.9, approach: str = 'mixed', skip: float = 0.1, octave: float = 0.05,
+                 gate: float | None = None, approach: str = 'mixed', skip: float = 0.1, octave: float = 0.05,
                  repeat: float = 0.05, pedal=None, accent: float = 1.05, skip_grid: str = 'swing',
-                 touch: float = 1.0, length=4.0) -> Clip:
+                 touch: float = 1.0, length=4.0, straight: bool = False, pickups: float = 0.5,
+                 beats_per_bar: float | None = None) -> Clip:
     """Upright-bass line over a progression -> Clip (straight: swing the skip notes with the feel).
+
+    straight=True: a straight-8th jazz bass instead of the walk (New York bar jazz without swing, a jazz waltz) -
+    the root on 1, chord tones inside the bar, an approach or an anticipation into the next chord, by meter
+    (`beats_per_bar`, default the progression's): 4/4 feel 'two' (half notes; `pickups` = the chance of an 8th
+    pickup into the next chord), 'push' (dotted-quarter / quarter motion), 'drive' (8th pushes: a climax), 'walk'
+    (= the quarter-note walk, feel='four'); 3/4 feel 'one' (the root through the bar, now and then the 5th on 3),
+    'two' (root + 5th / 10th / an approach on 3), 'walk' (three quarters, now and then two 8ths on 3; with a 4-bar
+    arch). An anticipation ties over (the next root is not struck again); 4/4 notes sound `gate` (0.92) of their
+    length. touch (0..1) = jazz.bass_touch on the line: phrase arcs of 4 bars from (1 - 0.16 x touch) x vel to
+    (1 + 0.22 x touch) x vel, the 1 leading, 3 answering, the pushed 8ths lighter, anticipations leaning in
+    (~6 dB per phrase on the evened Meatbass). Seeded: the same seed, the same line.
 
     feel='four' walks quarter notes: the root (or slash bass) on beat 1 of every chord, chord tones on the strong
     beat 3 and chord / scale / chromatic passing tones between, and on the last beat before each change an approach
@@ -1561,6 +1595,16 @@ def walking_bass(prog, key=None, feel: str = 'four', low='E1', high='G3', seed=0
     ghosted skip notes, lighter approach notes, pushed anticipations accented; ~6 dB per phrase on a
     velocity-responsive bass); 0 = the flat written level (vel +-3 %: the dynamics ear reads it as flat_dynamics)."""
     touch = _unit(touch, 'walking_bass touch')
+    if straight:
+        p = _as_prog(prog, key, length)
+        bpb = p.beats_per_bar if beats_per_bar is None else _real(beats_per_bar, 'walking_bass beats_per_bar', 1, 16)
+        if abs(bpb - 4.0) < _EPS and feel in ('walk', 'four'):
+            feel = 'four'                       # the straight 4/4 walk is the walking line itself
+        else:
+            return _straight_bass(p, feel, seed, _real(vel, 'walking_bass vel', 1, 127), touch,
+                                  _unit(pickups, 'walking_bass pickups'),
+                                  0.92 if gate is None else _real(gate, 'walking_bass gate', 0.05, 1.0), bpb)
+    gate = 0.9 if gate is None else gate
     if skip_grid not in ('swing', 'triplet'):
         raise ComposeError(f"walking_bass skip_grid must be 'swing' or 'triplet', got {skip_grid!r}")
     if feel not in WALK_FEELS:
@@ -1612,6 +1656,139 @@ def walking_bass(prog, key=None, feel: str = 'four', low='E1', high='G3', seed=0
         notes = _bass_touched(notes, p.length, vel, touch, '2-4' if feel == 'four' else '1-3', p.beats_per_bar,
                               seed_int(seed) + 101)
     return Clip._raw(notes, p.length)
+
+
+STRAIGHT_FEELS = {4: ('two', 'push', 'drive', 'walk'), 3: ('one', 'two', 'walk')}
+"""walking_bass(straight=True) feels per meter (beats per bar)."""
+
+
+def _approach_note(rng: random.Random, nroot: int) -> int:
+    """The note before the next root: a half step above / below (below twice as often) or its fifth."""
+    return rng.choice((nroot + 1, nroot - 1, nroot - 1, nroot + 7 if nroot + 7 <= 50 else nroot - 5))
+
+
+def _straight_bass(p: Progression, feel: str, seed, vel: float, touch: float, pickups: float, gate: float,
+                   bpb: float) -> Clip:
+    """walking_bass(straight=True): the straight-8th lines of New York bar jazz without swing (perry-street-rain,
+    4/4) and the straight jazz waltz (minetta-lane-waltz, 3/4), then the bassist's touch."""
+    meter = 3 if abs(bpb - 3.0) < _EPS else 4 if abs(bpb - 4.0) < _EPS else None
+    if meter is None:
+        raise ComposeError(f"walking_bass(straight=True) plays 4/4 or 3/4 (beats_per_bar 4 or 3), got {bpb:g}")
+    if feel not in STRAIGHT_FEELS[meter]:
+        raise ComposeError(f"walking_bass(straight=True) in {meter}/4: feel must be one of "
+                           f"{', '.join(STRAIGHT_FEELS[meter])}, got {feel!r}")
+    rng = random.Random(seed_int(seed))
+    chords = [(st, d, c) for st, d, c in p if c is not None]
+    if not chords:
+        return Clip._raw((), p.length)
+    out = (_waltz_line if meter == 3 else _even_line)(chords, feel, rng, vel, pickups, bpb)
+    if meter == 4:
+        merged: list = []                   # an anticipation ties over: drop the repeated root
+        for n in sorted(out):
+            if merged and merged[-1][2] == n[2] and abs(merged[-1][0] + merged[-1][1] - n[0]) < 1e-6 \
+                    and merged[-1][1] <= 0.5:
+                s0, d0, p0, v0 = merged[-1]
+                merged[-1] = (s0, d0 + n[1], p0, v0)
+                continue
+            merged.append(n)
+        line = Clip([(a, d * gate, q, v) for a, d, q, v in merged], length=p.length)
+    else:
+        line = Clip(sorted(out), length=p.length)
+    if touch <= 0:
+        return line
+    from .humanize import bass_touch
+    return bass_touch(line, vel * (1.0 - (1.0 - 0.84) * touch), vel * (1.0 + (1.22 - 1.0) * touch), accent='1-3',
+                      phrase=4 * bpb, beats_per_bar=bpb, seed=seed)
+
+
+def _chord_ivs(c: Chord) -> set:
+    return {(q - c.root) % 12 for q in c.pcs}
+
+
+def _even_line(chords: list, feel: str, rng: random.Random, vel: float, pickups: float, bpb: float) -> list:
+    """4/4: the root on 1, the fifth / tenth / octave inside the bar, an 8th-note approach (chromatic or the
+    target's fifth) or an anticipation (18 %) on the & of 4; half-bar chords: root + approach (two) or root, fifth,
+    approach (push / drive, half the time)."""
+    out: list = []
+    prev = 34
+    for i, (st, d, c) in enumerate(chords):
+        root = _near(c.root, prev, 28, 43)
+        nxt = chords[i + 1][2].root if i + 1 < len(chords) else chords[0][2].root
+        nroot = _near(nxt, root, 28, 43)
+        ivs = _chord_ivs(c)
+        fifth = root + 7
+        third = root + (3 if 3 in ivs and 4 not in ivs else 4)
+        seventh = root + (10 if 10 in ivs else 11)
+        ap = _approach_note(rng, nroot)
+        anticip = rng.random() < 0.18
+        last = nroot if anticip else ap
+
+        def v(x):
+            return max(1, min(127, int(round(vel * x * (1 + (rng.random() - 0.5) * 0.08)))))
+        if d >= 4:
+            if feel == 'two':
+                mid = rng.choice((fifth, fifth, third + 12 if third + 12 <= 50 else fifth, root + 12))
+                if rng.random() < pickups:
+                    out += [(st, 2.0, root, v(1.0)), (st + 2, 1.5, mid, v(0.9)), (st + 3.5, 0.5, last, v(0.82))]
+                else:
+                    out += [(st, 2.0, root, v(1.0)), (st + 2, 2.0, mid, v(0.9))]
+            elif feel == 'push':
+                a = rng.choice((fifth, root + 12 if root + 12 <= 50 else fifth))
+                b = rng.choice((seventh, fifth, third + 12 if third + 12 <= 50 else third))
+                out += [(st, 1.5, root, v(1.0)), (st + 1.5, 1.0, a, v(0.92)), (st + 2.5, 1.0, b, v(0.88)),
+                        (st + 3.5, 0.5, last, v(0.84))]
+            else:   # drive
+                out += [(st, 1.0, root, v(1.05)), (st + 1.0, 0.5, root + 12 if root + 12 <= 50 else fifth, v(0.8)),
+                        (st + 1.5, 1.0, fifth, v(0.95)), (st + 2.5, 0.5, seventh, v(0.85)),
+                        (st + 3.0, 0.5, fifth, v(0.9)), (st + 3.5, 0.5, last, v(0.88))]
+        else:       # half-bar chords
+            if feel == 'two' or rng.random() < 0.5:
+                out += [(st, 1.5, root, v(1.0)), (st + 1.5, 0.5, last, v(0.82))]
+            else:
+                out += [(st, 1.0, root, v(1.0)), (st + 1.0, 0.5, fifth, v(0.85)), (st + 1.5, 0.5, last, v(0.84))]
+        prev = root
+    return out
+
+
+_WALTZ_ARCH = (0.9, 1.0, 1.08, 0.92)       # a 4-bar arch on the waltz line's level
+
+
+def _waltz_line(chords: list, feel: str, rng: random.Random, vel: float, pickups: float, bpb: float) -> list:
+    """3/4: 'one' = the root held through the bar (30 %: the fifth / an approach on 3), 'two' = root (half) + fifth
+    / tenth / approach (quarter) on 3, 'walk' = root, a chord tone, an approach (18 %: two 8ths on 3). The
+    downbeat leans, 2 is light, the approach on 3 leads, over a 4-bar arch."""
+    out: list = []
+    prev = 38
+    for i, (st, d, c) in enumerate(chords):
+        root = _near(c.root, prev, 28, 45)
+        nxt = chords[i + 1][2].root if i + 1 < len(chords) else chords[0][2].root
+        nroot = _near(nxt, root, 28, 45)
+        ivs = _chord_ivs(c)
+        third = root + (3 if 3 in ivs and 4 not in ivs else 4)
+        fifth = root + (6 if 6 in ivs and 7 not in ivs else 7)
+        seventh = root + (10 if 10 in ivs else 11 if 11 in ivs else 9)
+        ap = _approach_note(rng, nroot)
+        arch = _WALTZ_ARCH[int(round(st / bpb)) % 4]
+
+        def v(x):
+            return max(1, min(127, int(round(vel * x * arch * (1 + (rng.random() - 0.5) * 0.1)))))
+        if feel == 'one':
+            if rng.random() < 0.3:
+                out += [(st, 1.9, root, v(1.0)), (st + 2.0, 0.9, rng.choice((fifth, ap)), v(0.84))]
+            else:
+                out += [(st, 2.85, root, v(1.0))]
+        elif feel == 'two':
+            mid = rng.choice((fifth, fifth, ap, ap, third + 12 if third + 12 <= 52 else fifth))
+            out += [(st, 1.9, root, v(1.04)), (st + 2.0, 0.9, mid, v(0.8))]
+        else:   # walk
+            a = rng.choice((third, fifth, fifth, seventh, root + 12 if root + 12 <= 50 else fifth))
+            if rng.random() < 0.18:
+                out += [(st, 0.92, root, v(1.02)), (st + 1.0, 0.92, a, v(0.8)), (st + 2.0, 0.45, fifth, v(0.84)),
+                        (st + 2.5, 0.45, ap, v(0.88))]
+            else:
+                out += [(st, 0.92, root, v(1.06)), (st + 1.0, 0.92, a, v(0.74)), (st + 2.0, 0.92, ap, v(0.88))]
+        prev = root
+    return out
 
 
 def _bass_touched(notes: list, length: float, vel: float, amount: float, accent: str, bpb: float, seed) -> list:
@@ -1897,9 +2074,13 @@ def _sweep_beats(sweep, style: str, bpb: float) -> float | None:
     return v
 
 
-def brushes(bars: float = 4, style: str = 'medium', kit=None, sweep=None, taps: bool = True, kick='feather',
+_UNSET = object()
+
+
+def brushes(bars: float = 4, style: str = 'medium', kit=None, sweep=None, taps: bool = True, kick=_UNSET,
             hat: bool = True, ride=False, fills: bool = True, phrase: int = 8, fill: str | None = None,
-            vel: float = 1.0, seed=0, beats_per_bar: float = 4) -> Clip:
+            vel: float = 1.0, seed=0, beats_per_bar: float = 4, straight: bool = False, ghosts: float = 0.0,
+            hat8: float = 0.0, digs=None) -> Clip:
     """Brush-kit groove -> Clip (straight 8ths; swing it with the feel). The recipe's 'seichte' drums:
       sweep   the continuous stir on the snare: one kit['sweep'] note per 'half' bar (medium, two), 'bar' (ballad,
               up), '2bars', 'beat' or a length in beats; each note held until just before the next (GM brush swirl is
@@ -1913,7 +2094,24 @@ def brushes(bars: float = 4, style: str = 'medium', kit=None, sweep=None, taps: 
     style: medium | ballad | up | two (sets the defaults and levels); beats_per_bar=3 plays a jazz waltz (taps and
     hi-hat on 2 and 3, one sweep per bar); vel scales every level. kit: a dict role -> note: GM_BRUSH (GeneralUser
     'Brush' kit, default) or SWIRLY_BRUSH or your own (roles: sweep tap slap kick hat_foot ride crash tom_lo tom_mid
-    tom_hi ...; a list of notes alternates round-robin)."""
+    tom_hi ...; a list of notes alternates round-robin).
+
+    straight=True: even-8th brushes (New York bar jazz without swing, the straight jazz waltz): the groove above
+    (no kick, 8th-note fills) plus brush_colour(): ghosts = the chance of a ghost tap on each &, kick='even' (or
+    True) a feathered kick on 1 and the & of 2 (now and then the & of 4; 3/4: 1, now and then the & of 2), hat8 =
+    the level of brush 8ths on the closed hat, ride = the level of an even-8th ride (1 2 &2 3 4 &4; 3/4: 1 2 &2 3)
+    instead of the taps, with digs (a pressed second brush: on 2 and 4 every second bar; 3/4: on 2) - digs=True /
+    False sets them without / against the ride."""
+    if kick is _UNSET:
+        kick = None if straight else 'feather'
+    if straight:
+        base, colour = _straight_brush_args(bars, style, dict(kit=kit, sweep=sweep, taps=taps, kick=kick, hat=hat,
+                                                              ride=ride, fills=fills, phrase=phrase, fill=fill,
+                                                              vel=vel, seed=seed, beats_per_bar=beats_per_bar,
+                                                              ghosts=ghosts, hat8=hat8, digs=digs))
+        return brushes(bars, style, **base) | brush_colour(bars, style, **colour)
+    if ghosts or hat8 or digs:
+        raise ComposeError("brushes ghosts= / hat8= / digs= are the straight-8th colour: give straight=True")
     if style not in BRUSH_STYLES:
         raise ComposeError(f"brushes style must be one of {', '.join(BRUSH_STYLES)}, got {style!r}")
     if kick not in ('feather', 'two', 'none', None, False):
@@ -1987,6 +2185,89 @@ def brushes(bars: float = 4, style: str = 'medium', kit=None, sweep=None, taps: 
         r = ride_pattern(L / bpb, kit=kit, vel=_clampv(72 * ride_f * vel), seed=rng.random(), beats_per_bar=bpb)
         notes.extend(r)
     return Clip._raw(notes, L)
+
+
+BRUSH_COLOUR = {
+    4: {'ride': {0: 46, 2: 58, 3: 46, 4: 46, 6: 58, 7: 46}, 'kick': ((0.0, 40), (1.5, 30)), 'kick_maybe': (3.5, 28, 0.35),
+        'digs': (2, (1.0, 3.0), 40)},
+    3: {'ride': {0: 56, 2: 44, 3: 56, 4: 44}, 'kick': ((0.0, 38),), 'kick_maybe': (1.5, 27, 0.3),
+        'digs': (1, (1.0,), 36)},
+}
+"""brush_colour() per meter (beats per bar): ride {8th index: level}, kick ((beat, level), ...), kick_maybe (beat,
+level, chance), digs (every n bars, beats, level). Ghost taps 22, hat 8ths 44 / 32 (beat / &) in both."""
+
+
+def _straight_brush_args(bars, style: str, kw: dict) -> tuple[dict, dict]:
+    """brushes(straight=True, ...) -> (the plain brushes() options, the brush_colour() options)."""
+    kick, ride = kw.pop('kick'), kw.pop('ride')
+    if kick not in ('feather', 'two', 'even', 'none', None, False, True):
+        raise ComposeError(f"brushes(straight=True) kick must be 'even' (or True: the straight feathered kick), "
+                           f"'feather', 'two' or None, got {kick!r}")
+    level = 0.0 if ride is None or ride is False else 1.0 if ride is True else \
+        _real(ride, 'brushes ride (a level factor)', 0.0, 4.0)
+    colour = {k: kw.pop(k) for k in ('ghosts', 'hat8', 'digs')}
+    colour.update(kick=kick in ('even', True), ride=level,
+                  **{k: kw[k] for k in ('kit', 'vel', 'fills', 'phrase', 'seed', 'beats_per_bar')})
+    kw.update(kick=kick if kick in ('feather', 'two') else None, ride=False, taps=kw['taps'] and level == 0.0,
+              fill=kw['fill'] if kw['fill'] is not None else 'eighths')
+    return kw, colour
+
+
+def brush_colour(bars: float = 4, style: str = 'medium', kit=None, *, ghosts: float = 0.0, kick: bool = False,
+                 hat8: float = 0.0, ride: float = 0.0, digs=None, vel: float = 1.0, fills: bool = True,
+                 phrase: int = 8, seed=0, beats_per_bar: float = 4) -> Clip:
+    """The even-8th colour of brushes(straight=True) on its own -> Clip (BRUSH_COLOUR per meter): ghost taps on the
+    &s (`ghosts` = the chance), a feathered kick (kick=True), brush 8ths on the closed hat (`hat8` = level), an
+    even-8th ride (`ride` = level) and brush digs (digs=None: with the ride). Written at their velocities (x vel), not
+    levelled by a band's kit. In the fill bar of every `phrase` (style: the fill's length, as in brushes()) the
+    colour plays through the first half of the bar and stops where the fill starts if that is later; digs and the
+    occasional kick stay out of a fill. Seeded."""
+    bpb = _real(beats_per_bar, 'brush_colour beats_per_bar', 1, 16)
+    meter = 3 if abs(bpb - 3.0) < _EPS else 4 if abs(bpb - 4.0) < _EPS else None
+    if meter is None:
+        raise ComposeError(f"brush_colour plays 4/4 or 3/4 (beats_per_bar 4 or 3), got {bpb:g}")
+    if style not in BRUSH_STYLES:
+        raise ComposeError(f"brush_colour style must be one of {', '.join(BRUSH_STYLES)}, got {style!r}")
+    if not _is_int(phrase) or phrase < 1:
+        raise ComposeError(f"brush_colour phrase must be an int >= 1 (bars), got {phrase!r}")
+    ghosts = _unit(ghosts, 'brushes ghosts (a chance per &)')
+    hat8 = _real(hat8, 'brushes hat8 (a level factor)', 0.0, 4.0)
+    ride = _real(ride, 'brushes ride (a level factor)', 0.0, 4.0)
+    kit = _check_kit(kit)
+    tab = BRUSH_COLOUR[meter]
+    n_bars = int(math.ceil(_real(bars, 'brushes bars', 0, 4096) - _EPS))
+    fill_start = bpb - (1.0 if style == 'ballad' else 2.0)
+    cut = max(fill_start, bpb / 2.0)
+    with_digs = bool(ride) if digs is None else bool(digs)
+    dig = 'dig' if 'dig' in kit else 'slap'
+    rng = random.Random(seed_int(seed))
+    extra = []
+    for b in range(n_bars):
+        t0 = bpb * b
+        fill_bar = fills and b % phrase == phrase - 1
+        for k in range(int(round(2 * bpb))):
+            t = t0 + 0.5 * k
+            if fill_bar and t >= t0 + cut:
+                continue
+            if ghosts and k % 2 == 1 and rng.random() < ghosts:
+                extra.append((t, 0.2, _kit_note(kit, 'tap'), int(22 * vel + rng.randint(0, 6))))
+            if hat8:
+                extra.append((t, 0.2, _kit_note(kit, 'hat'), int((44 if k % 2 == 0 else 32) * hat8
+                                                                 + rng.randint(-3, 3))))
+            if ride and k in tab['ride']:
+                extra.append((t, 0.4, _kit_note(kit, 'ride'), int(tab['ride'][k] * ride + rng.randint(-3, 3))))
+        if kick:
+            for x, lv in tab['kick']:
+                extra.append((t0 + x, 0.3, _kit_note(kit, 'kick'), int(lv * vel + rng.randint(0, 4))))
+            x, lv, chance = tab['kick_maybe']
+            if rng.random() < chance and not fill_bar:
+                extra.append((t0 + x, 0.3, _kit_note(kit, 'kick'), int(lv * vel + rng.randint(0, 4))))
+        every, where, lv = tab['digs']
+        if with_digs and b % every == every - 1:
+            for x in where:
+                if not (fill_bar and x >= fill_start):
+                    extra.append((t0 + x, 0.25, _kit_note(kit, dig), int(lv * vel + rng.randint(0, 5))))
+    return Clip([(a, d, p, max(1, min(127, v))) for a, d, p, v in extra], length=bpb * n_bars)
 
 
 def brush_fill(kind: str = 'triplets', length=2.0, kit=None, vel=(40, 90)) -> Clip:

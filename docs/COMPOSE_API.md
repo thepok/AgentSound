@@ -96,9 +96,11 @@ or `patches.get('synthwave/supersaw_lead').but(cutoff=2500)`.
 |---|---|
 | `Song(title, tempo=120, key='C major', seed=1, time_sig='4/4', sample_rate=48000, tail=4.0, meter=None)` | tempo 30..300 (the tempo the song starts with), sample rate 44100/48000/96000, tail = seconds rendered after the end; `meter=(3, 4)` = `time_sig`, the default meter |
 | `s.section(name, bars, meter=None)` -> `Section` | appended after the previous section; names unique; sections are the report markers; `meter=(3, 4)` / `'6/8'` gives it its own meter |
+| `s.form('intro:4 head:AABA solo:AABA out:B,A3o tag:4 end:2', parts={'A1': '...', 'A': ..., 'B': ...}, meter=None)` -> sections | the form in one line with the changes attached: `name:bars` (its prog: `parts[name]` if given) or `name:PARTS` - letters (the k-th A is `parts['A<k>']` when given, else `parts['A']`) or names joined by `,`; every section gets `.prog` (its parts' changes in a row) and `.parts` (`Part`: `.name .index .bar .start .end .length .bars .prog`; a Part is a position), so players need no progression argument (`jazz.chorus(band, head, ...)`, `head.part('A2').prog`) |
 | `s['verse']`, `s.sections`, `s.length` (beats), `s.bar(n)`, `s.seconds(beat)` | lookup / time helpers (bars across meter changes, seconds through the tempo map) |
 | `s.at(pos, beats=0)` | the absolute beat of a position: a beat, a Section or section name (its start), or `(position, beats)` - `s.at(chorus, 2.5)`. **Every position argument takes these forms**: `track.note('C4', (verse, 3.5))`, `track.play(fill, (chorus, -1))`, `s.fermata((ret, 16))` |
 | `s.breath(before=[chorus1, chorus2], beats=1, keep=[riser, impact])` | a drop: every track (except `keep=`, or only `tracks=`) stops for `beats` before each position - notes starting there removed, notes still sounding ended there (`track.clear(..., cut=True)`) |
+| `s.ending(end, chords=[(comp, LH, 70), (piano, RH, 80, 0.25)], bass=(bass, 'Ab1', 7, 92), drums=(drums, jazz.last_stir(kit, 8, last=3)), rit=tag.bar(2), to=0.72, hold=2, length=4, room=(-13, -8), room_tracks=(), roll_bpm=None, pedal=True)` | the last chord of a ballad / jazz tune in one call: each chord rolled (`clip.strum`, `ms` per note at `roll_bpm` = the tempo at the ritardando's start x `to`) and placed `delay` beats late, the chord tracks' pedal lifted just before / down just after it, the bass note, the drums clip, the ritardando from `rit` (it stays slow), the fermata (`hold` / `seconds` / `length`), the room send ramp `(from_db, to_db)` to the section end (`until=` for a beat) on the chord tracks + `room_tracks`; leave any part out and write it by hand |
 | `s.set_tempo`, `s.tempo_ramp`, `s.ritardando`, `s.accelerando`, `s.fermata`, `s.rubato`, `s.lilt`, `s.tempo_at` | a moving tempo, see Tempo and meter |
 | `s.track(id, sound, *, fx=(), gain_db=0, pan=None, output='master', sends=None, mute=False)` | ids match `[a-z0-9_-]+` |
 | `s.bus(id, fx=(), *, gain_db=0, pan=None, output='master', sends=None)` | group or return bus; `fx` may be a chain patch |
@@ -108,7 +110,9 @@ or `patches.get('synthwave/supersaw_lead').but(cutoff=2500)`.
 | `s.carve(*targets, key, freq=2500, q=0.7, depth=4, **compressor_params)` | carve room for a lead: a keyed dynamic EQ on every target (a band-mode `compressor`: `band`, `bandq`, `range`) dips its `freq` band by up to `depth` dB while the key (the lead) plays and gives it back in the lead's gaps - the bed keeps its level and body, only the lead's presence band steps aside (`node.carve(key, ...)` for one node). Hero leads: `s.carve(strings, pad, piano, keys, key=sax, depth=4)` |
 | `s.master.add(fx...)`, `s.master.use('master/...')`, `s.master.gain_db`, `s.master.automate(...)` | master chain |
 | `node.fx['limiter'].set(gain=5.2)`, `track.fx['compressor'].set(attack=25)`, `track.fx['eq'].set({'peak1.gain': -3})`, `node.fx.index_of('ducker')` | a live chain (an `FXChain`) indexed by position, `name=` or type (a type that occurs twice is an error: index it or name it); `FX.set()` changes params in place - instead of `next(i for i, f in enumerate(t.fx) if f.type == ...)` |
-| `s.prog(spec, bars=1)`, `s.motif(spec, dur=0.5)` | progression / motif in the song key and meter |
+| `s.prog(spec, bars=1)`, `s.motif(spec, dur=0.5)` | progression / motif in the song key and meter; the progression is a `voicing.Harmony` (a Progression that voices itself, see Voicing) |
+| `s.harmony(spec_or_table, at=0, *, key=None)` | a `voicing.Harmony` from a progression string or a voicing table `[(dur, chord, top, bass[, {voice: pitch}])]`, placed at `at` (its methods then work in song beats) |
+| `s.arc(rides, *, within=None, glide=0.5, default=0.0, curve='smooth', name='arc')` | the conductor's arc: a gain ride per section `{name: dB}` on a utility first in the master chain (soft passages up, early fortissimos under the climax) - `within={name: [(beat, dB[, curve])]}` adds points inside a section; the written dynamics stay. Minimal and generic: genre packages extend it (lanes) rather than duplicate it |
 | `s.export(stems=True, bit_depth=24)` | render options (CLI `--stems` also works) |
 | `s.compile()` -> dict, `s.save(path)`, `s.describe()`, `s.warnings` | validation: unique ids, routing targets exist, no cycles (outputs, sends and sidechains), notes inside the song, automation targets resolvable and strictly increasing; **silent notes** (`agentsound.silent_notes`): every note of a sampler / kit / sfz / stack / drum-machine track that reaches no sample zone (a kit without that piece, a key outside the multisample's range, a velocity or keyswitch articulation without zones), no drum piece or only muted stack layers is a "silent notes: ..." warning (GM names / note names, bar:beat, the fix) and goes to the render JSON's `analysis.silentNotes` (the report's `silent_notes` warnings, next to what the render measured: docs/RENDER_FORMAT.md "Silent notes") |
 
@@ -116,7 +120,7 @@ or `patches.get('synthwave/supersaw_lead').but(cutoff=2500)`.
 or `{'type': ..., 'params': {...}}`. Patch fx come first, then `fx=`; `gain_db` adds to the patch level; `pan=None`
 keeps the patch pan; sends merge (patch sends to buses that don't exist are dropped with a warning).
 
-**Section**: `.name .start .end .length .bars .span .meter .beats_per_bar`, `.bar(n, beat=0)`, `.beat(b)`, `.bar_starts(every=1)`, `beat in sec`.
+**Section**: `.name .start .end .length .bars .span .meter .beats_per_bar`, `.bar(n, beat=0)`, `.beat(b)`, `.bar_starts(every=1)`, `beat in sec`; from `s.form`: `.prog`, `.parts`, `.part('A2')` (or an index).
 
 **Track** (all return the track):
 
@@ -126,6 +130,7 @@ keeps the patch pan; sends merge (patch sends to buses that don't exist are drop
 | `loop(what, *sections, bars=None, until=None, ...)` | repeat to fill each section, or from a position for `bars` / `until` a beat or section; cut at the end |
 | `note(pitch, at, dur=1, vel=100)`, `clear(start, end=None, pitches=None, cut=False)` | single note / remove notes starting in the span; `cut=True` also ends the notes still sounding at `start` there (a real stop: held pads and bass notes do not ring into the silence) |
 | `cut(at, pitches=None)` | end every note sounding through `at` right there |
+| `feature(*sections, db=2, glide=1, target='gainDb')` | a spotlight lane: the track steps up `db` for each section (its solo) and back after it, gliding over the `glide` beats before the start / end (`bass.feature(bass_solo, db=2.5)`) |
 | `groove(name_or_Groove)`, `humanize(timing_ms=4, vel=6, seed=None)` | applied at compile with the local song tempo (ms stay ms in a ritardando); drum tracks get per-drum offsets |
 | `automate(target, *point_lists, at=None)`, `send(bus, db)`, `to(bus)`, `add_fx(*fx, first=False)`, `duck(key=None, pitches=None, **p)` | also on buses (and `automate`/`add_fx` on the master); `at=` (a Section / beat / `(section, beats)`) makes the points' beats relative to it |
 | `modulate(target, *modulators, window=None)` | LFOs, step sequences, trance gates, followers, per-note envelopes, random steps driving a parameter (see Modulation); on tracks, buses and the master |
@@ -759,7 +764,7 @@ picks, in one articulation, at a frozen dynamic. The sampler plays them *played*
 | **legato** | `mono='legato'` + overlapping notes (`art.legato(clip)`, `jazz.horn_line`) | no new attack: library legato zones, else the new sample enters past its attack, crossfaded (`legatotime`) and level-matched to the old note; notes after a rest attack |
 | **portamento** | `clip.glide(150, where=art.leaps(5))` (a mark: the compiler steps `instrument.glide` before the note) or automate `glide` | the old note bends to the new pitch, the new one in from the old (`glideshape` linear / ease / fast) |
 | **articulations** | `clip.articulate('staccato', span=(8, 12))`, `track.note(.., art='pizz')`, `art.auto_articulate(clip, track)` | keyswitch notes inserted at the note start (never sounding), zones by `swLast`; unused articulations are not loaded |
-| **expression** | `art.expression(track, clip, at, shapes)` - `SHAPES`: flat swell cresc dim fp sfz accent, or 'auto' | points on `instrument.dynamics` (a sampler whose dynamics move its level: `art.live_dynamics(track)` - layers='dynamics', `dynrange` > 0 or zones mapped to it) else `instrument.expression`; tied notes continue the line's level |
+| **expression** | `art.expression(track, clip, at, shapes)` - `SHAPES`: flat swell cresc dim fp sfz accent, or 'auto'; `follow=` a function beat -> level (a Score's dynamics map) | points on `instrument.dynamics` (a sampler whose dynamics move its level: `art.live_dynamics(track)` - layers='dynamics', `dynrange` > 0 or zones mapped to it) else `instrument.expression`; tied notes continue the line's level; with `follow` a held note whose map level changes inside it follows it (a crescendo under a held chord) |
 | **vibrato** | `art.vibrato(track, clip, at, depth=18, rate=5.2, delay=0.35, grow=0.6)` | `instrument.vibrato` (cents) / `vibratorate` (Hz): delayed per long note, runs on through legato; on a stack track (`layered/hero_sax`) every sampler layer gets it (`instrument.layers.<id>.vibrato`, `art.vibrato_prefixes(track)`) |
 | **echo throws** | `art.throws(track, clip, at, bus=echo, throw=-8, min_rest=0.75, min_dur=0.5)` | `send.<bus>` rises from the track's static send to `throw` dB on the held last note of every phrase and falls back before the next phrase: the echo answers in the gaps instead of smearing the line |
 
@@ -854,7 +859,89 @@ print(vc.summary(issues))                                                       
 | `satb(steps, ...)` | `voice()` with the SATB set (or `ranges=` with the same names) |
 | `check(parts, harmony=None, *, voices=None, order=None, strong=1.0, t0=0, clashes=True, span=None)` | parallel 5ths / 8ves (also compound, also non-adjacent voices) between EVERY pair, semitone clashes (m2 / M7 / m9) at each onset, strong-beat non-chord tones vs a `[(start, dur, chord)]` timeline, notes out of range and crossings (with `voices`) -> `[Issue]`; advice: written suspensions show as non-chord tones on purpose |
 | `arpeggiate(parts, free, harmony, t0, *, voices=, until=None)`, `passing_eighths(parts, free, t0, key_at, *, order=, until=None)` | counterpoint for a fugue's free voices (`free` = {(voice, round(start, 4))}): a chord-tone leap on the last beat of a long note, passing 8ths between notes a 3rd / 4th apart (`key_at` a key or a function beat -> (scale pcs, tonic, leading tone)) - only where no parallels or semitone rubs result; edit `parts` in place |
-| `line('C5:1 r:.5 Eb5:.5 \| ...', t0, shift)`, `length(spec)`, `timeline(table, t0)`, `harmony_at(harm, t)`, `merge_ties(notes)`, `info(sym)` (`ChordInfo`: root, bass, third, fifth, seventh, major, dim7), `leading_tone(key)`, `parallel_or_rub(parts, v, seq)` | notation and chord helpers |
+| `line('C5:1 r:.5 Eb5:.5 \| ...', t0, shift)`, `length(spec)`, `timeline(table, t0)`, `harmony_at(harm, t)`, `merge_ties(notes)`, `window(notes, a, b=None)`, `trim(notes, a, b=None)`, `info(sym)` (`ChordInfo`: root, bass, third, fifth, seventh, major, dim7), `leading_tone(key)`, `parallel_or_rub(parts, v, seq)` | notation and chord helpers (window: the notes starting in [a, b); trim: cut to [a, b) - a voice entering late) |
+| `fugue(entries, *, voices=SATB, at=0, subject=, answer=, counter=, harmony=, subject_harmony=, key=, lt=, center=, key_at=, final=, final_at=, until=, counterpoint=True)` -> `Fugue` | a fugue / fugato: `entries [(voice, beat, material[, shift[, 'lead']])]` (material `'subject'` / `'answer'` / `'counter'`, a line() spec, notation or notes) written as given, the free voices voiced chord by chord around them (from each voice's first entry), their counterpoint (`arpeggiate` + `passing_eighths` in `key_at`: a key, a function or `[(beat, key)]` spans); `harmony` a timeline (or a Harmony) or built from `subject_harmony` under each subject / answer entry; `final` / `final_at` the last chord (a bare fifth). `Fugue`: `.parts`, `.written`, `.free`, `.harmony`, `.leads` (subject / answer and entries marked 'lead'), `.added`, `.lead(v, t)` (1 / -1 / 0), `.offset(v, lead=8, other=-6)` (a velocity offset function), `.emphasis(v, end)` (expression points: the entering voice in front), `.check()` |
+| `imitation(cell, entries, *, key=None)` | imitative entries of one cell: `[(voice, beat, how)]` - `how` semitones, `'+2d'` scale steps of `key`, or a tuple of new pitches in the cell's rhythm -> `{voice: notes}` |
+
+**`Harmony`** (`voicing.Harmony(spec, key=None, *, at=0)`, also what `s.prog()` / `s.harmony()` return): ONE harmony
+object from a progression string (lengths in bars) or a voicing table (beats; top / bass / fixed voices kept). It IS a
+Progression (every player and `chords()` / `.bass()` take it) and voices itself; positions in and out of its methods
+are in its frame (`at` + its own beats), iteration yields its own beats like any Progression.
+
+| call | does |
+|---|---|
+| `h.at(t)`, `h.symbol_at(t)`, `h.info_at(t)`, `h.timeline()`, `h.table` | the Chord / written symbol / ChordInfo at a beat (a progression wraps around, a table is None outside); `[(start, dur, symbol)]`; the rows |
+| `h[3:9]`, `h.place(at)`, `h.transpose(n)`, `h + other`, `h * 2`, `h.stretch(f)` | rows (a slice keeps where it sounds), placed elsewhere, moved (chords, tops, basses, fixed voices) - a Harmony stays a Harmony |
+| `h.chorale(voices=SATB, *, key=None, tie=, active=, lt=, ...)` | `voicing.chorale` over the rows: real parts `{voice: [(start, dur, pitch)]}` |
+| `h.under(melody, voices=3, *, top=None, floor=48, gap=3, vel=0.88, key=None, tie=True)` | a voice SET (STRINGS, SATB ...): the parts under a written line voice-led in the harmony's rhythm, the line's sounding note as the top voice (dropped from the result), its other notes avoided; a COUNT: block harmony in the line's rhythm (`voices` - 1 chord tones under each note, `gap` apart, above `floor`, at `vel` x its velocity) -> a Clip with the line |
+| `h.tutti(*, top_shift=12, bass_shift=-12, key=None)` | the full orchestra's chord on `voicing.TUTTI` (v1 .. v8) |
+| `h.voice(register, voices=2, vel=60, *, phrase=16)` | a section's divisi share of each chord in a narrow register (different pitch classes, no seconds, the smallest motion), a sine arc over `phrase` beats -> a Clip |
+| `h.figure(kind, **kw)` | a chord figure (agentsound.figures): `'oompah'` (`split=True`: oom and pah apart), `'alberti'`, `'broken'`, `'ostinato'`, `'storm16'` |
+
+**Figures** (`agentsound.figures`; `figure(src, kind, **kw)`, `clip.figure(kind)`, `h.figure(kind)`): repeat
+figures re-attack held notes - `'pulse8'` (the string drive, gap 0.42), `'pulse16'`, `'beats'`, `'offbeats'`,
+`'syncope'` (off-beat attacks over the beat: sforzandi between the beats), `'tremolo'` (measured 32nds); options
+`step=` (`every=`), `gap=`, `offset=`; tuples in -> tuples out (velocity carried), a Clip in -> a Clip (marks kept).
+Chord figures play a harmony (see above). Every figure is a default: edit the notes afterwards as any part.
+
+### The orchestrator's desk (`orch.Score`, `orch.Choir`)
+
+`from agentsound.bandlib import orchestra as orch` (an orchestra band preset: `bands.symphony_orchestra(s)` ...). A
+whole piece's parts are written into ONE Score with ONE dynamics map and performed at the end; the moves every
+orchestral song wrote by hand are methods. Everything writes plain notes: any note can still be written, moved or
+dropped by hand (`sc.parts[role]` is a list of `(start, dur, pitch, vel, articulation)`), an explicit velocity wins
+over the map, raw Clips and `orch.perform` keep working.
+
+```python
+o = bands.symphony_orchestra(s)
+DYN = {'intro': [(0, 'ff'), (2, 'pp', 'step'), (16, 50)], 't1': [(0, 68), (28, 'f')]}   # (beat, level[, 'step'])
+sc = orch.Score(s, o, DYN, seed=7)                    # velocity = map + off + seeded +-3 + bar accents + phrase arc
+h = s.harmony(T1, t1)                                 # a voicing table at the section
+m = voicing.line(T1_MEL, t1.start)
+sc.add('violins1', m, off=10, dur=0.92)               # (start, dur, pitch[, vel]) notes or a Clip, song beats
+acc = h.under(m, voicing.STRINGS)                     # the strings under the line
+sc.add(acc, 'staccato', fig='pulse8', off={'violins2': -4, 'violas': -6}, accent=False, roles=('violins2', 'violas'))
+sc.double(m, {'flutes': (12, 0, {'dur': 0.9}), 'oboes': (0, -2)})          # colla parte: shift, off, options
+sc.hits(h.tutti(), [t1.start + 3, t1.start + 7], length=0.7, sf=True)    # hammered tutti chords
+sc.brass(h, [t1.start, t1.start + 4], length=0.7)    # natural trumpets + horns + timpani on the chord tones
+sc.unison(t1.end, 2, 'C')                             # every section on C in octaves
+sc.perform()                                          # every role played (orch.perform), held notes follow the map
+```
+
+| call | does |
+|---|---|
+| `orch.Score(song, band, dynamics=None, *, key=None, seed=0, jitter=3, accents=(5, 2), floor=14, phrasing=PHRASING, curve='linear', fold=True, fallback=FALLBACK, follow=True)` | the part buffer. `dynamics`: `{section (name): [(beat, level[, 'step' / 'subito'])]}` or absolute marks (`sc.mark(marks, at=)` adds more); a level is a velocity or a marking (`VEL`: pp 28, p 40, mf 78, f 95, ff 115); between marks a hairpin (`curve`). `sc.level(t)`, `sc.phase(t)` (where t falls in its bar), `sc.vel(t, off=0, accent=True)` (the map + off + the seeded jitter + the downbeat / half-bar accents; consumes the score's random stream in call order) |
+| `sc.add(role, notes, art='sustain', *, off=0, accent=True, dur=1, transpose=0, sf=(), offs=None, phrasing=None, fig=None)` | write a part: velocities from the map (`offs(note)` per note, the role's phrase arc: `humanize.touch` x `phrasing[role]`), `dur` x the lengths (or a function of the note), `sf` beats of sforzandi (+16, marcato), `fig` a figure first. `sc.add(parts_dict, art, off={role: ...}, roles=(...))` writes several roles (a voicing's parts) |
+| `sc.double(line, {role: shift \| (shift, off[, {options}])}, *, at=None, **common)` | double a line in several sections / octaves with per-section velocity offsets; with `at=` played now (a Clip: `transpose` + `vel_add`, play options like `shapes=`) |
+| `sc.colla_parte(parts, {role: (voice(s), off[, transpose[, {options}]])}, **common)` | the orchestra doubles the voices (violins I on S, the basses on B an octave down ...) |
+| `sc.winds(h, *, off=0, roles=None, second=-3, top_shift=12, tie=True)` | the wind choir: `h` voiced on `WINDS8`, each pair on its section (the second player softer) |
+| `sc.hits(parts, times, length=0.8, off=0, *, roles=None, sf=False, mapping=TUTTI_ROLES)` | tutti chords struck at `times` from chord parts (`h.tutti()`): each section takes its voices |
+| `sc.brass(h, times, length=0.8, off=0, *, horns=True, trumpets=True, timpani=True, roll=False, art=None, lead=(6, -2, -7))` | natural brass + timpani on the chord tones only: the natural trumpets' notes (`natural_brass(key)`: partials 4 5 6 8 10 12), two horn chord tones, the timpani on tonic / dominant (`timpani_tuning(key)`) |
+| `sc.unison(t, d, pc, off=0, *, octaves=UNISON_OCTAVES)` | the unison blow: every section on one pitch class in its octaves (trumpets only on a natural note, timpani rolling when tuned to it) |
+| `sc.play(role, clip, at, **perform_options)` | play now (orch.perform with the score's seed rule: the role's letters + the placement beat) |
+| `orch.bed(sc_or_band, h, at, *, shapes='swell', articulations='auto', roles=None, vel=60, role=spec ...)`, `sc.bed(h, at, shapes, ...)` | held harmony for several roles in one call: `('G4 Eb5', 2, 42)` = `h.voice(register, voices, vel)`, `('root', 'C2', 44)` = `h.bass('root', ...)`, or a Clip; without specs the string bed `BED` (two divisi voices per violin / viola section, cellos / basses on the roots) at `vel` for `roles` (default all five) |
+| `sc.stabs(h, at, beats, vel=112, *, timpani=None, low='E2')` | orchestra stabs now: strings staccato on the chord (octaves 5 and 4 split over the violins / violas), cellos / basses on its bass, trumpets marcato, trombones and horns an octave lower, timpani hits (a function chord -> pitch, default tonic / dominant) |
+| `sc.fermata(chord, at, beats, {role: (lo, hi) \| 'E4 G#4 B4' \| (spec, vel[, {options}])}, *, vel=100, start=0, length=None, **play_options)` | a held chord for the whole orchestra: every chord tone in a role's register, or the pitches written |
+| `sc.perform(roles=None, *, fold=None, fallback=None, follow=None, **perform_options)` | play the buffer: each role's notes grouped by articulation (one it lacks -> `fallback`, `False` = none), folded by octaves into its range, `orch.perform` per role; `follow=True` lets held notes follow the dynamics map inside them (a held chord grows through a written crescendo: `articulation.expression_points(follow=)`) |
+
+**`orch.Choir(song, tracks=None, *, lane='expression' | 'dynamics', speak=120, ...)`** - a sampled choir that speaks
+on time. Choir samples answer slowly at low velocity (the VPO choirs: ~0.6 s x (1 - vel / 127)), so the notes SING
+at a speaking velocity and the written dynamics move to a lane - every note keeps its written level and arc, only the
+onset changes. `lane='expression'` (the epic's): velocity `speak`, the level as `vel / speak` on 'expression' moved
+over the `ramp_ms` before each onset; `ch.speak(track, notes)` plays at once, `ch.lane(track, points)` /
+`ch.last(track)` / `ch.write()`. `lane='dynamics'` (the requiem's): velocity `speak + (vel - 70) x spread`, the level
+`(vel / 127) ** curve` on 'dynamics' with a messa di voce on long notes, notes started early (`lead_s`) and humanized,
+`gate=(a, b)` parts the syllables there on 'expression' (declaimed, not a vowel pad); `sc.sing(choir, key, notes,
+off=, dur=, offs=)` writes with the score's map, `ch.swell(key, notes, a, b, period, lo)` (`orch.swells`) lets a line
+breathe, `ch.perform()` sings it all. One line in one call: `orch.sing(track, notes, lane=..., swell=(a, b, period),
+**choir_options)` (a Choir for that track, its lanes written; several calls on one track: use a Choir - one lane per
+track).
+
+The moves are also module functions taking the score first: `orch.double(sc, ...)`, `orch.colla_parte(sc, ...)`,
+`orch.hits(sc, ...)`, `orch.unison(sc, ...)`.
+
+Hall blooms on fermatas: `orch.ring(o, at, length, db, back=)` (a `back` inside the bloom cuts it short); the
+conductor's arc: `s.arc(...)` (Song).
 
 Voice sets (ordered top to bottom, `{name: (lo, hi[, centre])}`, any dict works): `SATB`, `STRINGS` (violins I / II,
 violas, cellos; the basses double the cellos an octave down), `WINDS` (fl ob cl bn), `WINDS8` (fl1 fl2 ob1 ob2 cl1 cl2
@@ -920,7 +1007,9 @@ print(notation.format(lead))                              # a placed part back a
 **`notes(spec, *, length=None, pickup=0, bpm=None, at=0, refs=None, transpose=0, steps=0, **settings)`** -> a
 `Line` (a Clip with `.voices`, `.gestures`, `.peaks`, `.meter`, `.bars(a, b)` / `.bar(n)` slices by bar number).
 `length='bar'` rounds up to whole bars (default: where the line ends); `transpose` / `steps` move the whole line
-(semitones / scale steps of `key=`). **`phrases(name=spec, ..., **settings)`**: `H('a1 a2 | a1+2d b2')` composes (the
+(semitones / scale steps of `key=`); `expand=False` plays no ornament: their notes are left out of the line and listed
+in `line.ornaments` (dicts: kind, start, dur, pitch, pitches, vel, args, kw, voice, notes) for a player to realize its
+own way (`romantic.score` reads its right hand like this; no `bpm=` needed). **`phrases(name=spec, ..., **settings)`**: `H('a1 a2 | a1+2d b2')` composes (the
 phrases are spliced in as if written there: holds and ties run across, bar checks see the whole line, settings
 written inside a phrase carry on), `H['a1']` one phrase, `H.add(b1='...')`, `H.variant('a3_end', 'a3', {8: 'Ab4/2 r/4
 Gb4/8 E4'})` copies a phrase with bars replaced, `H(line, vel=110, oct=3)` overrides settings. **`hold(pitches,
@@ -956,8 +1045,23 @@ Before writing a helper in a song, use the one that exists (each replaced code f
 | echo-send points at phrase ends | `articulation.throws(track, clip, at)` |
 | `[(t, -0.7, 'step'), ...]` pitch-bend scoops by hand | `^scoop` in notation, `gesture.scoop`, `jazz.scoop` |
 | arp step lists | `arp(prog, pattern=[0, 2, 1, None], accent=1.2)`, `clip.arpeggiate(pattern='x.xX_')` |
-| pedal on / off points | `pianist.pedal(prog, at)` (`arrangement.pedal(prog, at)`) |
+| pedal on / off points | `pianist.pedal(prog, at)` (`arrangement.pedal(prog, at)`), `bandlib.jazz.pedal([comp], section)` |
+| `P = {k: s.prog(v) ...}` + `s.section(...)` per section | `s.form('intro:4 head:AABA ...', parts=CHANGES)`: sections with `.prog` / `.parts` |
+| a `hands()` closure: `arrange` + `piano.play(arr.rh)` + `comp.play(arr.lh)` + the pedal | `arr.place(piano, comp)`; a whole chorus: `jazz.chorus(band, head, melody, piano=..., bass=..., drums=...)` |
+| `even_bass` / `waltz_bass` / `even_brushes` / `waltz_brushes` copies | `jazz.walking_bass(prog, straight=True, feel='two' \| 'push' \| 'drive' \| 'one' \| 'walk')`, `brushes(..., straight=True, ghosts=, kick='even', hat8=, ride=)` |
+| the last chord: strums, pedal, bass note, cymbal clip, ritardando, fermata, room ramps | `s.ending(end, chords=[...], bass=..., drums=(drums, jazz.last_stir(kit, 8)), rit=..., room=(-13, -8))` |
+| `gainDb` points around a solo | `track.feature(solo, db=2)` |
+| `BASS_SLIDES` pitch-bend loops | `jazz.slides(section, [(bar, beat, semitones), ...])` |
+| a score token parser + performance pipeline in the song | `romantic.score(rh={bar: notation}, lh=..., dyn=...).perform(s, rh, lh)` |
 | an `energy()` gainDb ride per section | `per_section({...})` points or the MIX dict's `'ride'` (agentsound.mixer) |
+| `dyn()` / `vel()` / `phase()` / `add()` / a parts loop with `art.articulate` + `orch.perform` | `orch.Score(s, o, DYNAMICS, seed=)`: `sc.add`, `sc.vel`, `sc.perform()` |
+| `tutti_hits()`, `brass()` (natural trumpets / horns / timpani), `unison()`, `wind_chords()`, `stabs()` | `sc.hits`, `sc.brass`, `sc.unison`, `sc.winds`, `sc.stabs`, `sc.fermata` |
+| the same line `add()`ed to four sections in octaves | `sc.double(line, {'violins1': (12, 4), 'flutes': (12, 0), ...})`, `sc.colla_parte(parts, {...})` |
+| `pads(prog, register, voices, vel)`, `harmony(line, prog)`, `under(table, t0, melody)`, `tutti(table, t0)` | `h.voice(...)`, `h.under(line, 3)`, `h.under(melody, voicing.STRINGS)`, `h.tutti()` (`h = s.prog(...)` / `s.harmony(table, at)`) |
+| `pulse()`, `syncopes()`, `beats_of()`, `offbeats()`, a `broken()` left hand, oom-pah-pah / ostinato loops | `figure(notes, 'pulse8' / 'syncope' / 'beats' / 'offbeats')`, `h.figure('broken' / 'oompah' / 'ostinato')` |
+| a fugato's steps / free voices / tie loop + `arpeggiate` + `passing_eighths` | `voicing.fugue(entries, ...)` (`.parts`, `.lead`, `.offset`, `.emphasis`) |
+| `speak()` / `sing()` + the choir's lead / gate / dynamics-lane loop | `orch.Choir(...)`: `speak` / `sing` / `lane` / `swell` / `perform` |
+| `send.hall` bloom points per role, a hand-written master `utility` arc | `orch.ring(o, at, length, db, back=)`, `s.arc(rides, within=)` |
 
 ## Patterns (all return a Clip)
 
@@ -1492,6 +1596,14 @@ note before the next beat: on the & or, `skip_grid='triplet'`, on the last tripl
 flat level (vel +-3 %: flat_dynamics). The line's notes are the same with any touch. With the evened Meatbass the
 velocity is the level: 80-95 is the calibrated walking level of the jazz presets, a soft pedal intro ~80, 60-70 is
 really soft (~4-5 dB under 90).
+`straight=True` (+ `pickups=0.5`, `beats_per_bar=None` = the progression's): the straight-8th bass of New York bar jazz
+without swing and of the straight jazz waltz (`STRAIGHT_FEELS`) - 4/4 `feel='two'` (half notes, an 8th pickup into
+the next chord with chance `pickups`), `'push'` (dotted-quarter / quarter motion), `'drive'` (8th pushes, a
+climax), `'walk'` (= the quarter-note walk); 3/4 `'one'` (the root through the bar, now and then the 5th on 3),
+`'two'` (root + 5th / 10th / approach on 3), `'walk'` (three quarters, now and then two 8ths on 3, a 4-bar arch); an
+approach or an anticipation (tied over) into every chord; 4/4 notes sound `gate` (default 0.92); `touch` = the
+bassist's touch (`bass_touch` from (1 - 0.16 touch) x vel to (1 + 0.22 touch) x vel, the 1 leading). The lines of
+songs/perry-street-rain and songs/minetta-lane-waltz.
 
 **Bass touch** (humanize.py, `jazz.bass_touch`) `bass_touch(clip, lo=62, hi=100, accent='1-3', phrase=16, peak=0.6,
 offbeat=0.82, ghost=0.55, approach=0.84, anticipation=1.1, pitch=0.35, beats_per_bar=4, jitter=0.03, seed=0)`:
@@ -1514,6 +1626,17 @@ GS 'Brush' kit, `inst.sf2(bank=128, program=40)`: 38 tap, 39 slap, 40 held swirl
 `SWIRLY_BRUSH` (Karoryfer Swirly Drums: 38 tap, 40 edge, 39 dig, 60 / 64 slow / fast one-shot stirs - swells the
 next one crossfades: use `sweep=jazz.swirly_sweep(s.tempo)`, one stir about every second - 62 stops them, 44 foot,
 51 ride) or your own.
+`straight=True`: even-8th brushes - the groove above (no kick unless asked, `fill='eighths'`) plus
+`brush_colour(bars, style, kit, ghosts=0, kick=False, hat8=0, ride=0, digs=None, vel=1, fills=True, phrase=8,
+seed=0, beats_per_bar=4)` (`BRUSH_COLOUR` per meter): `ghosts` = the chance of a ghost tap on each &, `kick='even'`
+a feathered kick on 1 and the & of 2 (now and then the & of 4; 3/4: 1, now and then the & of 2), `hat8` = brush 8ths
+on the closed hat (level), `ride` = an even-8th ride (1 2 &2 3 4 &4; 3/4: 1 2 &2 3) instead of the taps, with digs
+(on 2 and 4 every second bar; 3/4 on 2). The colour plays through the first half of a fill bar and stops where the
+fill starts if later; it is written at its own velocities (`bandlib.jazz.brushes(band, ..., straight=True)` levels
+only the groove under it). `jazz.bombs(bars, kit, seed=, density=0.3, vel=58)`: the drummer comping under a solo -
+soft kick bombs and digs on the upbeats, kick + dig on the last & into every 4-bar phrase. `jazz.last_stir(kit,
+length=8, crash=28, kick=30, sweeps=(56, 44, 32), every=2, last=None)`: the drums under the last chord (a crash
+ringing, a feathered kick, dying stirs).
 
 **Feel** (humanize.py): `swing_ratio(bpm)` 0.66 at ballad tempo (<= 70), 0.61 at 140, 0.555 at 220, 0.53 at 300.
 `LAYBACK_MS` / `layback_ms(part, bpm)`: piano right hand 22..10 ms behind (ballad..up), comping 10..5, bass
@@ -1622,6 +1745,10 @@ sweep INTO a downbeat), `run(start, end, dur, bpm, chord=, key=, scale=)`, `chro
 dur, bpm, notes=6)`, `octave_run`, `fourths(top, dur, bpm, voices=2, grid=0.25)` (cascading 4ths), `shake(pitches,
 dur, bpm, interval=3)` (block-chord ending shake), `alternating_hands(chord, dur, bpm, top, pattern='RL')`
 (`MOVES` = name -> function).
+`Arrangement.place(rh_track, lh_track=None, at=None, pedal=True, end=None)` plays it (the right hand, the left hand
+when it has notes, the harmony pedal on the right hand's track; `at` defaults to arrange's `at=`; `.prog` / `.at`
+keep what arrange was given). `pianist.crushes(line, prob=0.3, seed=0, min_dur=0.9)`: acciaccaturas across a played
+line (a half step below, crushed in before its long notes).
 `JAZZ_PROGRESSIONS`: ii_v_i, minor_ii_v_i, turnaround, iii_vi_ii_v, tritone_turnaround, backdoor, rhythm_a, blues,
 bridge_cycle (roman numerals: `s.prog(jazz.JAZZ_PROGRESSIONS['rhythm_a'])`).
 
@@ -1642,13 +1769,40 @@ against a concert recording). Times are beats; figures are timed in REAL time th
 | `melody_rubato(rh, anchors, bpm, lean_ms=35, late_ms=6, sync_ms=32, agogic_ms=50, peak_ms=40)` | Chopin's rubato: only the melody moves - leaning ahead / behind inside each anchor span, the downbeat melody spread around the bass (+-sync_ms), held back after leaps and on local summits; order and legato kept; the left hand keeps the tempo map |
 | `pedal_changes(changes, end=, lift_ms=90, bpm=, dry=, flutter=, flutter_ms=280, flutter_to=0)` | legato pedal per harmony (up with the new bass, down lift_ms later), cleared every flutter_ms in chromatic runs / cadenzas (`flutter_to=0.6`: to a half pedal, the bass rings on) |
 | `figure_stats(clip, bpm)` | notes, notes/s, fastest / slowest IOI, ends vs middle, CV - to compare a figure with a recording |
+| `score(rh={bar: notation}, lh={first bar: 'slots ...'}, dyn=[(bar, pos, 'p')], meter='12/8', pickup='1/8', unit='1/8', key=, phrases=[(1, 2), ...])` -> `Score` | a written piano score: the right hand in notation with its ornaments as written (`^tr`, `^tr(lower=-1)`, `^turn(upper=1, lower=-1)`, `{..}:N^fig(even)`, `[..]^roll(60)`, `!` / `?`; read with `notes(expand=False)`), the left hand as `accompany` entries per slot of the meter (`'BASS:CHORD[/CHORD2][@off+len][\|pattern]'`, chord notes joined by `.`, `;` two entries in one slot, `-` no bass; bars separated by ` \| `), dynamics marks, phrases; `.bar(k)` (0 = the pickup), `.events` (`Event`: kind, at, dur, pitches, factor, args, kw), `.in_bar(k)`, `.entries`, `.end` |
+| `Score.perform(s, rh_track, lh_track, pedal=True, touch=, breath=0.3, accompany=, lh_dyn=0.6, rubato=, cap=112, roll_bpm=, anchors='half', pedal_opts=, plain=False)` | the nocturne's measured pipeline: the left hand first (accompany per entry, the dynamics x factor ** lh_dyn), the right hand's touch over its principal notes (a breath at every phrase end), every ornament in real time (the trill lands on the next note), lean_on_long, cantabile, the dynamics, melody_rubato at every half bar, a velocity cap; the pedal with the harmony, cleared in chromatic figures. `plain=True` = the plain tools (the etude's 'before' baseline for an A/B). Returns {'rh', 'lh', 'pedal', 'figures'} |
+| `Score.rubato(s, depth=, phrase=, shapes=('lean', 'arch'), seed=None / int / 'bar', bars=(first, last), overlap=None)`, `Score.touch(melody, {(a, b): (lo, hi, ...)}, gap=16)`, `Score.phrase_of(bar)` | the phrase loops of a slow piece: `song.rubato` per phrase (two phrases sharing a bar meet `overlap` beats into it), per-phrase `touch` dynamics (a shared bar belongs to the first phrase; returns [(phrase, its start, the shaped notes)]) - songs/gymnopedie-etude |
 
 ```python
+SCORE = rom.score(RH, LH, DYN, meter='12/8', pickup='1/8', key='Eb major', phrases=[(1, 2), (3, 4)])
+SCORE.perform(s, rh_t, lh_t)                     # the whole pipeline below in one call (songs/nocturne-etude)
 lh_t.play(rom.accompany(entries, s.tempo_at, vel=38), 0)                         # the timekeeper first
 rh = rom.fioritura(['Db6', 'C6', 'B5', 'Bb5', 'A5', 'Ab5', 'F5', 'D5', 'B4', 'Bb4'], 1.25, s.tempo_at, at=b16 + 1)
 rh = rom.cantabile(rom.lean_on_long(line, s.tempo_at), s.tempo_at)
 rh = rom.melody_rubato(rom.dynamics(rh, marks), anchors=bar_and_half_bar_beats, bpm=s.tempo_at)
 ```
+
+**The chorus player** `jazz.chorus(band, section, melody=None, *, piano=None, comp=None, bass='walk', drums=None,
+memory=None, defaults=None, bpm=None, key=None, lh_pedal=True, pedal_end=None, record=None)` -> {part: Arrangement}:
+one chorus over a form section (`s.form`: its `.parts` and their changes) played by the players above, part by part
+(nothing of its own): `piano` = `pianist.arrange` options per part (+ `touch=(lo, hi)`: `jazz.touch` on the melody
+first, `pedal=False`: dry lines, `bpm=`) - the right hand on `band.piano`, the left hand on `band.comp`, the harmony
+pedal (`Arrangement.place`); `comp` = `jazz.comp` options (+ `answer=True`: comp in the part's melody's rests,
+`roll=(lo, hi)` ms with `roll_seed=` an int or a shared `random.Random`, `direction=`); `bass` = `walking_bass`
+options (a string = the feel; `straight=True` for the even lines; None: no bass); `drums` = `bandlib.jazz.brushes`
+options for the section, `[(bars, options), ...]` blocks in a row, or one block per part. Every option dict takes
+shared keys - `jazz.each(a, b, c, d)` = one value per part, a shared `seed=` counts up per part (seed + index) - and
+part keys (`'A2': {...}` or an index) that override them; a part key of `None` rests there. `defaults=` {'piano':
+..., 'comp': ..., 'bass': ..., 'drums': ...} lie under the call's options (an option dict like `ornaments=` is
+replaced, part dicts merge): a song binds its band once, e.g. `play = functools.partial(jazz.chorus, b, memory=mem,
+defaults=dict(piano=dict(lh='guide', lh_vel=56), bass=dict(straight=True), drums=dict(straight=True,
+style='ballad')))`. `melody`: {part: clip}, a list per part, or one clip over the section (sliced per part).
+`lh_pedal` = `bandlib.jazz.pedal([band.comp], section)` after the left hand played; `pedal_end` ends both pedals early
+(into an ending); `record` gets the Arrangements as 'section:part'. Order: piano parts, comping, left-hand pedal,
+bass, drums - the song's own lines (a horn, fills, a bass solo) stay hand-placed around it. Examples:
+songs/perry-street-rain, songs/minetta-lane-waltz (3/4), songs/lanterns-on-carmine (comping under a tenor).
+`jazz.slide(at, semitones=-2, length=0.2)` / `jazz.slides(section, [(bar, beat, semitones), ...], length=0.2)`:
+pitch-bend points of a bass slide into a note (the lane jumps a whole step under just before it and slides up).
 
 **Band presets** (finished productions: IR rooms, placement, master, balance measured on demo songs):
 `bands.make('jazz_trio' | 'jazz_quartet' | 'jazz_ballad' | 'bossa', s)` - `agentsound/bandlib/jazz.py`, recipe

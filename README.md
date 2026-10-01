@@ -102,6 +102,19 @@ as text that parses to the same notes (every track of every song round-trips). W
 for real stops, `track.fx['compressor'].set(...)`, `Clip.window / vel_add / arch / roll`, `harmonize(keep=False,
 fit=prog, fold=)`.
 
+**Form, choruses, endings** (the jazz package, docs/COMPOSE_API.md "Song" / "Jazz"): `s.form('intro:4 head:AABA
+solo:AABA out:B,A3o tag:4 end:2', parts=CHANGES)` makes the sections with their changes attached (`.prog`, `.parts`);
+`jazz.chorus(band, head, melody, piano=..., comp=..., bass=..., drums=...)` plays a trio / quartet chorus part by part
+through the existing players (pianist.arrange + `Arrangement.place`, jazz.comp, walking_bass, brushes) - every option
+shared or per part (`jazz.each(...)`, `'A2': {...}`, `None` rests), song-wide `defaults=`; straight-8th and 3/4 lines
+(`walking_bass(straight=True, feel='two' | 'push' | 'drive' | 'one' | 'walk')`, `brushes(straight=True, ghosts=,
+kick='even', hat8=, ride=)`); `s.ending(end, chords=..., bass=..., drums=..., rit=..., hold=..., room=...)` is the
+rolled last chord with ritardando, fermata and room ramp; `track.feature(solo, db=2)`, `jazz.slides(...)`,
+`jazz.bombs`, `jazz.last_stir`, `pianist.crushes`. Written classical scores: `romantic.score(rh={bar: notation},
+lh=..., dyn=..., meter='12/8', pickup='1/8').perform(s, rh_track, lh_track)` - the nocturne etude's pipeline (touch,
+ornaments in real time, singing line, melody rubato, pedal) on top of `notes(expand=False)`; `Score.rubato` / `touch`
+are the phrase loops of a slow piece.
+
 **CLI** (`python -m agentsound <command>`):
 
 | command | does |
@@ -215,15 +228,15 @@ playability checks, and a log (`.moves`, `.budget`, `.summary()`).
 
 | player | entry points | plays |
 |---|---|---|
-| `pianist` | `pianist.arrange(melody, prog, bpm=, style=)`, `Memory`, moves (trill, tremolo, turn, crush, gliss, runs ...) | voicing devices under the melody, ornaments (fast ones budgeted per `fast_every`), fills, left-hand styles in any meter, pedal |
-| `romantic` | `fioritura`, `trill`, `turn`, `grace`, `accompany`, `lean_on_long`, `cantabile`, `dynamics`, `melody_rubato`, `pedal_changes`, `figure_stats` | the classical / romantic pianist for written scores (Chopin, the nocturne etude): fioriture as shaped gestures in real time, trills with a start and a Nachschlag, the 12/8 bass-chord-chord left hand, the singing line (long notes lean, the next note plays into the decay), hairpins, melody-only rubato over a steady left hand, pedal per harmony with flutter in chromatic runs |
+| `pianist` | `pianist.arrange(melody, prog, bpm=, style=)` (`.place(piano, comp)`), `Memory`, moves (trill, tremolo, turn, crush, gliss, runs ...), `crushes` | voicing devices under the melody, ornaments (fast ones budgeted per `fast_every`), fills, left-hand styles in any meter, pedal |
+| `romantic` | `score` (+ `Score.perform` / `rubato` / `touch`), `fioritura`, `trill`, `turn`, `grace`, `accompany`, `lean_on_long`, `cantabile`, `dynamics`, `melody_rubato`, `pedal_changes`, `figure_stats` | the classical / romantic pianist for written scores (Chopin, the nocturne etude): fioriture as shaped gestures in real time, trills with a start and a Nachschlag, the 12/8 bass-chord-chord left hand, the singing line (long notes lean, the next note plays into the decay), hairpins, melody-only rubato over a steady left hand, pedal per harmony with flutter in chromatic runs |
 | `drummer` | `drummer.arrange(song, style=, kit=)`, `Memory`, `Kit.of(...)`, moves (tom_run, build, stop ...); solo: `perform(steps)`, `vocabulary()` (for `soloist.solo`), `rudiment`, `pattern`, `Hands`, `DrumMotif`, `SOLO_MOVES`, `feet`, `choke`, `hat_lane` | a whole form: grooves per style and section role, budgeted fills, crashes, builds, stops, endings (a hit grabbed by a choke); four limbs with speed limits; kick locked to the bass. A drum SOLO: a stroke language (stickings, accents, ghosts, flams, drags, buzz, kit voices), the hands' physics (a weaker hand, stick heights, rebounds, up-strokes, reach, sticking-aware speed limits), the PAS rudiments orchestrated around the kit, feet ostinatos and double bass, the live hi-hat openness lane, cymbal chokes, per-hand samples, and solo moves (motif and its development, tom melodies, call and response, 3 over 4, fives, quintuplets, half / double time, linear, hand-hand-foot triplets, speed bursts, press rolls, the gated tom break, silences, the big finish) played in order by `perform()` or by `soloist.solo()` |
 | `bassist` | `bassist.arrange(prog, bpm=, style=, kick=)`, `Memory`, `touch`, moves (slide, approach, octave_pop ...) | styles rock pop country funk motown disco ballad reggae tumbao synth walking; kick lock / interlock; fingering and tempo limits |
 | `guitarist` | `guitarist.arrange(...)` (rhythm), `guitarist.lead(...)` (`gestures=True`: fretwork bends / vibrato), `guitarist.vocabulary(style)` (the solo vocabulary), `Fretboard`, `shapes`, `Memory` | real chord shapes, strum / pick patterns per style and section, palm mutes / dead notes, double-tracked takes; lead bends, vibrato, slides, hammer-ons |
 | `fretwork` | `fretwork.bend`, `prebend`, `ghost_bend`, `unison_bend`, `oblique_bend`, `vibrato` (`VIBRATOS`), `hammer_on`, `trill`, `legato_run`, `slide`, `slide_in` / `slide_out`, `picked_run`, `tremolo_pick`, `sweep`, `rake`, `pinch`, `palm_mute`, `whammy_dive` / `whammy_scoop` / `whammy_vibrato`, `feedback`, `wah` / `wah_talk`, `pick_scrape`, `squeak`; `render(track, parts, at)` | the lead guitarist's hands inside and between notes (a guitar hero's micro-performance, like the hornist's breath): bends that rise fast, overshoot and settle, pre-bends, unison bends (the held string on a twin track / the sampler's per-note `bendfollow`), finger vibrato that only goes UP (down from a bent pitch), legato without the pick, alternate picking with accents, sweeps, pinch harmonics and controlled feedback (the sampler's `harmonic`), palm mutes, whammy, wah, pick scrapes |
 | `soloist` | `soloist.solo(song, track, vocab, at=, arc=, motif=, budget=, prog=)`, `Move`, `Vocabulary`, `Ctx`, `Part`, `Budget`, `ARCS`, `develop` / `vary`, material lines (`answer_line`, `sequence_line`, `run_line`, ...) | the instrument-agnostic SOLO: a dramatic arc (statement -> call / response -> varied repetition -> speed burst -> climax -> resolution) over any player's vocabulary (`guitarist.vocabulary`, `hornist.vocabulary`), motivic development of the song's hook, planned space, one ornament budget, dynamics never flat (`songs/_demo_soloist`: the same arc on the sax and the guitar) |
 | `hornist` | `hornist.arrange(melody, bpm, family=, style=, section=)`, `hornist.vocabulary(family, style=)` (the solo vocabulary), `Memory`, `.place(track, at)`, moves (push, pulse, swell, bloom, taper, vibrato, scoop, fall, shake, lean_in, turn_away, bell_swing ...) | the wind player (sax, trumpet, trombone, flute, clarinet, bowed strings): breath INSIDE held notes (air pushes / swells on the post-compressor `air` stage or live `dynamics`), air-coupled vibrato, budgeted pitch spice, mic technique (bell toward / away from the mic via a `mic` EQ + reverb sends) |
-| `jazz` | `jazz.band`, `comp`, `walking_bass`, `brushes`, `ride_pattern`, `horn_line`, `solo_line`, `paraphrase`, `block_chords`, `Feel` | the jazz vocabulary: rootless / shell / quartal voicings, comping cells, walking lines, brush kits, horn phrasing (scoops, falls, swells, vibrato) |
+| `jazz` | `jazz.band`, `chorus`, `comp`, `walking_bass` (straight / 3/4 too), `brushes`, `brush_colour`, `ride_pattern`, `bombs`, `last_stir`, `slides`, `horn_line`, `solo_line`, `paraphrase`, `block_chords`, `Feel` | the jazz vocabulary: rootless / shell / quartal voicings, comping cells, walking lines, brush kits, horn phrasing (scoops, falls, swells, vibrato) |
 | `articulation` | `perform`, `legato`, `expression`, `vibrato`, `throws`, `auto_articulate` | sampled solo instruments played: live dynamics, legato, portamento, keyswitches, echo throws |
 
 Shared feel (`humanize`): `touch(clip, lo, hi)` writes phrase-shaped melody velocities, `bass_touch` the same for bass
@@ -239,7 +252,21 @@ the interlocked wind pairs, `HORNS`, `BRASS`, `TUTTI`): chord tones in range, no
 leading tone or seventh, no parallel fifths / octaves, the smallest motion, no semitone rub against the written lines.
 `voicing.check(parts, harmony, voices=...)` reads written parts back (parallels between EVERY voice pair, semitone
 clashes, strong-beat non-chord tones, ranges, crossings); `arpeggiate` / `passing_eighths` give a fugue's free voices
-motion without parallels or rubs (songs/lux-perpetua, songs/unbowed).
+motion without parallels or rubs (songs/lux-perpetua, songs/unbowed). ONE harmony object: `s.prog(...)` /
+`s.harmony(table, at)` return a `voicing.Harmony` (a Progression from a progression string or a voicing table) that
+voices itself - `.chorale(voices)`, `.under(melody, STRINGS)` (the parts under a written line) or `.under(line, 3)`
+(block harmony), `.voice(register, voices, vel)` (a section's divisi), `.tutti()`, `.figure('oompah' / 'broken' ...)`.
+`voicing.fugue(entries, ...)` writes a fugue / fugato (entries as written, free voices voiced, their counterpoint,
+who leads when), `voicing.imitation(cell, entries)` imitative entries; `figures` holds the textures (`'pulse8'`
+string drive, `'offbeats'`, `'syncope'`, `'beats'`, `'tremolo'`, oom-pah, Alberti, broken chords, ostinatos).
+
+The orchestrator's desk (`bandlib.scoring`, as `orch.*`): `orch.Score(s, band, DYNAMICS)` holds a whole piece's
+parts with ONE dynamics map (marks, hairpins, subito, bar accents, phrase arcs) and performs them at the end - held
+notes follow a written crescendo (`follow=True`); `sc.double` / `colla_parte` (doublings with per-section offsets),
+`sc.hits` (tutti chords), `sc.brass` (natural trumpets + horns + timpani on the chord tones), `sc.unison`,
+`sc.winds`, `sc.stabs`, `sc.fermata`, `orch.bed` (a section's held harmony in one call); `orch.Choir` makes a sampled
+choir speak on time (speaking velocity, the written dynamics on a lane, syllable gating, swells); `s.arc(rides)` is
+the conductor's section arc on the master input (songs/unbowed, songs/lux-perpetua, songs/ashes-and-chandeliers).
 
 ## 5. Band presets, genres, recipes
 
@@ -375,7 +402,7 @@ Also user-facing: `delivery` (mp3 tags, cover, credits.txt, the CC-BY / BY-SA / 
 
 ```
 agentsound/            Python compose layer (stdlib only)
-  song.py theory.py voicing.py patterns.py midifx.py humanize.py automation.py modulation.py vamod.py tempo.py
+  song.py theory.py voicing.py figures.py patterns.py midifx.py humanize.py automation.py modulation.py vamod.py tempo.py
   articulation.py pianist.py romantic.py drummer.py bassist.py guitarist.py jazz.py heroes.py
   gesture.py budget.py fretwork.py soloist.py guitar_vocab.py horn_vocab.py   lanes, budgets, solos
   makingof/            the making-of film (facts, players' logs, narration, timeline, web/ renderer)
@@ -393,7 +420,8 @@ tests/                 C++ tests (test_*.cpp, ctest) and tests/python (unittest)
 Python helper modules (`catalog.HELPER_MODULES`, listed with every public function by `catalog helpers`): `theory`,
 `patterns`, `humanize`, `automation`, `modulation`, `midifx`, `vamod`, `jazz`, `pianist`, `romantic`, `drummer`, `bassist`,
 `guitarist`, `sfz`, `kits`, `organ`, `articulation`, `speech`, `tempo`, `song`, `mixer`, `mastering`, `heroes`,
-`gesture`, `fretwork`, `soloist`, `guitar_vocab`, `horn_vocab`, `budget`, `voicing`, `notation`.
+`gesture`, `fretwork`, `soloist`, `guitar_vocab`, `horn_vocab`, `budget`, `voicing`, `notation`, `figures`,
+`bandlib.scoring` (the orchestrator's desk, used as `orch.Score` / `orch.Choir` ...).
 
 | to add | do |
 |---|---|

@@ -150,7 +150,8 @@ def recipes() -> list[tuple[str, str]]:
 HELPER_MODULES = ('theory', 'voicing', 'notation', 'patterns', 'humanize', 'automation', 'modulation', 'midifx', 'vamod', 'jazz', 'pianist', 'romantic',
                   'drummer', 'hornist', 'gesture', 'fretwork', 'soloist', 'guitar_vocab', 'horn_vocab', 'budget',
                   'bassist', 'guitarist', 'sfz', 'kits', 'organ', 'articulation', 'speech', 'tempo', 'song', 'mixer',
-                  'mastering', 'heroes', 'bands', 'compare', 'delivery', 'library', 'silent_notes')
+                  'mastering', 'heroes', 'bands', 'compare', 'delivery', 'library', 'silent_notes', 'figures',
+                  'bandlib.scoring')
 
 
 def helpers() -> dict[str, list[tuple[str, str]]]:

@@ -15,10 +15,12 @@ it. Add new findings here instead of losing them in a report.
   horn / oboe, 3 short sections) as the lead and judged none of the 15 other sections ("no lead plays in half its
   bars"); the theme moves between violins I, the flutes / oboes doubling it and the fugato's entering voice - mixed
   by hand from per-section stem levels (songs/unbowed/MIX.md). The MIX dict has no `roles` key (strict), so the CLI cannot be told either.
-- **Choir samples speak slowly at low velocity.** The attack slows as velocity drops, so a soft answer took about
-  0.4 s to be heard. The epic worked around it with velocity 120 plus an `instrument.expression` lane and a 100 ms
-  sample offset. The choir patches (`sampled/choir*`, fairlight) should do this by default, and the
-  hornist/arranger docs should say so.
+- **Choir samples speak slowly at low velocity - the patches.** The attack slows as velocity drops, so a soft answer
+  took about 0.4 s to be heard. `orch.Choir` handles it by default now (the speaking velocity + the written level on
+  an expression / dynamics lane, early starts), but a choir track played directly (`track.play`, `orch.perform` on the
+  film orchestra's 'choir' role) still speaks late: the choir patches (`sampled/choir*`, fairlight) could start a few
+  ms into the sample and flatten the velocity -> attack curve by default, and the hornist / arranger docs should
+  point to `orch.Choir`.
 - **Piano damper / soundboard model.** Found by the Gymnopédie étude: decay inside a bar is 15.3 dB against 11.6 in
   the reference. We need a two-stage string decay and pedal coupling between notes. Half pedal and `sympathetic`
   exist, but they are not a physical model.
@@ -68,33 +70,34 @@ it. Add new findings here instead of losing them in a report.
 
 - **Compact song code, phase 2: genre packages on top of the notation** (phase 1 = `agentsound.notation` + the
   foundation helpers; migrated with byte-identical render JSON: ashes-and-chandeliers 993 -> 870 lines,
-  perry-street-rain 439 -> 391, midnight-interstate 515 -> 464). The survey found the rest of the length in
+  perry-street-rain 439 -> 391, midnight-interstate 515 -> 464; the jazz package is done - song.form / ending /
+  track.feature, jazz.chorus, walking_bass / brushes(straight=True), romantic.score: perry-street-rain -> 238,
+  minetta-lane-waltz 442 -> 261, lanterns-on-carmine 326 -> 223, nocturne-etude 446 -> 190, gymnopedie-etude
+  177 -> 153, _demo_jazz 169 -> 130, lamplight-avenue 544 -> 472). The survey found the rest of the length in
   re-implemented section logic. Each package must stay expressive (defaults overridable, raw Clips keep working) and
-  prove itself the same way (a song migrated with an identical render JSON):
+  prove itself the same way (a song migrated with an identical render JSON). The orchestra package is done
+  (`voicing.Harmony`, `figures`, `orch.Score` / `Choir` / `bed`, `voicing.fugue`, `s.arc`; byte-identical: unbowed
+  953 -> 598, lux-perpetua 759 -> 513 (+ score.py 233 -> 193), ashes-and-chandeliers 870 -> 711). What is left of
+  those three is note data, comments and the songs' own decisions; unbowed / lux keep `follow=False` (their written
+  re-attacks) - switching them to `follow=True` is a musical change to judge by ear. Open:
   - *pop / synthwave*: section plans (one dict per section: which parts play, their energy, the fill into the
     next) instead of per-section play() blocks; lanes (cutoff / send / gainDb rides per section, today hand-written
     `energy()` / `pts` lists in midnight-interstate, skyline-heartbeat, children-of-neon, orbital-station,
     polaroid-summer); transitions (riser + reverse cymbal + impact + downlifter + `s.breath` as one call); a drum plan
     (grooves per section with fills at the ends - what `drums({...})` tables + `fill()` loops do by hand); the robot
     voice (speech.words + the vocoder chord + the frozen vowel in one helper).
-  - *orchestra*: a `Score` (parts by role over a progression, doubling rules: `octave` / `third` / `harmony` / the
-    `pads()` divisi of ashes-and-chandeliers), orchestral hits (`stabs()`: strings staccato + brass marcato +
-    timpani on given beats), figures (oom-pah-pah, string ostinatos, harp arpeggios), a Harmony helper (`harmony()`
-    block voicing under a line), `sing()` (the choir's speaking-velocity + expression-lane trick of ashes'
-    `speak()`), a fugue / entries helper (the staggered choir entries of the ascent, lux-perpetua / unbowed fugatos).
-  - *jazz*: a chorus player (head / solo / head-out per chorus: today perry-street-rain's `hands()` / `comp()` /
-    `bass()` closures), a straight-8th and 3/4 bass + brushes (perry's `even_bass` / `even_brushes`,
-    minetta-lane-waltz's `waltz_bass`), endings (tag, ritardando, the rolled last chord with the fermata),
-    `romantic.score` for written classical scores (the nocturne's RH / LH token tables -> notation with ^tr / ^turn /
-    ^fig and a left-hand pattern).
-  - Migrate the other songs' note data to the notation (minetta-lane-waltz, lanterns-on-carmine: their `ph()`;
-    chrome-leviathan: `line` / `mel`; nocturne-etude: its score tokens; the tuple tables elsewhere) - the round trip
-    test already proves every one of their notes is expressible.
+  - *orchestra, leftovers*: a harp arpeggio figure (ashes' masque harp), staggered choir entries that climb by scale
+    steps (ashes' ascent: `voicing.imitation` places cells, not a held note climbing bar by bar), the lux storm's
+    interleaved 16ths (violins I / II from one velocity stream - a two-voice `storm16` that takes a velocity function),
+    and the nocturne's own dynamics map (romantic marks) onto `orch.Score`-style marks.
+  - Migrate the other songs' note data to the notation (chrome-leviathan: `line` / `mel`; the tuple tables
+    elsewhere) - the round trip test already proves every one of their notes is expressible.
 - **Notation follow-ups** (phase 1): a Line's extras (gestures, peaks, voices) survive shift / transpose / octave /
   velocity / with_length but not the other Clip transforms (they return plain Clips: the gestures of
   `line.legato()` are gone - re-parse or keep the Line); gesture lanes written by `track.play(line)` merge with other
   writers of `instrument.pitchbend` on the track (the per-track lane registry above would sum them); ornaments need
-  `bpm=` at parse time (a Line could carry them unexpanded and realize them at play time like the gestures);
+  `bpm=` at parse time (`notes(expand=False)` now lists them unexpanded in `line.ornaments` - romantic.score realizes
+  them - but track.play does not realize them at play time like the gestures; graces `g:` are always expanded);
   `format()` writes absolute pitch names only (no degrees / relative octaves) and splits no notes at bar lines (a
   long note across a bar leaves that bar line out); triplets written in notation count exactly while older code
   added 1/3 in floats (positions differ by ~1e-16 - the render JSON rounds to 6 decimals, so nothing audible).
@@ -115,6 +118,20 @@ it. Add new findings here instead of losing them in a report.
     be more real.
   - The sampler's `harmonic` follows `key + tune` as the note's fundamental: zones with a pitch keytrack other than
     100 % or a detuned root would isolate the wrong partial.
+- **Jazz package follow-ups** (phase 2, jazz):
+  - lamplight-avenue still hand-wires what the library has, because adopting it would change the sound (render JSON):
+    the hero sax chain + carve + sidechains (`hero(sax, family='sax', bed=[...])`), the drum grids per section
+    (`drummer.arrange`), `pedal_points()` (pianist.pedal / bandlib.jazz.pedal add a release at the end), the guitar's
+    'b' / 'v' marks (notation `^bend` / `^vib` are sampled gestures, not the 3-point bend). Try them by ear on the
+    song, then migrate.
+  - `jazz.chorus` plays piano / comping / bass / brushes; the horn (horn_line per part, with its own phrasing across
+    parts) and per-part extras (bass fills, piano fills in the horn's gaps, bombs) stay hand-placed around it.
+    lanterns-on-carmine's skip notes alternate swing / triplet by the seed's parity (`skip_grid=jazz.each(...)`).
+  - `song.form` names sections with tokens: a section name with a space ('piano A1' in _demo_jazz) needs
+    `s.section`; a part used by two sections is one Progression object (fine: progressions are immutable).
+  - `romantic.score`: the left hand is its own entry grammar (accompany entries per slot), not notation; `Score.touch`
+    / `rubato` cover the gymnopedie's loops, but its left hand (bass on 1, the chord on 2, rolled with a shared rng)
+    and the pedal every bar are still song code - a `perform(style='satie')` would need to reproduce that rng order.
 - **Section renders report silent notes after the section end** (`build --section solo`: bass / piano / pad / drums
   notes at the first bars after the section, "made no sound") - the preview stops before them; the report should skip
   notes that start after the rendered span.
@@ -205,20 +222,19 @@ it. Add new findings here instead of losing them in a report.
     time; cached after). German is not attempted (Breeze speaks English and Chinese well).
   - Stems are post-fader and dry of the shared reverbs, so a soloed group in "meet the tracks" sounds drier than in
     the mix.
-- **Orchestra: a held note does not follow a crescendo.** `orch.perform` turns each note's start velocity into the
-  dynamics lane (long notes get a messa di voce), so a chord held through a written crescendo stays at its start
-  level. `unbowed`'s dominant pedal climbed only ~2 LU over bars 9-15 with held tremolo strings / horns / wind chords
-  under a velocity ramp of 78 -> 120; re-attacking every held part each bar made it 8 LU. perform() could follow a
-  song-wide dynamics map (a function of the beat) inside held notes, or `orch.dynamics` could merge with perform's
-  lane instead of competing with it.
 - **One keyswitch per section track.** A role that plays two articulations at the same moment (the violas' staccato
   8ths under a marcato tutti stab, the basses' pizzicato under a sustained doubling) gets one of them ("notes at beat
   X ask for different articulations"): 44 collisions in `unbowed`. Options: a second track per role for the
   doublings (`violins1_div`), or the compiler splitting colliding articulations onto a twin sampler.
-- **A conductor's arc helper.** `unbowed` rides the master input per section (a `utility` named `arc` first in the
-  master chain: soft passages +3..+6 dB, the earlier fortissimos -1..-2.5 dB under the coda) to keep the LRA in the
-  classical window (20.9 -> 16.2 LU) without flattening the written dynamics. A `MIX['arc'] = {section: dB}` (with
-  in-section points) would make it a logged mixer move instead of hand-written automation.
+- **The conductor's arc as a mixer move.** `s.arc(rides, within=)` (unbowed) is the helper now; a `MIX['arc'] =
+  {section: dB}` key would make it a logged mixer move (`mix --auto` could propose it from the per-section LUFS and
+  the profile's LRA window), and the pop package's lanes should extend `s.arc` rather than add a second ride.
+- **unbowed's intro: two passages sit two beats after their chords.** `H(sc.INTRO[3:9], t0 + 8)` places the rows that
+  start at beat 6 of the table (G7/F, Cm/Eb, Fm, G7 ...) at beat 8 under the violins' cell (Fm under its B4), and
+  `winds(H(sc.INTRO[11:15], t0 + 26))` the rows from beat 24 (the rest, Db, Fm/Ab, Ab7) at 26 - the Ab7 then runs into
+  the G pedal at 32 while the strings play Fm/Ab / Ab7 on time. Kept as written for the byte-identical migration
+  (found while moving the tables onto `voicing.Harmony`, whose slices keep their own position: `H(sc.INTRO, t0)[3:9]`
+  sounds with the table). Listen before changing it.
 - **A zone's release wins over the track's `release`.** The VPO choir's `ampeg_release=1.25` joins short syllables
   into one vowel pad (lux-perpetua's Dies irae: re-attack depth 6-8 dB per written note), and `inst.sfz(...,
   release=)` cannot shorten it (only zones without their own ampeg_* take the param). lux-perpetua parts the

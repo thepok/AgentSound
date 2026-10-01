@@ -20,64 +20,26 @@ from agentsound import *
 from agentsound import jazz
 
 
-# The head, concert pitch, one list per bar: (beat in the bar, length in beats, pitch). Written straight: the feel
-# swings it (horn_line for the sax, the track grooves for the piano).
-A_FRONT = [
-    [(0.5, 0.5, 'D4'), (1.0, 0.5, 'F4'), (1.5, 2.5, 'A4')],                               # Bbmaj7
-    [(0.5, 0.5, 'G4'), (1.0, 0.5, 'F4'), (1.5, 0.5, 'D4'), (2.0, 1.5, 'Bb3')],            # Gm7
-    [(0.5, 0.5, 'Eb4'), (1.0, 0.5, 'G4'), (1.5, 2.5, 'Bb4')],                             # Cm7
-    [(0.5, 0.5, 'A4'), (1.0, 0.5, 'G4'), (1.5, 0.5, 'Eb4'), (2.0, 1.5, 'C4')],            # F7
-]
-A1_BACK = [
-    [(0.0, 0.5, 'F4'), (0.5, 0.5, 'E4'), (1.0, 0.5, 'F4'), (1.5, 0.5, 'A4'), (2.0, 0.5, 'Ab4'), (2.5, 1.5, 'F4')],
-    [(0.0, 1.5, 'Eb4'), (1.5, 0.5, 'D4'), (2.0, 0.5, 'C4'), (2.5, 1.5, 'A3')],            # Cm7 F7
-    [(0.0, 2.0, 'Bb3'), (2.5, 0.5, 'Ab4'), (3.0, 1.0, 'G4')],                             # Bbmaj7 G7alt
-    [(0.0, 1.0, 'Eb4'), (1.0, 0.5, 'C4'), (1.5, 0.5, 'A3'), (2.0, 1.0, 'C4')],            # Cm7 F7
-]
-A2_BACK = [
-    [(0.5, 0.5, 'Ab4'), (1.0, 0.5, 'G4'), (1.5, 0.5, 'F4'), (2.0, 0.5, 'D4'), (2.5, 1.5, 'Ab4')],  # Fm7 Bb7
-    [(0.0, 2.0, 'G4'), (2.0, 0.5, 'Gb4'), (2.5, 1.5, 'F4')],                              # Ebmaj7 Ab7
-    [(0.0, 1.0, 'F4'), (1.0, 0.5, 'E4'), (1.5, 0.5, 'D4'), (2.0, 0.5, 'B3'), (2.5, 1.5, 'Ab4')],   # Dm7 G7b9
-    [(0.0, 3.0, 'F4')],                                                                   # Bb6 Bb7
-]
-BRIDGE = [
-    [(0.0, 3.0, 'G4'), (3.0, 0.5, 'F4'), (3.5, 0.5, 'G4')],                               # Ebmaj7
-    [(0.0, 1.5, 'Bb4'), (1.5, 0.5, 'Gb4'), (2.0, 2.0, 'F4')],                             # Ebm7 Ab7
-    [(0.0, 3.0, 'A4'), (3.0, 0.5, 'G4'), (3.5, 0.5, 'A4')],                               # Dm7
-    [(0.0, 1.5, 'B4'), (1.5, 0.5, 'Ab4'), (2.0, 2.0, 'F4')],                              # G7b9
-    [(0.0, 3.0, 'G4'), (3.0, 0.5, 'F4'), (3.5, 0.5, 'G4')],                               # Cm7
-    [(0.0, 1.5, 'A4'), (1.5, 0.5, 'Eb4'), (2.0, 1.5, 'C4')],                              # F7
-    [(0.5, 0.5, 'D4'), (1.0, 0.5, 'F4'), (1.5, 0.5, 'A4'), (2.0, 0.5, 'B4'), (2.5, 1.5, 'F4')],    # Dm7 G7
-    [(0.0, 1.0, 'Eb4'), (1.0, 0.5, 'D4'), (1.5, 0.5, 'C4'), (2.0, 0.5, 'A3'), (2.5, 1.0, 'C4')],   # Cm7 F7
-]
-A3_BACK = [
-    [(0.0, 0.5, 'F4'), (0.5, 0.5, 'E4'), (1.0, 0.5, 'F4'), (1.5, 0.5, 'A4'), (2.0, 0.5, 'Ab4'), (2.5, 1.5, 'F4')],
-    [(0.0, 1.5, 'Eb4'), (1.5, 0.5, 'D4'), (2.0, 0.5, 'C4'), (2.5, 1.5, 'A3')],            # Cm7 F7
-    [(0.5, 0.5, 'C4'), (1.0, 0.5, 'D4'), (1.5, 0.5, 'Eb4'), (2.0, 0.5, 'E4'), (2.5, 1.5, 'F4')],   # Cm7 F7
-    [(0.0, 4.0, 'D4')],                                                                   # Bb6
-]
-INTRO_RH = [   # the head's pickup figure, answered: played in drop-2 block chords
-    [(0.5, 0.5, 'F4'), (1.0, 0.5, 'A4'), (1.5, 2.0, 'C5')],                               # Dm7
-    [(0.5, 0.5, 'Ab4'), (1.0, 0.5, 'B4'), (1.5, 2.0, 'D5')],                              # G7b9
-    [(0.5, 0.5, 'Eb5'), (1.0, 0.5, 'D5'), (1.5, 1.0, 'C5'), (2.5, 0.5, 'Bb4'), (3.0, 1.0, 'G4')],  # Cm7
-    [(0.0, 2.0, 'A4')],                                                                   # F7
-]
-END_RH = [    # a soft arpeggio up to the #11 over the final chord
-    [],
-    [(0.0, 1 / 3, 'F4'), (1 / 3, 1 / 3, 'A4'), (2 / 3, 1 / 3, 'D5'), (1.0, 1 / 3, 'E5'), (4 / 3, 1 / 3, 'A5'),
-     (5 / 3, 2.3, 'D6')],
-]
+# The head, concert pitch, in notation (docs/COMPOSE_API.md "Notation": sticky note values, '|' checks the bars).
+# Written straight: the feel swings it (horn_line for the sax, the track grooves for the piano).
+TUNE = phrases(
+    front='r/8 D4 F4 A4:2.5 | r/8 G4 F4 D4 Bb3/4. r/8 | r/8 Eb4 G4 Bb4:2.5 | r/8 A4 G4 Eb4 C4/4. r/8 |',
+    a1='F4/8 E4 F4 A4 Ab4 F4/4. | Eb4/4. D4/8 C4 A3/4. | Bb3/2 r/8 Ab4 G4/4 | Eb4/4 C4/8 A3 C4/4 r |',
+    a2='r/8 Ab4 G4 F4 D4 Ab4/4. | G4/2 Gb4/8 F4/4. | F4/4 E4/8 D4 B3 Ab4/4. | F4:3 r/4 |',
+    a3='F4/8 E4 F4 A4 Ab4 F4/4. | Eb4/4. D4/8 C4 A3/4. | r/8 C4 D4 Eb4 E4 F4/4. | D4/1 |',
+    vel=92)
+BRIDGE = notes("""
+ G4:3 F4/8 G4 | Bb4/4. Gb4/8 F4/2 | A4:3 G4/8 A4 | B4/4. Ab4/8 F4/2 |
+ G4:3 F4/8 G4 | A4/4. Eb4/8 C4/4. r/8 | r/8 D4 F4 A4 B4 F4/4. | Eb4/4 D4/8 C4 A3 C4/4 r/8""", vel=92)
+INTRO_RH = notes('r/8 F4 A4 C5/2 r/8 | r/8 Ab4 B4 D5/2 r/8 | r/8 Eb5 D5 C5/4 Bb4/8 G4/4 | A4/2 r',
+                 vel=40)                         # the head's pickup figure, answered: played in drop-2 block chords
+END_RH = notes('r/1 | F4/8t A4 D5 E5 A5 D6:2.3', vel=56, length='bar')   # a soft arpeggio up to the #11
 
 A1_CHORDS = 'Bbmaj7 Gm7 Cm7 F7 | Dm7:0.5 G7b9:0.5 Cm7:0.5 F7:0.5 Bbmaj7:0.5 G7alt:0.5 Cm7:0.5 F7:0.5'
 A2_CHORDS = 'Bbmaj7 Gm7 Cm7 F7 | Fm7:0.5 Bb7:0.5 Ebmaj7:0.5 Ab7:0.5 Dm7:0.5 G7b9:0.5 Bb6:0.5 Bb7:0.5'
 B_CHORDS = 'Ebmaj7 Ebm7:0.5 Ab7:0.5 Dm7 G7b9 | Cm7 F7 Dm7:0.5 G7:0.5 Cm7:0.5 F7:0.5'
 A3_CHORDS = 'Bbmaj7 Gm7 Cm7 F7 | Dm7:0.5 G7b9:0.5 Cm7:0.5 F7:0.5 Cm7:0.5 F7:0.5 Bb6'
 TAG_CHORDS = 'Cm7:0.5 F7:0.5 Dm7:0.5 G7b9:0.5 Cm7:0.5 F7:0.5 Dm7:0.5 G7alt:0.5'
-
-
-def bars_to_clip(bars, vel=92) -> Clip:
-    notes = [(i * 4 + t, d, p, vel) for i, bar in enumerate(bars) for t, d, p in bar]
-    return Clip(notes, length=len(bars) * 4)
 
 
 def build() -> Song:
@@ -97,8 +59,7 @@ def build() -> Song:
     intro_prog = s.prog('Dm7 G7b9 Cm7 F7')
     tag_prog = s.prog(TAG_CHORDS)
     end_prog = s.prog('Cm9:0.5 F13:0.5 Bbmaj7#11')
-    mel = {'A1': bars_to_clip(A_FRONT + A1_BACK), 'A2': bars_to_clip(A_FRONT + A2_BACK),
-           'B': bars_to_clip(BRIDGE), 'A3': bars_to_clip(A_FRONT + A3_BACK)}
+    mel = {'A1': TUNE('front a1'), 'A2': TUNE('front a2'), 'B': BRIDGE, 'A3': TUNE('front a3')}
 
     # --- tenor sax: the head (A3 already a little looser) and the last A again as the head out
     head = (mel['A1'].velocity(0.9) + mel['A2'].velocity(0.92) + mel['B']
@@ -110,17 +71,17 @@ def build() -> Song:
     jazz.horn_line(head_out, s.tempo, param='level', vibrato=False, seed=6).place(b.sax, out)
 
     # --- piano right hand: block-chord intro, the piano chorus, a last arpeggio
-    b.piano.play(jazz.block_chords(bars_to_clip(INTRO_RH, 40), intro_prog, style='drop2'), intro)
+    b.piano.play(jazz.block_chords(INTRO_RH, intro_prog, style='drop2'), intro)
     # the piano's chorus: the tune in locked hands (Shearing / Garland: 4-way close + the melody doubled an octave
     # down), then two A-B solo phrases built on the head's opening motif, then the last A as a block-chord shout
     for sec, part, seed, vel in ((p1, 'A1', 11, 38), (p3, 'A3', 14, 50)):
         line = jazz.paraphrase(mel[part], seed=seed, anticipate=0.35, embellish=0.25, key=s.key).octave(1)
         b.piano.play(jazz.block_chords(line.with_vel(vel), prog[part], style='locked', min_dur=0.5, vel=0.78), sec)
-    motif = bars_to_clip(A_FRONT[:1]).octave(1)
+    motif = TUNE['front'].bar(1).octave(1)
     for sec, part, seed, dens, inten, vel in ((p2, 'A2', 21, 0.55, 0.45, 48), (pb, 'B', 22, 0.7, 0.6, 52)):
         b.piano.play(jazz.solo_line(prog[part], key=s.key, register=('D4', 'D6'), density=dens, intensity=inten,
                                     motif=motif, motif_prob=0.5, vel=vel, seed=seed), sec)
-    b.piano.play(bars_to_clip(END_RH, 56), end)
+    b.piano.play(END_RH, end)
 
     # --- piano left hand: comping (rootless under the sax, answering its phrases; shells under the block chords)
     under = ('A2', 'G4')

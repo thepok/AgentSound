@@ -29,7 +29,7 @@ import os
 import random
 
 from agentsound import *
-from agentsound.humanize import touch
+from agentsound import romantic as rom
 
 import satie_score as sc
 
@@ -62,28 +62,17 @@ ROLL_MS = (8.0, 18.0)             # chords rolled from the bottom
 CADENCE_ROLL_MS = 32.0            # the cadence chords (bars 38-39, 77-78) rolled wider, the right hand too
 
 
-def phrase_of(bar: int):
-    for a, b in sc.PHRASES:
-        if a <= bar <= b:
-            return a, b
-    raise ValueError(bar)
-
-
-def bar(n: int) -> float:
-    """1-based score bar -> beat."""
-    return (n - 1) * 3.0
+SCORE = rom.score(meter='3/4', phrases=sc.PHRASES)          # the phrases: rubato, dynamics, the hand's breath
+bar = SCORE.bar                                               # 1-based score bar -> beat
+MELODY = Clip([(bar(n) + beat, d, p, 64) for n, (_, _, mel, _) in sc.bars().items() for beat, q, d in mel
+               for p in (q if isinstance(q, tuple) else (q,))])
 
 
 def tempo_plan(s: Song) -> None:
     """The tempo breathes like the reference performance: phrase by phrase (rubato), broader into the D-pedal middle
     parts and at the big cadences, a slower second half, the lingering beat 2 (lilt) and the final ritardando."""
-    for a, b in sc.PHRASES:
-        if b >= 76:
-            continue
-        shared_start = any(b0 == a for _, b0 in sc.PHRASES)       # the phrase starts with the last bar's pickup
-        shared_end = any(a0 == b for a0, _ in sc.PHRASES)
-        span = (bar(a) + (2 if shared_start else 0), bar(b) + (2 if shared_end else 3))
-        s.rubato(span, depth=0.04, phrase='arch' if BEFORE else 'breath')
+    # every phrase but the last (two phrases sharing a bar meet on its beat 3: the next one's pickup)
+    SCORE.rubato(s, depth=0.04, phrase='arch' if BEFORE else 'breath', bars=(1, 75), overlap=2)
     # (the reference: ~75 BPM in the first theme, ~68 in the middle part, bar 31 -15 %, bars 36-37 -12..-20 %,
     # the second half ~64 -> 70, its middle part ~66, bar 70 -18 %, the end -30..-40 %)
     s.ritardando((bar(21), bar(22)), to=0.92)
@@ -122,22 +111,9 @@ def build() -> Song:
     bars = sc.bars()
 
     # ------------------------------------------------------------------ the melody: touch per phrase
-    done = set()
-    for a, b in sc.PHRASES:
-        lo, hi, _ = DYN[(a, b)]
-        notes = []
-        for n in range(a, b + 1):
-            if n in done:
-                continue
-            done.add(n)
-            for beat, q, d in bars[n][2]:
-                for p in (q if isinstance(q, tuple) else (q,)):
-                    notes.append(Note(bar(n) + beat - bar(a), d, note(p), 64))
-        if not notes or hi == 0:
-            continue
-        shaped = sorted(touch(Clip(notes), lo, hi, gap=16), key=lambda nt: (nt.start, nt.pitch))
+    for (a, b), at, shaped in SCORE.touch(MELODY, DYN, gap=16):
         for i, nt in enumerate(shaped):
-            t = bar(a) + nt.start
+            t = at + nt.start
             rank = sum(1 for o in shaped[:i] if abs(o.start - nt.start) < 1e-6)     # a chord: rolled upwards
             n = a + int((nt.start + 1e-6) // 3)
             spread = CADENCE_ROLL_MS if n in sc.CHORD_ON_ONE else 12.0
@@ -145,7 +121,7 @@ def build() -> Song:
 
     # ------------------------------------------------------------------ the left hand: bass on 1, the chord on 2
     for n, (bass, chord, _, extra) in bars.items():
-        a, b = phrase_of(n)
+        a, b = SCORE.phrase_of(n)
         base = DYN[(a, b)][2]
         x = (n - a + 0.5) / (b - a + 1)                      # the hand breathes with the phrase
         f = 0.92 + 0.16 * math.sin(math.pi * x)

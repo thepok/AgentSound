@@ -48,7 +48,7 @@ from .theory import (Chord, ComposeError, Key, Progression, available_tensions, 
 __all__ = ['MOVES', 'DEVICES', 'STYLES', 'FILL_KINDS', 'ORNAMENTS', 'LH_STYLES', 'LH_METERS', 'FAST', 'SPICE',
            'Memory', 'trill', 'tremolo', 'mordent', 'inverted_mordent', 'turn', 'crush', 'blues_crush', 'slip_note',
            'repeated', 'roll', 'sweep', 'gliss', 'fourths', 'pentatonic_run', 'run', 'chromatic_run', 'octave_run',
-           'shake', 'alternating_hands', 'voicing', 'left_hand', 'pedal', 'arrange', 'Arrangement']
+           'shake', 'alternating_hands', 'voicing', 'left_hand', 'pedal', 'arrange', 'Arrangement', 'crushes']
 
 _EPS = 1e-6
 
@@ -698,6 +698,20 @@ def alternating_hands(chord, dur, bpm, *, top='C6', lh_register=('C3', 'C4'), gr
     return _clip(out, a)
 
 
+def crushes(line, prob: float = 0.3, seed=0, *, min_dur: float = 0.9, grace: int = -1, ahead: float = 0.07,
+            length: float = 0.09, vel: float = 0.7) -> Clip:
+    """Acciaccaturas across a whole line (a played solo line, not one note): before each note of at least `min_dur`
+    beats (and not at the very start) with chance `prob`, the note `grace` semitones away (a half step below)
+    crushed in `ahead` beats early, `length` long, at `vel` x its velocity. Seeded; the line's own notes stay."""
+    c = as_clip(line)
+    rng = random.Random(seed_int(seed))
+    out = list(c)
+    for n in c:
+        if n.dur >= min_dur and n.start >= 0.2 and rng.random() < prob:
+            out.append(Note(n.start - ahead, length, n.pitch + grace, max(1, int(n.vel * vel))))
+    return Clip(out, length=c.length)
+
+
 MOVES = {
     'trill': trill, 'tremolo': tremolo, 'mordent': mordent, 'inverted_mordent': inverted_mordent, 'turn': turn,
     'crush': crush, 'blues_crush': blues_crush, 'slip_note': slip_note, 'repeated': repeated, 'roll': roll,
@@ -1239,12 +1253,32 @@ class Arrangement:
     budget did not allow - its substitute, if any, is logged as played), dry ((start, end) windows where the pedal
     should come up: runs and repeated notes), budget (fast_every / spice_every / same_every, 'fast': the FAST
     alternations kept [(beat, kind)], 'spice': how many SPICE ornaments, 'dropped': [(beat, kind, substitute)]).
-    pedal(prog, at) -> the pedal points; summary() counts what was used (and 'dropped:<kind>')."""
+    pedal(prog, at) -> the pedal points; summary() counts what was used (and 'dropped:<kind>'); place(rh_track,
+    lh_track, at) plays it (the two hands and the pedal); prog / at: what arrange() was given."""
 
     def __init__(self, rh: Clip, lh: Clip, melody: Clip, moves: list, dry: list):
         self.rh, self.lh, self.melody, self.moves, self.dry = rh, lh, melody, moves, dry
         self.harmonized = 0.0          # share of melody notes with voices under them (or an ornament)
         self.budget: dict = {}
+        self.prog = None               # the changes arrange() played over
+        self.at = None                 # arrange(at=): where it is meant to be placed
+
+    def place(self, rh_track, lh_track=None, at=None, *, pedal: bool = True, end=None) -> 'Arrangement':
+        """Play the arrangement: the right hand on rh_track, the left hand on lh_track (the comping track; default
+        rh_track) when it has notes, and with pedal=True the harmony pedal on rh_track (self.pedal(prog, at, end=)).
+        at defaults to arrange(at=) - a Section, beat or (section, beats)."""
+        if at is None:
+            at = self.at
+        if at is None:
+            raise ComposeError("Arrangement.place(): give at= (arrange() had no at=)")
+        rh_track.play(self.rh, at)
+        if len(self.lh):
+            (lh_track or rh_track).play(self.lh, at)
+        if pedal:
+            if self.prog is None:
+                raise ComposeError("Arrangement.place(pedal=True): the arrangement has no progression")
+            rh_track.automate('instrument.pedal', self.pedal(self.prog, rh_track._song._at(at), end=end))
+        return self
 
     def __repr__(self) -> str:
         return (f"Arrangement(rh {len(self.rh)} notes, lh {len(self.lh)} notes, {self.harmonized:.0%} of the melody "
@@ -1620,6 +1654,7 @@ def arrange(melody, prog, *, bpm, key=None, style: str = 'straight', density: fl
     arr = Arrangement(rh_clip, lh_clip, mel_clip, sorted(moves), sorted(dry))
     arr.harmonized = (n_harm[0] + n_kept) / max(1, len(mel))
     arr.budget = budget
+    arr.prog, arr.at = prog, at
     return arr
 
 

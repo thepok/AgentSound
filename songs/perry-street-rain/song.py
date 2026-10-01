@@ -30,10 +30,12 @@ climbs in a 3+3+2 rhythm through a backdoor Gb13 and a chromatic Emaj7#11 to the
   tag          4   backdoor tag (Bbm9 Eb13 | Cm7 F7alt | Bbm9 Eb7sus4 | Dbm6 Gb13) as a ballad, ritardando
   end          2   Abmaj9#11 rolled into the pedal, fermata, the room rings
 """
+import functools
+import random
+
 from agentsound import *
 from agentsound import bands, jazz, pianist
 from agentsound.bandlib import jazz as jazzband
-import random
 
 ANALYSIS = {'profile': 'jazz'}
 METADATA = {'title': 'Perry Street Rain', 'artist': 'AgentSound', 'album': 'Blue Hour Sessions',
@@ -47,112 +49,16 @@ MASTER_DRIVE = 5.7
 PIANO_TRIM = -2.2
 
 # ------------------------------------------------------------------------------------------------ changes
-A1 = ('Fm9 Dbmaj7#11 Bbm9 Eb7sus4:0.5 Eb7b9:0.5 | Abmaj9 Dm7b5:0.5 G7b9:0.5 Cm9:0.5 F7b9:0.5 '
-      'Bbm7:0.5 Eb7sus4:0.5')
-A2 = ('Fm9 Dbmaj7#11 Bbm9 Eb7sus4:0.5 Eb7b9:0.5 | Abmaj9 Cm7:0.5 F7b9:0.5 Bbm9:0.5 Eb13:0.5 '
-      'Abmaj9:0.5 Ab13:0.5')
-BR = 'Dbmaj9 Gb13#11 Cm9 F7alt | Bbm9 Dbm6 Emaj7#11 Eb7sus4:0.5 Eb7b9:0.5'
-A3 = ('Fm9 Dbmaj7#11 Bbm9 Eb7sus4:0.5 Eb7b9:0.5 | Abmaj9 Cm7:0.5 F7b9:0.5 Bbm9:0.5 Eb13:0.5 '
-      'Abmaj9:0.5 C7alt:0.5')
-A3_OUT = ('Fm9 Dbmaj7#11 Bbm9 Eb7sus4:0.5 Eb7b9:0.5 | Abmaj9 Cm7:0.5 F7b9:0.5 Bbm9:0.5 Eb13:0.5 '
-          'Abmaj9:0.5 F7alt:0.5')
-INTRO = 'Dbmaj9 Cm9 Bbm9 Eb7sus4:0.5 Eb7b9:0.5'
-TAG = 'Bbm9:0.5 Eb13:0.5 Cm7:0.5 F7alt:0.5 Bbm9:0.5 Eb7sus4:0.5 Dbm6:0.5 Gb13:0.5'
-END = 'Abmaj9#11:2'
-
-
-def even_bass(prog, seed: int, vel: int = 84, style: str = 'two', pickups: float = 0.5) -> Clip:
-    """A straight-8th jazz bass line: the root on 1, the fifth / tenth / octave inside the bar, an 8th-note
-    approach (chromatic, or the target's fifth) or an anticipation on the & of 4 into the next chord.
-    style 'two' = long notes (heads), 'push' = dotted-quarter / quarter motion, 'drive' = 8th pushes (climax)."""
-    rng = random.Random(seed)
-    chords = [(st, d, c) for st, d, c in prog if c is not None]
-    out = []
-
-    def near(pc, ref, lo=28, hi=50):                    # E1 .. D3, closest to the previous note
-        cands = [p for p in range(lo, hi + 1) if p % 12 == pc]
-        return min(cands, key=lambda p: (abs(p - ref), p))
-
-    prev = 36
-    for i, (st, d, c) in enumerate(chords):
-        root = near(c.root, prev if i else 34, 28, 43)
-        nxt = chords[i + 1][2].root if i + 1 < len(chords) else chords[0][2].root
-        nroot = near(nxt, root, 28, 43)
-        fifth = root + 7
-        third = root + (3 if 3 in {(p - c.root) % 12 for p in c.pcs} and 4 not in {(p - c.root) % 12 for p in c.pcs}
-                        else 4)
-        seventh = root + (10 if 10 in {(p - c.root) % 12 for p in c.pcs} else 11)
-        ap = rng.choice((nroot + 1, nroot - 1, nroot - 1, nroot + 7 if nroot + 7 <= 50 else nroot - 5))
-        anticip = rng.random() < 0.18
-        last = (nroot, 0.5) if anticip else (ap, 0.5)
-        v = lambda x: max(1, min(127, int(round(vel * x * (1 + (rng.random() - 0.5) * 0.08)))))
-        if d >= 4:
-            if style == 'two':
-                mid = rng.choice((fifth, fifth, third + 12 if third + 12 <= 50 else fifth, root + 12))
-                if rng.random() < pickups:
-                    out += [(st, 2.0, root, v(1.0)), (st + 2, 1.5, mid, v(0.9)), (st + 3.5, 0.5, last[0], v(0.82))]
-                else:
-                    out += [(st, 2.0, root, v(1.0)), (st + 2, 2.0, mid, v(0.9))]
-            elif style == 'push':
-                a = rng.choice((fifth, root + 12 if root + 12 <= 50 else fifth))
-                b = rng.choice((seventh, fifth, third + 12 if third + 12 <= 50 else third))
-                out += [(st, 1.5, root, v(1.0)), (st + 1.5, 1.0, a, v(0.92)), (st + 2.5, 1.0, b, v(0.88)),
-                        (st + 3.5, 0.5, last[0], v(0.84))]
-            else:   # drive
-                out += [(st, 1.0, root, v(1.05)), (st + 1.0, 0.5, root + 12 if root + 12 <= 50 else fifth, v(0.8)),
-                        (st + 1.5, 1.0, fifth, v(0.95)), (st + 2.5, 0.5, seventh, v(0.85)),
-                        (st + 3.0, 0.5, fifth, v(0.9)), (st + 3.5, 0.5, last[0], v(0.88))]
-        else:       # half-bar chords
-            if style == 'two' or rng.random() < 0.5:
-                out += [(st, 1.5, root, v(1.0)), (st + 1.5, 0.5, last[0], v(0.82))]
-            else:
-                out += [(st, 1.0, root, v(1.0)), (st + 1.0, 0.5, fifth, v(0.85)), (st + 1.5, 0.5, last[0], v(0.84))]
-        prev = root
-    notes = sorted(out)
-    merged = []                                         # an anticipation ties over: drop the repeated root
-    for n in notes:
-        if merged and merged[-1][2] == n[2] and abs(merged[-1][0] + merged[-1][1] - n[0]) < 1e-6 \
-                and merged[-1][1] <= 0.5:
-            s0, d0, p0, v0 = merged[-1]
-            merged[-1] = (s0, d0 + n[1], p0, v0)
-            continue
-        merged.append(n)
-    return Clip([(a, d * 0.92, p, v) for a, d, p, v in merged], length=prog.length)
-
-
-def even_brushes(band, bars: int, seed: int, vel: float = 1.0, ghosts: float = 0.0, kick: str | None = None,
-                 hat8: float = 0.0, ride: float = 0.0, fills: bool = True) -> Clip:
-    """Straight-8th brushes: the preset's stirs (one per beat at 96 BPM) + taps and hat foot on 2 and 4, plus
-    even-8th colour: ghost taps on the &s (ghosts = probability), a feathered kick on 1 and the & of 2 ('even'),
-    brush 8ths on the closed hat (hat8 = level), or the ride in even 8ths (1 2 &2 3 4 &4, ride = level)."""
-    kit = band.info['kit']
-    base = jazzband.brushes(band, bars, style='ballad', kick=None, fills=fills, fill='eighths', vel=vel,
-                            taps=ride == 0.0, seed=seed)
-    rng = random.Random(seed)
-    extra = []
-    for b in range(bars):
-        t0 = 4.0 * b
-        fill_bar = fills and b % 8 == 7
-        for k in range(8):
-            t = t0 + 0.5 * k
-            if fill_bar and t >= t0 + 3.0:
-                continue
-            if ghosts and k % 2 == 1 and rng.random() < ghosts:
-                extra.append((t, 0.2, kit['tap'], int(22 * vel + rng.randint(0, 6))))
-            if hat8:
-                extra.append((t, 0.2, kit['hat'], int((44 if k % 2 == 0 else 32) * hat8 + rng.randint(-3, 3))))
-            if ride and k in (0, 2, 3, 4, 6, 7):
-                extra.append((t, 0.4, kit['ride'], int((58 if k in (2, 6) else 46) * ride + rng.randint(-3, 3))))
-        if kick == 'even':
-            extra.append((t0, 0.3, kit['kick'], int(40 * vel + rng.randint(0, 4))))
-            extra.append((t0 + 1.5, 0.3, kit['kick'], int(30 * vel + rng.randint(0, 4))))
-            if rng.random() < 0.35 and not fill_bar:
-                extra.append((t0 + 3.5, 0.3, kit['kick'], int(28 * vel + rng.randint(0, 4))))
-        if ride and b % 2 == 1:                          # the second brush digs on 2 and 4 under the ride
-            for x in (1.0, 3.0):
-                if not (fill_bar and x >= 3.0):
-                    extra.append((t0 + x, 0.25, kit['dig'], int(40 * vel + rng.randint(0, 5))))
-    return base | Clip([(a, d, p, max(1, min(127, v))) for a, d, p, v in extra], length=4.0 * bars)
+CHANGES = {
+    'A1': 'Fm9 Dbmaj7#11 Bbm9 Eb7sus4:0.5 Eb7b9:0.5 | Abmaj9 Dm7b5:0.5 G7b9:0.5 Cm9:0.5 F7b9:0.5 Bbm7:0.5 Eb7sus4:0.5',
+    'A2': 'Fm9 Dbmaj7#11 Bbm9 Eb7sus4:0.5 Eb7b9:0.5 | Abmaj9 Cm7:0.5 F7b9:0.5 Bbm9:0.5 Eb13:0.5 Abmaj9:0.5 Ab13:0.5',
+    'B': 'Dbmaj9 Gb13#11 Cm9 F7alt | Bbm9 Dbm6 Emaj7#11 Eb7sus4:0.5 Eb7b9:0.5',
+    'A3': 'Fm9 Dbmaj7#11 Bbm9 Eb7sus4:0.5 Eb7b9:0.5 | Abmaj9 Cm7:0.5 F7b9:0.5 Bbm9:0.5 Eb13:0.5 Abmaj9:0.5 C7alt:0.5',
+    'A3o': 'Fm9 Dbmaj7#11 Bbm9 Eb7sus4:0.5 Eb7b9:0.5 | Abmaj9 Cm7:0.5 F7b9:0.5 Bbm9:0.5 Eb13:0.5 Abmaj9:0.5 F7alt:0.5',
+    'intro': 'Dbmaj9 Cm9 Bbm9 Eb7sus4:0.5 Eb7b9:0.5',
+    'tag': 'Bbm9:0.5 Eb13:0.5 Cm7:0.5 F7alt:0.5 Bbm9:0.5 Eb7sus4:0.5 Dbm6:0.5 Gb13:0.5',
+}
+FORM = 'intro:4 head:AABA piano_solo:AABA bass_solo:AA head_out:B,A3o tag:4 end:2'
 
 
 # ------------------------------------------------------------------------------------------------ the head
@@ -206,9 +112,7 @@ END_RH = hold('D5=72 G5=76 Bb5=78 C6=84 Eb6=100', 7.6, length=8)
 
 def build() -> Song:
     s = Song('Perry Street Rain', tempo=TEMPO, key='Ab major', seed=5, tail=6)
-    secs = [('intro', 4), ('head', 32), ('piano_solo', 32), ('bass_solo', 16), ('head_out', 16), ('tag', 4),
-            ('end', 2)]
-    intro, head, solo, bsolo, hout, tag, end = (s.section(n, bars=b) for n, b in secs)
+    intro, head, solo, bsolo, hout, tag, end = s.form(FORM, parts=CHANGES)
     feel = jazz.Feel(TEMPO, ratio=0.5, layback={'piano': 9, 'comp': 5, 'bass': -2, 'drums': 0})
     # dynamics pass: touch() plays the melody ~3 dB louder on average and its accents hit the master limiter (at
     # the preset's drive the loudest solo onsets lost up to 7 dB, 9.4 dB of onset spread into the master, 5.2 out)
@@ -221,171 +125,114 @@ def build() -> Song:
     b.piano.add_fx(fx.eq({'high.freq': 5500, 'high.gain': 2.0}))
     b.comp.add_fx(fx.eq({'high.freq': 4200, 'high.gain': 1.5}))
     s.master.add_fx(fx.eq({'high.freq': 8000, 'high.gain': 2.5}), first=True)   # air (the room IR is dark)
-    P = {k: s.prog(v) for k, v in (('A1', A1), ('A2', A2), ('B', BR), ('A3', A3), ('A3o', A3_OUT),
-                                   ('intro', INTRO), ('tag', TAG), ('end', END))}
-    form = [('A1', 0), ('A2', 8), ('B', 16), ('A3', 24)]
     rng = random.Random(9)
+    # one pianist for the whole song (jazz.chorus -> pianist.arrange per part: the right hand harmonized, decorated
+    # and filled, the left hand on the comping track, the pedal with the harmony, lifted for runs): the ornament
+    # budget (fast two-key alternations about one per 16 bars) counts song-wide in the Memory
+    mem = pianist.Memory()
+    play = functools.partial(jazz.chorus, b, memory=mem, record=ARRANGED, defaults=dict(
+        piano=dict(lh='guide', lh_vel=56), bass=dict(straight=True), drums=dict(straight=True, style='ballad')))
 
-    def comp(sec, part, bar, style, dens, inten, seed, answer=None, voicing='rootless', reg=('A2', 'G4'),
-             roll=(8, 22), vel=None):
-        c = jazz.comp(P[part], style=style, voicing=voicing, density=dens, intensity=inten, seed=seed,
-                      register=reg, answer=answer, vel=vel)
-        b.comp.play(c.roll(roll, seed=rng, bpm=TEMPO), sec.bar(bar))     # rolled grips (a seeded speed)
-
-    def bass(sec, part, bar, seed, vel, style='two', pickups=0.5):
-        # a bassist's touch on the line (jazz.bass_touch): 4-bar arcs around `vel`, the root on 1 leading, the
-        # pushed 8ths lighter, anticipations leaning in - the evened Meatbass answers it (~6 dB per phrase)
-        line = jazz.bass_touch(even_bass(P[part], seed, vel, style, pickups), vel * 0.84, vel * 1.22, accent='1-3',
-                               seed=seed)
-        b.bass.play(line, sec.bar(bar))
-
-    hands_memory = pianist.Memory()
     # ============================================================== intro: piano alone, rubato, pedalled
     # pianist moves on top of the rolled grips: a trill on the Cm9's 9th (D-Eb, the pedal lifted for it), a turn on
     # the high C, an arpeggio sweep down the Eb7b9 into the head
     b.comp.play(INTRO_LH.strum(ms=60, bpm=TEMPO), intro)
     b.piano.play(INTRO_RH.roll((30, 45), seed=rng, bpm=TEMPO), intro)
     b.piano.play(pianist.trill('D5', 2.5, TEMPO, chord='Cm9', rate=13.5, vel=66, seed=11), intro.beat(4))
-    hands_memory.played(intro.beat(4), 'trill')      # the ornament budget counts it (pianist.Memory)
-    hands_memory.save(solo.bar(31))                  # ... and saves its fast figure for the climax (solo A3's end)
+    mem.played(intro.beat(4), 'trill')              # the ornament budget counts it (pianist.Memory)
+    mem.save(solo.bar(31))                          # ... and saves its fast figure for the climax (solo A3's end)
     b.piano.play(pianist.turn('C6', 1.5, TEMPO, chord='Bbm9', vel=88, ms=80), intro.beat(10.5))
     b.piano.play(pianist.sweep('Eb7b9', 1.35, TEMPO, low='C5', high='Db6', direction='down', ring=False,
                                vel=(62, 44), seed=12), intro.beat(14.5))
-    b.piano.automate('instrument.pedal', pianist.pedal(P['intro'], intro, dry=[(4.0, 5.9)]))
-    jazzband.pedal([b.comp], P['intro'], intro)
+    b.piano.automate('instrument.pedal', pianist.pedal(intro.prog, intro, dry=[(4.0, 5.9)]))
+    jazzband.pedal([b.comp], intro)
     b.drums.play(jazz.brush_fill('swell', 2, kit=kit, vel=(14, 46)), intro.beat(-2))
-
-    def hands(sec, part, bar, mel, *, pedal_rh=True, lh='guide', lh_vel=56, bpm=TEMPO, **kw):
-        """The pianist plays `mel` over P[part]: the right hand harmonized, decorated and filled, the left hand
-        on the comping track; the piano's pedal follows the harmony and lifts for runs. One pianist.Memory for the
-        whole song: the ornament budget (fast two-key alternations about one per 16 bars) counts song-wide."""
-        at = sec.bar(bar)
-        arr = pianist.arrange(mel, P[part], bpm=bpm, key=s.key, lh=lh, lh_vel=lh_vel, memory=hands_memory, at=at,
-                              **kw)
-        b.piano.play(arr.rh, at)
-        if len(arr.lh):
-            b.comp.play(arr.lh, at)
-        if pedal_rh:
-            b.piano.automate('instrument.pedal', arr.pedal(P[part], at))
-        ARRANGED[f"{sec.name}:{part}"] = arr
-        return arr
 
     # ============================================================== head: the melody, harmonized by the pianist
     # a pianist's touch (jazz.touch) on the tune first, then pianist.arrange: phrase by phrase a voicing device
     # under the melody (guide tones, 3rds / 6ths, drop 2, quartal ...), ornaments on the long notes, fills in the
     # gaps, the left hand on the comping track (shells in the A sections, rootless voicings from the bridge) - no
     # separate comping part any more: one pianist, two hands. The head builds A1 < A2 < B, the last A settles.
-    heads = {'A1': jazz.touch(HEAD_A1, 46, 88), 'A2': jazz.touch(HEAD_A2, 48, 94), 'B': jazz.touch(HEAD_B, 54, 104),
-             'A3': jazz.touch(jazz.paraphrase(HEAD_A3, seed=3, anticipate=0.0, delay=0.0, embellish=0.15,
-                                              key=s.key), 50, 98)}
-    hands(head, 'A1', 0, heads['A1'], style='straight', density=0.45, seed=201, lh_vel=52, inner=0.76)
-    hands(head, 'A2', 8, heads['A2'], style='straight', density=0.6, seed=202, lead_in=True, lh_vel=55, inner=0.76,
-          ornaments={'trill': 2.0, 'restrike': 1.5, 'turn': 1.0, 'tremolo': 1.0, 'crush': 0.8})
-    hands(head, 'B', 16, heads['B'], style='straight', density=0.85, seed=203, lead_in=True, lh='rootless',
-          lh_vel=58, devices={'drop2': 2.5, 'octave': 1.5, 'sixths': 1.5, 'quartal': 1.5, 'guide': 1.0},
-          fills={'run': 2.0, 'fourths': 2.0, 'arpeggio': 2.0, 'hands': 1.0, 'chromatic': 1.0},
-          ornaments={'tremolo': 2.0, 'trill': 1.0, 'restrike': 1.0, 'turn': 1.0})
-    hands(head, 'A3', 24, heads['A3'], style='lush', density=0.6, seed=204, lead_in=True, lh='rootless',
-          lh_vel=54)
-    jazzband.pedal([b.comp], P['A1'] + P['A2'] + P['B'] + P['A3'], head)
-    bass(head, 'A1', 0, 31, 81, 'two', 0.35)
-    bass(head, 'A2', 8, 32, 85, 'two', 0.6)
-    bass(head, 'B', 16, 33, 92, 'push')
-    bass(head, 'A3', 24, 34, 92, 'push')
-    b.drums.play(even_brushes(b, 8, 41, vel=0.52), head)
-    b.drums.play(even_brushes(b, 8, 42, vel=0.7, ghosts=0.4, kick='even'), head.bar(8))
-    b.drums.play(even_brushes(b, 16, 43, vel=0.8, ghosts=0.55, kick='even'), head.bar(16))
+    play(head, [HEAD_A1, HEAD_A2, HEAD_B, jazz.paraphrase(HEAD_A3, seed=3, anticipate=0.0, delay=0.0, embellish=0.15,
+                                                         key=s.key)],
+         piano=dict(style='straight', seed=201, lead_in=True, touch=jazz.each((46, 88), (48, 94), (54, 104), (50, 98)),
+                    A1=dict(density=0.45, lead_in=False, lh_vel=52, inner=0.76),
+                    A2=dict(density=0.6, lh_vel=55, inner=0.76,
+                            ornaments={'trill': 2.0, 'restrike': 1.5, 'turn': 1.0, 'tremolo': 1.0, 'crush': 0.8}),
+                    B=dict(density=0.85, lh='rootless', lh_vel=58,
+                           devices={'drop2': 2.5, 'octave': 1.5, 'sixths': 1.5, 'quartal': 1.5, 'guide': 1.0},
+                           fills={'run': 2.0, 'fourths': 2.0, 'arpeggio': 2.0, 'hands': 1.0, 'chromatic': 1.0},
+                           ornaments={'tremolo': 2.0, 'trill': 1.0, 'restrike': 1.0, 'turn': 1.0}),
+                    A3=dict(style='lush', density=0.6, lh='rootless', lh_vel=54)),
+         bass=dict(seed=31, feel=jazz.each('two', 'two', 'push', 'push'), vel=jazz.each(81, 85, 92, 92),
+                   pickups=jazz.each(0.35, 0.6, 0.5, 0.5)),
+         drums=[(8, dict(seed=41, vel=0.52)), (8, dict(seed=42, vel=0.7, ghosts=0.4, kick='even')),
+                (16, dict(seed=43, vel=0.8, ghosts=0.55, kick='even'))])
 
     # ============================================================== piano solo: lines, two hands, the climax
     # A1 the motif with guide tones and answers over left-hand shells; A2 an improvised line (jazz.solo_line with
     # the hook as motif) with runs / 4ths in its gaps; B two-handed chords (locked hands, drop 2) with tremolos, a
     # shake and alternating-hands breaks; A3 the climax: the hook an octave up in octaves, blues crushes, repeated
     # notes, octave runs. The right hand plays the lines dry (no pedal) except in the chordal bridge.
-    line_a2 = jazz.solo_line(P['A2'], key=s.key, register=('Bb4', 'Db6'), density=0.7, intensity=0.6, seed=14,
-                             motif=HEAD_A1.slice(0, 4), motif_prob=0.5, phrase_bars=(1, 2), triplets=0.15)
-    hands(solo, 'A1', 0, jazz.touch(SOLO_A1, 56, 104), style='sparse', density=0.55, seed=301, lead_in=True,
-          pedal_rh=False, lh_vel=56, fills={'answer': 2.0, 'run': 1.5, 'pentatonic': 1.0},
-          ornaments={'mordent': 1.0, 'crush': 1.0, 'turn': 1.0, 'trill': 1.0})
-    hands(solo, 'A2', 8, jazz.touch(line_a2, 60, 108), style='straight', density=0.6, seed=302, lead_in=True,
-          pedal_rh=False, lh_vel=58, devices={'single': 3.0, 'guide': 2.0, 'thirds': 1.0},
-          fills={'run': 2.0, 'chromatic': 2.0, 'fourths': 2.0, 'pentatonic': 1.5},
-          ornaments={'trill': 1.5, 'mordent': 1.0, 'turn': 1.0, 'crush': 1.0})
-    hands(solo, 'B', 16, jazz.touch(SOLO_B, 72, 114), style='lush', density=0.85, seed=303, lead_in=True, embellish=0.3,
-          lh='rootless', lh_vel=62, voices=3, devices={'locked': 3.0, 'drop2': 2.0, 'octave': 1.0},
-          ornaments={'tremolo': 1.5, 'restrike': 1.0, 'roll': 0.6, 'turn': 0.6},
-          fills={'hands': 3.0, 'arpeggio': 1.0, 'tremolo': 1.0})
-    hands(solo, 'A3', 24, jazz.touch(SOLO_A3, 76, 116), style='bar', climax=True, density=0.9, seed=332,
-          lead_in=True, pedal_rh=False, lh='rootless', lh_vel=66, quick=0.15,
-          ornaments={'blues_crush': 2.0, 'slip': 0.5, 'crush': 0.5, 'repeated': 1.5, 'trill': 1.0, 'tremolo': 1.0,
-                     'shake': 1.5},
-          fills={'hands': 3.0, 'octave_run': 1.0, 'chromatic': 1.0, 'repeated': 0.5})
-    bass(solo, 'A1', 0, 61, 86, 'push')
-    bass(solo, 'A2', 8, 62, 90, 'push')
-    bass(solo, 'B', 16, 63, 92, 'push')
-    bass(solo, 'A3', 24, 64, 96, 'drive')
-    b.drums.play(even_brushes(b, 8, 71, vel=0.8, ghosts=0.5, kick='even'), solo)
-    b.drums.play(even_brushes(b, 8, 72, vel=0.85, ghosts=0.3, kick='even', hat8=0.8), solo.bar(8))
-    b.drums.play(even_brushes(b, 8, 73, vel=0.9, kick='even', hat8=0.9), solo.bar(16))
-    b.drums.play(even_brushes(b, 8, 74, vel=1.0, kick='even', ride=0.95), solo.bar(24))
+    line_a2 = jazz.solo_line(head.part('A2').prog, key=s.key, register=('Bb4', 'Db6'), density=0.7, intensity=0.6,
+                             seed=14, motif=HEAD_A1.slice(0, 4), motif_prob=0.5, phrase_bars=(1, 2), triplets=0.15)
+    play(solo, [SOLO_A1, line_a2, SOLO_B, SOLO_A3], lh_pedal=False, piano=dict(
+        seed=301, lead_in=True, pedal=False, touch=jazz.each((56, 104), (60, 108), (72, 114), (76, 116)),
+        A1=dict(style='sparse', density=0.55, fills={'answer': 2.0, 'run': 1.5, 'pentatonic': 1.0},
+                ornaments={'mordent': 1.0, 'crush': 1.0, 'turn': 1.0, 'trill': 1.0}),
+        A2=dict(style='straight', density=0.6, lh_vel=58, devices={'single': 3.0, 'guide': 2.0, 'thirds': 1.0},
+                fills={'run': 2.0, 'chromatic': 2.0, 'fourths': 2.0, 'pentatonic': 1.5},
+                ornaments={'trill': 1.5, 'mordent': 1.0, 'turn': 1.0, 'crush': 1.0}),
+        B=dict(style='lush', density=0.85, pedal=True, embellish=0.3, lh='rootless', lh_vel=62, voices=3,
+               devices={'locked': 3.0, 'drop2': 2.0, 'octave': 1.0},
+               ornaments={'tremolo': 1.5, 'restrike': 1.0, 'roll': 0.6, 'turn': 0.6},
+               fills={'hands': 3.0, 'arpeggio': 1.0, 'tremolo': 1.0}),
+        A3=dict(style='bar', climax=True, density=0.9, seed=332, lh='rootless', lh_vel=66, quick=0.15,
+                ornaments={'blues_crush': 2.0, 'slip': 0.5, 'crush': 0.5, 'repeated': 1.5, 'trill': 1.0,
+                           'tremolo': 1.0, 'shake': 1.5},
+                fills={'hands': 3.0, 'octave_run': 1.0, 'chromatic': 1.0, 'repeated': 0.5})),
+        bass=dict(seed=61, feel=jazz.each('push', 'push', 'push', 'drive'), vel=jazz.each(86, 90, 92, 96)),
+        drums=dict(seed=71, kick='even', vel=jazz.each(0.8, 0.85, 0.9, 1.0), ghosts=jazz.each(0.5, 0.3, 0, 0),
+                   hat8=jazz.each(0, 0.8, 0.9, 0), ride=jazz.each(0, 0, 0, 0.95)))
     b.drums.play(Clip([(0, 2, kit['crash'], 40)], length=4), solo.bar(24))
 
     # ============================================================== bass solo: the hook in the bass, piano whispers
     b.bass.play(jazz.touch(BASS_SOLO, 68, 96), bsolo)        # the solo sung like a melody: phrase arcs, peaks
-    bend = []
-    for bar, beat, frm in BASS_SLIDES:
-        t = bsolo.bar(bar) + beat
-        bend += [(t - 0.03, 0.0, 'step'), (t - 0.01, frm, 'step'), (t + 0.2, 0.0, 'smooth')]
-    b.bass.automate('instrument.pitchbend', bend)
-    # the bassist steps up for the solo: +1 dB, then back ('gainDb' lanes are dB on the track's gain_db)
-
-    b.bass.automate('gainDb', [(0, 0.0), (bsolo.start - 1, 0.0), (bsolo.start, 1.0, 'smooth'),
-                               (hout.start - 1, 1.0), (hout.start, 0.0, 'smooth')])
-    comp(bsolo, 'A1', 0, 'sparse', 0.3, 0.22, 131, answer=BASS_SOLO.slice(0, 32), voicing='shell',
-         reg=('C3', 'A4'), roll=(20, 40), vel=44)                     # the piano whispers under the bass
-    comp(bsolo, 'A2', 8, 'sparse', 0.3, 0.25, 132, answer=BASS_SOLO.slice(32, 64), voicing='shell',
-         reg=('C3', 'A4'), roll=(20, 40), vel=46)
-    jazzband.pedal([b.comp], P['A1'] + P['A2'], bsolo)
+    b.bass.automate('instrument.pitchbend', jazz.slides(bsolo, BASS_SLIDES))
+    b.bass.feature(bsolo, db=1.0)                            # the bassist steps up for the solo: +1 dB, then back
+    play(bsolo, BASS_SOLO, bass=None, drums=dict(seed=141, vel=0.55, fills=False),     # the piano whispers under it
+         comp=dict(style='sparse', voicing='shell', density=0.3, intensity=jazz.each(0.22, 0.25), seed=131,
+                   register=('C3', 'A4'), vel=jazz.each(44, 46), roll=(20, 40), roll_seed=rng))
     # the piano announces the head out: a glissando-like Ab13 scale sweep up into its first note (F5)
     b.piano.play(pianist.gliss('F5', 1.0, TEMPO, chord='Ab13', span=17, vel=(40, 84), seed=13), bsolo.beat(-1))
-    b.drums.play(even_brushes(b, 16, 141, vel=0.55, fills=False), bsolo)
     b.drums.play(jazz.brush_fill('swell', 2, kit=kit, vel=(22, 56)), bsolo.beat(-2))
 
     # ============================================================== head out: the bridge lush, the last A quiet
-    hands(hout, 'B', 0, jazz.touch(HEAD_B, 66, 108), style='lush', density=0.85, seed=401, lead_in=True,
-          lh='rootless', lh_vel=60, devices={'drop2': 3.0, 'locked': 1.5, 'close': 1.5, 'ust': 1.0},
-          fills={'arpeggio': 2.0, 'fourths': 1.0, 'run': 1.0})
-    last_a = jazz.touch(jazz.paraphrase(HEAD_A3_OUT, seed=8, anticipate=0.0, embellish=0.1, key=s.key), 48, 88)
-    hands(hout, 'A3o', 8, last_a, style='sparse', density=0.45, seed=402, lead_in=True, lh_vel=50,
-          ornaments={'trill': 1.5, 'turn': 1.0, 'mordent': 1.0, 'restrike': 1.0},
-          fast_every=16)                               # sparse plays no fast figure - except a trill on the last note
-    jazzband.pedal([b.comp], P['B'] + P['A3o'], hout)
-    bass(hout, 'B', 0, 161, 93, 'push')
-    bass(hout, 'A3o', 8, 162, 81, 'two', 0.4)
-    b.drums.play(even_brushes(b, 8, 171, vel=0.85, ghosts=0.5, kick='even'), hout)
-    b.drums.play(even_brushes(b, 8, 172, vel=0.6, ghosts=0.2), hout.bar(8))
+    play(hout, [HEAD_B, jazz.paraphrase(HEAD_A3_OUT, seed=8, anticipate=0.0, embellish=0.1, key=s.key)], piano=dict(
+        seed=401, lead_in=True,
+        B=dict(touch=(66, 108), style='lush', density=0.85, lh='rootless', lh_vel=60,
+               devices={'drop2': 3.0, 'locked': 1.5, 'close': 1.5, 'ust': 1.0},
+               fills={'arpeggio': 2.0, 'fourths': 1.0, 'run': 1.0}),
+        A3o=dict(touch=(48, 88), style='sparse', density=0.45, lh_vel=50,
+                 ornaments={'trill': 1.5, 'turn': 1.0, 'mordent': 1.0, 'restrike': 1.0},
+                 fast_every=16)),               # sparse plays no fast figure - except a trill on the last note
+        bass=dict(seed=161, feel=jazz.each('push', 'two'), vel=jazz.each(93, 81), pickups=jazz.each(0.5, 0.4)),
+        drums=[(8, dict(seed=171, vel=0.85, ghosts=0.5, kick='even')), (8, dict(seed=172, vel=0.6, ghosts=0.2))])
 
     # ============================================================== tag + ending
     # the tag as a ballad (rolled voicings, a trill / tremolo on its long notes); the moves are timed for the
     # ritardando's slower tempo
-    tag_arr = hands(tag, 'tag', 0, jazz.touch(TAG_RH, 46, 86), style='ballad', density=0.55, seed=501, lead_in=True,
-                    pedal_rh=False, lh='rootless', lh_vel=48, bpm=TEMPO * 0.85, section_end=False)
-    b.piano.automate('instrument.pedal', tag_arr.pedal(P['tag'], tag, end=end.start - 0.1))
-    jazzband.pedal([b.comp], P['tag'], tag, end=end.start - 0.1)
-    bass(tag, 'tag', 0, 191, 82, 'two', 0.3)
-    b.drums.play(even_brushes(b, 3, 201, vel=0.5, fills=False), tag)
+    play(tag, TAG_RH, pedal_end=end.start - 0.1, piano=dict(
+        touch=(46, 86), style='ballad', density=0.55, seed=501, lead_in=True, lh='rootless', lh_vel=48,
+        bpm=TEMPO * 0.85, section_end=False),
+        bass=dict(seed=191, vel=82, feel='two', pickups=0.3), drums=[(3, dict(seed=201, vel=0.5, fills=False))])
     b.drums.play(jazz.brush_fill('swell', 4, kit=kit, vel=(12, 44)), tag.beat(-4))
-    b.comp.play(END_LH.strum(ms=70, bpm=TEMPO * 0.72), end)
-    b.piano.play(END_RH.strum(ms=80, bpm=TEMPO * 0.72).shift(0.25), end)
-    for t in (b.piano, b.comp):
-        t.automate('instrument.pedal', [(-0.05, 0.0, 'step'), (0.02, 1.0, 'step')], at=end)
-    b.bass.note('Ab1', end, dur=7, vel=92)
-    b.drums.play(Clip([(0, 8, kit['crash'], 28), (0, 0.5, kit['kick'], 30), (0, 2, kit['sweep'], 56),
-                       (2, 2, kit['sweep'], 44), (4, 3, kit['sweep'], 32)], length=8), end)
 
     # ============================================================== time
     s.rubato(intro, depth=0.06, phrase='lean')
-    s.ritardando((tag.bar(2), end.start), to=0.72, a_tempo=False)
-    s.fermata(end.start, hold=2, length=4)
-    for t in (b.piano, b.comp):
-        t.automate('send.room', ramp(end.start, end.end, -13, -8))
+    # Abmaj9#11 rolled from the left hand up into the pedal, the bass's Ab1, a soft cymbal and dying stirs;
+    # ritardando, fermata, the room rings
+    s.ending(end, chords=[(b.comp, END_LH, 70), (b.piano, END_RH, 80, 0.25)], bass=(b.bass, 'Ab1', 7, 92),
+             drums=(b.drums, jazz.last_stir(kit, 8, last=3)), rit=tag.bar(2), to=0.72, hold=2, length=4,
+             room=(-13, -8))
     return s

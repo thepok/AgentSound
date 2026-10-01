@@ -474,6 +474,7 @@ class _Ctx:
         self.ref_stack: list[str] = []
         self.bare = False                # bare phrase names resolve (phrases(): only in the line given to H(...))
         self.slurs: list[list[_Rec]] = []
+        self.expand = True               # notes(expand=False): ornaments listed in line.ornaments, not played
 
     def voice(self, name: str) -> _Voice:
         v = self.voices.get(name)
@@ -992,14 +993,15 @@ class _Builder:
 
 class Line(Clip):
     """A Clip parsed from notation (or composed from phrases), plus what the notation knows about it: voices
-    ({label: Line}), gestures (pitch moves track.play() writes), peaks (beats of ^peak notes), meter, pickup and
-    the spec. shift / transpose / octave / velocity / with_length keep them; other Clip transforms return plain
-    Clips."""
+    ({label: Line}), gestures (pitch moves track.play() writes), peaks (beats of ^peak notes), meter, pickup, the
+    spec and ornaments (notes(expand=False): the ornaments as written, for a player to realize). shift / transpose /
+    octave / velocity / with_length keep them; other Clip transforms return plain Clips."""
 
-    __slots__ = ('voices', 'gestures', 'peaks', 'meter', 'pickup', 'spec')
+    __slots__ = ('voices', 'gestures', 'peaks', 'meter', 'pickup', 'spec', 'ornaments')
 
     @classmethod
-    def _make(cls, notes, length, voices=None, gestures=(), peaks=(), meter=(4, 4), pickup=0.0, spec=''):
+    def _make(cls, notes, length, voices=None, gestures=(), peaks=(), meter=(4, 4), pickup=0.0, spec='',
+              ornaments=()):
         c = cls.__new__(cls)
         c._notes = tuple(sorted(notes, key=lambda n: (n.start, n.pitch)))
         c.length = float(length)
@@ -1009,6 +1011,7 @@ class Line(Clip):
         c.meter = meter
         c.pickup = float(pickup)
         c.spec = spec
+        c.ornaments = list(ornaments)
         return c
 
     def __repr__(self) -> str:
@@ -1017,7 +1020,9 @@ class Line(Clip):
 
     def _carry(self, c: Clip, shift: float = 0.0) -> 'Line':
         return Line._make(c._notes, c.length, {}, [dict(g, start=g['start'] + shift) for g in self.gestures],
-                          [p + shift for p in self.peaks], self.meter, self.pickup, self.spec)
+                          [p + shift for p in self.peaks], self.meter, self.pickup, self.spec,
+                          [dict(o, start=o['start'] + shift, notes=[n._replace(start=n.start + shift)
+                                                                     for n in o['notes']]) for o in self.ornaments])
 
     def shift(self, by: float) -> 'Line':
         return self._carry(super().shift(by), by)
@@ -1089,7 +1094,7 @@ def _settings(kw: dict, where: str = 'notes') -> dict:
 
 
 def notes(spec, *, length=None, pickup=0, bpm=None, at=0.0, refs=None, transpose: int = 0, steps: int = 0,
-          **settings) -> Line:
+          expand: bool = True, **settings) -> Line:
     """Notation -> a Line (a Clip; grammar: the module docstring / docs/COMPOSE_API.md "Notation"). spec: a string,
     or {voice label: string}. Settings (inline too, as name=value): vel (base velocity = 'mf', 96), dur (the first
     duration, 1/8), gate (sounding x written), gap (beats off every note), unit (what a bare number counts: beats;
@@ -1099,7 +1104,10 @@ def notes(spec, *, length=None, pickup=0, bpm=None, at=0.0, refs=None, transpose
     (default: where the line ends; 'bar': up to whole bars); pickup: beats before bar 1 (they start at -pickup, so
     the downbeat lands where the line is placed); bpm (a number or a function of the beat, e.g. s.tempo_at) and at
     (the line's position) for ornaments; refs: named phrases for $name; transpose / steps move the whole line
-    (semitones / scale steps of key=)."""
+    (semitones / scale steps of key=). expand=False: the ornaments (^tr ^turn ^mord ^crush, ^roll / ^strum chords,
+    ^fig groups) are not played - their notes are left out of the line and listed in line.ornaments (dicts: kind,
+    start, dur, pitch, pitches, vel, args, kw, voice, notes = the written notes) for a player to realize in its own
+    way (romantic.score); no bpm needed."""
     if 'tr' in settings or 'st' in settings:
         raise ComposeError("notes(): transpose= / steps= move the whole line (tr= / st= are the inline settings)")
     st = _settings(settings)
@@ -1125,6 +1133,7 @@ def notes(spec, *, length=None, pickup=0, bpm=None, at=0.0, refs=None, transpose
             raise ComposeError(f"notes(): bpm must be 20..400 or a function of the beat, got {bpm!r}")
     ctx = _Ctx(st, ref_map, pk, bpm, float(getattr(at, 'start', at)))
     ctx.bare = isinstance(refs, Phrases)                    # H('a1 a2'): bare names; refs={...}: $name only
+    ctx.expand = bool(expand)
     _Builder(ctx).run(parse_tree(text), ctx.voice(''), top=True)
     return _finish(ctx, length, text)
 
@@ -1215,8 +1224,11 @@ def _finish(ctx: _Ctx, length, text: str) -> Line:
                               overlap=ctx.voices[out[idx[0]][0]].st['slur'], max_gap=1e9)
             for i, n2 in zip(idx, leg):
                 out[i] = (out[i][0], n2, out[i][2])
-    if pend:
+    unexpanded = []
+    if pend and ctx.expand:
         out += _ornaments(ctx, pend)
+    elif pend:
+        unexpanded = _written_ornaments(pend)
     end = max((vv.t for vv in voices), default=Fraction(0))
     meter = voices[0].st['meter'] if voices else (4, 4)
     if length is None:
@@ -1227,13 +1239,35 @@ def _finish(ctx: _Ctx, length, text: str) -> Line:
     else:
         from .patterns import beats as _b
         L = _b(length)
-    line = Line._make([n for _, n, _ in out], L, None, gestures, peaks, meter, float(ctx.pickup), text)
+    line = Line._make([n for _, n, _ in out], L, None, gestures, peaks, meter, float(ctx.pickup), text, unexpanded)
     if any(vv.name for vv in voices):
         line.voices = {vv.name or 'main': Line._make([n for name, n, _ in out if name == vv.name], L, None,
                                                      [g for g in gestures if g['voice'] == vv.name],
-                                                     [], vv.st['meter'], float(ctx.pickup), '')
+                                                     [], vv.st['meter'], float(ctx.pickup), '',
+                                                     [o for o in unexpanded if o['voice'] == vv.name])
                        for vv in voices}
     return line
+
+
+def _written_ornaments(pend: list) -> list:
+    """notes(expand=False): the ornaments as written (one dict per ornament, by start)."""
+    out, groups = [], {}
+    for r, n in pend:
+        if r.group is not None:
+            groups.setdefault(id(r.group[0]), []).append((r, n))
+            continue
+        name, pos, kw = r.orn
+        out.append({'kind': name, 'start': n.start, 'dur': n.dur, 'pitch': n.pitch, 'pitches': [n.pitch],
+                    'vel': n.vel, 'args': list(pos), 'kw': dict(kw), 'voice': r.voice, 'notes': [n]})
+    for members in groups.values():
+        r0 = members[0][0]
+        name, pos, kw = r0.group[1]
+        ns = sorted((n for _, n in members), key=lambda n: (n.start, n.pitch))
+        dur = float(r0.group[2]) if len(r0.group) > 2 else max(n.dur for n in ns)
+        out.append({'kind': name, 'start': ns[0].start, 'dur': dur, 'pitch': ns[0].pitch,
+                    'pitches': [n.pitch for n in ns], 'vel': max(n.vel for n in ns), 'args': list(pos),
+                    'kw': dict(kw), 'voice': r0.voice, 'notes': ns})
+    return sorted(out, key=lambda o: o['start'])
 
 
 def _factor_fn(marks: list, curve: str):

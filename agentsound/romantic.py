@@ -33,12 +33,11 @@ from __future__ import annotations
 import math
 import random
 
-from .patterns import Clip, Note, _vel, seed_int
+from .patterns import Clip, Note, _vel, as_clip, seed_int
 from .theory import ComposeError, Key, note
 
 __all__ = ['SHAPES', 'LEVELS', 'fioritura', 'grace', 'turn', 'trill', 'accompany', 'lean_on_long', 'cantabile',
-           'dynamics',
-           'melody_rubato', 'pedal_changes', 'decay_db', 'figure_stats']
+           'dynamics', 'melody_rubato', 'pedal_changes', 'decay_db', 'figure_stats', 'score', 'Score', 'Event']
 
 _EPS = 1e-6
 
@@ -667,3 +666,394 @@ def figure_stats(clip: Clip, bpm) -> dict:
             'fastest_ms': round(1000 * min(secs), 1), 'slowest_ms': round(1000 * max(secs), 1),
             'ends_vs_middle': round((sum(ends) / len(ends)) / (sum(mid) / len(mid)), 2),
             'cv': round(sd / mean, 3)}
+
+
+# ------------------------------------------------------------------------------------------------ written scores
+
+_accompany = accompany
+
+
+class Event:
+    """One right-hand event of a Score: kind ('note', 'chord' = notes struck together as written, or the ornament
+    of the notation: 'trill', 'turn', 'mordent', 'prall', 'crush', 'roll', 'strum', 'fig'), at / dur (beats; a
+    note's dur includes its holds), pitches, factor (the written accent: ! > 1, ? < 1), args / kw (the ornament's
+    arguments as written: ^tr(upper), ^turn(upper=1, lower=-1), ^fig(even), ^roll(60))."""
+
+    __slots__ = ('kind', 'at', 'dur', 'pitches', 'factor', 'args', 'kw')
+
+    def __init__(self, kind, at, dur, pitches, factor=1.0, args=(), kw=None):
+        self.kind, self.at, self.dur, self.pitches = kind, float(at), float(dur), tuple(pitches)
+        self.factor, self.args, self.kw = factor, tuple(args), dict(kw or {})
+
+    @property
+    def pitch(self) -> int:
+        return self.pitches[0]
+
+    @property
+    def top(self) -> int:
+        return max(self.pitches)
+
+    def __repr__(self) -> str:
+        return f"Event({self.kind}, at {self.at:g}, dur {self.dur:g}, {list(self.pitches)})"
+
+
+def _lh_entries(specs: list, t0: float, slot: float, unit: float, slots: int, where: str) -> list:
+    """Left-hand entries of one bar: slot specs 'BASS:CHORD[/CHORD2][@off+len][|pattern]' (chord notes joined by
+    '.', ';' = several entries in one slot, '-' = no bass; off / len in units)."""
+    if len(specs) != slots:
+        raise ComposeError(f"{where}: {len(specs)} left-hand slots, the meter has {slots}: {' '.join(specs)!r}")
+    out = []
+    for i, sp in enumerate(specs):
+        for part in sp.split(';'):
+            pat = 'bcc'
+            if '|' in part:
+                part, pat = part.split('|')
+            off, ln = 0.0, slot / unit
+            if '@' in part:
+                part, span = part.split('@')
+                off, ln = (float(x) for x in span.split('+'))
+            bass, _, chords = part.partition(':')
+            if not chords:
+                raise ComposeError(f"{where}: left-hand slot {part!r} must be BASS:CHORD (C2:G3.C4.E4)")
+            ch = [c.split('.') for c in chords.split('/')]
+            out.append((t0 + i * slot + off * unit, ln * unit, None if bass == '-' else bass, ch[0],
+                        ch[1] if len(ch) > 1 else ch[0], pat))
+    return out
+
+
+class Score:
+    """A written piano score (romantic.score): the right hand in notation with its ornaments as written, the left
+    hand as accompaniment entries, dynamics, phrases. .bar(k), .events, .entries, .dyn (beat, level), .phrases;
+    .perform(song, rh_track, lh_track) plays it like a pianist; .rubato(song) / .touch(clip, levels) are the
+    phrase loops of a slow piece."""
+
+    def __init__(self, rh=None, lh=None, dyn=None, *, meter='4/4', pickup=0, unit='1/8', key=None, phrases=None,
+                 accent: float = 1.1, ghost: float = 0.72, refs=None):
+        from .notation import _meter_beats, _duration, notes as _notes
+        from .tempo import parse_meter
+        self.meter = parse_meter(meter, 'score meter')
+        self.bar_beats = float(_meter_beats(self.meter))
+        self.pickup = float(_duration(pickup, 'score pickup')) if pickup else 0.0
+        self.unit = float(_duration(unit, 'score unit'))
+        n, d = self.meter
+        self.slot = self.bar_beats / (n // 3) if n % 3 == 0 and d == 8 and n > 3 else 4.0 / d
+        self.key = Key(key) if key is not None else None
+        self.phrases = [tuple(p) for p in (phrases or [])]
+        self.events: list[Event] = []
+        self.line = None
+        last = 0
+        if rh is not None:
+            bars = rh if isinstance(rh, dict) else None
+            text = rh if bars is None else ' | '.join(bars[k] for k in sorted(bars))
+            if bars is not None:
+                last = max(bars)
+                if sorted(bars) != list(range(0 if self.pickup else 1, last + 1)):
+                    raise ComposeError("score rh: give every bar once, in a row (0 = the pickup)")
+            kw = {'key': self.key} if self.key is not None else {}
+            line = _notes(text, unit=unit, meter=meter, pickup=pickup, expand=False, vel=100, accent=accent,
+                          ghost=ghost, refs=refs, **kw)
+            self.line = line.shift(self.pickup) if self.pickup else line
+            evs = [Event(o['kind'], o['start'], o['dur'], o['pitches'], o['vel'] / 100, o['args'], o['kw'])
+                   for o in self.line.ornaments]
+            plain: dict = {}
+            for x in self.line:
+                plain.setdefault(x.start, []).append(x)
+            for at, ns in plain.items():
+                evs.append(Event('note' if len(ns) == 1 else 'chord', at, max(x.dur for x in ns),
+                                 sorted(x.pitch for x in ns), max(x.vel for x in ns) / 100))
+            self.events = sorted(evs, key=lambda e: e.at)
+            if bars is None:
+                last = int(math.ceil((self.line.length - self.pickup) / self.bar_beats - _EPS))
+        self.entries = []
+        if lh is not None:
+            spb = int(round(self.bar_beats / self.slot))
+            for first in sorted(lh):
+                bars_, cur = [], []
+                for t in str(lh[first]).split():          # bars: ' | ' (a pattern's '|' sits inside its slot)
+                    if t == '|':
+                        bars_.append(cur)
+                        cur = []
+                    else:
+                        cur.append(t)
+                bars_.append(cur)
+                for i, specs in enumerate(x for x in bars_ if x):
+                    k = first + i
+                    self.entries += _lh_entries(specs, self.bar(k), self.slot, self.unit, spb, f"score lh bar {k}")
+                    last = max(last, k)
+        self.bars = last
+        self.dyn = []
+        for item in (dyn or []):
+            if len(item) != 3:
+                raise ComposeError(f"score dyn: (bar, position in units, level), got {item!r}")
+            b, pos, lv = item
+            if lv not in LEVELS:
+                raise ComposeError(f"score dyn: unknown level {lv!r}; use one of {', '.join(LEVELS)}")
+            self.dyn.append((self.bar(b) + pos * self.unit, lv))
+
+    def __repr__(self) -> str:
+        return (f"Score({self.bars} bars of {self.meter[0]}/{self.meter[1]}, {len(self.events)} right-hand events, "
+                f"{len(self.entries)} left-hand entries)")
+
+    def bar(self, k) -> float:
+        """The beat of bar k (1 = the first full bar; 0 = the pickup)."""
+        if k == 0 and self.pickup:
+            return 0.0
+        return self.pickup + (k - 1) * self.bar_beats
+
+    def in_bar(self, k) -> list:
+        """The right-hand events starting in bar k."""
+        a, b = self.bar(k), self.bar(k + 1) if k else self.pickup
+        return [e for e in self.events if a - _EPS <= e.at < b - _EPS]
+
+    @property
+    def end(self) -> float:
+        return self.bar(self.bars + 1)
+
+    # ------------------------------------------------------------------ the phrase loops
+    def rubato(self, song, *, depth: float = 0.04, phrase: str = 'arch', shapes=None, seed=None, bars=None,
+               overlap: float | None = None) -> None:
+        """song.rubato over every phrase (in the bars range (first, last) when given): `phrase` (or `shapes`
+        cycled phrase by phrase), depth, seed (None: the song's; an int; 'bar' = the phrase's first bar). Two
+        phrases that share a bar meet `overlap` beats into it (the bar's last beat is the next phrase's pickup)."""
+        for i, (a, b) in enumerate(self.phrases):
+            if bars is not None and not (bars[0] <= a and b <= bars[1]):
+                continue
+            shared_start = overlap is not None and any(b0 == a for _, b0 in self.phrases)
+            shared_end = overlap is not None and any(a0 == b for a0, _ in self.phrases)
+            span = (self.bar(a) + (overlap if shared_start else 0),
+                    self.bar(b) + (overlap if shared_end else self.bar_beats))
+            sd = a if seed == 'bar' else seed
+            song.rubato(span, depth=depth, phrase=shapes[i % len(shapes)] if shapes else phrase, seed=sd)
+
+    def touch(self, clip, levels, *, gap=16, **kw) -> list:
+        """Per-phrase dynamics of a melody: for each phrase (lo, hi) = levels[(first, last)] - the notes of its
+        bars (a bar two phrases share belongs to the first) shifted to the phrase start, through touch(). Returns
+        [(phrase, beat of its start, the shaped notes sorted by (start, pitch))]; phrases without notes or with
+        hi 0 are left out."""
+        from .humanize import touch as _touch
+        done, out = set(), []
+        ns = sorted(as_clip(clip), key=lambda x: (x.start, x.pitch))
+        for a, b in self.phrases:
+            lo, hi = levels[(a, b)][:2]
+            sel = []
+            for k in range(a, b + 1):
+                if k in done:
+                    continue
+                done.add(k)
+                sel += [x._replace(start=x.start - self.bar(a)) for x in ns
+                        if self.bar(k) - _EPS <= x.start < self.bar(k + 1) - _EPS]
+            if not sel or hi == 0:
+                continue
+            out.append(((a, b), self.bar(a), sorted(_touch(Clip(sel), lo, hi, gap=gap, **kw),
+                                                     key=lambda x: (x.start, x.pitch))))
+        return out
+
+    def phrase_of(self, k) -> tuple:
+        """The phrase (first, last) bar k belongs to (the first one that holds it)."""
+        for a, b in self.phrases:
+            if a <= k <= b:
+                return a, b
+        raise ComposeError(f"bar {k} is in no phrase of the score")
+
+    # ------------------------------------------------------------------ the performance
+    def perform(self, song, rh_track, lh_track=None, *, pedal: bool = True, touch=None, breath: float = 0.3,
+                accompany=None, lh_dyn: float = 0.6, rubato=None, cap: int = 112, accent_cap: float = 118,
+                roll_bpm=None, anchors: str = 'half', pedal_opts=None, plain: bool = False) -> dict:
+        """Play the score like a romantic pianist (the nocturne etude's measured pipeline):
+          left hand first (the timekeeper: the tempo map knows its onsets) - accompany() per entry (`accompany`
+            options: vel 38, bass 1.2, first 1.0, second 0.88, top 1.06, roll_ms 14), the dynamics at a gentler
+            slope (factor ** lh_dyn)
+          right hand - the velocities from a touch() over the melody's principal notes (`touch` options: lo 64,
+            hi 96, gap 1/4, start 0.55, end 0.4, pitch 0.9; each phrase end takes `breath` beats of air for it),
+            accents x their factor (at most `accent_cap`), then every ornament in real time at the tempo map:
+            ^tr = trill() landing on the next note, ^turn = turn(), ^fig = fioritura() (ease 0.2 when even, 0.8
+            else; lighter in the middle), ^roll chords = pianist.roll at `roll_bpm` (default the song tempo); then
+            lean_on_long, cantabile, the dynamics, melody_rubato (`rubato` options: sync_ms 42, seed 3; anchors at
+            every half bar) and a cap (`cap`: the climax sings, not bangs)
+          pedal - pedal_changes() with the harmony (the left hand's bass + chord), cleared in chromatic figures
+            (`pedal_opts`: lift_ms 110, flutter_ms 320, flutter_to 0.6, tail 2 beats after the last bar)
+        plain=True: the score as the plain tools read it - the etude's 'before' baseline for an A/B: every
+        left-hand strike at one level (humanized), the figures on an even grid, pianist.trill / turn, chords rolled
+        25 ms, the dynamics as crescendo spans, no singing line, no rubato, no cleared pedal.
+        Returns {'rh': Clip, 'lh': Clip, 'pedal': points, 'figures': [(clip, bpm, at)]}."""
+        bpm = song.tempo_at
+        out: dict = {'figures': []}
+        if self.entries and lh_track is not None:
+            ns = []
+            if plain:
+                from .humanize import humanize as _human
+                for st, ln, bass, c1, c2, pat in self.entries:
+                    for i in range(int(round(ln / self.unit))):
+                        c, t = pat[i % len(pat)], st + i * self.unit
+                        if c in 'bB' and bass:
+                            ns.append(Note(t, ln - i * self.unit, note(bass), 58))
+                        if c in 'cB':
+                            ns += [Note(t, self.unit if c == 'c' else ln - i * self.unit, note(p), 58)
+                                   for p in (c1 if i <= 1 else c2)]
+                lh = self._plain_dyn(_human(Clip._raw(ns, max(n.start + n.dur for n in ns)), timing_ms=4, vel=6,
+                                            bpm=song.tempo, seed=2), lh_dyn)
+            else:
+                ac = dict(vel=38, bass=1.2, first=1.0, second=0.88, top=1.06, roll_ms=14)
+                ac.update(accompany or {})
+                for st, ln, bass, c1, c2, pat in self.entries:
+                    ns += list(_accompany([(st, ln, bass, c1, c2)], bpm, pattern=pat, seed=int(st * 3), **ac))
+                lh = Clip._raw(ns, max(n.start + n.dur for n in ns))
+                if self.dyn:
+                    lh = dynamics(lh, [(b, LEVELS[lv] ** lh_dyn) for b, lv in self.dyn])
+            lh_track.play(lh, 0)
+            out['lh'] = lh
+        if self.events:
+            rh = self._right_hand(song, bpm, touch, breath, rubato, cap, accent_cap, roll_bpm, anchors, out, plain)
+            rh_track.play(rh, 0)
+            out['rh'] = rh
+        if pedal:
+            po = dict(lift_ms=110, flutter_ms=320, flutter_to=0.6, tail=2.0)
+            po.update(pedal_opts or {})
+            tail = po.pop('tail')
+            changes, last = [], None
+            for e in sorted(self.entries, key=lambda e: e[0]):
+                h = (e[2], tuple(e[3]))
+                if e[2] and h != last:
+                    changes.append(round(e[0], 4))
+                last = h
+            flutter = []
+            for e in ([] if plain else self.events):
+                if e.kind == 'fig' and len(e.pitches) >= 6:
+                    if sum(1 for x, y in zip(e.pitches, e.pitches[1:]) if abs(x - y) == 1) >= 3:
+                        flutter.append((e.at, e.at + e.dur))
+            ped = pedal_changes(changes, end=self.end + tail, bpm=bpm, flutter=flutter, **po)
+            for t in (rh_track, lh_track):
+                if t is not None:
+                    t.automate('instrument.pedal', ped)
+            out['pedal'] = ped
+        return out
+
+    def _plain_dyn(self, clip: Clip, power: float) -> Clip:
+        """perform(plain=True): the dynamics with the tools that existed - humanize.crescendo per span of marks."""
+        from .humanize import crescendo
+        pts = [(b, LEVELS[lv] ** power) for b, lv in self.dyn]
+        for (b0, l0), (b1, l1) in zip(pts, pts[1:]):
+            if b1 > b0:
+                clip = crescendo(clip, l0, l1, span=(b0, b1 - 1e-3))
+        return clip
+
+    def _right_hand(self, song, bpm, touch_opts, breath, rubato_opts, cap, accent_cap, roll_bpm, anchors, out,
+                    plain=False):
+        from . import pianist
+        from .humanize import touch as _touch
+        sk = []
+        for e in self.events:
+            sk.append((e.at, e.dur, e.top if e.kind in ('chord', 'roll', 'strum') else e.pitch, 80))
+        sk = Clip(sk)
+        ends = {self.bar(b + 1) for _, b in self.phrases}
+        if breath:
+            sk = Clip._raw([n._replace(dur=n.dur - breath) if any(abs(n.start + n.dur - e) < 0.05 for e in ends)
+                            and n.dur > 0.6 else n for n in sk], sk.length)
+        to = dict(lo=60, hi=100, gap='1/4', start=0.35, end=0.3, pitch=0.7) if plain else \
+            dict(lo=64, hi=96, gap='1/4', start=0.55, end=0.4, pitch=0.9)
+        to.update(touch_opts or {})
+        sk = _touch(sk, **to)
+        vel = {round(n.start, 4): n.vel for n in sk}
+        rb = song.tempo if roll_bpm is None else roll_bpm
+        notes_ = []
+        for i, e in enumerate(self.events):
+            at, d = e.at, e.dur
+            v = vel.get(round(at, 4), 70)
+            if e.factor > 1:
+                v = min(accent_cap, v * e.factor)
+            elif e.factor < 1:
+                v = v * e.factor
+            nxt = self.events[i + 1] if i + 1 < len(self.events) else None
+            kw = dict(e.kw)
+            if e.kind == 'note':
+                notes_.append(Note(at, d, e.pitch, v))
+            elif e.kind == 'chord':
+                notes_ += [Note(at, d, p, v) for p in e.pitches]
+            elif e.kind == 'roll':
+                if plain:
+                    kw['ms'] = 25
+                elif e.args and isinstance(e.args[0], (int, float)):
+                    kw.setdefault('ms', e.args[0])
+                notes_ += list(pianist.roll(sorted(e.pitches), d, rb, vel=v, at=at, **kw))
+            elif plain and e.kind == 'fig':            # the notes on an even grid, the pianist's light drop
+                n = len(e.pitches)
+                f = Clip([(at + j * d / n, d / n * 1.1, p, v if j == 0 else max(1, v - 12))
+                          for j, p in enumerate(e.pitches)])
+                out['figures'].append((f, bpm, at))
+                notes_ += list(f)
+            elif plain and e.kind == 'trill':
+                f = pianist.trill(e.pitch, d, song.tempo, key=self.key or song.key, vel=v, at=at, hold=0.0)
+                out['figures'].append((f, bpm, at))
+                notes_ += list(f)
+            elif plain and e.kind == 'turn':
+                notes_ += list(pianist.turn(e.pitch, d, song.tempo, key=self.key or song.key, vel=v, at=at))
+            elif e.kind == 'fig':
+                shape = e.args[0] if e.args else kw.pop('shape', 'arch')
+                kw.setdefault('ease', 0.2 if shape == 'even' else 0.8)
+                kw.setdefault('dip', 7 if len(e.pitches) > 5 else 4)
+                f = fioritura(list(e.pitches), d, bpm, at=at, shape=shape, vel=(v, v - 6), seed=int(at * 7), **kw)
+                out['figures'].append((f, bpm, at))
+                notes_ += list(f)
+            elif e.kind == 'trill':
+                if e.args:
+                    kw.setdefault('start', e.args[0])
+                land = nxt.pitch if nxt is not None and nxt.kind in ('note', 'trill', 'turn') else None
+                f = trill(e.pitch, d, bpm, at=at, key=self.key or song.key, land=land, land_dur=0.05, vel=v,
+                          seed=int(at), **kw)
+                f = Clip([n for n in f if n.start < at + d - 1e-6])      # the landing note is the next event
+                out['figures'].append((f, bpm, at))
+                notes_ += list(f)
+            elif e.kind == 'turn':
+                if e.args:
+                    kw.setdefault('where', e.args[0])
+                notes_ += list(turn(e.pitch, d, bpm, at=at, key=self.key or song.key, vel=v, **kw))
+            elif e.kind in ('mordent', 'prall'):
+                kw.setdefault('upper', e.kind == 'prall' or (bool(e.args) and e.args[0] == 'upper'))
+                notes_ += list(pianist.mordent(e.pitch, d, _bpm_at(bpm, at), key=self.key or song.key, vel=v, at=at,
+                                               **kw))
+            elif e.kind == 'crush':
+                if e.args:
+                    kw.setdefault('grace', int(e.args[0]))
+                notes_ += list(pianist.crush(e.pitch, d, _bpm_at(bpm, at), vel=v, at=at, **kw))
+            else:   # strum
+                from .midifx import strum
+                ms = e.args[0] if e.args and isinstance(e.args[0], (int, float)) else 30.0
+                notes_ += list(strum(Clip._raw([Note(at, d, p, v) for p in e.pitches], 0.0), ms,
+                                     bpm=_bpm_at(bpm, at), **kw))
+        rh = Clip._raw(notes_, max(n.start + n.dur for n in notes_))
+        if plain:
+            return self._plain_dyn(rh, 1.0)
+        rh = lean_on_long(rh, bpm, gain=10)
+        rh = cantabile(rh, bpm)
+        if self.dyn:
+            rh = dynamics(rh, list(self.dyn))
+        ro = dict(sync_ms=42, seed=3)
+        ro.update(rubato_opts or {})
+        if anchors == 'half':
+            anc = [self.bar(k) + h * self.bar_beats / 2 for k in range(1, self.bars + 1) for h in (0, 1)]
+        elif anchors == 'bar':
+            anc = [self.bar(k) for k in range(1, self.bars + 1)]
+        else:
+            anc = list(anchors)
+        rh = melody_rubato(rh, anc + [self.end], bpm, **ro)
+        return Clip._raw([n._replace(vel=min(n.vel, cap)) for n in rh], rh.length)
+
+
+def score(rh=None, lh=None, dyn=None, *, meter='4/4', pickup=0, unit='1/8', key=None, phrases=None,
+          accent: float = 1.1, ghost: float = 0.72, refs=None) -> Score:
+    """A written piano score -> Score (play it with .perform(song, rh_track, lh_track)):
+      rh       the right hand in notation (agentsound.notation, read with unit= and meter=): a string, or
+               {bar: notation} (bar 0 = the pickup when pickup= is given; joined with bar lines). Ornaments as
+               written and realized by perform(): ^tr / ^tr(upper) / ^tr(lower=-1) trills, ^turn (upper=1,
+               lower=-1: chromatic), {..}:N^fig(even | arch | rit | accel | wave) fioriture, [..]^roll(60) rolled
+               chords; ! / ? accents x accent= / ghost= (dynamics belong in dyn=)
+      lh       {first bar: 'slot slot slot slot | next bar ...'}: per slot of the meter (a dotted quarter in 12/8,
+               a quarter in 4/4) 'BASS:CHORD[/CHORD2][@off+len][|pattern]' - accompany() entries (chord notes
+               joined by '.', ';' several entries in one slot, '-' no bass, off / len in units, the pattern of
+               b bass / c chord / B both held / . rest, default 'bcc')
+      dyn      [(bar, position in units, 'p' | 'mf' | ...)]: marks and the hairpins between them
+      phrases  [(first bar, last bar)]: the breaths of the touch, Score.rubato / Score.touch
+    meter ('12/8'), pickup (a note value: '1/8'), unit (what a bare number counts, '1/8'), key (ornaments' scale).
+    Found and measured by the nocturne etude (songs/nocturne-etude)."""
+    return Score(rh, lh, dyn, meter=meter, pickup=pickup, unit=unit, key=key, phrases=phrases, accent=accent,
+                 ghost=ghost, refs=refs)

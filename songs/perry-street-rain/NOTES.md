@@ -34,7 +34,7 @@ salon IR room. Analysis profile `jazz`. Checked in the render JSON: off-beat 8th
 "es ist, als würde ein Kind Taste für Taste drücken beim Lead - zu simpel" and "es gibt doch da so schöne Moves, z. B.
 wo zwei Tasten sehr schnell abgewechselt werden". The melody had been a bare single-note line (touch() dynamics on
 top). New library module `agentsound/pianist.py` (also `jazz.pianist`): named moves + an arranger; every piano part
-of the song now goes through it (`hands()` in song.py: `pianist.arrange(touched melody, P[part], bpm, key, style,
+of the song now goes through it (`jazz.chorus` in song.py, formerly a `hands()` closure: `pianist.arrange(touched melody, P[part], bpm, key, style,
 density, lh, seed)` -> right hand on `piano`, left hand on `comp`, the piano pedal with the harmony, lifted for runs
 and trills; `ARRANGED` keeps each Arrangement for inspection).
 
@@ -64,10 +64,10 @@ the crushed Gb5 of the C7alt turnaround.
   before long melody notes (head A2/A3, solo, tag); locked hands (solo bridge), drop-2 block chords (head-out
   bridge) and octaves (solo A3) as the climaxes; pedal changing with the harmony in intro / head / head out / tag,
   held into the last chord; a paraphrased last A.
-- Bass (`even_bass` in song.py): straight-8th jazz lines - root on 1, fifth / tenth / octave inside the bar, an
+- Bass (`jazz.walking_bass(straight=True)`, formerly `even_bass` in song.py): straight-8th jazz lines - root on 1, fifth / tenth / octave inside the bar, an
   8th-note chromatic or fifth approach (sometimes an anticipation tied over) on the & of 4; 'two' -> 'push' ->
   'drive' as the tune builds; a written solo with slides.
-- Brushes (`even_brushes`): the preset's stirs one per beat + taps and hat foot on 2 and 4, plus even-8th colour
+- Brushes (`brushes(straight=True)`, formerly `even_brushes`): the preset's stirs one per beat + taps and hat foot on 2 and 4, plus even-8th colour
   (ghost taps on the &s, feathered kick 1 / &2, brush 8ths on the closed hat in the solo, the ride in even 8ths with
   digs on 2 and 4 for the climax), 8th-note fills every 8 bars. Drums sit 15-16 dB (RMS) under the piano per section.
 
@@ -123,7 +123,7 @@ smoother machen, es klingt hart" - "eine Sound-Design-Frage, nicht so sehr Struc
 - **Ornament budget** (`pianist.arrange`, system level): the fast two-key alternations (trill, tremolo, shake, repeated
   notes, alternating hands) at most ~1 per 16 bars, never in neighbouring phrases, never two of a kind within 32
   bars, only at structural moments; the other ornaments at least 1.5-3 bars apart. One `pianist.Memory()` for the
-  whole song (`hands()` passes `memory=, at=`), the intro trill booked on it (`played`), the fast budget saved for
+  whole song (`jazz.chorus` passes `memory=, at=`), the intro trill booked on it (`played`), the fast budget saved for
   the climax (`save(solo.bar(31))`); the last A (sparse, no fast figures by default) gets `fast_every=16` for its
   final trill. Same seeds, everything else as v3 (devices, fills, runs, sweeps, gliss, left hand, dynamics: the
   substitutes come from a side random stream).

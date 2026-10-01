@@ -62,87 +62,30 @@ HORNIST = os.environ.get('LAMPLIGHT_HORNIST', '1') != '0'        # 0: the sax li
 HERO = HERO_SAX['mix']
 
 
-def line(notes, length):
-    """[(beat, dur, pitch[, vel])] -> Clip."""
-    return Clip([(n[0], n[1], n[2], n[3] if len(n) > 3 else 96) for n in notes], length=length)
-
-
 # ------------------------------------------------------------------------------------------------ the material
+# notation (docs/COMPOSE_API.md "Notation"): sticky note values, ^peak = the held high notes (line.peaks: the scoops,
+# the vibrato peaks of the wind player)
 # the HOOK (8 bars over RIFF): motif = two rising 8ths leaping into a held high note, a falling answer
-HOOK = [
-    # Eb: Eb-Bb -> F5 (the 9th) held
-    (0.0, .5, 'Eb4'), (0.5, .5, 'Bb4'), (1.0, 2.5, 'F5'), (3.5, .5, 'Eb5'),
-    # Gm7: the falling answer
-    (4.0, 1.0, 'D5'), (5.0, .5, 'Bb4'), (5.5, .5, 'C5'), (6.0, 1.5, 'Bb4'), (7.5, .5, 'G4'),
-    # Abmaj7: the motif a step higher: Ab-Eb -> G5 (the major 7th)
-    (8.0, .5, 'Ab4'), (8.5, .5, 'Eb5'), (9.0, 2.5, 'G5'), (11.5, .5, 'F5'),
-    # Bbsus4 -> Bb
-    (12.0, 1.5, 'Eb5'), (13.5, .5, 'F5'), (14.0, 1.0, 'D5'), (15.0, .75, 'Bb4'),
-    # Cm7: the motif's biggest leap, G4-C5 -> G5
-    (16.0, .5, 'G4'), (16.5, .5, 'C5'), (17.0, 2.5, 'G5'), (19.5, .5, 'F5'),
-    # Abmaj7
-    (20.0, 1.0, 'Eb5'), (21.0, .5, 'C5'), (21.5, .5, 'Eb5'), (22.0, 1.5, 'F5'), (23.5, .5, 'Eb5'),
-    # Fm7 -> Bb7
-    (24.0, 1.0, 'C5'), (25.0, .5, 'Ab4'), (25.5, .5, 'C5'), (26.0, 1.0, 'D5'), (27.0, 1.0, 'F5'),
-    # Eb: home, held
-    (28.0, 3.0, 'Eb5'),
-]
-HOOK_PEAKS = (1.0, 9.0, 17.0)          # the held high notes: the only scoops of the riff
-
+RIFF_H = phrases(hook='Eb4/8 Bb4 F5:2.5^peak Eb5/8 | D5/4 Bb4/8 C5 Bb4/4. G4/8 | Ab4/8 Eb5 G5:2.5^peak F5/8 | '
+                      'Eb5/4. F5/8 D5/4 Bb4:0.75 r/16 |',
+                 climb='G4/8 C5 G5:2.5^peak', vel=96)
+HOOK = RIFF_H('hook climb F5/8 | Eb5/4 C5/8 Eb5 F5/4. Eb5/8 | C5/4 Ab4/8 C5 D5/4 F5 | Eb5:3 r/4')
 # the last riff of the outro: the same motif, the ending opened up (ad lib) and falling off at the very end
-HOOK_OUT = HOOK[:20] + [
-    (20.0, .5, 'Eb5'), (20.5, .5, 'F5'), (21.0, 2.5, 'Ab5'), (23.5, .5, 'G5'),
-    (24.0, 1.0, 'F5'), (25.0, .5, 'Eb5'), (25.5, .5, 'C5'), (26.0, 1.0, 'D5'), (27.0, 1.0, 'F5'),
-    (28.0, 3.5, 'Eb5'),
-]
-
+HOOK_OUT = RIFF_H('hook climb r/8 | Eb5 F5 Ab5:2.5^peak G5/8 | F5/4 Eb5/8 C5 D5/4 F5 | Eb5:3.5 r/8')
 # the verse melody (8 bars over VERSE), low and speaking; the second half climbs and quotes the motif
-VERSE_A = [
-    (1.0, .5, 'G4'), (1.5, .5, 'Bb4'), (2.0, 1.0, 'C5'), (3.0, .5, 'Bb4'), (3.5, .5, 'G4'),
-    (4.0, 1.5, 'Ab4'), (5.5, .5, 'G4'), (6.0, 1.5, 'Eb4'),
-    (9.0, .5, 'Bb3'), (9.5, .5, 'Eb4'), (10.0, 1.0, 'G4'), (11.0, .5, 'F4'), (11.5, .5, 'G4'),
-    (12.0, 1.5, 'Ab4'), (13.5, .5, 'G4'), (14.0, 1.0, 'F4'), (15.0, .5, 'Eb4'), (15.5, .5, 'F4'),
-    (17.0, .5, 'G4'), (17.5, .5, 'Bb4'), (18.0, 1.0, 'C5'), (19.0, .5, 'D5'), (19.5, .5, 'Eb5'),
-    (20.0, 2.0, 'C5'), (22.0, .5, 'Bb4'), (22.5, 1.5, 'Ab4'),
-    (25.0, .5, 'F4'), (25.5, .5, 'Ab4'), (26.0, 1.5, 'Bb4'), (27.5, .5, 'C5'),
-    (28.0, 2.5, 'D5'),
-]
-VERSE_B = [
-    (1.0, .5, 'G4'), (1.5, .5, 'Bb4'), (2.0, 1.0, 'C5'), (3.0, .5, 'D5'), (3.5, .5, 'Eb5'),
-    (4.0, 1.5, 'C5'), (5.5, .5, 'Bb4'), (6.0, 1.5, 'Ab4'),
-    (8.0, 1.0, 'Bb4'), (9.0, .5, 'G4'), (9.5, .5, 'Bb4'), (10.0, 1.5, 'Eb5'), (11.5, .5, 'D5'),
-    (12.0, 1.5, 'C5'), (13.5, .5, 'Ab4'), (14.0, 1.5, 'F4'),
-    (17.0, .5, 'Eb4'), (17.5, .5, 'G4'), (18.0, 1.0, 'C5'), (19.0, 1.0, 'Eb5'),
-    (20.0, 1.5, 'F5'), (21.5, .5, 'Eb5'), (22.0, 1.0, 'C5'), (23.0, 1.0, 'Eb5'),
-    (24.0, 2.0, 'F5'), (26.0, 1.0, 'Eb5'), (27.0, 1.0, 'C5'),
-    (28.0, 3.0, 'D5'),
-]
+VERSE_A = notes("""r/4 G4/8 Bb4 C5/4 Bb4/8 G4 | Ab4/4. G4/8 Eb4/4. r/8 | r/4 Bb3/8 Eb4 G4/4 F4/8 G4 |
+                   Ab4/4. G4/8 F4/4 Eb4/8 F4 | r/4 G4/8 Bb4 C5/4 D5/8 Eb5 | C5/2 Bb4/8 Ab4/4. |
+                   r/4 F4/8 Ab4 Bb4/4. C5/8 | D5:2.5 r:1.5""", vel=96)
+VERSE_B = notes("""r/4 G4/8 Bb4 C5/4 D5/8 Eb5 | C5/4. Bb4/8 Ab4/4. r/8 | Bb4/4 G4/8 Bb4 Eb5/4. D5/8 |
+                   C5/4. Ab4/8 F4/4. r/8 | r/4 Eb4/8 G4 C5/4 Eb5 | F5/4. Eb5/8 C5/4 Eb5 | F5/2 Eb5/4 C5 |
+                   D5:3 r/4""", vel=96)
 # the pre-chorus: the sax climbs a third per bar, a pickup into the chorus
-PRE = [
-    (0.0, 1.0, 'C5'), (1.0, 1.0, 'Ab4'), (2.0, 1.5, 'C5'), (3.5, .5, 'Eb5'),
-    (4.0, 1.0, 'D5'), (5.0, 1.0, 'Bb4'), (6.0, 1.5, 'D5'), (7.5, .5, 'F5'),
-    (8.0, 1.0, 'Eb5'), (9.0, 1.0, 'C5'), (10.0, 2.0, 'Eb5'),
-    (12.0, 2.0, 'F5'), (14.5, .5, 'Bb4'), (15.0, .5, 'C5'), (15.5, .5, 'D5'),
-]
-# the chorus: long notes up high; the hook's motif in bars 3 and 5
-CHORUS = [
-    (0.0, 3.0, 'Eb5'), (3.0, .5, 'F5'), (3.5, .5, 'G5'),
-    (4.0, 2.0, 'F5'), (6.0, 1.0, 'D5'), (7.0, 1.0, 'Bb4'),
-    (8.0, .5, 'G4'), (8.5, .5, 'C5'), (9.0, 2.5, 'G5'), (11.5, .5, 'F5'),
-    (12.0, 1.5, 'D5'), (13.5, .5, 'C5'), (14.0, 2.0, 'Bb4'),
-    (16.0, .5, 'C5'), (16.5, .5, 'Eb5'), (17.0, 2.5, 'G5'), (19.5, .5, 'F5'),
-    (20.0, 1.5, 'G5'), (21.5, .5, 'F5'), (22.0, 1.0, 'Eb5'), (23.0, 1.0, 'Bb4'),
-    (24.0, 1.0, 'C5'), (25.0, 1.0, 'Eb5'), (26.0, 2.0, 'F5'),
-    (28.0, 2.0, 'Eb5'), (30.0, 1.5, 'D5'),
-]
-CHORUS_PEAKS = (9.0, 17.0)
-# chorus 3: the leap over Abmaj7 reaches Ab5, the tail climbs to the tonic up high
-CHORUS3 = CHORUS[:13] + [
-    (16.0, .5, 'C5'), (16.5, .5, 'Eb5'), (17.0, 2.5, 'Ab5'), (19.5, .5, 'G5'),
-    (20.0, 1.5, 'G5'), (21.5, .5, 'F5'), (22.0, 1.0, 'Eb5'), (23.0, 1.0, 'Bb4'),
-    (24.0, 1.0, 'C5'), (25.0, 1.0, 'Eb5'), (26.0, 1.5, 'F5'), (27.5, .5, 'G5'),
-    (28.0, 2.0, 'F5'), (30.0, 1.5, 'Eb5'),
-]
+PRE = notes('C5/4 Ab4 C5/4. Eb5/8 | D5/4 Bb4 D5/4. F5/8 | Eb5/4 C5 Eb5/2 | F5/2 r/8 Bb4 C5 D5', vel=96)
+# the chorus: long notes up high; the hook's motif in bars 3 and 5 (chorus 3: the leap over Abmaj7 reaches Ab5,
+# the tail climbs to the tonic up high)
+CHO = phrases(front='Eb5:3 F5/8 G5 | F5/2 D5/4 Bb4 | G4/8 C5 G5:2.5^peak F5/8 | D5/4. C5/8 Bb4/2 |', vel=96)
+CHORUS = CHO('front C5/8 Eb5 G5:2.5^peak F5/8 | G5/4. F5/8 Eb5/4 Bb4 | C5/4 Eb5 F5/2 | Eb5/2 D5/4. r/8')
+CHORUS3 = CHO('front C5/8 Eb5 Ab5:2.5^peak G5/8 | G5/4. F5/8 Eb5/4 Bb4 | C5/4 Eb5 F5/4. G5/8 | F5/2 Eb5/4. r/8')
 
 # the guitar solo, part 1 (8 bars over VERSE): written sounding; 'b' = bent up into the note, 'v' = vibrato
 SOLO1 = [
@@ -161,12 +104,8 @@ SOLO1 = [
     (28.0, 3.0, 'F5', 110, 'v'),
 ]
 # part 2 (8 bars over CHORUS): the trade - the sax states the motif, the guitar answers it, bent and higher
-TRADE_SAX = [
-    (0.0, .5, 'Eb4'), (0.5, .5, 'Bb4'), (1.0, 2.5, 'F5'), (3.5, .5, 'Eb5'),
-    (4.0, 2.0, 'D5'), (6.0, 1.0, 'Bb4'),
-    (16.0, .5, 'C5'), (16.5, .5, 'Eb5'), (17.0, 2.5, 'G5'), (19.5, .5, 'F5'),
-    (20.0, 1.5, 'G5'), (21.5, .5, 'F5'), (22.0, 1.5, 'Eb5'),
-]
+TRADE_SAX = notes('Eb4/8 Bb4 F5:2.5^peak Eb5/8 | D5/2 Bb4/4 r | r/1 | r | C5/8 Eb5 G5:2.5^peak F5/8 | '
+                  'G5/4. F5/8 Eb5/4. r/8', vel=96)
 TRADE_GTR = [
     (8.0, .5, 'G4', 96), (8.5, .5, 'C5', 102), (9.0, 2.0, 'G5', 116, 'bv'), (11.0, .5, 'F5', 96),
     (11.5, .5, 'Eb5', 94), (12.0, 1.0, 'D5', 100), (13.0, .5, 'F5', 98), (13.5, .5, 'D5', 94),
@@ -215,7 +154,7 @@ def build() -> Song:
     b = bands.power_ballad(s, ids={'lead': 'guitar'})
     gtr, piano, strings, pad, kit, bass = b.lead, b.piano, b.strings, b.pad, b.drums, b.bass
     hall, plate, echo = b.hall, b.plate, b.echo
-    piano.fx[1] = piano.fx[1].but(ratio=1.3, threshold=-18)     # keep the pianist's touch
+    piano.fx[1].set(ratio=1.3, threshold=-18)                    # keep the pianist's touch
     piano.pan = 0.2
     # base levels (the 'gainDb' lanes below are dB on a track's gain_db)
     GTR_DB, PIANO_DB, RHODES_DB, BASS_DB, SAX_DB = 1.5, -2.0, -3.0, -1.0, -3.5
@@ -228,8 +167,7 @@ def build() -> Song:
     kit.add_fx(fx.eq({'peak1.freq': 125, 'peak1.gain': -2.5, 'peak1.q': 1.0}))          # the kick owns ~55 Hz
     bass.add_fx(fx.eq({'lp.freq': 2200, 'peak1.freq': 3500, 'peak1.gain': -3.0}))    # fingers, no fret click
     kit.gain_db = -3.0
-    duck = next(i for i, f in enumerate(bass.fx) if getattr(f, 'type', None) == 'ducker')
-    bass.fx[duck] = bass.fx[duck].but(depth=12, hold=30, release=140)                  # the kick owns the low end on its hits
+    bass.fx['ducker'].set(depth=12, hold=30, release=140)             # the kick owns the low end on its hits
 
     # the HERO sax (HUMAN_FEEDBACK 2026-09-30: "epischer und praesenter"): close-miked alto, compressed, gritty,
     # double-tracked (layered/hero_sax); a big bright pre-delayed plate of its own, the hall, and echo THROWS at the
@@ -271,10 +209,11 @@ def build() -> Song:
     breath = {sax: hornist.Memory(), sax2: hornist.Memory()}      # the wind players' song-wide budgets
 
     # ------------------------------------------------------------------------------------------ helpers
-    def sax_line(notes, at, lo, hi, *, peaks=(), seed=1, track=None, throws=True, section=None, climax=False,
+    def sax_line(line, at, lo, hi, *, peaks=None, seed=1, track=None, throws=True, section=None, climax=False,
                  style='hero', extra=()):
         t = track or sax
-        c = line(notes, 32 if max(n[0] + n[1] for n in notes) <= 32 else 64)
+        peaks = tuple(getattr(line, 'peaks', ())) if peaks is None else peaks      # the ^peak notes
+        c = Clip(list(line), length=32 if max(n.start + n.dur for n in line) <= 32 else 64)
         if HORNIST:
             # the wind player (recipes/HUMAN_FEEDBACK.md 2026-09-30: "da spielt er eine Note und pustet mal kurz
             # mehr, mal kurz weniger"): touch() velocity arcs, legato phrases, breaths, and INSIDE the held notes
@@ -311,16 +250,11 @@ def build() -> Song:
             t.automate('instrument.pitchbend', pts)
         return played
 
-    def harmony(notes):
+    def harmony(line):
         """The tenor a diatonic third under the lead (a sixth where the third would leave its range)."""
-        out = []
-        for n in notes:
-            p = note(n[2])
-            h = key.transpose(p, -2)
-            if h > note('E5'):
-                h = key.transpose(p, -5)
-            out.append((n[0], n[1], h) + tuple(n[3:]))
-        return out
+        third = [key.transpose(n.pitch, -2) for n in line]
+        return Clip([n._replace(pitch=h if h <= note('E5') else key.transpose(n.pitch, -5))
+                     for n, h in zip(line, third)], length=line.length)
 
     def gtr_line(notes, at, seed=1):
         a = at.start if hasattr(at, 'start') else at
@@ -438,19 +372,13 @@ def build() -> Song:
 
     # ------------------------------------------------------------------------------------------ piano
     # intro: the pianist hints the hook up high, soft (the sax owns it from the riff on)
-    hint = touch(line([(0.0, .5, 'Eb5'), (0.5, .5, 'Bb5'), (1.0, 2.5, 'F6'), (3.5, .5, 'Eb6'),
-                       (4.0, 1.0, 'D6'), (5.0, .5, 'Bb5'), (5.5, .5, 'C6'), (6.0, 2.0, 'Bb5'),
-                       (8.0, .5, 'Ab5'), (8.5, .5, 'Eb6'), (9.0, 3.0, 'G6')], 16), 40, 86)
-    arr = pianist.arrange(hint, INTRO, bpm=TEMPO, key=s.key, style='ballad', density=0.45, seed=11, lh=None,
-                          memory=mem, at=intro.start)
-    piano.play(arr.rh, intro).play(arr.lh, intro)
-    piano.automate('instrument.pedal', arr.pedal(INTRO, intro))
+    hint = touch(notes('Eb5/8 Bb5 F6:2.5 Eb6/8 | D6/4 Bb5/8 C6 Bb5/2 | Ab5/8 Eb6 G6:3', vel=96, length=16), 40, 86)
+    pianist.arrange(hint, INTRO, bpm=TEMPO, key=s.key, style='ballad', density=0.45, seed=11, lh=None,
+                    memory=mem, at=intro.start).place(piano)
     # verse 2: the pianist takes the verse melody an octave up, harmonized and decorated
-    vmel = touch(line([(n[0], n[1], note(n[2]) + 12) + tuple(n[3:]) for n in VERSE_B], 32), 46, 98)
-    arr2 = pianist.arrange(vmel, VERSE, bpm=TEMPO, key=s.key, style='straight', density=0.55, seed=12,
-                           lh='shell', lh_vel=50, memory=mem, at=verse2.start)
-    piano.play(arr2.rh, verse2).play(arr2.lh, verse2)
-    piano.automate('instrument.pedal', arr2.pedal(VERSE, verse2))
+    vmel = touch(VERSE_B.octave(1), 46, 98)
+    pianist.arrange(vmel, VERSE, bpm=TEMPO, key=s.key, style='straight', density=0.55, seed=12, lh='shell',
+                    lh_vel=50, memory=mem, at=verse2.start).place(piano)
     # choruses: driving 8th-note chords under the sax (below Bb4), pedal with the changes
     for ch, v in ((chorus1, 74), (chorus2, 80), (chorus3, 86)):
         c = CHOR.block(voicing='spread', register=('Bb2', 'Bb4'), rhythm='x.x.x.x.', step='1/8', vel=v)
@@ -494,23 +422,23 @@ def build() -> Song:
 
     # ------------------------------------------------------------------------------------------ the sax
     for i, sec in enumerate((riff1, riff2)):
-        sax_line(HOOK, sec, 84 + 3 * i, 118 + 3 * i, peaks=HOOK_PEAKS, seed=10 + i, section='riff')
+        sax_line(HOOK, sec, 84 + 3 * i, 118 + 3 * i, seed=10 + i, section='riff')
     sax_line(VERSE_A, verse1, 54, 86, seed=20, section='verse', style='pop')
     sax_line(VERSE_B, verse1.bar(8), 58, 92, seed=21, section='verse', style='pop')
     for i, pre in enumerate((pre1, pre2)):
         sax_line(PRE, pre, 58 + 4 * i, 106 + 4 * i, seed=30 + i, section='pre')
-    for ch, notes, lo, hi, sd in ((chorus1, CHORUS, 88, 118, 40), (chorus2, CHORUS, 90, 120, 41),
+    for ch, mel, lo, hi, sd in ((chorus1, CHORUS, 88, 118, 40), (chorus2, CHORUS, 90, 120, 41),
                                   (chorus3, CHORUS3, 80, 124, 42)):
-        sax_line(notes, ch, lo, hi, peaks=CHORUS_PEAKS, seed=sd, section='chorus', climax=ch is chorus3)
-        sax_line(harmony(notes), ch, lo - 16, hi - 14, seed=sd + 50, track=sax2, section='chorus', style='pop')
-    sax_line(TRADE_SAX, solo.bar(8), 78, 120, peaks=(1.0, 17.0), seed=50, section='solo')
-    sax_line(HOOK, outro, 80, 121, peaks=HOOK_PEAKS, seed=60, section='outro')
+        sax_line(mel, ch, lo, hi, seed=sd, section='chorus', climax=ch is chorus3)
+        sax_line(harmony(mel), ch, lo - 16, hi - 14, seed=sd + 50, track=sax2, section='chorus', style='pop')
+    sax_line(TRADE_SAX, solo.bar(8), 78, 120, seed=50, section='solo')
+    sax_line(HOOK, outro, 80, 121, seed=60, section='outro')
     # the only fall of the song: the last held Eb drops away into the fade
     if HORNIST:
-        sax_line(HOOK_OUT, outro.bar(8), 78, 123, peaks=HOOK_PEAKS + (21.0,), seed=61, section='outro',
+        sax_line(HOOK_OUT, outro.bar(8), 78, 123, seed=61, section='outro',
                  extra=[hornist.fall(31.4, TEMPO, semis=-4, ms=430)])
     else:
-        sax_line(HOOK_OUT, outro.bar(8), 78, 123, peaks=HOOK_PEAKS + (21.0,), seed=61)
+        sax_line(HOOK_OUT, outro.bar(8), 78, 123, seed=61)
         fall_at = outro.bar(8) + 30.6
         sax.automate('instrument.pitchbend', [(fall_at, 0), (fall_at + 0.8, -4, 'smooth')])
 
