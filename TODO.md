@@ -11,8 +11,10 @@ it. Add new findings here instead of losing them in a report.
   (`lead={section: [ids]}`) and better inference (the melodic part that carries the theme in each section, not the
   loudest melodic role). Also inside a section: matryoshka's minor section hands the voice from a solo cello (4 bars)
   to the piano (4 bars); mix reads 'bed too loud -0.5 dB' for the whole section although the piano is 7 dB over the
-  cello in its own bars (per-bar RMS). The MIX dict has no 
-oles key (strict), so the CLI cannot be told either.
+  cello in its own bars (per-bar RMS). `unbowed` (a symphonic movement): `mix` took the three solo tracks (clarinet /
+  horn / oboe, 3 short sections) as the lead and judged none of the 15 other sections ("no lead plays in half its
+  bars"); the theme moves between violins I, the flutes / oboes doubling it and the fugato's entering voice - mixed
+  by hand from per-section stem levels (songs/unbowed/MIX.md). The MIX dict has no `roles` key (strict), so the CLI cannot be told either.
 - **Choir samples speak slowly at low velocity.** The attack slows as velocity drops, so a soft answer took about
   0.4 s to be heard. The epic worked around it with velocity 120 plus an `instrument.expression` lane and a 100 ms
   sample offset. The choir patches (`sampled/choir*`, fairlight) should do this by default, and the
@@ -98,7 +100,27 @@ oles key (strict), so the CLI cannot be told either.
   - `layered/piano_strings`, `piano_pad` and `piano_organ` peak at +0.6 to +0.8 dBFS on the track.
 - **Drummer:**
   - No 6/8 or 12/8 feel.
-  - Hi-hat CC4 opening is not automated, and there are no cymbal chokes.
+  - Cymbal chokes and the live hi-hat work on the `sampled/big_rusty_kit` / `unruly_kit` / `mf_natural` layouts only
+    (their choke keys; `Kit.live_hat` = the SFZ CC4 imported live). The band presets' `rock_kit()` copies tom 47 over
+    the Big Rusty crash choke (50), so `ending='choke'` has nothing to grab there; kits without choke samples need a
+    silent choke zone (`*silence` + `offBy` on the cymbal zones: a kits.py helper) - and both silent-notes ears would
+    then report those strokes as silent (they must learn that a choke-only key is meant to be silent).
+  - Big Rusty's snare layers 2-4 (velocity 14-51) are recorded at nearly one level (-35 dB RMS rendered for velocity
+    15, 25, 35, 50; then +8 dB at 65): ghost notes and soft taps sound alike, and at the same low velocity its toms
+    are ~10 dB louder than its snare (velocity 50: tom 45 -24 dB, snare -34 dB). A soft solo passage jumps when the
+    hands move to the toms. A per-piece level / velocity curve in `Kit` (or the patch) would let the drummer balance
+    it (measured in `the-drummer-speaks`, `.scratch/velcurve`).
+  - The hands' physics run move by move (`drummer.perform()`) or slot by slot (`soloist.solo()` with
+    `drummer.vocabulary()`): a rebound or an up-stroke across a boundary is not modelled, and `check()` / the limb
+    resolver do not see two neighbouring soloist slots together (a stroke at a slot's very end and one at the next
+    slot's start could collide). A vocabulary `place()` that re-runs `_resolve` over the whole solo would close it.
+  - The soloist's statement / answer / develop phrases all open with the motif as the call (by design of the arc):
+    in a 34-bar drum solo the riff's rhythm is heard ~10 times. Fine as an identity, but a drum vocabulary could
+    offer its own 'call' moves (the motif orchestrated, fragmented on the toms) so the calls vary more
+    (`the-drummer-speaks`).
+  - `restrike` (the sampler's re-strike damping) is off by default and set only in `the-drummer-speaks`
+    (`restrike=6`); the drum patches and the band presets do not use it yet (validate on one song before changing
+    the patches).
   - The pop Chart kit's hat foot is the closed-hat sample.
   - An intro (energy 0.38) and a `groove` section read the same drum level.
   - The `songs/_bands` demos are not ported to the drummer.
@@ -133,23 +155,20 @@ oles key (strict), so the CLI cannot be told either.
     time; cached after). German is not attempted (Breeze speaks English and Chinese well).
   - Stems are post-fader and dry of the shared reverbs, so a soloed group in "meet the tracks" sounds drier than in
     the mix.
-- **Tempo: fermata spans are resolved from the notes placed so far.** `lux-perpetua` hit this with `s.fermata()`
-  without `length=`: `orch.perform` (it calls `s.tempo_at`) ran before the rest of the song was written and raised
-  "fermata at beat 136 (holding 100 beats) overlaps the fermata at beat 62". Passing `length=` works. The error, or
-  the docs, should say so.
-- **`orch.ring()` never gives the send back.** It keeps the raised hall send for the rest of the song. A mid-song
-  fermata needs a `back=` beat. `lux-perpetua` writes the bloom and the return by hand.
-- **A four-part voicer and a harmony check belong in the library.**
-  - `songs/lux-perpetua/score.py` `satb()` voices chorales and fugue free voices around written lines. It works in
-    SATB ranges, wants complete chords, never doubles the leading tone or the 7th, forbids parallel 5ths / 8ves,
-    takes the smallest motion, and avoids semitone clashes with the written lines.
-  - The song's scratch check lists strong-beat non-chord tones and semitone clashes per section. It found five real
-    mistakes before the first render.
-  - Both would serve every choral, chorale and string-quartet piece, from `agentsound.theory` or a choir player.
-  - The A&R revision added more of the same kind to `score.py`: `arpeggiate()` / `passing_eighths()` (free fugue
-    voices in quarters and 8ths, checked against parallels and semitone rubs) and a check-only pass for parallels
-    between ANY two sung voices (the hand-written outer voices had 9 the free-voice check never saw). A library
-    version should check every voice pair, not only the free voices it places.
+- **Orchestra: a held note does not follow a crescendo.** `orch.perform` turns each note's start velocity into the
+  dynamics lane (long notes get a messa di voce), so a chord held through a written crescendo stays at its start
+  level. `unbowed`'s dominant pedal climbed only ~2 LU over bars 9-15 with held tremolo strings / horns / wind chords
+  under a velocity ramp of 78 -> 120; re-attacking every held part each bar made it 8 LU. perform() could follow a
+  song-wide dynamics map (a function of the beat) inside held notes, or `orch.dynamics` could merge with perform's
+  lane instead of competing with it.
+- **One keyswitch per section track.** A role that plays two articulations at the same moment (the violas' staccato
+  8ths under a marcato tutti stab, the basses' pizzicato under a sustained doubling) gets one of them ("notes at beat
+  X ask for different articulations"): 44 collisions in `unbowed`. Options: a second track per role for the
+  doublings (`violins1_div`), or the compiler splitting colliding articulations onto a twin sampler.
+- **A conductor's arc helper.** `unbowed` rides the master input per section (a `utility` named `arc` first in the
+  master chain: soft passages +3..+6 dB, the earlier fortissimos -1..-2.5 dB under the coda) to keep the LRA in the
+  classical window (20.9 -> 16.2 LU) without flattening the written dynamics. A `MIX['arc'] = {section: dB}` (with
+  in-section points) would make it a logged mixer move instead of hand-written automation.
 - **A zone's release wins over the track's `release`.** The VPO choir's `ampeg_release=1.25` joins short syllables
   into one vowel pad (lux-perpetua's Dies irae: re-attack depth 6-8 dB per written note), and `inst.sfz(...,
   release=)` cannot shorten it (only zones without their own ampeg_* take the param). lux-perpetua parts the
@@ -184,7 +203,6 @@ oles key (strict), so the CLI cannot be told either.
   - `catalog --markdown` mentions `docs/CATALOG.md`, which does not exist.
   - `.gitignore` excepts a nonexistent `assets/samples/README.md`.
   - `CLAUDE.md` still repeats the workflow that README.md now covers.
-  - `assets/refrences/REFERENCES.md` rows were appended below the table.
 - **Disk:** C: is ~99 % full. Agents' scratch renders must go to D: (git-ignored folders in their worktrees).
   Periodically clean `%TEMP%\claude\...\scratchpad` and stale worktrees (`git worktree prune`).
 

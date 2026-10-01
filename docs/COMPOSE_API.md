@@ -148,7 +148,7 @@ s.accelerando(build, to=1.1)                                    # push into the 
 | `s.tempo_ramp(start, end, to_bpm, curve='linear')` | from the tempo at `start` to `to_bpm` at `end`, kept afterwards; `'smooth'` eases in and out |
 | `s.ritardando(span, to=0.8, bpm=None, curve='smooth', a_tempo=True)` | slow down across the span to `to` x the tempo there (or to `bpm`); `a_tempo=True` returns to the old tempo at the span end (rit. ... a tempo) - after the held chord when a `fermata` sits on the span end, never when no note starts after the chord there (a final chord stays slow); a ramp starting right at the span end continues from the slowed tempo, a `set_tempo` there wins. `False` always stays slow |
 | `s.accelerando(span, to=1.15, bpm=None, curve='smooth', a_tempo=False)` | speed up; keeps the new tempo unless `a_tempo=True` (then as for ritardando) |
-| `s.fermata(at, hold=1.5, seconds=None, length=None)` | the chord at `at` rings `hold` extra beats (at the tempo there) or `seconds` longer, then the music goes on. The stretched span runs to the next note onset after the chord (notes within 1/4 beat of `at` - strums, rolls - belong to the chord), else to the end of the chord; `length=` sets it. Everything inside waits (arpeggios under a fermata slow down too: end them on the chord) |
+| `s.fermata(at, hold=1.5, seconds=None, length=None)` | the chord at `at` rings `hold` extra beats (at the tempo there) or `seconds` longer, then the music goes on. The stretched span runs to the next note onset after the chord (notes within 1/4 beat of `at` - strums, rolls - belong to the chord), else to the end of the chord - but never into the next fermata while nothing after the chord is placed yet (a song that asks `tempo_at` while writing its parts); `length=` sets it exactly. Everything inside waits (arpeggios under a fermata slow down too: end them on the chord) |
 | `s.rubato(span, depth=0.04, phrase='arch', seed=None)` | phrase-shaped breathing of +-depth around the tempo: `'arch'` moves forward into the phrase and broadens towards its end, `'wave'` breathes twice, `'lean'` holds back then moves on, `'breath'` moves on through the first 60 % and broadens into the last 40 % (a sung phrase: the reference recording of the Gymnopedie etude read phrase middles +2.5 %, last bars -3.5 %), `'free'` only wanders; plus a seeded smooth irregularity. The span keeps its length (time taken is given back) and joins the tempo around it without a jump |
 | `s.lilt(span, beats={2: 0.06}, jitter=0.0, seed=None)` | beat-level agogics in every whole bar of the span: inner beat k arrives `beats[k]` beats late (negative: early), plus a seeded random `jitter` (standard deviation in beats) per beat; the downbeats stay on the tempo map (each bar gives its time back). The whole tempo moves - both hands, every track together - where `humanize` moves single notes apart. A slow 3/4 whose chord on 2 lingers: `{2: 0.06}` (a concert recording of Satie's Gymnopedie No. 1: +0.066 beats, +-0.08 / +-0.14 on beats 2 / 3); a Viennese waltz: `{2: -0.08}`; a pianist's unmetronomic pulse: `jitter=0.02-0.05`. Stacks with rubato, ramps and fermatas; delays within +-0.3 beats |
 | `s.tempo_at(beat)`, `s.seconds(beat)`, `s.tempo_map()`, `s.tempo_points()` | the BPM at a beat, the song time of a beat (exactly as the engine renders it), the map, the render JSON points |
@@ -826,6 +826,37 @@ Details:
 * Jazz symbols: `Cø9` (= Cm9b5), bare tensions in parentheses `Cm7(11)`, `C7(13)`, `C7(b9,#11)`; roman numerals
   may repeat the minor sign: `iim7b5`, `ivm7`, `im(maj7)`. `C11` is read as C9sus4 by the jazz voicings.
 
+### Voicing and voice leading (`agentsound.voicing`)
+
+Real parts for chorales, choirs, string and wind choirs and orchestral tuttis, voiced around the lines written by
+hand (`voice_lead` above voices a pad; this voices independent parts and checks them). Pitches are MIDI numbers,
+times beats; parts are `{voice: [(start, dur, pitch)]}`.
+
+```python
+from agentsound import voicing as vc
+table = [(2, 'Cm', 'G5', 'C3'), (2, 'Fm/Ab', None, 'Ab2'), (1, 'G7', 'F5', 'G2', {'violas': 'D4'}), (1, 'Cm', 'Eb5', 'C3')]
+strings = vc.chorale(table, sec.start, voices=vc.STRINGS, key='C minor', tie=True)   # top / bass fixed, rest voiced
+winds = vc.chorale(table, sec.start, voices=vc.WINDS8, key='C minor')                # 8 interlocked wind parts
+steps = [{'chord': 'G7', 'fixed': {'S': 'F5'}, 'active': ('S', 'A', 'T'), 'avoid': [71], 'lt': 11}, ...]
+vc.voice(steps, voices=vc.SATB, key='C minor', prev={...})                        # -> [{voice: pitch}] per step
+issues = vc.check(strings, vc.timeline(table, sec.start), voices=vc.STRINGS)        # [Issue(kind, beat, voices, ...)]
+print(vc.summary(issues))                                                          # 'clash 1, parallel_5th 2' / 'clean'
+```
+
+| call | does |
+|---|---|
+| `voice(steps, *, voices=SATB, lt=None, key=None, prev=None, center=None, spacing=12, bass_gap=19, leap=None, unison=False)` | per step (`chord`, `fixed` {voice: pitch}, `active` voices, `avoid` pitches, `lt`) the free voices: chord tones in range, strictly descending (no crossing / unison), adjacent upper voices <= `spacing` apart (the bass <= `bass_gap`), complete chords (3rd, 7th, root, 5th), the leading tone (`lt` pc or from `key`) and the 7th never doubled, big sets double the root first, the free bass on the chord's bass, the smallest motion (leaps > 5th / > 8ve cost), no parallel 5ths / 8ves between any moving voices, no free voice a semitone (or whole tone) from `avoid`. Sets with more than four free voices search `leap` (default 9) semitones around the previous pitches (wider when nothing fits); `unison=True` lets neighbouring voices share a pitch (orchestral doublings: WINDS8 and TUTTI in a narrow span need it), never crossing |
+| `chorale(table, t0=0, *, voices=, key=, lt=, prev=, tie=False, active=None, center=None, spacing=, bass_gap=, leap=, unison=False)` | homophonic writing from `(dur, chord, top, bass[, {voice: pitch}])` rows (None = free; chord None = a rest) -> parts in the table's rhythm; `tie=True` holds repeated pitches |
+| `satb(steps, ...)` | `voice()` with the SATB set (or `ranges=` with the same names) |
+| `check(parts, harmony=None, *, voices=None, order=None, strong=1.0, t0=0, clashes=True, span=None)` | parallel 5ths / 8ves (also compound, also non-adjacent voices) between EVERY pair, semitone clashes (m2 / M7 / m9) at each onset, strong-beat non-chord tones vs a `[(start, dur, chord)]` timeline, notes out of range and crossings (with `voices`) -> `[Issue]`; advice: written suspensions show as non-chord tones on purpose |
+| `arpeggiate(parts, free, harmony, t0, *, voices=, until=None)`, `passing_eighths(parts, free, t0, key_at, *, order=, until=None)` | counterpoint for a fugue's free voices (`free` = {(voice, round(start, 4))}): a chord-tone leap on the last beat of a long note, passing 8ths between notes a 3rd / 4th apart (`key_at` a key or a function beat -> (scale pcs, tonic, leading tone)) - only where no parallels or semitone rubs result; edit `parts` in place |
+| `line('C5:1 r:.5 Eb5:.5 \| ...', t0, shift)`, `length(spec)`, `timeline(table, t0)`, `harmony_at(harm, t)`, `merge_ties(notes)`, `info(sym)` (`ChordInfo`: root, bass, third, fifth, seventh, major, dim7), `leading_tone(key)`, `parallel_or_rub(parts, v, seq)` | notation and chord helpers |
+
+Voice sets (ordered top to bottom, `{name: (lo, hi[, centre])}`, any dict works): `SATB`, `STRINGS` (violins I / II,
+violas, cellos; the basses double the cellos an octave down), `WINDS` (fl ob cl bn), `WINDS8` (fl1 fl2 ob1 ob2 cl1 cl2
+bn1 bn2, the Classical wind choir interlocked), `HORNS` (4), `BRASS` (2 tp, 2 hn, tb), `TUTTI` (8 voices, C7 down to the
+basses' E1).
+
 ## Patterns (all return a Clip)
 
 **Clip** = immutable notes `(start, dur, pitch, vel)` + `length`. `Clip([(0, 1, 'A4', 100), ...], length=4)`,
@@ -951,7 +982,7 @@ b.drums.play(drummer.tom_run(2, s.tempo, kit=b.drums), verse.bar(-1, 2), replace
 
 `arrange(form, *, bpm=None, style='rock', density=0.5, seed=0, kit=None, plan=None, fill_every=4, flashy_every=8,
 same_every=16, crash_every=4, fills=None, feel=None, timing_ms=None, swing=None, ending=None, human=True,
-phrase_fills=True, lock=None, lock_mode='with', memory=None, at=None)` -> `Performance` (`.clip` from `.start`, `.hits` = every stroke with its
+phrase_fills=True, lock=None, lock_mode='with', memory=None, at=None, hands=None)` -> `Performance` (`.clip` from `.start`, `.hits` = every stroke with its
 limb / tag / timing offset, `.moves` = [(start, end, 'groove' | 'fill' | 'build' | 'crash' | 'stop' | 'dropout' |
 'ending' | 'dropped', name)], `.plan` per section, `.budget`, `.summary()`, `.fills`, `.crashes`, `.play(track,
 humanize=False)`). `form`: a Song, a Section, consecutive Sections, or `(name, bars)` pairs (placed at `at=`).
@@ -961,7 +992,9 @@ humanize=False)`). `form`: a Song, a Section, consecutive Sections, or `(name, b
   hats. A section's groove = a main cell + a variation in its 4th bar; a repeated section reuses it. The pre-chorus
   BUILDS into the chorus (snare 8ths -> 16ths -> 32nds, the kick on the beats); a break STOPS (the band hit, silence,
   time on the hat); the end section = a big hit and (2+ bars) a tom rumble into the final cut-off (`ending='hit' |
-  'roll' | 'groove'`; on another last section 'hit' lands on its last bar; ballad / synthpop end on a cymbal swell).
+  'roll' | 'groove' | 'choke'` (the hit, the cymbals grabbed a beat later); on another last section 'hit' lands on
+  its last bar; ballad / synthpop end on a cymbal swell). `hat_loose` time is a half-open hat (openness 0.45: the
+  live-hat lane on Big Rusty / Unruly).
 - **Fills** (`FILL_KINDS`: pickup, snare, toms, triplets, flams, linear, roll, build; eighths / slap = jazz brushes)
   into EVERY section (into a chorus a whole bar at density >= 0.45), and with a chance (density) into a new 4- or
   8-bar phrase. The BUDGET (user feedback: spice, not habit): phrase fills at least `fill_every` bars apart, the
@@ -993,9 +1026,12 @@ humanize=False)`). `form`: a Song, a Section, consecutive Sections, or `(name, b
   track: `part.play(track)` switches that off; a track `groove` still applies on top (the jazz presets' band swing:
   then leave the drummer's `swing=` at 0.5, or the drums swing twice).
   Jazz on sticks stays soft (ride 44-56 before its accents, kick bombs <= 57).
-- **Kit** (`Kit.of(track | instrument | 'gm' | 'big_rusty' | 'unruly' | 'swirly' | 'gm_brush' | {piece: key})`):
-  pieces kick snare side rimshot edge clap hat hat_shank hat_pedal hat_open hat_splash ride bell ride_crash crash
-  crash2 china splash tamb cowbell, toms tom1.. (high -> low) and floor. A sampled kit is read: only keys with
+- **Kit** (`Kit.of(track | instrument | 'gm' | 'big_rusty' | 'big_rusty_kit' | 'unruly' | 'unruly_kit' |
+  'mf_natural' | 'swirly' | 'gm_brush' | {piece: key})`): pieces kick snare side rimshot edge clap hat hat_shank
+  hat_pedal hat_open hat_half hat_splash ride bell ride_crash crash crash2 china splash tamb cowbell crash_choke
+  ride_choke china_choke, toms tom1.. (high -> low) and floor (`kit.voices()`: snare + toms, high -> low). The
+  `sampled/big_rusty_kit` / `unruly_kit` patches are recognised with their choke keys and their live hi-hat
+  (`Kit.live_hat`), MF Natural with its per-hand samples (`Kit.hand_keys`). A sampled kit is read: only keys with
   samples count, tom copies merge (Big Rusty: 4 toms, Unruly: 3, the pop Chart kit: none - its fills stay on the
   snare), a key that only copies another piece's samples is no second piece (Big Rusty's 57 = its 49 crash: no
   doubled crash; the final hit takes the ride crash as its second cymbal), missing pieces fall back (no ride: a
@@ -1003,6 +1039,9 @@ humanize=False)`). `form`: a Song, a Section, consecutive Sections, or `(name, b
   has no crash: 18 crash strokes play on hat_open (46) instead"); `part.play(track)` adds them to `s.advice` (repeated
   in `s.warnings` by every compile), plus - for a part arranged for another kit than the track plays (`kit=None`:
   General MIDI) - the strokes landing on keys without samples and the fallback `kit=<track>` would play.
+- **Hands**: `hands=` a `Hands` / `HANDS` name (the solo layer's player, below): the fills' strokes get its physics -
+  the weaker hand, rebounds, up-strokes, reach (the levels; the style's feel keeps the timing). One drummer through
+  a song: the same `Hands` in `arrange()` and `perform()`.
 - **Kick and bass**: `lock=b.bass` (the bass Track once it is placed, or a Clip from the part's start): the kick
   locks to the bass - each kick of the groove moves onto the bass note nearest it (within an 8th, never under the
   backbeat, 16th off-beats only in a 16th feel; no bass note near: it drops, beat 1 stays), so kick and bass hit
@@ -1015,6 +1054,94 @@ roll crescendo), `build` (8ths -> 16ths -> 32nds), `stop(bpm, length=4)` (band h
 (mallet cymbal roll), `crash_hit`, `open_hat` (open + the foot's chick), `count_in`, `beat(style, bars, bpm,
 role=...)` (the groove alone), `brushes` / `ride` (patterns.brushes / ride_pattern on the kit's keys). Reused:
 `patterns.snare_roll`, `tom_fill`, `brushes`, `brush_fill`, `ride_pattern`.
+
+### The drum solo: hands, rudiments, feet, solo moves
+
+What `hornist` is for a sax, this layer of `drummer` is for a drummer taking a SOLO: the strokes of two hands and two
+feet played like a person plays them, so a sampled kit sounds played, not triggered (HUMAN_FEEDBACK "realism").
+
+```python
+from agentsound import drummer
+kit = s.track('drums', 'sampled/big_rusty_kit')        # 14 layers x 4 round robins, chokes, a live hi-hat
+c = drummer.rudiment('paradiddle', s.tempo, beats=8, kit=kit, orchestrate='split', shape='cresc')
+c = drummer.pattern('f>R l l >R@tom1 l r >L@floor+K -', s.tempo, kit=kit, energy=0.8)    # any sticking
+motif = drummer.DrumMotif.make(seed=3, cell='x..x..x...x.x...')    # the riff's rhythm as the solo's motif
+part = drummer.perform([('time', 4, 0.55), ('motif', 2, 0.45), ('develop', 4, 0.6),
+                        ('rudiment', 2, 0.65, {'rudiment': 'flam_accent', 'orchestrate': 'accents'}),
+                        ('tom_melody', 2, 0.65), ('three_over_four', 2, 0.75), ('silence', 1),
+                        ('gated_toms', 2, 0.9), ('speed_burst', 1, 0.95), ('finish', 2, 1.0)],
+                       bpm=s.tempo, kit=kit, at=solo.start, motif=motif, seed=7)
+part.play(kit)                       # the clip + the hi-hat openness lane (instrument.dynamics) on a live-hat kit
+```
+
+- **The stroke language** (`STROKE_HELP`, `strokes(pattern, grid=0.25, ...)` -> Hits, `pattern(pat, bpm, ...)` ->
+  Clip): one token per grid step - `R L` taps, `r l` ghosts, `>R` accent, `^R` rimshot accent, `fR` flam, `dR` drag,
+  `zR` buzz stroke, `RR` / `RLR` several strokes in one step (a diddle, a triplet), `K k` kick, `P p` hat foot
+  (`P@kick`: the left foot on a double pedal), `@piece` / `@N` (the kit's voices: 0 snare, 1 tom1 ...), `A+B`
+  together, `-` rest. `energy` (0..1) is the passage's top level (42 .. 126: a whisper .. fff), `shape` its dynamic ('cresc',
+  'decresc', 'build', 'swell', 'wave', (lo, hi), a function), `orchestrate` spreads unmarked strokes over the kit
+  (`ORCHESTRATIONS`: snare, toms / around, down / up (a group per drum), split (the lead hand on the floor tom, the
+  other on the snare), accents (accents on the toms, taps on the snare), hands, a list, a dict, a function).
+- **The hands' physics** (`Hands(lead='R', weak=0.3, tap=0.6, ghost=(18, 32), grace=0.36, height=0.035,
+  timing_ms=4, single_ms=70, double_ms=38, foot_ms=85, heel_toe_ms=58, evenness=0.8, reach_ms=55)`, named
+  `HANDS`: master, pro (default), rock, student; `perform_hits(hits, bpm)`): the weaker hand softer, later and
+  looser; stick heights that wander a little (accents least); the rebound of a double stroke a little under the
+  first; an accent right after its own hand's tap loses contrast at speed (the stick has to come up: the Moeller
+  problem); a hand crossing the kit faster than its reach lands softer and later; ghosts stay 15-35; flams (the other
+  hand 16-28 ms ahead, wider when soft), drags (two graces), buzz strokes (3-6 bounces closing in and dying away);
+  micro-timing: each stroke ~0.6 x `timing_ms` (SD) around a slow wander of each limb (+-3 ms beat to beat), the weak
+  hand a little late, ghosts looser, accents tighter; loud passages push a hair ahead. `sticking_problems(hits, bpm)` lists what two hands and two feet cannot play
+  (a single stroke sooner than `single_ms` after its hand's last, a rebound sooner than `double_ms`, one foot faster
+  than heel-toe, one limb on two drums at once); `rudiment()` / `pattern()` raise with the limit.
+- **Rudiments** (`RUDIMENTS`: the PAS roll, diddle, flam and drag rudiments - single / double / triple stroke rolls,
+  5- to 17-stroke rolls, buzz roll, single / double / triple / inverted paradiddle, paradiddle-diddle, flam, flam
+  accent, flam tap, flamacue, flam paradiddle, flammed mill, pataflafla, Swiss army triplet, inverted flam tap, flam
+  drag, drag, single / double drag tap, lesson 25, dragadiddle, single / double / triple ratamacue - plus accent grids
+  on singles: accent_fours / threes / triplets, moeller_sixes, herta): `rudiment(name, bpm, beats=, grid=, kit=,
+  energy=, orchestrate=, shape=, hands=, lead='L', accents=True)`.
+- **Feet** (`FEET`, `feet(kind, bars, bpm)` / the ostinato under a solo move): chick (hat foot on 2 and 4), chick4,
+  splash, four, clave (kick on the 3-2 son clave), samba, double (16th double bass: both feet on one kick),
+  heel_toe, gallop, none; `double_bass(beats, bpm, accents=...)`.
+- **Hi-hat openness, chokes**: a hat stroke's `open` (0 closed .. 1 open; pieces `hat`, `hat_half` 0.55,
+  `hat_open` 1). On a kit whose variable hat opens by the live `dynamics` param (`Kit.live_hat`: Big Rusty and
+  Unruly, their SFZ CC4 imported live) every stroke's openness is a step in `instrument.dynamics`
+  (`hat_lane(hits, kit, bpm)`; `Performance.lanes`, written by `part.play(track)`), elsewhere the openness picks the
+  closed / half / open sample. `hat_dance(beats, bpm)` plays the hat as a voice. Chokes: pieces `crash_choke`,
+  `ride_choke`, `china_choke` (the kits' choke keys: `big_rusty_kit` 88 / 89 / 90, `unruly_kit` 88 / 89,
+  `mf_natural` 58), `choke(bpm, piece='crash', after=1)` (a hit grabbed `after` beats later), `arrange(...,
+  ending='choke')`. Per-hand samples: `Kit.hand_keys` ({key: {'R': key}}: MF Natural's snare / toms recorded per
+  hand - each hand plays its own).
+- **Re-strike damping** (the sampler's `restrike`, dB): a drum head or cymbal struck again is touched by the stick,
+  so its old vibration does not stay on top of the new one. Sampled, every hit layers fully - a 16th-note run on one
+  drum piles up ~5-7 dB of ring; `restrike=6` keeps it near one hit. Set it on a solo kit:
+  `s.track('drums', patches.get('sampled/big_rusty_kit').but(restrike=6))` (drum kits 4-9; default 0 = off).
+- **The solo moves** (`SOLO_MOVES`: name -> fn(SoloContext) -> Hits, its feet, `spice` (a showpiece), energy,
+  density, natural length): time (the groove dissolving as the band drops out), hat_dance, motif (the `DrumMotif`
+  stated, repeated with a touch), develop (the motif varied bar by bar: `MOTIF_VARIATIONS` orchestrate, answer,
+  displace, flams, diminish, augment, fill, kick, fragment, rimshots, invert, sparse, climb), rudiment (orchestrated:
+  paradiddles split, flam accents on the toms, six-stroke rolls down the kit ...), flam_toms, tom_melody (the toms as
+  a melody: called on the snare, answered on the toms, its dynamics from `humanize.touch` with the toms as pitches),
+  call_response (snare calls, toms answer), three_over_four (dotted-8th accents around the toms over 16th ghosts),
+  fives (16ths in groups of five across the bar line), quintuplets, half_double (half-time into double-time), linear
+  (R L K / R L L K / R L R K K figures), bonham (hand-hand-foot 16th triplets around the toms, original pattern),
+  speed_burst (the fastest singles the hands can play at the tempo), buzz (a press roll pp -> ff), double_bass,
+  gated_toms (an 80s tom break in that spirit, original figure: send the toms to `bus/gated` for its span - its
+  window is in `part.moves`), silence (the drummer stops), swell (a cymbal roll; on `sampled/big_rusty_mallets`
+  soft mallets), finish (unison hits, a gap, a run around the whole kit into the band's 1; `choke=True`), hit_choke.
+  `perform(steps, bpm=, kit=, at=, hands=, seed=, motif=, feet=)` plays them in YOUR order (steps `(move, bars[,
+  energy[, opts]])` or dicts with the move's opts) -> a Performance (`.moves` = (start, end, 'solo', name)); give the
+  steps an arc (soft start, build, climax), never one level. `solo_move(name, beats, bpm, ...)` is one move as a
+  Clip. The arc, the motif development and the budget across a solo belong to `soloist.solo()` (the instrument-
+  agnostic solo wrapper), which plays the drummer's moves through `drummer.vocabulary()`.
+- **With the soloist** (`drummer.vocabulary(kit, hands=None, moves=None, feet=None, opts=None, budget=None)` ->
+  `soloist.Vocabulary`): one `soloist.Move` per solo move (`SOLO_ROLES`: where it fits in the arc - motif, answer,
+  develop, burst, climax, resolve; spice / fast as above; the finish a rare cue), each slot played by the hands'
+  physics on the kit, the hi-hat lane carried as the Part's steps; the motif is any Clip - the song's riff or hook:
+  `DrumMotif.from_clip(clip, kit=)` takes its rhythm (16ths or triplets) and accents (the loudest notes), a drum clip
+  keeps its drums - and `DrumMotif.to_clip(kit)` turns one back into notes; `vary` picks the stage's
+  `MOTIF_VARIATIONS`; `place` writes the notes and the hat lane (the track's humanize off); `touch=False` (the
+  drummer shapes its own dynamics). `soloist.solo(s, kit, drummer.vocabulary(kit, hands='master'), at=solo,
+  motif=riff, arc='build', seed=7)`.
 
 ## Automation
 
@@ -1875,10 +2002,12 @@ perf = soloist.solo(s, lead, vocab, at=(64, 8))                # (start beat, ba
   `roles` where it fits ('motif' 'answer' 'fill' 'develop' 'burst' 'climax' 'resolve'; () = anywhere);
   `play(ctx) -> Part | Clip | [notes]` (positions relative to `ctx.at`).
 - `Vocabulary(moves, motif=None, vary=None, *, name='', place=None, register=(0.0, 1.0), vel=(56, 118),
-  phrase_bars=2, touch=True, budget=None)` - `motif(ctx) -> Clip` makes a motif when the solo gets none,
-  `vary(motif, ctx) -> Clip` develops it (default `soloist.vary`: sequence, invert, fragment, rhythm displacement,
-  octave, ornament - by stage), `place(track, perf)` writes the parts on the track (default: the notes + every
-  gesture lane via `gesture.render`), `budget` its default `Budget`.
+  phrase_bars=2, touch=True, budget=None, range=(48, 84), rest=1.0)` - `motif(ctx) -> Clip` makes a motif when the
+  solo gets none, `vary(motif, ctx) -> Clip` develops it (default `soloist.vary`: sequence, invert, fragment, rhythm
+  displacement, octave, ornament - by stage), `place(track, perf)` writes the parts on the track (default: the notes
+  + every gesture lane via `gesture.render`), `budget` its default `Budget`, `rest` (0..1) scales the space the
+  stages plan at the phrase ends (1 for a horn that breathes; the drummer's vocabulary 0.4 - its feet keep the pulse
+  through the space).
 - `Ctx` (what `play` / `motif` / `vary` get): `song, track, vocab, at` (song beat), `beats` (the slot, the rest
   excluded), `bpm, bpb, key, prog, chord(t=None)` (the chord at a beat, None without `prog=`), `stage, role`
   ('call' | 'response' | 'fill' | 'lead'), `energy, density` (0..1 here), `register` (0..1: low statement .. top at

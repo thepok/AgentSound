@@ -3,7 +3,7 @@ orchestra hits, guitars, basses and brass as first-class patches. They run throu
 modulators exactly like the synth patches.
 
   gm/grand_piano gm/piano_lead gm/strings gm/choir_aahs gm/orchestra_hit gm/warm_pad gm/fretless gm/nylon_guitar
-  gm/music_box gm/synth_strings gm/brass_section
+  gm/music_box gm/synth_strings gm/brass_section gm/epiano
 
 Any other preset of the font: inst.sf2('Name') or inst.sf2(bank=..., program=...); list them with
 `python -m agentsound sf2 [search]`. Level calibration: every patch at gain_db 0 lands at about -18 LUFS
@@ -70,6 +70,20 @@ register(Patch(
           '(a piano decays), pedal steps (instrument.pedal) for legato lines; double with synthwave/epiano_bright at '
           '-8..-12 dB for sparkle. Sends: plate -12, hall -14. Measured -18.0 LUFS (audition melody).',
     audition={'notes': 'phrase'}))
+
+register(Patch(
+    'gm/epiano',
+    instrument=inst.sf2('Tine Electric Piano', width=1.2, level=2.0),
+    fx=[fx.eq({'hp.freq': 60, 'hp.slope': 24, 'peak1.freq': 300, 'peak1.gain': -1.5, 'peak1.q': 0.9}),
+        fx.chorus(mode='II', mix=0.4),
+        _dim(1)],
+    sends={'plate': -12, 'hall': -18},
+    notes='v1. GeneralUser GS "Tine Electric Piano": a Rhodes-style tine e-piano, chorused (Juno chorus II 0.4 + '
+          'dimension mode 1) like the 80s ballad keys. The DX7-free stand-in for synthwave/epiano (that one needs the '
+          'DX7 ROM banks, assets/dx7/README.md); the song template uses it so a fresh clone builds. Range: C3-C6; '
+          'comp chords C4-C5. Velocity 70-90 = round, 110+ = bark. Tweak: chorus mix 0.2-0.6, velsens 0.6-1. '
+          'Sends: plate -12, hall -18. Measured -18.0 LUFS (audition chords).',
+    audition={'notes': 'chord'}))
 
 register(Patch(
     'gm/strings',

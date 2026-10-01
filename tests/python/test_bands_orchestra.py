@@ -245,6 +245,13 @@ class TestChamberOrchestra(_PresetCase):
         orch.ring(b, a.bar(1), length=2, db=4)
         send = dict(b.violins1._auto)['send.hall']
         self.assertEqual(send[-1][1], b.info['seating']['violins1']['hall_send'] + 4)
+        base = b.info['seating']['violas']['hall_send']
+        orch.ring(b, 6.5, length=0.5, db=3, roles=['violas'], back=7.75)   # a mid-song fermata: given back
+        send = dict(b.violas._auto)['send.hall']
+        self.assertEqual([p[1] for p in send[-4:]], [base, base + 3, base + 3, base])
+        self.assertEqual(send[-1][0], 7.75)
+        with self.assertRaises(ComposeError):
+            orch.ring(b, 1, length=2, roles=['violas'], back=3)
         for r in b.roles:
             b[r].note(60 if r != 'basses' else 40, a.start, 2)
         s.compile()

@@ -1149,16 +1149,25 @@ def dynamics(band: Band, roles, points, at=0.0) -> Band:
     return band
 
 
-def ring(band: Band, at, length=2.0, db: float = 4.0, roles=None) -> Band:
+def ring(band: Band, at, length=2.0, db: float = 4.0, roles=None, back=None, back_beats: float = 0.25) -> Band:
     """Let the hall ring (the recipe's 'automate the room'): raise the hall send of every role (or `roles`) by `db`
-    over `length` beats from `at` (a beat or Section) and keep it there - on the last chord before a general pause or
-    the end, so the tail blooms into the silence."""
+    over `length` beats from `at` (a beat or Section) - on the last chord before a general pause or the end, so the
+    tail blooms into the silence. It stays raised, unless `back` (a beat or Section: where the music goes on after a
+    mid-song fermata) gives it back: the send returns to its seat over the `back_beats` before it."""
     a0 = float(getattr(at, 'start', at))
     bus = band.buses['hall']
     target = 'send.' + str(getattr(bus, 'id', 'hall'))
+    b0 = None if back is None else float(getattr(back, 'start', back))
+    if b0 is not None and b0 - float(back_beats) <= a0 + float(length) + 1e-9:
+        raise ComposeError(f"ring: back={b0:g} must come after the bloom ({a0:g} + length {float(length):g} + "
+                           f"back_beats {float(back_beats):g})")
     for r in (_roles(band, roles) if roles is not None else list(band.roles)):
         base = band.info['seating'][r]['hall_send']
-        band[r].automate(target, [(a0, base), (a0 + float(length), min(6.0, base + db), 'smooth')])
+        top = min(6.0, base + db)
+        pts = [(a0, base), (a0 + float(length), top, 'smooth')]
+        if b0 is not None:
+            pts += [(b0 - float(back_beats), top), (b0, base, 'smooth')]
+        band[r].automate(target, pts)
     return band
 
 

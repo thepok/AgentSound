@@ -123,7 +123,7 @@ class SamplerConstructor(unittest.TestCase):
 
 
 class GmLibrary(unittest.TestCase):
-    NAMES = ['gm/brass_section', 'gm/choir_aahs', 'gm/fretless', 'gm/grand_piano', 'gm/music_box', 'gm/nylon_guitar',
+    NAMES = ['gm/brass_section', 'gm/choir_aahs', 'gm/epiano', 'gm/fretless', 'gm/grand_piano', 'gm/music_box', 'gm/nylon_guitar',
              'gm/orchestra_hit', 'gm/piano_lead', 'gm/strings', 'gm/synth_strings', 'gm/warm_pad']
 
     def test_registered_and_calibrated(self):

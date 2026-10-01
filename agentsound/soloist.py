@@ -15,7 +15,7 @@ track); the soloist only plans:
 The interface (docs/COMPOSE_API.md "The soloist") - other players implement it:
     Move(name, beats, energy, density, spice, play, *, fast=False, roles=(), weight=1.0)
     Vocabulary(moves, motif=None, vary=None, *, name='', place=None, register=(0, 1), vel=(56, 118), phrase_bars=2,
-               touch=True, budget=None)
+               touch=True, budget=None, range=(48, 84), rest=1.0)
     Ctx            what play / motif / vary get (the slot, the arc here, the harmony, the motif, the budget ...)
     Part(clip, gestures=(), log=(), tricks=(), steps=None, aux=None)   what a move played
     solo(song, track, vocab, at=..., arc='classic', motif=None, budget=None, seed=None, *, prog=None, key=None,
@@ -132,10 +132,13 @@ class Vocabulary:
     vary(motif, ctx) -> Clip (default soloist.vary), place(track, perf) (writes the parts: default the notes + the
     gestures through agentsound.hornist.render), register (lo, hi) share of the instrument's range the arc may use,
     vel (lo, hi) the velocity range of the whole solo (the arc moves inside it), phrase_bars, touch (re-shape a flat
-    phrase's velocities: humanize.touch), budget (its default Budget: spice_every / fast_every / same_every bars)."""
+    phrase's velocities: humanize.touch), budget (its default Budget: spice_every / fast_every / same_every bars),
+    rest (0..1: scales every stage's planned space at the phrase ends - 1 for a wind player who breathes, ~0.4 for
+    a drummer, whose feet keep the pulse through the space)."""
 
     def __init__(self, moves, motif=None, vary=None, *, name: str = '', place=None, register=(0.0, 1.0),
-                 vel=(56, 118), phrase_bars: float = 2, touch: bool = True, budget=None, range=(48, 84)):
+                 vel=(56, 118), phrase_bars: float = 2, touch: bool = True, budget=None, range=(48, 84),
+                 rest: float = 1.0):
         self.moves = list(moves)
         if not self.moves:
             raise ComposeError("Vocabulary needs at least one Move")
@@ -155,6 +158,9 @@ class Vocabulary:
         if self.phrase_bars <= 0:
             raise ComposeError("Vocabulary phrase_bars must be > 0")
         self.touch = bool(touch)
+        if isinstance(rest, bool) or not isinstance(rest, (int, float)) or not 0.0 <= rest <= 1.0:
+            raise ComposeError(f"Vocabulary rest must be 0..1 (a share of the stages' planned space), got {rest!r}")
+        self.rest = float(rest)
         self.budget = budget
         from .theory import note as _note
         self.range = (_note(range[0]), _note(range[1]))
@@ -552,6 +558,7 @@ def solo(song, track, vocab: Vocabulary, at=None, arc: str = 'classic', motif=No
         rest = st['rest']
         if stage == 'statement' and i + 1 < len(phrases) and stages[i + 1] == 'statement':
             rest = max(rest, 0.45)
+        rest *= vocab.rest
         play_len = max(bpb * 0.5, pl * (1.0 - rest))
         # slots of this phrase: (role, offset, beats, wanted role, motif)
         plan = st['plan']

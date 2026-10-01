@@ -32,6 +32,7 @@ namespace fs = std::filesystem;
 constexpr double kStealSeconds = 0.004;   // stolen / mono-replaced voices fade out linearly
 constexpr double kOffFastSeconds = 0.005; // SFZ off_mode "fast": a voice turned off by a group fades out linearly
 constexpr double kChokeSeconds = 0.05;    // choke group: -60 dB in 50 ms
+constexpr double kRestrikeSeconds = 0.004;  // re-strike damping: time constant of the glide (~12 ms to settle)
 constexpr double kMinRelease = 0.001;     // shortest zone release (s)
 constexpr double kGainTau = 0.0015;       // level, expression, pan, width, pitch bend smoothing (~5 ms 10-90 %)
 constexpr double kToneTau = 0.002;        // cutoff, resonance (~7 ms)
@@ -52,7 +53,7 @@ constexpr int kMaxSwitchNotes = 16;       // keyswitch notes tracked while held 
 enum Param { kLevel, kPan, kWidth, kTranspose, kTune, kPitchbend, kCutoff, kResonance, kAttack, kDecay, kSustain, kRelease,
              kVelsens, kStart, kOneshot, kReverse, kMono, kPolyphony, kPedal, kExpression, kDynamics, kDynTone, kDynRange,
              kLayers, kXfSpread, kLegatoTime, kLegatoOffset, kLegatoMatch, kGlide, kGlideShape, kVibrato, kVibratoRate,
-             kSympathetic, kBendFollow, kHarmonic, kHarmonicNum, kHarmonicFocus };
+             kSympathetic, kBendFollow, kHarmonic, kHarmonicNum, kHarmonicFocus, kRestrike };
 
 constexpr double kHalfDampDb = 16.0;      // half pedal: extra decay (dB/s) of pedal-held treble notes at pedal 0.5
                                           // (0 at 1; the heavy bass strings get 40 % of it: the bass rings through)
@@ -193,6 +194,13 @@ std::vector<ParamSpec> makeSpecs() {
         num("harmonicfocus", 2.0f, 40.0f, 10.0f, "Q",
             "Q of each of the two band-passes that isolate the partial (higher = purer, a whistle; lower = more "
             "of the neighbouring partials, grittier)."),
+        num("restrike", 0.0f, 24.0f, 0.0f, "dB",
+            "Re-strike damping: when a key is struck again while its earlier notes still sound, those voices fall by "
+            "this much within ~12 ms and ring on from there (each new strike again). A drum head or a cymbal struck "
+            "again does not keep its old vibration on top of the new one - the stick touches it - so sampled rolls, "
+            "tom runs and cymbal swells stop piling up boom and wash (layering every hit fully: a 16th-note floor-tom "
+            "run ~+7 dB of low ring over one hit; 6 dB of damping leaves ~+1.2 dB). 0 = off (every hit layers fully, "
+            "bit-identical to before); drum kits 4-9, a piano's repeated notes 3-6.", false),
     };
 }
 
@@ -839,6 +847,7 @@ struct Voice {
     float hEnvX{0.0f}, hEnvH{0.0f}, hPeak{0.0f}, hGain{1.0f}, hdGain{0.0f};
     float hWarm{0.0f};               // a cold start fades the partial in while its band-passes and envelopes settle
     float hA{0.0f};                  // the amount at the end of the last block (ramped per sample: no zipper)
+    float rs{1.0f}, rsTarget{1.0f};  // re-strike damping: the gain and where it glides (restrike)
 };
 
 struct Held {
@@ -1077,6 +1086,7 @@ public:
         stealStep_ = static_cast<float>(1.0 / (kStealSeconds * sr_));
         offStep_ = static_cast<float>(1.0 / (kOffFastSeconds * sr_));
         chokeCoef_ = static_cast<float>(std::exp(-6.9 * smp::kControl / (kChokeSeconds * sr_)));
+        rsCoef_ = static_cast<float>(std::exp(-smp::kControl / (kRestrikeSeconds * sr_)));
         age_ = 0;
         seed_ = ctx.seed ^ dsp::hashString("as.instrument.sampler");
         startSample_ = songStartSample(ctx.startBeat, sr_, ctx.bpm, tempoMap_);   // song position (tempo map aware)
@@ -1810,6 +1820,14 @@ private:
     // of this same note), then the voices.
     void startZones(int noteId, int key, int vel, std::int64_t now, double heldSeconds, bool released,
                     const Handoff* ho = nullptr) {
+        const float restrike = params_.get(kRestrike);
+        if (restrike > 0.0f && !released && !playing_.empty()) {   // the stick touches the ringing head / cymbal
+            const float g = dsp::dbToGain(-restrike);
+            for (auto& v : voices_) {
+                if (v.active && !v.finishing && v.key == key && v.noteId != noteId && v.fadeStep <= 0.0f && v.lgDir >= 0)
+                    v.rsTarget *= g;
+            }
+        }
         for (const int zi : playing_) {
             const Zone& z = zones_[static_cast<std::size_t>(zi)];
             for (auto& v : voices_) {
@@ -2120,6 +2138,8 @@ private:
         v.fade = 1.0f;
         v.fadeStep = 0.0f;
         v.damp = 1.0f;
+        v.rs = 1.0f;
+        v.rsTarget = 1.0f;
         v.lp[0].reset();
         v.lp[1].reset();
         v.tg.fill(0.0f);
@@ -2243,7 +2263,12 @@ private:
         if (v.sustained && halfDb_ > 0.0f)   // half pedal: the dampers touch the strings (the bass less)
             v.damp *= dsp::dbToGain(-halfDb_ * (0.4f + 0.6f * std::clamp((v.key - 21) / 87.0f, 0.0f, 1.0f)));
         a *= v.damp;
+        if (v.rs != v.rsTarget) {    // re-strike damping glides there in ~12 ms (one-pole per control block)
+            v.rs = std::fabs(v.rs - v.rsTarget) < 1e-6f ? v.rsTarget : v.rsTarget + (v.rs - v.rsTarget) * rsCoef_;
+        }
+        a *= v.rs;
         if (v.env.stage == Eg::Done || (v.fadeStep > 0.0f && v.fade <= 0.0f) || v.reader.done || v.damp < kSilent ||
+            v.rs < kSilent ||
             (v.lgDir < 0 && v.lgPos >= 1.0f) || (v.env.stage == Eg::Sustain && v.env.sustain * v.amp < kSilent * 0.1f)) {
             v.finishing = true;
             a = 0.0f;
@@ -2490,7 +2515,7 @@ private:
     int poly_{32};
     int transpose_{0};
     bool reverse_{false}, oneshot_{false}, mono_{false};
-    float stealStep_{0.0f}, offStep_{0.0f}, chokeCoef_{0.0f};
+    float stealStep_{0.0f}, offStep_{0.0f}, chokeCoef_{0.0f}, rsCoef_{0.0f};
     std::uint64_t age_{0}, seed_{0};
     std::int64_t startSample_{0}, clock_{0};
     const TempoMap* tempoMap_{nullptr};   // set only for songs whose tempo changes

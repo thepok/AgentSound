@@ -38,7 +38,7 @@ def build() -> Song:
     s.gated(key=kit, pitches=['snare', 'clap'])              # 80s gated snare (the kit sends -6 dB to it)
     bass = s.track('bass', 'synthwave/octave_bass')
     pad = s.track('pad', 'synthwave/warm_pad', sends={shimmer: -20})
-    keys = s.track('keys', inst.sf2('Tine Electric Piano', width=1.2), gain_db=-2, pan=-0.3)  # synthwave/epiano is the DX7 version (needs the ROMs)
+    keys = s.track('keys', 'gm/epiano', gain_db=-2, pan=-0.3)     # synthwave/epiano: the DX7 version (needs the ROMs)
     arps = s.track('arp', 'synthwave/arp_pluck', gain_db=-2, pan=0.3)
     lead = s.track('lead', 'synthwave/supersaw_lead', gain_db=2)
 

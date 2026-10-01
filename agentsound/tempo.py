@@ -556,13 +556,19 @@ class TempoPlan:
                 return lilt_factor(delays, b - b0, L)
             out = _scale(out, s, t, lfactor, keep_kind=False, kind='fine')
         spans = []
-        for beat, hold, seconds, length in sorted(self.fermatas):
+        ferm = sorted(self.fermatas)
+        for i, (beat, hold, seconds, length) in enumerate(ferm):
             L = self._fermata_span(beat, length, onsets)
+            if (length is None and i + 1 < len(ferm) and beat + L > ferm[i + 1][0] + 1e-9
+                    and not any(b >= beat + CHORD for b, _ in (onsets or []))):
+                # no note after this chord yet: the span came from the notes placed SO FAR (a song asking tempo_at()
+                # while it writes its parts, before the music after the chord exists) - it stops at the next fermata
+                L = ferm[i + 1][0] - beat
             end = beat + L
             for a, b in spans:
                 if beat < b - 1e-9 and end > a + 1e-9:
                     raise ComposeError(f"fermata at beat {beat:g} (holding {L:g} beats) overlaps the fermata at beat {a:g}; "
-                                       f"give length= to shorten one")
+                                       f"give length= to shorten one (an explicit length= is taken as written)")
             spans.append((beat, end))
             d0 = _seconds(out, beat, end)
             extra = seconds if seconds is not None else hold * 60.0 / _value(out, beat)

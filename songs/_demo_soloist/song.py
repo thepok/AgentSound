@@ -1,17 +1,21 @@
 """Soloist demo: one instrument-agnostic solo wrapper (agentsound.soloist), two players. The same 8-bar arc over the
 same changes and the same motif, played by the hero sax (hornist.vocabulary: breath swells, pushes, air-coupled
 vibrato, scoops / falls, a shake or growl at the climax) and then by the hero guitar (guitarist.vocabulary: bends,
-up-only finger vibrato, legato, picking bursts, pinch harmonics, feedback, whammy, wah). Build one at a time:
+up-only finger vibrato, legato, picking bursts, pinch harmonics, feedback, whammy, wah) and then by the drummer
+(drummer.vocabulary: the motif's RHYTHM as a drum motif, developed around the toms, rudiments, polyrhythms, speed
+bursts, press rolls, the gated tom break - played by the hands' physics). Build one at a time:
     python -m agentsound build songs/_demo_soloist --section sax
     python -m agentsound build songs/_demo_soloist --section guitar
+    python -m agentsound build songs/_demo_soloist --section drums
 
 Sections (96 BPM, A minor, Am F C G two bars each):
   sax     8   layered/hero_sax: statement -> answer -> develop -> burst -> climax -> resolve (arc 'classic')
   guitar  8   layered/hero_guitar_heavy: the same arc, the same motif, the guitar's vocabulary
+  drums   8   the band's Big Rusty kit alone (the organ holds the chord): the same arc and motif, the drummer's
 See docs/COMPOSE_API.md "The soloist".
 """
 from agentsound import *
-from agentsound import bands, guitarist as gtr, hornist, soloist
+from agentsound import bands, drummer, guitarist as gtr, hornist, soloist
 
 ANALYSIS = {'profile': 'rock'}
 
@@ -22,6 +26,7 @@ def build() -> Song:
     s = Song('Soloist Demo', tempo=96, key='A minor', seed=11)
     sax_sec = s.section('sax', bars=8)
     gtr_sec = s.section('guitar', bars=8)
+    drum_sec = s.section('drums', bars=8)
     prog = s.prog('Am F C G', bars=2)
     hook = s.motif(MOTIF).clip(octave=4)
     b = bands.rock_band(s, without=('lead', 'gtr_r'))          # drums, bass, a rhythm guitar, organ; space, master
@@ -37,6 +42,10 @@ def build() -> Song:
     lead = s.track('lead', 'layered/hero_guitar_heavy', gain_db=1)
     p1 = soloist.solo(s, sax, hornist.vocabulary('sax', style='hero'), at=sax_sec, prog=prog, motif=hook, seed=4)
     p2 = soloist.solo(s, lead, gtr.vocabulary('rock'), at=gtr_sec, prog=prog, motif=hook, seed=4)
+    # the drum solo: the band drops out, the organ holds Am, the drummer plays the same arc on the same motif
+    b.keys.play(s.prog('Am').block(voicing='spread', register=('C3', 'C5'), vel=60).stretch(8), drum_sec)
+    p3 = soloist.solo(s, b.drums, drummer.vocabulary(b.drums, hands='master'), at=drum_sec, motif=hook, seed=4)
     print('sax:', p1.summary())
     print('guitar:', p2.summary())
+    print('drums:', p3.summary())
     return s

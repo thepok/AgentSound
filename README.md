@@ -126,7 +126,7 @@ file analysis, comparison), `art/` (covers + a public-domain stroke font), `io/`
 | `dx7` | DX7 FM (msfa core) playing the 256 original ROM voices by name (`assets/dx7/`, not bundled: see its README) |
 | `drums` | synthesized drum machine on the GM key map, kits 808 909 linn synthwave modern, every piece tweakable |
 | `sf2` | SoundFont 2 player (GeneralUser GS by default: full GM/GS set + drum kits; any .sf2 via `file=`) |
-| `sampler` | the sampled-instrument core: WAV folders / files / zones with an SFZ-grade zone model - velocity layers, round robin, random layers, release triggers, groups / off_by, crossfades, per-zone envelopes, filters, EQ, LFOs, loops; keyswitch articulations, `mono='legato'` transitions + portamento, live `dynamics` (layer crossfades while a note sounds), `expression`, sustain `pedal`, `vibrato`, WavPack decoding (organs), 32-tap sinc interpolation |
+| `sampler` | the sampled-instrument core: WAV folders / files / zones with an SFZ-grade zone model - velocity layers, round robin, random layers, release triggers, groups / off_by, crossfades, per-zone envelopes, filters, EQ, LFOs, loops; keyswitch articulations, `mono='legato'` transitions + portamento, live `dynamics` (layer crossfades while a note sounds), `expression`, sustain `pedal`, `vibrato`, `restrike` (re-strike damping: a drum or string struck again damps its own ringing voices, so rolls do not pile up), WavPack decoding (organs), 32-tap sinc interpolation |
 | `stack` | 1-8 child instruments on one track (layers): level, pan, transpose, detune, key / velocity ranges with crossfades, velocity curve, note delay, own fx chain; pedal / bend / expression / dynamics forwarded |
 
 **Effects** (by family)
@@ -205,7 +205,7 @@ playability checks, and a log (`.moves`, `.budget`, `.summary()`).
 |---|---|---|
 | `pianist` | `pianist.arrange(melody, prog, bpm=, style=)`, `Memory`, moves (trill, tremolo, turn, crush, gliss, runs ...) | voicing devices under the melody, ornaments (fast ones budgeted per `fast_every`), fills, left-hand styles in any meter, pedal |
 | `romantic` | `fioritura`, `trill`, `turn`, `grace`, `accompany`, `lean_on_long`, `cantabile`, `dynamics`, `melody_rubato`, `pedal_changes`, `figure_stats` | the classical / romantic pianist for written scores (Chopin, the nocturne etude): fioriture as shaped gestures in real time, trills with a start and a Nachschlag, the 12/8 bass-chord-chord left hand, the singing line (long notes lean, the next note plays into the decay), hairpins, melody-only rubato over a steady left hand, pedal per harmony with flutter in chromatic runs |
-| `drummer` | `drummer.arrange(song, style=, kit=)`, `Memory`, `Kit.of(...)`, moves (tom_run, build, stop ...) | a whole form: grooves per style and section role, budgeted fills, crashes, builds, stops, endings; four limbs with speed limits; kick locked to the bass |
+| `drummer` | `drummer.arrange(song, style=, kit=)`, `Memory`, `Kit.of(...)`, moves (tom_run, build, stop ...); solo: `perform(steps)`, `vocabulary()` (for `soloist.solo`), `rudiment`, `pattern`, `Hands`, `DrumMotif`, `SOLO_MOVES`, `feet`, `choke`, `hat_lane` | a whole form: grooves per style and section role, budgeted fills, crashes, builds, stops, endings (a hit grabbed by a choke); four limbs with speed limits; kick locked to the bass. A drum SOLO: a stroke language (stickings, accents, ghosts, flams, drags, buzz, kit voices), the hands' physics (a weaker hand, stick heights, rebounds, up-strokes, reach, sticking-aware speed limits), the PAS rudiments orchestrated around the kit, feet ostinatos and double bass, the live hi-hat openness lane, cymbal chokes, per-hand samples, and solo moves (motif and its development, tom melodies, call and response, 3 over 4, fives, quintuplets, half / double time, linear, hand-hand-foot triplets, speed bursts, press rolls, the gated tom break, silences, the big finish) played in order by `perform()` or by `soloist.solo()` |
 | `bassist` | `bassist.arrange(prog, bpm=, style=, kick=)`, `Memory`, `touch`, moves (slide, approach, octave_pop ...) | styles rock pop country funk motown disco ballad reggae tumbao synth walking; kick lock / interlock; fingering and tempo limits |
 | `guitarist` | `guitarist.arrange(...)` (rhythm), `guitarist.lead(...)` (`gestures=True`: fretwork bends / vibrato), `guitarist.vocabulary(style)` (the solo vocabulary), `Fretboard`, `shapes`, `Memory` | real chord shapes, strum / pick patterns per style and section, palm mutes / dead notes, double-tracked takes; lead bends, vibrato, slides, hammer-ons |
 | `fretwork` | `fretwork.bend`, `prebend`, `ghost_bend`, `unison_bend`, `oblique_bend`, `vibrato` (`VIBRATOS`), `hammer_on`, `trill`, `legato_run`, `slide`, `slide_in` / `slide_out`, `picked_run`, `tremolo_pick`, `sweep`, `rake`, `pinch`, `palm_mute`, `whammy_dive` / `whammy_scoop` / `whammy_vibrato`, `feedback`, `wah` / `wah_talk`, `pick_scrape`, `squeak`; `render(track, parts, at)` | the lead guitarist's hands inside and between notes (a guitar hero's micro-performance, like the hornist's breath): bends that rise fast, overshoot and settle, pre-bends, unison bends (the held string on a twin track / the sampler's per-note `bendfollow`), finger vibrato that only goes UP (down from a bent pitch), legato without the pick, alternate picking with accents, sweeps, pinch harmonics and controlled feedback (the sampler's `harmonic`), palm mutes, whammy, wah, pick scrapes |
@@ -220,6 +220,14 @@ as additive shapes on abstract lanes - pitch bend, vibrato, air, mic, harmonic, 
 click-free; the hornist and fretwork are built on it) and `budget` (one ornament budget for every player: the
 pianist's, guitarist's, hornist's and soloist's tricks; `guitar_vocab` and `horn_vocab` hold the solo vocabularies). Rules from the user's feedback: flat velocities read as
 robotic (the report's `flat_dynamics`), ornaments and fills are spice, not habit.
+
+Voicing (`voicing`): `voicing.chorale(table, voices=voicing.STRINGS, key='C minor')` / `voicing.voice(steps, ...)`
+voices chords into real parts around the lines written by hand - any voice set (`SATB`, `STRINGS`, `WINDS`, `WINDS8`
+the interlocked wind pairs, `HORNS`, `BRASS`, `TUTTI`): chord tones in range, no crossing, complete chords, no doubled
+leading tone or seventh, no parallel fifths / octaves, the smallest motion, no semitone rub against the written lines.
+`voicing.check(parts, harmony, voices=...)` reads written parts back (parallels between EVERY voice pair, semitone
+clashes, strong-beat non-chord tones, ranges, crossings); `arpeggiate` / `passing_eighths` give a fugue's free voices
+motion without parallels or rubs (songs/lux-perpetua, songs/unbowed).
 
 ## 5. Band presets, genres, recipes
 
@@ -355,7 +363,7 @@ Also user-facing: `delivery` (mp3 tags, cover, credits.txt, the CC-BY / BY-SA / 
 
 ```
 agentsound/            Python compose layer (stdlib only)
-  song.py theory.py patterns.py midifx.py humanize.py automation.py modulation.py vamod.py tempo.py
+  song.py theory.py voicing.py patterns.py midifx.py humanize.py automation.py modulation.py vamod.py tempo.py
   articulation.py pianist.py romantic.py drummer.py bassist.py guitarist.py jazz.py heroes.py
   gesture.py budget.py fretwork.py soloist.py guitar_vocab.py horn_vocab.py   lanes, budgets, solos
   makingof/            the making-of film (facts, players' logs, narration, timeline, web/ renderer)
@@ -373,7 +381,7 @@ tests/                 C++ tests (test_*.cpp, ctest) and tests/python (unittest)
 Python helper modules (`catalog.HELPER_MODULES`, listed with every public function by `catalog helpers`): `theory`,
 `patterns`, `humanize`, `automation`, `modulation`, `midifx`, `vamod`, `jazz`, `pianist`, `romantic`, `drummer`, `bassist`,
 `guitarist`, `sfz`, `kits`, `organ`, `articulation`, `speech`, `tempo`, `song`, `mixer`, `mastering`, `heroes`,
-`gesture`, `fretwork`, `soloist`, `guitar_vocab`, `horn_vocab`, `budget`.
+`gesture`, `fretwork`, `soloist`, `guitar_vocab`, `horn_vocab`, `budget`, `voicing`.
 
 | to add | do |
 |---|---|

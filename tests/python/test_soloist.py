@@ -54,6 +54,17 @@ def song(bars=16):
 
 
 class Interface(unittest.TestCase):
+    def test_rest_scale(self):
+        def played(rest):
+            v = toy_vocab()
+            v.rest = rest
+            s, sec, tr = song()
+            p = soloist.solo(s, tr, v, at=sec, motif=MOTIF, seed=3, place=False)
+            return sum(n.dur for n in p.clip)
+        self.assertGreater(played(0.4), played(1.0))          # a drummer leaves less space than a horn
+        with self.assertRaises(ComposeError):
+            soloist.Vocabulary(toy_vocab().moves, rest=1.5)
+
     def test_move_validation(self):
         with self.assertRaises(ComposeError):
             soloist.Move('x', 0, 1.5, 0.5, False, lambda c: None)

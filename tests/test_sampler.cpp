@@ -876,6 +876,46 @@ void testSympatheticAndHalfPedal() {
               lossC6, lossC2));
 }
 
+void testRestrike() {
+    std::printf("re-strike damping (restrike)\n");
+    // a drum-like hit: decaying noise (a ringing head: hits add in power, not in phase), one-shot
+    std::vector<float> hit(static_cast<std::size_t>(48000 * 2.5));
+    unsigned seed = 12345u;
+    for (std::size_t i = 0; i < hit.size(); ++i) {
+        const double t = static_cast<double>(i) / 48000.0;
+        seed = seed * 1664525u + 1013904223u;
+        const double n = static_cast<double>(seed >> 8) / 8388608.0 - 1.0;
+        hit[i] = static_cast<float>(0.3 * n * std::exp(-t / 0.8) * std::min(1.0, t / 0.001));
+    }
+    const std::string file = writeWav(gTmp / "restrike" / "tom.wav", hit, 48000, 24);
+    auto cfg = [&](double rs) {
+        return json{{"samples", {{"file", file}, {"root", 45}, {"loop", "oneshot"}}}, {"restrike", rs}, {"polyphony", 32}};
+    };
+    // a 16th-note run on one drum (8 strokes, 125 ms apart), then silence
+    std::vector<Event> run;
+    for (int k = 0; k < 8; ++k) run.push_back({sec(0.125 * k), true, k + 1, 45, 0.8f});
+    std::vector<Event> one = {{sec(0.875), true, 1, 45, 0.8f}};
+    auto plain = make(cfg(0.0)), damped = make(cfg(9.0)), damped2 = make(cfg(9.0)), single = make(cfg(9.0));
+    auto bareCfg = cfg(0.0);
+    bareCfg.erase("restrike");
+    auto bare = make(bareCfg);
+    const Audio p = render(*plain, run, sec(1.6)), d = render(*damped, run, sec(1.6)), d2 = render(*damped2, run, sec(1.6), 0);
+    const Audio b = render(*bare, run, sec(1.6));
+    const Audio o = render(*single, one, sec(1.6));
+    check(p.l == b.l && p.r == b.r, "restrike 0 is the plain sampler (bit-identical)");
+    check(d.l == d2.l && d.r == d2.r, "restrike is deterministic and block-size independent");
+    const auto pm = p.mono(), dm = d.mono(), om = o.mono();
+    // after the last stroke: the plain run rings with every earlier hit on top; damped it is close to one hit
+    const double pl = rms(pm, sec(0.95), sec(1.3)), dl = rms(dm, sec(0.95), sec(1.3)), ol = rms(om, sec(0.95), sec(1.3));
+    check(db(pl / ol) > 4.0 && db(dl / ol) < 2.0 && db(dl / ol) > 0.0,
+          fmt("a run's ring: plain %+.1f dB over one hit, restrike 9 dB %+.1f dB", db(pl / ol), db(dl / ol)));
+    // the new stroke's attack is not damped (the first 10 ms after the last strike)
+    const double pa = rms(om, sec(0.876), sec(0.886)), da = rms(dm, sec(0.876), sec(0.886));
+    check(da > pa * 0.95, fmt("the new stroke keeps its attack (%.3f vs a single hit %.3f)", da, pa));
+    check(clicks(d) == 0, "no clicks from the damping glide");
+    check(rejects(cfg(30.0), "restrike"), "restrike above 24 dB is rejected");
+}
+
 void testGroupsAndGenerators() {
     std::printf("groups (off_by), off modes, *silence / *sine / *noise\n");
     const fs::path dir = gTmp / "groups";
@@ -1964,6 +2004,7 @@ int main(int argc, char** argv) {
         testSequencesAndTriggers();
         testReleaseAndPedal();
         testSympatheticAndHalfPedal();
+        testRestrike();
         testGroupsAndGenerators();
         testZoneShaping();
         testRandomDelayLfo();

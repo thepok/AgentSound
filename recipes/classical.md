@@ -350,6 +350,7 @@ orch.perform(o, 'violas', chords.articulate('tremolo'), build, shapes='cresc')  
 orch.dynamics(o, orch.STRINGS, [(0, 'p'), (16, 'ff', 'smooth')], at=build)             # one lane for many roles
 o.percussion.note(orch.PERCUSSION_KEYS['cymbal_roll'], climax.start - 4.2, 6, 96)       # swell peaks 3.5 s in
 orch.ring(o, coda.bar(-1), length=2, db=5)                                               # the hall blooms at the end
+orch.ring(o, dev.bar(-1) + 2, length=1, db=3, back=recap)   # a mid-song fermata: the bloom is given back at `back`
 print(o.describe()); o.info['articulations']['cellos']; o.info['sweet']['horns']       # how to play each role
 ```
 

@@ -1,199 +1,35 @@
 """Lux Perpetua - the score as data (an original Requiem in D minor in the idiom of Mozart's K. 626, no borrowed notes).
 
 Everything here is notes and harmony, no sounds: song.py orchestrates and performs it. Pitches are sounding pitch,
-times are beats (quarter notes) from the start of each movement. The four-part choir writing is voiced by `satb()`,
-a small voice-leading search (chord tones in SATB ranges, complete chords, no doubled leading tone or seventh, no
+times are beats (quarter notes) from the start of each movement. The four-part choir writing is voiced by `satb()`
+(the library's `agentsound.voicing.voice` in the choir's ranges), a small voice-leading search (chord tones in SATB ranges, complete chords, no doubled leading tone or seventh, no
 parallel fifths / octaves, smallest motion) around the lines written by hand (soprano tunes, basses, fugue subject and
 countersubject).
 """
 from __future__ import annotations
 
-from collections import Counter
-from itertools import product
-
-from agentsound.theory import chord as _chord, note as _note
-
-
-def N(p) -> int:
-    return p if isinstance(p, int) else _note(p)
-
-
-def line(spec: str, t0: float = 0.0, shift: int = 0) -> list:
-    """'D4:1 A4:.5 r:1 | ...' -> [(start, dur, pitch)] from t0 (bars '|' are only for the eye)."""
-    out, t = [], float(t0)
-    for tok in spec.replace('|', ' ').split():
-        p, d = tok.split(':')
-        d = float(d)
-        if p not in ('r', '-'):
-            out.append((t, d, N(p) + shift))
-        t += d
-    return out
-
-
-def length(spec: str) -> float:
-    return sum(float(tok.split(':')[1]) for tok in spec.replace('|', ' ').split())
-
-
-# ------------------------------------------------------------------------------------------------ chords
-
-class ChordInfo:
-    def __init__(self, sym: str):
-        c = _chord(sym)
-        self.sym = sym
-        self.pcs = set(c.pcs)
-        r = self.root = c.root
-        self.bass = c.bass if c.bass is not None else r
-        pick = lambda cands: next((x % 12 for x in cands if x % 12 in self.pcs), None)   # noqa: E731
-        self.third = pick((r + 4, r + 3)) if pick((r + 4, r + 3)) is not None else pick((r + 5, r + 2))
-        self.fifth = pick((r + 7, r + 6, r + 8))
-        self.seventh = next((x % 12 for x in (r + 10, r + 11, r + 9) if x % 12 in self.pcs
-                             and x % 12 not in (self.third, self.fifth)), None)
-        self.major = self.third == (r + 4) % 12
-        self.dim7 = self.third == (r + 3) % 12 and self.fifth == (r + 6) % 12 and self.seventh == (r + 9) % 12
-
-
-_INFO: dict = {}
-
-
-def info(sym: str) -> ChordInfo:
-    if sym not in _INFO:
-        _INFO[sym] = ChordInfo(sym)
-    return _INFO[sym]
-
+from agentsound import voicing
+from agentsound.voicing import N, harmony_at, info, length, line, timeline  # noqa: F401  (song.py uses them)
 
 # ------------------------------------------------------------------------------------------------ the voicer
+# The four-part voicer and the counterpoint helpers live in the library (agentsound.voicing); the Requiem keeps its
+# choir ranges, centres and D minor's leading tone (C#) as the defaults.
 
 ORDER = ('S', 'A', 'T', 'B')
 CHOIR = {'S': (60, 79), 'A': (55, 72), 'T': (48, 67), 'B': (43, 62)}          # C4-G5, G3-C5, C3-G4, G2-D4
 CENTER = {'S': 70, 'A': 64, 'T': 57, 'B': 50}
 
 
-def _score(cur: dict, prev: dict, ci: ChordInfo, lt: int | None, free_b: bool, free=(), avoid=()) -> float:
-    vs = [v for v in ORDER if v in cur]
-    ps = [cur[v] for v in vs]
-    for a, b in zip(ps, ps[1:]):
-        if a <= b:
-            return 1e9
-    sc = 0.0
-    for v1, v2 in (('S', 'A'), ('A', 'T')):
-        if v1 in cur and v2 in cur and cur[v1] - cur[v2] > 12:
-            sc += 15 * (cur[v1] - cur[v2] - 12)
-    if 'T' in cur and 'B' in cur and cur['T'] - cur['B'] > 19:
-        sc += 5
-    pcs = [p % 12 for p in ps]
-    have = set(pcs)
-    if len(ps) >= 3:
-        if ci.third is not None and ci.third not in have:
-            sc += 40
-        if ci.seventh is not None and ci.seventh not in have:
-            sc += 25
-        if ci.root not in have and not ci.dim7:
-            sc += 30
-        if ci.fifth is not None and ci.fifth not in have:
-            sc += 4
-    cnt = Counter(p for p in pcs if p in ci.pcs)
-    if lt is not None and cnt.get(lt, 0) > 1:
-        sc += 40
-    if ci.seventh is not None and cnt.get(ci.seventh, 0) > 1:
-        sc += 40
-    if ci.major and cnt.get(ci.third, 0) > 1:
-        sc += 6
-    if free_b and 'B' in cur:
-        sc += 0 if cur['B'] % 12 == ci.bass else 18
-    for v, p in cur.items():
-        q = prev.get(v)
-        if q is not None:
-            d = abs(p - q)
-            sc += d + (8 if d > 7 else 0) + (20 if d > 12 else 0)
-        else:
-            sc += 0.15 * abs(p - CENTER[v])
-    for v in free:                    # no free voice a semitone (or rubbing whole tone) from a written line's notes
-        for x in avoid:
-            d = abs(cur[v] - x)
-            sc += 45 if d == 1 else 12 if d == 2 else 0
-    moved = [v for v in cur if prev.get(v) is not None]
-    for i in range(len(moved)):
-        for j in range(i + 1, len(moved)):
-            a, b = moved[i], moved[j]
-            if cur[a] == prev[a] and cur[b] == prev[b]:
-                continue
-            i0, i1 = abs(prev[a] - prev[b]) % 12, abs(cur[a] - cur[b]) % 12
-            if i0 == i1 and i0 in (0, 7) and cur[a] != prev[a]:
-                sc += 60
-    return sc
-
-
 def satb(steps: list, *, lt: int | None = 1, ranges: dict | None = None, prev: dict | None = None) -> list:
-    """Voice a chord sequence. steps: [{'chord': sym, 'fixed': {voice: pitch}, 'active': voices}] -> one
-    {voice: pitch} per step (fixed voices kept, the free ones chosen). lt = the leading tone's pitch class (never
-    doubled; C# in D minor)."""
-    rng = ranges or CHOIR
-    prev = dict(prev or {})
-    out = []
-    for st in steps:
-        ci = info(st['chord'])
-        active = tuple(st.get('active', ORDER))
-        fixed = {v: N(p) for v, p in (st.get('fixed') or {}).items() if p is not None and v in active}
-        free = [v for v in active if v not in fixed]
-        cands = [[p for p in range(rng[v][0], rng[v][1] + 1) if p % 12 in ci.pcs] for v in free]
-        best = None
-        for combo in product(*cands):
-            cur = dict(fixed)
-            cur.update(zip(free, combo))
-            sc = _score(cur, prev, ci, st.get('lt', lt), 'B' in free, free, st.get('avoid', ()))
-            if best is None or sc < best[0]:
-                best = (sc, cur)
-        if best is None or best[0] >= 1e9:
-            raise ValueError(f"cannot voice {st['chord']} with {fixed}")
-        out.append(best[1])
-        for v in ORDER:
-            prev[v] = best[1].get(v)
-    return out
+    """Voice a chord sequence (voicing.voice in the choir's ranges; lt = C#, the leading tone of D minor)."""
+    return voicing.voice(steps, voices=ranges or CHOIR, lt=lt, prev=prev, center=CENTER)
 
 
 def chorale(table: list, t0: float = 0.0, *, lt: int | None = 1, ranges=None, prev=None, tie: bool = False,
             active=ORDER) -> dict:
-    """Homophonic writing from a table of (dur, chord, S, B[, {voice: pitch}]) rows (S / B None = free; a row with
-    chord None is a rest): {voice: [(start, dur, pitch)]}, every voice in the table's rhythm (tie=True merges
-    repeated pitches)."""
-    steps, times = [], []
-    t = float(t0)
-    for dur, sym, s_, b_, *more in table:
-        if sym is not None:
-            steps.append({'chord': sym, 'fixed': {'S': s_, 'B': b_, **(more[0] if more else {})}, 'active': active})
-            times.append((t, dur))
-        t += dur
-    voiced = satb(steps, lt=lt, ranges=ranges, prev=prev)
-    out = {v: [] for v in active}
-    for (t, dur), vc in zip(times, voiced):
-        for v in active:
-            p = vc.get(v)
-            if p is None:
-                continue
-            last = out[v][-1] if out[v] else None
-            if tie and last and last[2] == p and abs(last[0] + last[1] - t) < 1e-6:
-                out[v][-1] = (last[0], last[1] + dur, p)
-            else:
-                out[v].append((t, dur, p))
-    return out
-
-
-def harmony_at(harm: list, t: float) -> str | None:
-    """harm: [(start, dur, chord)] -> the chord sounding at t."""
-    for s, d, c in harm:
-        if s - 1e-6 <= t < s + d - 1e-6:
-            return c
-    return None
-
-
-def timeline(table: list, t0: float = 0.0) -> list:
-    """(dur, chord, ...) rows -> [(start, dur, chord)]."""
-    out, t = [], float(t0)
-    for row in table:
-        if row[1] is not None:
-            out.append((t, row[0], row[1]))
-        t += row[0]
-    return out
+    """Homophonic writing from (dur, chord, S, B[, {voice: pitch}]) rows (voicing.chorale, SATB)."""
+    return voicing.chorale(table, t0, voices=ranges or CHOIR, lt=lt, prev=prev, tie=tie, active=active,
+                           center=CENTER)
 
 
 # ================================================================================================ I. INTROITUS
@@ -371,105 +207,14 @@ def _key_pcs(t: float):
     return {2, 4, 5, 7, 9, 10, 0}, 2, 1                       # D minor
 
 
-def _at_time(notes, t):
-    for n in notes:
-        if n[0] - 1e-6 <= t < n[0] + n[1] - 1e-6:
-            return n[2]
-    return None
-
-
-def _parallel_or_rub(parts, v, seq) -> bool:
-    """True when the line seq [(t, pitch) ...] of voice v (its first and last entries are the notes around the new
-    ones) makes parallel fifths / octaves with another voice, or a new note rubs a semitone / minor ninth against
-    one."""
-    for w in ORDER:
-        if w == v:
-            continue
-        for t, u in seq[1:-1]:
-            if any(q is not None and abs(u - q) % 12 in (1, 11)
-                   for q in (_at_time(parts[w], t), _at_time(parts[w], t + 0.25))):
-                return True
-        for (ta, ua), (tb, ub) in zip(seq, seq[1:]):
-            wa, wb = _at_time(parts[w], ta), _at_time(parts[w], tb)
-            if None in (wa, wb) or wa == wb or ua == ub or (ub - ua) * (wb - wa) <= 0:
-                continue
-            if abs(ua - wa) % 12 == abs(ub - wb) % 12 and abs(ua - wa) % 12 in (0, 7):
-                return True
-    return False
-
-
 def arpeggiate(parts: dict, free: set, harmony: list, t0: float, until: float = 68.0) -> list:
-    """The fugue's free voices move in quarters: a free note of 2 beats or more gives its last beat to another tone
-    of its chord (a leap of a third to a fifth) that approaches the next note by step or third, where that makes no
-    parallels or rubs. harmony: [(start, dur, chord)] from t0. Edits parts in place; returns [(beat, voice, pitch)]."""
-    from agentsound.theory import chord as _ch
-    added = []
-    for v in ORDER:
-        out = []
-        ns = parts[v]
-        lo, hi = CHOIR[v]
-        for i, (a, d, p1) in enumerate(ns):
-            nxt = ns[i + 1] if i + 1 < len(ns) else None
-            c = None
-            if ((v, round(a, 4)) in free and d >= 2 - 1e-6 and nxt is not None and abs(a + d - nxt[0]) < 1e-6
-                    and a + d - t0 <= until):
-                sym = harmony_at([(x + t0, y, z) for x, y, z in harmony], a + d - 1)
-                pcs = set(_ch(sym).pcs) if sym else set()
-                cands = [q for q in range(lo, hi + 1) if q % 12 in pcs and 3 <= abs(q - p1) <= 7
-                         and 1 <= abs(q - nxt[2]) <= 4]
-                for q in sorted(cands, key=lambda q: (abs(q - nxt[2]), abs(q - p1))):
-                    if not _parallel_or_rub(parts, v, [(a + d - 1.01, p1), (a + d - 1, q), (a + d, nxt[2])]):
-                        c = q
-                        break
-            if c is None:
-                out.append((a, d, p1))
-            else:
-                out.append((a, d - 1, p1))
-                out.append((a + d - 1, 1.0, c))
-                free.add((v, round(a + d - 1, 4)))
-                added.append((a + d - 1, v, c))
-        parts[v] = out
-    return added
+    """The fugue's free voices move in quarters (voicing.arpeggiate in the choir's ranges)."""
+    return voicing.arpeggiate(parts, free, harmony, t0, voices=CHOIR, until=until)
 
 
 def passing_eighths(parts: dict, free: set, t0: float, until: float = 68.0) -> list:
-    """Counterpoint for the fugue's free voices: a note that moves a third to the next note gives its last 8th to
-    the step between, one that moves a fourth its last two 8ths (the scale of the local key; the leading tone into
-    the tonic) - unless that makes parallel fifths / octaves with another voice or rubs a semitone / minor ninth
-    against one. parts: {voice: [(start, dur, pitch)]} (song beats, sorted), free: {(voice, start)} of the free
-    notes. Edits parts in place; returns [(beat, voice, pitch)] of the passing notes."""
-    added = []
-    for v in ORDER:
-        out = []
-        ns = parts[v]
-        for i, (a, d, p1) in enumerate(ns):
-            nxt = ns[i + 1] if i + 1 < len(ns) else None
-            gap = abs(nxt[2] - p1) if nxt is not None else 0
-            k = 1 if 3 <= gap <= 4 else 2 if gap == 5 else 0
-            ok = ((v, round(a, 4)) in free and k and d >= 0.5 * k + 0.5 - 1e-6 and abs(a + d - nxt[0]) < 1e-6
-                  and a + d - t0 <= until)
-            xs = None
-            if ok:
-                p2 = nxt[2]
-                tp = a + d - 0.5 * k
-                pcs, tonic, lt = _key_pcs(tp - t0)
-                if p2 % 12 == tonic and p2 > p1:
-                    pcs = (pcs - {(tonic - 2) % 12}) | {lt}
-                cands = [q for q in range(min(p1, p2) + 1, max(p1, p2)) if q % 12 in pcs]
-                if len(cands) == k:
-                    xs = cands if p2 > p1 else cands[::-1]
-                    seq = [(tp - 0.01, p1)] + [(tp + 0.5 * j, x) for j, x in enumerate(xs)] + [(a + d, p2)]
-                    if _parallel_or_rub(parts, v, seq):
-                        xs = None
-            if xs is None:
-                out.append((a, d, p1))
-            else:
-                out.append((a, d - 0.5 * k, p1))
-                for j, x in enumerate(xs):
-                    out.append((a + d - 0.5 * k + 0.5 * j, 0.5, x))
-                    added.append((a + d - 0.5 * k + 0.5 * j, v, x))
-        parts[v] = out
-    return added
+    """Passing 8ths for the fugue's free voices in the Kyrie's local keys (voicing.passing_eighths)."""
+    return voicing.passing_eighths(parts, free, t0, _key_pcs, order=ORDER, until=until)
 
 
 def swells(notes, a: float, b: float, period: float, lo: float = 0.65) -> list:

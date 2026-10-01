@@ -202,6 +202,18 @@ class TempoApi(unittest.TestCase):
             s.fermata(10, hold=1)
             s.compile()
 
+    def test_fermata_before_the_music_after_it_is_written(self):
+        # a song asking tempo_at() while it writes its parts: the first fermata's chord is placed, the music after
+        # it not yet - its span stops at the next fermata instead of overlapping it (lux-perpetua hit this)
+        s = Song('f2', tempo=60)
+        s.section('a', bars=8)
+        t = s.track('p', va())
+        t.play(Clip([(0, 8, 'C3', 90), (8, 20, 'C4', 90)], length=32), 0)   # the chord on 8 lasts 20 beats
+        s.fermata(8, hold=2)
+        s.fermata(20, hold=2, length=2)
+        self.assertEqual(s.tempo_at(24), 60)
+        self.assertAlmostEqual(s.seconds(20) - s.seconds(8), 12 + 2, places=6)
+
     def test_fermata_after_ritardando(self):
         s = Song('rf', tempo=90)
         end = s.section('end', bars=2)
