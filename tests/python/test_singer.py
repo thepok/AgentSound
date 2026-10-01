@@ -331,7 +331,8 @@ class SingerRender(_Env):
         first = min(n['start'] if isinstance(n, dict) else n[0] for n in t['notes'])
         self.assertAlmostEqual(first, 0.0)               # the first take would start before beat 0: it starts at 0 ...
         self.assertGreater(zones[0].get('offset', 0), 0)  # ... skipping the part of the file before the song
-        self.assertTrue(any('throws: 2 phrase ends' in x for x in vo.track.hero.compile_log))
+        # the vocal's echo is deliberate: one throw on the section's last phrase end (no constant echo)
+        self.assertTrue(any('throws: 1 section ends' in x for x in vo.track.hero.compile_log))
         self.assertEqual(heroes.infer(vo.track).name, 'vocal')
         fx_types = [f['type'] for f in t['fx']]
         self.assertIn('deesser', fx_types)

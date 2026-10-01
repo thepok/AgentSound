@@ -160,10 +160,25 @@ it. Add new findings here instead of losing them in a report.
   (fills sized to every rest >= 1 beat, ending before the voice re-enters, never above the voice while it sings)
   would make it a building block. Also: `jazz.chorus(comp=...)` on a band without a `comp` track (the `bossa`
   preset) fails on `None.play` - place the comping on the piano or raise a clear error.
-- **The vocal hero's jazz defaults**: `hero(family='vocal', genre='jazz')` still writes echo throws on every phrase
-  end and a -12 dB hero plate: the sung sections read -8.5 LU of reverb (jazz -20..-10). jane-street-bossa turned
-  them off by hand (`echo=False, throws=False`, plate -17, the band's room -15 -> -12.9 LU). The jazz profile could
-  carry those defaults (throws off, plate -17, the band's room send).
+- **Dry vocals: open points** (fix/dry-vocals: the vocal hero's dry space per genre, the calm `jazz` / `ballad` singing
+  styles, `songs/_demo_vocal/wetness.py`). (1) The wetness measure is a script (numpy), not part of the report: the
+  engine's report could give every sung track its own returns-vs-dry LU and post-phrase tail (the user's rule "judge
+  the wet/dry balance on every sung song"). (2) The other songs with sung vocals (_demo_vocal, _demo_vocal_rock) now
+  render with the dry defaults; their old A/B mp3s (make_ab.py, grit_ab.py, grit_rock_ab.py) were made with the wet
+  chain - re-run them before the next listening round. (3) The coda measure of grit_ab.py / grit_rock_ab.py placed
+  every word-final consonant `offset_s` (~0.3-0.6 s) too early (the take timeline counts from the first note, not
+  from the file start) - fixed; hero_vocal.GRIT_MEASURED's coda_db / out_t_db need a re-run. (4) jane-street-bossa's
+  melody is leapy for a calm jazz vocal: the A line has 9 leaps of a 4th+ in 25 intervals (8 of them a 5th or more,
+  the hook's sixth F4-D5 in every phrase), a mean interval of 4.4 semitones (B / C 3.0-3.1), ~3 notes per bar, 58 %
+  of them eighths, up to G5 - the calm singing helps, a stepwise rewrite of the A phrases would calm it further.
+  (5) The calm styles' `note dynamics` read 14.8 dB (audio onsets) vs 15.7 before: the gain lane is narrower, the
+  soft mode varies the level itself. (6) Calm round (calm_ab.py): jane-street-bossa now sounds in G major
+  (TRANSPOSE = -3, CALM_A) - the A&R / mix / master notes (AR.md, MIX.md, MASTER.md) were made in Bb: the sub reads
+  +3.8 dB over the jazz profile (was +2.3) with the bass a minor third lower, re-run the A&R. The B and C melodies
+  are still dense (eighth-note syllables) - the sparse A (FEW_A, new shorter words) is an option the user has not
+  heard yet. `singer.SOFT_MAKEUP_DB` is measured for Hanami only (-0.7 dB); TIGER's soft mode needs its number.
+  The singer has no register-dependent make-up: a part sung a minor third lower reads ~2 dB softer (raw) - the song
+  sets `makeup_db` by hand (TRANSPOSE_MAKEUP_DB).
 - **Diction warnings flicker between takes**: a nasal coda in legato gets exactly the warn length (35 ms vs "< 35 ms"
   for a nasal) - 'on' read 46 ms in take 0 and 35 ms in take 1 of the same line. The singer's legato minimum for
   nasals should sit a few ms over the ear's threshold.
@@ -175,6 +190,16 @@ it. Add new findings here instead of losing them in a report.
   leaned 1.8 dB left until the song moved it to -0.25.
 - **No jazz reference in `assets/refrences/`**: the straight-jazz songs are judged against the profile only (a Beegie
   Adair trio track, the user's model, and a vocal jazz track would make `compare` useful).
+- **Vocal grit: open points** (feat/vocal-grit, `hero(..., grit=)`, songs/_demo_vocal/grit_ab.py). (1) The
+  parallel buses are calibrated on Hanami: TIGER's crunch lands -0.5 LU (vocal) - per-voice calibration or a measured
+  auto-trim would close it. (2) The megaphone's level follows the source spectrum (Hanami -0.3 LU, a synthetic vowel
+  in the test -2.4 LU) and its mix is +0.5 LU (less crest into the master limiter, more into the plate): a plate send
+  offset for the insert grits may help. (3) TIGER style 'rock' renders 'and' /n/ (legato) 35 ms against the 35 ms
+  warn length (`coda_short`, clean and crunch alike - not the grit). (4) The user disliked every variant over the
+  soft pop demo band (recipes/HUMAN_FEEDBACK.md "Vocals"); the rock re-test (songs/_demo_vocal_rock, 'Exit Nine' over
+  The Drummer Speaks' rock_band, `grit_rock_ab.py` -> `out/grit_rock_ab/`) waits for the user's ear. (5) Grit raises
+  the vowels' 2-8 kHz band, so a word-final nasal / stop reads several dB lower against its vowel than in the clean
+  render (the coda itself is untouched on the clean path) - worst on crunch.
 
 - **Compact song code, phase 2: genre packages on top of the notation** (phase 1 = `agentsound.notation` + the
   foundation helpers; migrated with byte-identical render JSON: ashes-and-chandeliers 993 -> 870 lines,

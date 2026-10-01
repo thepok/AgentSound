@@ -147,6 +147,11 @@ PROFILES: dict[str, MixProfile] = {
                       glue=('a drum bus compressor 4:1, 2-4 dB with 20-30 % parallel blend',
                             'the master glue 2:1, slow attack, 1-2 dB above -12 dB only'),
                       notes='lead -19, drums -19.5, bass -20, keys / pad / pluck -26..-27.5 LUFS (pop_band demo)'),
+    'ballad': MixProfile('ballad', rhythm=(-9.0, -4.0), low=(-6.0, -2.0), bed=(-10.0, -4.0), other_max=-4.0,
+                         lead_ride_db=1.0, bed_ride_db=-1.0, bed_duck_db=1.5, kick_bass_duck_db=3.0, dip_db=-1.5,
+                         glue=('the master glue 1.5:1, slow attack, 1 dB at most: keep the swells',),
+                         notes='a (pop / soul / jazz) ballad: the voice or lead close in front, a soft band well under, '
+                               'the drums behind (hero(genre="ballad"): the vocal\'s intimate dry space)'),
     'rock': MixProfile('rock', rhythm=(-3.5, 0.0), low=(-5.0, -1.5), bed=(-10.0, -4.0), other_max=-2.0,
                        lead_ride_db=1.0, bed_ride_db=-1.0, bed_duck_db=0.0, kick_bass_duck_db=5.0, dip_db=-2.0,
                        glue=('drum bus: parallel compression (rock_band drum_bus)', 'master glue 2:1, 1-3 dB'),

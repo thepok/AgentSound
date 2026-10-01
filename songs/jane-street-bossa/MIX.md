@@ -27,8 +27,12 @@ MIX = {
 | drums / rim -0.3, shaker -1 dB | the kit inside 13-16 dB under the lead in every judged section |
 | piano -2 dB at 160 Hz | the left hand and the upright both carried 60-250 Hz (masking warning in the intro / tag / end) |
 
-Space (sound designer's moves, see SOUND.md): no echo throws on the voice, its hero plate at -17, the band's room -15
-- the reverb went from -8.5 LU to -12.7 LU under the mix (jazz -20..-10). The A&R's major issue (the piano laying
+Space (dry vocals, fix/dry-vocals - HUMAN_FEEDBACK "der Gesang hat immer viel Hall"): the voice now takes the
+library's jazz vocal space (its own short pre-delayed plate at -25, no echo, no throws, no band room): its
+returns -20.6 LU under the dry voice (before: hero plate -17 + room -15 = -9.7 LU), 30 dB down 0.1 s after a phrase
+end (before 1.0 s); the whole mix's reverb -18.1 LU (before -12.7; jazz -20..-10), the sung sections narrow
+(12-13 % wide: a centred, dry voice). Earlier: no echo throws on the voice, its hero plate at -17, the band's room -15
+- the reverb went from -8.5 LU to -12.7 LU under the mix. The A&R's major issue (the piano laying
 out under the voice: 9 of 32 head bars empty, the sung sections 10-13 % wide) was an arrangement fix (continuous
 bossa comping) plus the master's width x1.2: the sung sections now read 18-20 % wide above 150 Hz ('lush').
 

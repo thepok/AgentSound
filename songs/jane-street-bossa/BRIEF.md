@@ -14,7 +14,7 @@ swing - this time a SONG, sung by a woman: a new tune with its own tempo, feel a
 ## The song
 
 - **Genre / profile**: jazz, a vocal jazz song with piano trio, `ANALYSIS = {'profile': 'jazz'}`.
-- **Tempo / key / meter / feel**: 126 BPM, Bb major, 4/4, straight 8ths (Feel ratio 0.5, small lay-backs: piano
+- **Tempo / key / meter / feel**: 100 BPM (first 126), G major (written in Bb: TRANSPOSE -3), 4/4, straight 8ths (Feel ratio 0.5, small lay-backs: piano
   +8 ms, bass / kit on the beat, the voice ~10 ms behind). Bossa-tinged: the A / B sections ride a soft bossa groove
   (brush 8ths, feathered kick, hat foot, cross-stick, a whisper of egg shaker), the C sections and the solo's climax
   open into a straight "push" four - the even-8th New York sound - and fall back into the bossa.
@@ -107,3 +107,7 @@ swing - this time a SONG, sung by a woman: a new tune with its own tempo, feel a
   lush 18-20 %, out chorus paraphrased + one harmony, sub +1.1); minors only: the final chord rings < 1 s after the
   voice (tail 1.4 s at -21 dB), 630-800 Hz +4-5 dB / 63 Hz +4 (polish), the solo opens 3-5 LU under the head and is
   6/13 motif, listen once to the out chorus' onset bends (AR.md).
+- producer (fix/dry-vocals, the user's feedback "viel Hall", "aufgeregt", "gerusht", then the pick of calm_ab f +
+  "20 % langsamer"): the voice dry (the library's jazz vocal space), sung soft and laid back (style 'jazz'), the
+  sparse A words (FEW_A), the whole song a minor third lower (G major) and 20 % slower (126 -> 100 BPM, ~4:15);
+  ghost brush taps, the shaker +2 dB, the B breathing at its 8th rests, master width x1.6. A&R round 3: ship.

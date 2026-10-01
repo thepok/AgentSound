@@ -22,8 +22,15 @@ Variants ($AGENTSOUND_VOCAL_VARIANT, see make_ab.py which builds them all into o
                                                                                  -> out/ab_tiger.mp3
   soulx    A/B: SoulX-Singer (zero-shot, prompted with one of Hanami's own takes; soulx_ab.py renders it first)
                                                                                  -> out/ab_soulx.mp3
+  chain    the vocal alone through the vocal hero chain, no reverb / echo (for the grit A/B: the "dry" vocal as
+           produced)
+
+Grit ("kann man die Stimmen mit dem Gitarren-Amp rauer machen?"): $AGENTSOUND_VOCAL_GRIT = clean (default) | light |
+crunch | megaphone puts hero(..., grit=...) on the lead in 'full' and 'chain'; $AGENTSOUND_VOCAL_VOICE = tiger sings
+'full' / 'chain' with the TIGER voicebank an octave down. grit_ab.py builds the level-matched set into out/grit_ab/.
 Build: python -m agentsound build songs/_demo_vocal   (needs the voicebank + the WSL singing venv: COMPOSE_API "Vocals")
 """
+import json
 import os
 
 from agentsound import *
@@ -32,6 +39,8 @@ from agentsound.humanize import touch
 
 ANALYSIS = {'profile': 'pop'}
 VARIANT = os.environ.get('AGENTSOUND_VOCAL_VARIANT', 'full')
+GRIT = os.environ.get('AGENTSOUND_VOCAL_GRIT', 'clean')
+VOICE = os.environ.get('AGENTSOUND_VOCAL_VOICE', 'hanami')
 METADATA = {'artist': 'AgentSound', 'album': 'Demos', 'genre': 'Pop'}
 
 LYRICS = ("City lights are calling out -, each window gold and blue. "
@@ -81,6 +90,16 @@ def build() -> Song:
         print(vox.describe())
         return s
 
+    grit = None if GRIT == 'clean' else json.loads(GRIT) if GRIT.startswith('{') else GRIT     # (a dict: grit_spec)
+    male = VOICE == 'tiger'
+    lead = dict(voice=VOICE, style='rock' if male else 'pop', seed=3, transpose=-12 if male else 0)
+    deess = {'deess': {'freq': 5500}} if male else {}
+    if VARIANT == 'chain':     # the vocal alone through the hero chain (+ grit), no plate / echo: the A/B "dry"
+        vox = singer.sing(s, MELODY, LYRICS, at=verse, **lead)
+        hero(vox.track, family='vocal', space=False, ride=False, throws=False, grit=grit, **deess)
+        print(vox.describe())
+        return s
+
     # --- full: the vocal produced over a small band (piano, pad, fretless bass)
     hall = s.hall(decay=2.6)
     s.master.add(fx.limiter(gain=3.0, ceiling=-1.0))
@@ -95,14 +114,15 @@ def build() -> Song:
     pad.loop(prog.block(register=('G3', 'D5')), verse)
     bass.loop(prog.bass('root', rate='1/2'), verse)
     mem = singer.Memory()
-    vox = singer.sing(s, MELODY, LYRICS, at=verse, voice='hanami', style='pop', seed=3, memory=mem)
-    hero(vox.track, family='vocal', bed=[pad], competitors=[piano])
+    vox = singer.sing(s, MELODY, LYRICS, at=verse, memory=mem, **lead)
+    hero(vox.track, family='vocal', bed=[pad], competitors=[piano], grit=grit, **deess)
     for dbl in (singer.double(vox, pan=-0.55), singer.double(vox, pan=0.55)):
-        hero(dbl.track, family='vocal', ride=False, throws=False, duck=False, carve=False, dips=False)
+        hero(dbl.track, family='vocal', ride=False, throws=False, duck=False, carve=False, dips=False, **deess)
     # a harmony a third above on the last line, sung (not shifted), under the lead
     harm = singer.sing(s, MELODY.slice(24, 32).transpose_scale(2, 'C major'), 'all the night belongs to you.',
-                       at=verse.beat(24), voice='hanami', style='pop', seed=3, take=21, formant=0.25,
+                       at=verse.beat(24), voice=VOICE, style=lead['style'], seed=3, take=21,
+                       formant=0 if male else 0.25, transpose=lead['transpose'],
                        track_id='vocal_harm', pan=0.3, gain_db=-7, memory=mem, vib_ct=18, peak_vib_ct=26, fall=0)
-    hero(harm.track, family='vocal', ride=False, throws=False, duck=False, carve=False, dips=False)
+    hero(harm.track, family='vocal', ride=False, throws=False, duck=False, carve=False, dips=False, **deess)
     print(vox.describe())
     return s

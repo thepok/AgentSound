@@ -41,7 +41,9 @@ A hero is three things, and the wrapper does all of them from one table (PRESETS
                  before the echo, so it moves the note and not the repeats of the notes before it
        echo      the instrument's own stereo echo (guitars), last
    space: the sends (plate / hall / echo); in a song the family's plate bus (bus/hero_plate: big, bright,
-   pre-delayed) and echo THROWS at the phrase ends instead of a constant echo.
+   pre-delayed) and echo THROWS at the phrase ends instead of a constant echo. Per genre (space['genres'],
+   hero(genre=)): the sung vocal is dry and close - its own short bus/vocal_plate 15-20 LU under it, no constant echo,
+   throws only on section ends (pop / rock) or none (jazz / ballad), no inherited band sends (SPACE_DEFAULTS).
 
 2. THE MIX RULES - when hero() gets a Track (and so the song): the bed (pads, strings, choir) ducks under the hero
    (song.sidechain keyed by it) and steps out of its presence band while the hero plays (song.carve: a keyed dynamic
@@ -71,6 +73,7 @@ brass, woodwind, voice, organ and generic. Every preset is also registered as he
 
 from __future__ import annotations
 
+import math
 import re
 from dataclasses import dataclass, field
 
@@ -117,9 +120,26 @@ MIX_DEFAULTS = {'duck': 2.5, 'duck_threshold': -34.0, 'duck_attack': 15.0, 'duck
                 'dip_freq': 2500.0, 'dip_q': 0.9, 'feature': ''}
 """Generic mix rules, from the four hero validations (bed duck 2.5 dB, attack 15 / release 260 ms; a 2.5 kHz presence
 carve; the hero ridden 1-2 dB up in the hooks; competitors -2 dB in the presence band); presets override."""
-SPACE_DEFAULTS = {'plate_bus': None, 'plate': -14.0, 'echo': -24.0, 'throw': -8.0, 'min_rest': 0.75, 'min_dur': 0.5}
+SPACE_DEFAULTS = {'plate_bus': None, 'plate': -14.0, 'echo': -24.0, 'throw': -8.0, 'min_rest': 0.75, 'min_dur': 0.5,
+                  'throws': True, 'throw_scope': 'phrases', 'inherit': True}
 """Generic space: no own plate bus, an echo send at -24 dB thrown to -8 dB on phrase ends (a held note of 0.5+ beats
-followed by 0.75+ beats of rest)."""
+followed by 0.75+ beats of rest). echo None: no constant echo send (the echo bus is only heard on the throws: the send
+sits at -60 dB between them). throws: whether hero(throws=None) writes them; throw_scope 'phrases' (every phrase end)
+or 'sections' (deliberate: only the last phrase end of each section); inherit False: the track's patch sends to
+other buses (a band's hall / room) are dropped - the hero's space is only its own plate (and echo throws).
+A preset's space may carry 'genres': {genre: {key: value}} - hero(..., genre=) picks one (Preset.space_for); the
+vocal also takes its singing style ('jazz', 'ballad' ...) when no genre is given."""
+THROW_SCOPES = ('phrases', 'sections')
+GRIT_MODES = ('parallel', 'insert')
+"""How a preset's grit amounts (Preset.grit, hero(..., grit=amount)) roughen the hero with the guitar amp:
+'parallel' - a post-fader send (after the whole hero chain: compressed, de-essed; 'send', 0 dB: the amp sees the
+hero's own level, so the drive does not depend on the blend) into a bus '<track>_grit' that band-limits the sound,
+drives the tube amp and rolls the fizz off like a speaker (its amp's output calibrated so the bus at 0 dB matches
+the clean track), the bus at 'blend' dB = the grit's level UNDER the untouched clean track (the words keep every
+consonant: the clean path carries them); the track (and so the grit with it) trimmed so clean + grit lands at the
+clean level - a grit variant is rougher, not louder ('trim': given, else -10 log10(1 + g^2 + 2 rho g), g = 10^(blend /
+20), rho the amount's measured correlation of grit and clean); 'insert' - the amount's chain stages merge into the hero chain (the megaphone:
+the whole sound band-limited and driven; its 'trim' measured)."""
 
 
 def stage_fx(stage: str, value, named: bool = False) -> list:
@@ -173,6 +193,123 @@ def chain(stages: dict, order=ORDER, named: bool = False, air: bool = False) -> 
     return out
 
 
+GRIT_KEYS = ('amount', 'blend', 'send', 'trim', 'gain', 'bus')
+
+
+def grit_trim(blend: float, rho: float = 0.0) -> float:
+    """The track trim (dB) that keeps clean + a parallel grit lend dB under it at the clean level: -10 log10(1 +
+    g^2 + 2 rho g), g = 10^(blend / 20), rho = how correlated the grit is with the clean sound (measured per amount)."""
+    g = 10.0 ** (float(blend) / 20.0)
+    return round(-10.0 * math.log10(1.0 + g * g + 2.0 * float(rho) * g), 2)
+
+
+def grit_spec(preset, grit):
+    """(amount, spec) of a grit option for a preset: grit = an amount name ('light', 'crunch', 'megaphone' for the
+    vocal) or a dict {'amount': name, 'blend': dB under the clean sound, 'gain': the amp's gain 0-10, 'send': dB
+    into the amp, 'trim': dB on the track, 'bus': a bus patch} that overrides the amount's values (a changed blend
+    re-derives the trim unless 'trim' is given); None / False -> (None, None). spec['trim'] is always set."""
+    if grit is None or grit is False:
+        return None, None
+    p = get_preset(preset)
+    over = {}
+    if isinstance(grit, dict):
+        over = dict(grit)
+        bad = [k for k in over if k not in GRIT_KEYS]
+        if bad:
+            raise ComposeError(f"hero grit: unknown key(s) {', '.join(map(repr, bad))} (keys: {', '.join(GRIT_KEYS)})")
+        amount = over.pop('amount', None)
+        if amount is None:
+            raise ComposeError("hero grit: a dict needs its 'amount' (e.g. {'amount': 'crunch', 'blend': -8})")
+    elif isinstance(grit, str):
+        amount = grit
+    else:
+        raise ComposeError(f"hero grit: an amount name or a dict, got {grit!r}")
+    if not p.grit:
+        raise ComposeError(f"hero preset {p.name!r} has no grit options (the vocal hero has: hero(vox.track, "
+                           f"family='vocal', grit='light' | 'crunch' | 'megaphone'))")
+    if amount not in p.grit:
+        raise ComposeError(f"hero grit {amount!r}: the {p.name} preset has {', '.join(p.grit)}")
+    spec = {k: (dict(v) if isinstance(v, dict) else v) for k, v in p.grit[amount].items()}
+    if spec['mode'] == 'insert' and any(k in over for k in ('send', 'bus', 'blend')):
+        raise ComposeError(f"hero grit {amount!r} is an insert (the whole sound through the amp): no blend / send / "
+                           f"bus")
+    spec.update(over)
+    if spec['mode'] == 'parallel':
+        spec.setdefault('send', 0.0)
+        if 'trim' not in over:
+            spec['trim'] = grit_trim(spec['blend'], spec.get('rho', 0.0))
+    spec.setdefault('trim', 0.0)
+    return amount, spec
+
+
+def _grit_stages(spec: dict, stages: dict) -> dict:
+    """The chain overrides of an insert grit merged under the user's own (`stages` win, dicts merge)."""
+    out = {k: (dict(v) if isinstance(v, dict) else v) for k, v in spec.get('stages', {}).items()}
+    if 'gain' in spec and isinstance(out.get('amp'), (list, tuple)):
+        out['amp'] = [f.but(gain=spec['gain']) if f.type == 'amp' else f.copy() for f in out['amp']]
+    for k, v in stages.items():
+        out[k] = {**out[k], **v} if isinstance(v, dict) and isinstance(out.get(k), dict) else v
+    return out
+
+
+def add_grit(track, amount='crunch', *, preset=None, log: list | None = None):
+    """Roughen a track with the guitar amp (hero(..., grit=) calls this; use it directly on a track that is no hero,
+    e.g. a double). amount: a preset's grit amount or dict (grit_spec). preset: whose grit table (default: the
+    track's hero preset, else 'vocal'). A 'parallel' amount adds the bus '<track>_grit' (the amount's bus patch, the
+    amp's gain overridable) at the amount's blend, a post-fader send to it (both synced to the track's fader when
+    the song compiles) and trims the track so clean + grit stays at the clean level; an
+    'insert' amount (on a track that is no hero) appends its amp stage before the track's 'air' / 'hero_ride'
+    utilities (its other stages - the hero's presence voicing - need hero(..., grit=)). Returns the log line."""
+    from . import patches
+    from .patches import FX
+    info = getattr(track, 'hero', None)
+    p = get_preset(preset if preset is not None else (info.preset if info is not None else 'vocal'))
+    amount, spec = grit_spec(p, amount)
+    if spec is None:
+        return 'grit: off'
+    song = track._song
+    trim = float(spec.get('trim', 0.0))
+    if trim:
+        track.gain_db = round(track.gain_db + trim, 4)
+    if spec['mode'] == 'insert':
+        add = chain({'amp': _grit_stages(spec, {})['amp']}, p.order, named=True)
+        cut = next((i for i, f in enumerate(track.fx) if f.type == 'utility' and f.name in (AIR, 'hero_ride')),
+                   len(track.fx))
+        track.fx[cut:cut] = add
+        line = f"grit: {amount} - {', '.join(f.name or f.type for f in add)} inserted"
+    else:
+        bid = f'{track.id}_grit'
+        if bid in song.buses:
+            raise ComposeError(f"track {track.id!r} already has a grit bus {bid!r}")
+        bp = patches.get(spec['bus']) if isinstance(spec['bus'], str) else spec['bus']
+        if 'gain' in spec:
+            bp = bp.but_fx('amp', gain=spec['gain'])
+        bus = song.bus(bid, bp, gain_db=float(spec['blend']))
+        amp = next((f for f in bus.fx if isinstance(f, FX) and f.type == 'amp'), None)
+        line = (f"grit: {amount} - parallel amp bus {bid!r} ({bp.name}" +
+                (f", amp gain {amp.params.get('gain'):g}" if amp is not None else '') +
+                f") blended {float(spec['blend']):g} dB under the clean sound (the send cancels the track's fader: "
+                f"the amp always sees the chain's level, the bus follows the fader)")
+
+        def _sync(_song, track=track, bus=bus, base=float(bp.gain_db), send=float(spec['send']),
+                  blend=float(spec['blend'])):
+            # the send is post-fader: undo the fader on the way into the amp (a calibrated, constant drive), put it
+            # back on the bus - so the grit stays `blend` under the clean track whatever the mix does to the fader
+            g = float(track.gain_db)
+            track.send(bus, max(-120.0, min(24.0, send - g)))
+            bus.gain_db = round(base + blend + g, 4)
+        _sync(song)
+        song.add_compile_hook(_sync)
+    if trim:
+        line += f"; the track {trim:+g} dB so clean + grit lands at the clean level"
+    if log is not None:
+        log.append(line)
+    return line
+
+
+grit = add_grit
+
+
 def air(track, *points):
     """Breath / air pressure on a hero track: automate its 'air' stage ('fx.air.gain', dB, after the compressor) -
     points as for track.automate: heroes.air(sax, [(8, 0), (8.5, 3, 'smooth'), (9.2, -1, 'smooth'), (10, 0)]).
@@ -213,12 +350,20 @@ class Preset:
     aliases: tuple = ()
     words: tuple = ()              # patch-name words that make infer() pick this preset
     measured: dict = field(default_factory=dict)  # the calibration / validation numbers (documentation)
+    grit: dict = field(default_factory=dict)      # hero(..., grit=amount): amount -> grit spec (GRIT_MODES; the vocal)
 
     def mix_value(self, key: str):
         return self.mix.get(key, MIX_DEFAULTS[key])
 
-    def space_value(self, key: str):
+    def space_value(self, key: str, genre: str | None = None):
+        g = (self.space.get('genres') or {}).get(genre) if genre else None
+        if g and key in g:
+            return g[key]
         return self.space.get(key, SPACE_DEFAULTS[key])
+
+    def space_for(self, genre: str | None = None) -> dict:
+        """The preset's space values (SPACE_DEFAULTS keys) with a genre's overrides (space['genres'][genre])."""
+        return {k: self.space_value(k, genre) for k in SPACE_DEFAULTS}
 
     @property
     def canonical(self) -> str:
@@ -236,9 +381,21 @@ def define(name: str, **kw) -> Preset:
     p = Preset(name=name, **kw)
     if p.double not in DOUBLE_MODES:
         raise ComposeError(f"hero preset {name!r}: double must be one of {DOUBLE_MODES}, got {p.double!r}")
+    for amount, g in p.grit.items():
+        if g.get('mode') not in GRIT_MODES:
+            raise ComposeError(f"hero preset {name!r}: grit {amount!r} mode must be one of {GRIT_MODES}")
+        for st in g.get('stages', {}):
+            if st not in STAGES:
+                raise ComposeError(f"hero preset {name!r}: grit {amount!r}: unknown chain stage {st!r}")
     for st in p.chain:
         if st not in STAGES:
             raise ComposeError(f"hero preset {name!r}: unknown chain stage {st!r}")
+    for where, sp in [('space', p.space)] + [(f"space genre {g!r}", v) for g, v in (p.space.get('genres') or {}).items()]:
+        bad = [k for k in sp if k not in SPACE_DEFAULTS and not (where == 'space' and k == 'genres')]
+        if bad:
+            raise ComposeError(f"hero preset {name!r}: unknown {where} key(s) {bad} (keys: {', '.join(SPACE_DEFAULTS)})")
+        if sp.get('throw_scope', 'phrases') not in THROW_SCOPES:
+            raise ComposeError(f"hero preset {name!r}: {where} throw_scope must be one of {THROW_SCOPES}")
     PRESETS[name] = p
     for a in p.aliases:
         _ALIASES[a] = name
@@ -541,6 +698,7 @@ class HeroInfo:
     throw_db: float | None = None
     ride_db: float = 0.0
     key_fx: list = field(default_factory=list)   # (FX, threshold as set): the bed's duck / carve keyed pre-fader
+    space: dict = field(default_factory=dict)     # the space values used (Preset.space_for(genre))
     _lanes: list = field(default_factory=list)
 
     def lines(self) -> list[str]:
@@ -606,14 +764,32 @@ class HeroInfo:
             self.compile_log.append(f"throws: the track already automates {tgt} (kept; no throws written)")
             return
         from . import articulation as _art
-        sp = self.preset
+        sp = self.space or self.preset.space_for(None)
+        scope = sp['throw_scope']
+        if scope == 'sections':          # deliberate throws: only the last phrase end of each section
+            clip = Clip._raw(_section_ends(song, notes, sp['min_rest'], sp['min_dur']), clip.length)
         n0 = len(t._auto)
         ends = _art.throws(t, clip, 0.0, bus=self.echo, base=self.echo_base, throw=self.throw_db,
-                           min_rest=sp.space_value('min_rest'), min_dur=sp.space_value('min_dur'))
+                           min_rest=sp['min_rest'], min_dur=sp['min_dur'])
         if len(t._auto) > n0:
             self._lanes.append(t._auto[-1])
-        self.compile_log.append(f"throws: {len(ends)} phrase ends, {tgt} {self.echo_base:g} -> {self.throw_db:g} dB "
-                                f"(articulation.throws)")
+        self.compile_log.append(f"throws: {len(ends)} {'section ends' if scope == 'sections' else 'phrase ends'}, "
+                                f"{tgt} {self.echo_base:g} -> {self.throw_db:g} dB (articulation.throws)")
+
+
+def _section_ends(song, notes, min_rest: float, min_dur: float) -> list:
+    """The phrase-end notes (articulation.throws' rule: a note of min_dur+ beats followed by min_rest+ beats of rest,
+    or the last note) that close a section: the last one in each section of the song."""
+    ns = sorted(notes, key=lambda n: n.start)
+    starts = sorted({round(n.start, 6) for n in ns})
+    last: dict = {}
+    for n in ns:
+        nxt = next((s for s in starts if s > n.start + 1e-6), None)
+        if n.dur < min_dur - 1e-6 or (nxt is not None and nxt - (n.start + n.dur) < min_rest - 1e-6):
+            continue
+        sec = next((s for s in song.sections if s.start - 1e-6 <= n.start < s.end - 1e-6), None)
+        last[sec.name if sec is not None else None] = n
+    return sorted(last.values(), key=lambda n: n.start)
 
 
 def _hook_names(song, sections, feature: str = '') -> list[str]:
@@ -685,6 +861,24 @@ def _depth(opt, default: float) -> float:
     return abs(float(default))
 
 
+SPACE_STYLES = {'jazz': 'jazz', 'ballad': 'ballad', 'rock': 'rock', 'pop': 'pop'}
+"""A sung vocal's singing style -> its space genre when hero() gets no genre (singer.STYLES)."""
+
+
+def _space_genre(p, track, prof):
+    """(the genre whose space a preset uses, why): the genre's when the preset's space has one for it, else (a sung
+    vocal without a genre) the singing style's."""
+    table = p.space.get('genres') or {}
+    if prof is not None:
+        return (prof.name, f"genre {prof.name!r}") if prof.name in table else (None, '')
+    sing = getattr(track, '_singer', None)
+    if sing and sing.get('parts'):
+        st = SPACE_STYLES.get(sing['parts'][0].style)
+        if st in table:
+            return st, f"the singing style {sing['parts'][0].style!r}"
+    return None, ''
+
+
 def _echo_bus(song, echo):
     """The echo bus for the throws, explicit: the given one (echo=bus / id), else the song's bus named exactly 'echo',
     else a new s.echo(). (Any bus with 'echo' / 'delay' in its name used to be taken - a slapback, a pre-delayed hall
@@ -699,8 +893,8 @@ def _echo_bus(song, echo):
 
 
 def hero(sound=None, family=None, *, genre=None, bed=(), competitors=(), sections=None, double=None, octave=None,
-         chain=True, space=True, plate=None, echo=None, duck=True, carve=True, dips=True, ride=True, throws=True,
-         air=True, **stages):
+         chain=True, space=True, plate=None, echo=None, duck=True, carve=True, dips=True, ride=True, throws=None,
+         air=True, grit=None, **stages):
     """THE way to make a lead a hero (the module docstring explains what it does).
 
     hero(track, family=None, ...) -> the track: its sound replaced by the hero patch and the mix rules applied, all of
@@ -718,12 +912,17 @@ def hero(sound=None, family=None, *, genre=None, bed=(), competitors=(), section
     double / octave / air / **stages: as build() (air: the breath stage - 'fx.air.gain' after the compressor, for
     within-note expression; heroes.air(track, points)). Switches (False = off; a number = the depth in dB): chain
     (False keeps the track's sound; the 'air' stage is still added), space, plate (a bus / id / 'bus/<patch>' instead
-    of the preset's), echo (a bus / id), duck, carve, dips, ride, throws."""
+    of the preset's), echo (a bus / id), duck, carve, dips, ride, throws (None: the preset's / genre's default - the
+    vocal: section-end throws for pop / rock, none for jazz / ballad). The space follows the genre when the preset's
+    space has one for it (the vocal: VOCAL_SPACE; without a genre its singing style's).
+    grit: roughen it with the guitar amp (a preset with a grit table: the vocal - 'light' / 'crunch' parallel amp
+    buses blended under the clean voice, 'megaphone' the whole voice band-limited and driven; or a dict, grit_spec;
+    GRIT_MODES). A parallel grit needs the track (its bus and send)."""
     from .song import Track
     if isinstance(sound, Track):
         return _wrap_track(sound, family, genre=genre, bed=bed, competitors=competitors, sections=sections,
                            double=double, octave=octave, chain=chain, space=space, plate=plate, echo=echo, duck=duck,
-                           carve=carve, dips=dips, ride=ride, throws=throws, air=air, stages=stages)
+                           carve=carve, dips=dips, ride=ride, throws=throws, air=air, grit=grit, stages=stages)
     if bed or competitors or sections is not None or genre is not None:
         raise ComposeError("hero(): bed= / competitors= / sections= / genre= are mix rules and need the track: "
                            "hero(s.track('lead', ...), family=..., bed=[...])")
@@ -731,11 +930,20 @@ def hero(sound=None, family=None, *, genre=None, bed=(), competitors=(), section
         raise ComposeError("hero() needs a sound or a family: hero('sampled/trumpet', family='brass'), "
                            "hero(family='sax')")
     p = get_preset(family) if family is not None else infer(sound)
-    return build(p, sound, double=double, octave=octave, air=air, **stages)
+    amount, gs = grit_spec(p, grit)
+    if gs is not None:
+        if gs['mode'] != 'insert':
+            raise ComposeError(f"hero grit {amount!r} is a parallel amp bus: it needs the track "
+                               f"(hero(s.track(...), family={p.name!r}, grit={amount!r}))")
+        stages = _grit_stages(gs, stages)
+    out = build(p, sound, double=double, octave=octave, air=air, **stages)
+    if gs is not None and gs.get('trim'):
+        out.gain_db = round(out.gain_db + float(gs['trim']), 4)
+    return out
 
 
 def _wrap_track(track, family, *, genre, bed, competitors, sections, double, octave, chain, space, plate, echo, duck,
-                carve, dips, ride, throws, stages, air=True):
+                carve, dips, ride, throws, stages, air=True, grit=None):
     from . import mixer, patches
     from .patches import FX
     song = track._song
@@ -745,8 +953,15 @@ def _wrap_track(track, family, *, genre, bed, competitors, sections, double, oct
     owner = next((q for q in PRESETS.values() if track.patch and track.patch in (q.patch, q.canonical)), None)
     if owner is not None and owner is not p and owner.family == p.family:
         p = owner                     # the track already holds a variant of that family (hero_piano_pop, ...)
+    g_amount, gs = grit_spec(p, grit)
+    if gs is not None and gs['mode'] == 'insert' and chain:
+        stages = _grit_stages(gs, stages)
     prof = mixer.get_profile(genre) if genre is not None else None
-    info = HeroInfo(track, p, prof.name if prof else None, {'throws': bool(throws)}, sections=sections)
+    sgenre, why = _space_genre(p, track, prof)
+    spc = p.space_for(sgenre)
+    if throws is None:
+        throws = bool(spc['throws'])
+    info = HeroInfo(track, p, prof.name if prof else None, {'throws': bool(throws)}, sections=sections, space=spc)
     lg = info.log
     if family is None:
         lg.append(f"family: {p.name} (inferred from {track.patch or track.instrument.type})")
@@ -776,20 +991,38 @@ def _wrap_track(track, family, *, genre, bed, competitors, sections, double, oct
         track.patch = new.name
         lg.append(f"sound: {new.name}" + (f" (was {old.name})" if old is not None and old.name != new.name else '')
                   + f", gain {new.gain_db:+g} dB - " + '; '.join(blog))
+    if gs is not None:                # the guitar amp: a parallel bus under the clean sound, or the megaphone chain
+        if gs['mode'] == 'insert' and chain:
+            trim = float(gs.get('trim', 0.0))
+            track.gain_db = round(track.gain_db + trim, 4)
+            lg.append(f"grit: {g_amount} - the amp stage in the chain ("
+                      + ', '.join(f"{k}" for k in gs.get('stages', {})) + ")"
+                      + (f"; the track {trim:+g} dB (level-matched to the clean hero)" if trim else ''))
+        else:
+            add_grit(track, grit, preset=p, log=lg)
     # 2. the space: the hero's plate, the echo for the throws
     own_echo = any(f.type == 'delay' and f.name == 'echo' for f in track.fx)
     if not space:
         lg.append("space: unchanged (space=False)")
     else:
-        pb = p.space_value('plate_bus') if plate is None or plate is True else plate
+        if sgenre:
+            lg.append(f"space: the {sgenre} space ({why})")
+        if not spc['inherit']:            # no band hall / room from the patch: the hero's own space only
+            gone = {b: v for b, v in track._patch_sends.items() if b not in ('plate', 'echo')}
+            for b in gone:
+                track._patch_sends.pop(b)
+            if gone:
+                lg.append("space: the patch's sends dropped (" + ', '.join(f"{b} {v:g} dB" for b, v in gone.items())
+                          + "): the hero sits in its own space - send it to a hall / room yourself to ask for one")
+        pb = spc['plate_bus'] if plate is None or plate is True else plate
         if pb:
             if isinstance(pb, str) and pb.startswith('bus/'):
-                bid = 'hero_plate'
+                bid = pb[4:]
                 made = bid not in song.buses
                 bus = song.bus(bid, pb) if made else song.buses[bid]
             else:
                 bus, made = song.node(getattr(pb, 'id', pb)), False
-            lvl = track.sends.get(bus.id, p.space_value('plate'))        # a send the song set itself stays
+            lvl = track.sends.get(bus.id, spc['plate'])        # a send the song set itself stays
             dropped = track._patch_sends.pop('plate', None)
             track.send(bus, lvl)
             lg.append(f"space: plate -> {bus.id!r} at {lvl:g} dB" + (f" (created from {pb})" if made else '')
@@ -804,21 +1037,23 @@ def _wrap_track(track, family, *, genre, bed, competitors, sections, double, oct
                 track._patch_sends.pop('hall')
                 lg.append(f"space: the preset's hall send ({hall_db:g} dB, under the plate's {lvl:g}) dropped - the "
                           f"plate is the hero's reverb (track.send('hall', ...) brings it back)")
+        const = track._patch_sends.get('echo', spc['echo'])      # a constant echo send (None: the throws only)
         if own_echo:
             info.echo = 'fx.echo'
             lg.append("space: its own echo (fx 'echo'); the throws raise fx.echo.mix")
-        elif echo is not False and (throws or 'echo' in track._patch_sends):
+        elif echo is not False and (throws or ('echo' in track._patch_sends and const is not None)):
             eid, made = _echo_bus(song, echo)
             base = track._patch_sends.pop('echo', None)
             if base is None:
-                base = p.space_value('echo')
-            base = track.sends.get(eid, base)
+                base = spc['echo']
+            base = track.sends.get(eid, -60.0 if base is None else base)
             track.send(eid, base)
-            info.echo, info.echo_base, info.throw_db = eid, float(base), float(p.space_value('throw'))
-            lg.append(f"space: echo -> {eid!r} at {base:g} dB" + (" (created: s.echo())" if made else ''))
-        elif echo is False:
+            info.echo, info.echo_base, info.throw_db = eid, float(base), float(spc['throw'])
+            lg.append(f"space: echo -> {eid!r} at {base:g} dB" + (" (created: s.echo())" if made else '')
+                      + (" - no constant echo, only the throws" if base <= -60 else ''))
+        else:
             track._patch_sends.pop('echo', None)
-            lg.append("space: no echo (echo=False)")
+            lg.append("space: no echo" + (" (echo=False)" if echo is False else " (no throws, no constant echo)"))
     # 3. the bed: duck + carve, keyed from the hero's tone before its air / echo / ride stages and its fader
     bed_ids = _nodes(bed)
     if bed_ids:
@@ -867,9 +1102,11 @@ def _wrap_track(track, family, *, genre, bed, competitors, sections, double, oct
         lg.append("ride: off" + (" (ride=False)" if ride is False else
                                  f" (the {prof.name} profile rides no lead)" if prof is not None else ''))
     if not throws:
-        lg.append("throws: off")
+        lg.append("throws: off" + (f" (the {sgenre} space)" if sgenre and not spc['throws'] else ''))
     elif info.echo:
-        lg.append("throws: echo throws on the phrase ends (written at compile from the notes the track plays)")
+        lg.append("throws: echo throws on the " + ("last phrase end of each section"
+                                                    if spc['throw_scope'] == 'sections' else "phrase ends")
+                  + " (written at compile from the notes the track plays)")
     else:
         lg.append("throws: none (no echo)")
     track.hero = info
@@ -924,3 +1161,4 @@ def play(track, line, at=0.0, *, lo=None, hi=None, **kw):
 hero.play = play
 hero.build = build
 hero.presets = presets
+hero.grit = add_grit

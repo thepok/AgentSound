@@ -221,11 +221,30 @@ Add new feedback here (date, song, the user's words, the rule) whenever the user
   (softest mode / energy) and restore the level with gain; also consider register (lower key) and a stepwise melody.
   And: "sie klingt gerusht" - jazz vocals lay BACK (vowels on or slightly behind the beat, breathing space between
   phrases, not crammed syllables); never push ahead of the band.
+  Verdict on the calm A/B (a-f): the user chose f = sung soft + a minor third lower + stepwise A melody + laid back
+  + FEWER syllables / longer notes in the A section, and asked for the whole song 20 % slower (126 -> ~101 BPM).
+  For calm jazz vocals: lower register, sparse lyrics, laid-back timing and a relaxed tempo matter more than fx.
 - **2026-10-01, jane-street-bossa / grit tests:** "der Gesang hat immer viel Hall und/oder Reverb, er klingt nicht
   trocken". The vocal hero chain (plate -12 dB + a constant echo send -20 dB + throws, plus the song's halls) made
   every sung vocal wet; the user wants it drier - and a wet voice also makes grit/distortion sound mushy. Rule:
   sung vocals sit dry and close by default (short plate with pre-delay well under the voice, no constant echo -
   echo only as deliberate throws), drier still for jazz/ballads; judge the wet/dry balance on every sung song.
+  (Done in the library, fix/dry-vocals: the vocal hero's own short plate 15-20 LU under the voice by genre, no constant
+  echo, `python songs/_demo_vocal/wetness.py songs/<slug>` measures it.)
+- **2026-10-01, jane-street-bossa:** "im Jazz-Song ist die Stimme viel zu aufgeregt, sollte ruhiger sein". The ballad
+  style with overrides still scooped into half of the openers (median -82 ct: mostly the voicebank pitch model's own
+  approach), wobbled +-21 ct on held notes and blended the power mode in. Rule: a jazz / ballad vocal sings calm and
+  intimate - the soft mode as the base, power only on rare peaks, few small scoops, a slow, narrow, late vibrato on
+  long notes only, no falls / doits, small dynamic swings, smooth legato, relaxed timing (singer style `jazz` /
+  `ballad`); and check whether the melody itself is busy (leaps, high notes).
+- **2026-10-01, jane-street-bossa (after the calm style):** "die Jazz-Stimme ist immer noch sehr aufgeregt, vielleicht
+  leiser singen lassen und dann nachtraeglich lauter machen?" and "ja stimmt, sie klingt gerusht". Measured: the
+  syllables were heard ~20 ms AHEAD of the beat (vowels only 15 ms late behind ~70 ms of consonants), a third of the
+  sung time at / above D5, 11 leaps of a 4th+ per chorus, 62 % of the syllable steps eighths at 126 BPM. Rule: a calm
+  vocal lays back (vowels 30-40 ms behind the beat, phrase starts ~50 ms: the syllable lands on the beat), sings in a
+  comfortable middle register (key it so little sits above ~D5 for Hanami), moves mostly stepwise, sings soft (the
+  soft mode alone, the level by make-up gain) and does not cram eighth-note syllables (fewer words on longer notes).
+  Singer styles `jazz` / `ballad` sing soft and laid back by default; songs/jane-street-bossa/calm_ab.py has the A/B.
 - **2026-10-01, _demo_vocal grit A/B (the voice through the guitar amp: light parallel, crunch, megaphone; Hanami and
   TIGER):** "keine der Stimmverrauhungen gefiel mir". Rule: no amp grit / distortion / megaphone on sung vocals by
   default; keep the voice clean (the `vocal` hero chain). Rougher rock vocals would have to come from the singing

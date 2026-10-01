@@ -1,5 +1,7 @@
 """Down on Jane Street - an original bossa-tinged straight-8th jazz song for a female voice and piano trio
-(Bb major, 126 BPM, ~3:25). Build: python -m agentsound build songs/jane-street-bossa
+(written in Bb major, sounding a minor third lower in G major since the calm round - TRANSPOSE; 100 BPM - the
+user's pick, 126 x 0.8 rounded to a round bossa tempo -, ~4:15).
+Build: python -m agentsound build songs/jane-street-bossa
 
 New York bar jazz without swing, sung: Hanami (a licensed DiffSinger voicebank) through agentsound.singer and the
 vocal hero chain (clean), a grand piano that comps and answers AROUND the voice, an upright bass and brushes with a
@@ -44,11 +46,11 @@ COVER = {'style': 'jazz', 'palette': ['#2f7a6b', '#e8b04a'], 'title': 'down on j
 MIX = {
     'trim': {'drums': -0.3, 'rim': -0.3, 'shaker': -1.0, 'vocal': -1.5, 'bass': 1.0},
     'ride': {'vocal': {'end': -2.0}, 'piano': {'tag': -1.5}, 'shaker': {'head': -2.0, 'head_out': -2.0}},
-    'eq': {'piano': [{'freq': 160, 'gain': -2.0, 'q': 0.8}], 'vocal': [{'freq': 3300, 'gain': -2.0, 'q': 1.0}],
-           'bass': [{'freq': 63, 'gain': -2.0, 'q': 1.0}]},
+    'eq': {'piano': [{'freq': 140, 'gain': -3.0, 'q': 0.8}], 'vocal': [{'freq': 3300, 'gain': -2.0, 'q': 1.0}],
+           'bass': [{'freq': 53, 'gain': -2.5, 'q': 1.0}]},
 }
 
-TEMPO = 126
+TEMPO = 100            # 20 % slower than the first version (126): calm_ab.py f, "20 % langsamer"
 ARRANGED = {}          # section:part -> pianist.Arrangement (filled by build(): what the pianist played)
 SOLO = {}              # 'perf' -> the soloist.Performance of the piano solo, 'vocal' -> the singer's parts
 MASTER_DRIVE = 4.0      # with the voice the mix reads ~2 LU louder into the master: less drive
@@ -74,7 +76,21 @@ VOX = phrases(
     hook='r/4 F4/8 G4 D5/4. C5/8 | A4/2. r/4 |',
     a_rest="""r/8 Eb4/4 F4/8 C5/4. Bb4/8 | G4/8 A4 C5/2. |
               r/8 F4 A4/4. F4/8 D5/4 | r/8 F4 Ab4/4. F4/8 D5/4 | r/8 G4 Bb4 G4 Eb5/4 D5/8 C5~ | C5/2 r/2 |""",
+    # the calm A (an option, calm_ab.py): the hook kept, the rest of the A stepwise - no sixth / ninth leaps up into
+    # the phrase ends, the line stays D4-Bb4 under the hook's D5 (same rhythm, same syllables)
+    a_calm="""r/8 Eb4/4 F4/8 G4/4. F4/8 | G4/8 F4 A4/2. |
+              r/8 F4 A4/4. G4/8 F4/4 | r/8 F4 Ab4/4. G4/8 F4/4 | r/8 G4 Bb4 A4 G4/4 F4/8 D4~ | D4/2 r/2 |""",
+    # the sparse A (an option, calm_ab.py f): fewer words on longer notes - quarters instead of eighths, 21 syllables
+    # instead of 26 (LYRICS_A1_FEW / LYRICS_A2_FEW), the same stepwise contour
+    a_few="""r/4 Eb4 F4 G4 | F4/4 A4/2 r/4 |
+             F4/4 A4 G4/2 | r/4 F4 Ab4 G4 | r/2 G4/4 Bb4 | A4/4 G4 F4/2 |""",
     length='bar')
+# the calm round (calm_ab.py, HUMAN_FEEDBACK: "die Jazz-Stimme ist immer noch sehr aufgeregt", "gerusht"): the A's
+# stepwise and the whole song a minor third lower (the voice F#3-E5: 4 % of the sung time at / above D5 instead of 33 %)
+CALM_A = True                                    # True: the A sections sing the calm a_calm after the hook
+FEW_A = True                                     # True: the sparse a_few (fewer words, longer notes; wins over CALM_A)
+TRANSPOSE = -3                                   # semitones for the whole song's pitched parts (-3: G major; 0: Bb)
+TRANSPOSE_MAKEUP_DB = 1.8                        # a minor third lower Hanami's takes read ~2 dB softer: the zone make-up
 VOX_A = VOX('hook a_rest')                       # A1 and A2: the same tune, other words
 VOX_B = notes("""
  r/8 Bb4 D5/4 r/8 Bb4 C5 D5 | Eb5/2 C5/4 r | r/4. A4/8 D5/4. C5/8 | B4/4. Ab4/8 G4/2 |
@@ -86,6 +102,8 @@ VOX_TAG = notes('r/4 F4/8 G4 D5/4. B4/8 | A4/2. r/4 | r/4 Gb4/8 Ab4 Eb5/4. C5/8 
 VOX_END = notes('D5:4.5', length=8)       # the voice lets go first, the chord rings on
 
 LYRICS_A1 = "Down on Jane Street rain, taps the awn-ing, sings a while. I or-dered two, I drank them both, I tipped the band a smile."
+LYRICS_A1_FEW = "Down on Jane Street rain, taps and sings a while. Or-dered two, drank them both, tipped the band a smile."
+LYRICS_A2_FEW = "Down on Jane Street rain, writes your name on glass. Let you be, let you go, let the tax-is pass."
 LYRICS_B = "Your chair is full of eve-ning, the can-dle leans your way, the wai-ter wipes the ta-ble, I tell the eve-ning, stay."
 LYRICS_A2 = "Down on Jane Street rain, writes your name a-cross the glass. I let you be, I let you go, I let the tax-is pass."
 LYRICS_C = "Let the bass walk me home, I'm not the one who's late, down on Jane Street rain, so I don't mind the wait."
@@ -112,11 +130,10 @@ ANSWER_DEVICES = {'thirds': 2.0, 'sixths': 2.0, 'guide': 1.5, 'drop2': 1.0}
 ORN = {'turn': 1.2, 'mordent': 1.0, 'inverted_mordent': 0.5, 'crush': 1.0, 'restrike': 1.6, 'roll': 1.0,
        'blues_crush': 0.4, 'trill': 0.25, 'tremolo': 0.2}
 
-# Hanami as a jazz singer: the ballad style laid back a little more, soft-leaning, small falls, a narrow vibrato that
-# blooms only on the held peaks
-VOICE = dict(voice='hanami', style='ballad', late_ms=10.0, fall=0.12, doit=0.0, vib_ct=22.0, peak_vib_ct=34.0,
-             scoop_first=0.3, scoop_leap=0.4, scoop_peak=0.5,
-             soft=0.75, power=0.35, vel=(60, 100))
+# Hanami as a jazz singer: the calm 'jazz' style (HUMAN_FEEDBACK: "die Stimme viel zu aufgeregt, sollte ruhiger
+# sein") - her soft mode (Nectar) as the base, power only on the loudest peaks, few small scoops, a slow narrow vibrato
+# late on the long notes only, no falls, small swings, smooth legato, laid back
+VOICE = dict(voice='hanami', style='jazz')
 
 
 def bossa_bass(prog, lo, hi, seed=0):
@@ -125,16 +142,34 @@ def bossa_bass(prog, lo, hi, seed=0):
     return jazz.bass_touch(line, lo, hi, accent='1-3', seed=seed)
 
 
-def bossa_kit(b, at, bars, seed, vel=1.0, shaker=True, rim=True, fills=True):
-    """The bossa kit (bossa_groove: brush 8ths + kick + hat foot, cross-stick, egg shaker) from `at` for `bars`."""
+BREATH_S = 0.28        # the B splits its phrases at rests this long (s): the singer breathes there
+GHOSTS = 0.35         # at 100 BPM the brush 8ths sit 300 ms apart: a few soft 16th taps in between keep the swirl
+
+
+def bossa_kit(b, at, bars, seed, vel=1.0, shaker=True, rim=True, fills=True, ghosts=GHOSTS):
+    """The bossa kit (bossa_groove: brush 8ths + kick + hat foot, cross-stick, egg shaker) from `at` for `bars`, plus
+    `ghosts` x the 16ths between the brush 8ths as whisper taps (never in a fill bar's last beats)."""
     g = jazzband.bossa_groove(bars, b, seed=seed, vel=vel, fills=fills)
     for role, on in (('drums', True), ('rim', rim), ('shaker', shaker)):
         if on:
             b[role].play(g[role], at)
+    if ghosts:
+        r = random.Random(seed * 7 + 3)
+        tap = b.info['kit']['tap']
+        gh = [(4.0 * bar + k * 0.5 + 0.25, 0.15, tap, max(1, int(round((14 + 8 * r.random()) * vel))))
+              for bar in range(int(bars)) for k in range(8)
+              if r.random() < ghosts and not (fills and bar % 8 == 7 and k >= 4)]
+        b['drums'].play(Clip(gh, length=4.0 * bars), at)
 
 
 def build() -> Song:
     s = Song('Down on Jane Street', tempo=TEMPO, key='Bb major', seed=21, tail=6)
+    # the comping sounds in A2-E4 whatever the key (written a minor third higher when the song sounds lower: the left
+    # hand stays out of the upright's 60-250 Hz)
+    COMP_REGISTER = ('C3', 'G4') if TRANSPOSE == -3 else ('A2', 'E4')
+    vox_a = VOX('hook a_few') if FEW_A else VOX('hook a_calm') if CALM_A else VOX_A
+    lyr_a1, lyr_a2 = (LYRICS_A1_FEW, LYRICS_A2_FEW) if FEW_A else (LYRICS_A1, LYRICS_A2)
+    voice = dict(VOICE, **({'transpose': TRANSPOSE, 'makeup_db': TRANSPOSE_MAKEUP_DB} if TRANSPOSE else {}))
     intro, head, solo, hout, tag, end = s.form(FORM, parts=CHANGES)
     # the bossa band as a trio: Salamander grand (both hands on one track), Meatbass, Swirly brushes, Blonde Bop
     # cross-stick, FreePats shaker, salon IR + 224XL plate; straight 8ths (the preset's Feel, ratio 0.5)
@@ -142,7 +177,7 @@ def build() -> Song:
     b.piano.gain_db += PIANO_TRIM
     b.piano.pan = -0.25               # no guitar on the left: the piano nearer the centre (the mix leaned 1.8 dB left)
     b.bass.gain_db += BASS_TRIM       # the preset's bass fader is set for the guitar band's accented pattern
-    b.shaker.gain_db += 2.0           # a whisper, but audible (it read 0.2 % of any band at the preset level)
+    b.shaker.gain_db += 4.0           # a whisper, but audible (0.2 % of any band at +2; at 100 BPM fewer shakes: +4)
     b.drums.gain_db += 1.5            # brushes 17 dB under the piano: up into the 13-16 dB window
     kit = b.info['kit']
     # air, not bite (HUMAN_FEEDBACK "es klingt hart": no 2-5 kHz boost on the piano)
@@ -157,13 +192,13 @@ def build() -> Song:
     def comp(part, vel, intensity=0.35, density=0.55, seed=0):
         """The piano's bossa comping under the voice: the two-bar cells all through (rootless, below the voice, soft,
         rolled) - the A&R found the answer=line comping dropping out under every sung note (9 of 32 head bars empty)"""
-        c = jazz.comp(part.prog, style='bossa', voicing='rootless', register=('A2', 'E4'), intensity=intensity,
+        c = jazz.comp(part.prog, style='bossa', voicing='rootless', register=COMP_REGISTER, intensity=intensity,
                       density=density, vel=vel, seed=seed)
         b.piano.play(c.roll((10, 22), seed=rng, bpm=TEMPO), part)
         jazzband.pedal([b.piano], part.prog, part)
 
     def sing(line, words, at, take=0, **kw):
-        v = singer.sing(s, line, words, at=at, seed=7, take=take, memory=vmem, **{**VOICE, **kw})
+        v = singer.sing(s, line, words, at=at, seed=7, take=take, memory=vmem, **{**voice, **kw})
         SOLO.setdefault('vocal', []).append(v)
         return v
 
@@ -186,9 +221,9 @@ def build() -> Song:
 
     # ============================================================== head: sung
     A1, B_, A2, C_ = head.parts
-    vox = sing(VOX_A, LYRICS_A1, A1)
-    sing(VOX_B, LYRICS_B, B_)
-    sing(VOX_A, LYRICS_A2, A2)
+    vox = sing(vox_a, lyr_a1, A1)
+    sing(VOX_B, LYRICS_B, B_, split_s=BREATH_S)     # a catch breath after 'way' (8 s in one breath at 100 BPM)
+    sing(vox_a, lyr_a2, A2)
     sing(VOX_C, LYRICS_C, C_)
     for part, v, sd in ((A1, 50, 11), (B_, 52, 12), (A2, 52, 13), (C_, 56, 14)):
         comp(part, v, seed=sd)
@@ -230,8 +265,8 @@ def build() -> Song:
     # second time through), and a soft third below on the climax line ('down on Jane Street, rain')
     def loose(line, seed):
         return jazz.paraphrase(line, seed=seed, anticipate=0.3, delay=0.15, embellish=0.0, key=s.key)
-    sing(loose(VOX_B, 81), LYRICS_B, hB, take=1)
-    sing(loose(VOX_A, 82), LYRICS_A2, hA2, take=1)
+    sing(loose(VOX_B, 81), LYRICS_B, hB, take=1, split_s=BREATH_S)
+    sing(loose(vox_a, 82), lyr_a2, hA2, take=1)
     out_c = loose(VOX_C, 83)
     sing(out_c, LYRICS_C_OUT, hC, take=1)
     harm = sing(out_c.slice(16, 24).transpose_scale(-2, s.key), 'down on Jane Street rain.', hC.start + 16, take=2,
@@ -264,14 +299,18 @@ def build() -> Song:
              room=(-13, -8))
 
     # ============================================================== the voice's production: the vocal hero, clean
-    # (no tube: a jazz voice close and warm), the piano dipped where the words live; a club, not a pop record: no echo
-    # throws, the hero plate lower, the voice in the band's own room too (the sung sections read -8 LU of reverb, the
-    # jazz recipe wants the room 12-18 LU under the mix)
-    hero(vox.track, family='vocal', genre='jazz', competitors=[b.piano], drive=False, echo=False, throws=False)
-    vox.track.send('hero_plate', -17).send('room', -15)
-    hero(harm.track, family='vocal', genre='jazz', drive=False, echo=False, throws=False, ride=False, duck=False,
+    # (no tube: a jazz voice close and warm), the piano dipped where the words live; dry and close (HUMAN_FEEDBACK: the
+    # voice was too wet): the library's jazz vocal space - its short pre-delayed plate ~20 LU under the voice, no
+    # echo, no throws, not in the band's room
+    hero(vox.track, family='vocal', genre='jazz', competitors=[b.piano], drive=False)
+    hero(harm.track, family='vocal', genre='jazz', drive=False, ride=False, duck=False,
          carve=False, dips=False)
-    harm.track.send('hero_plate', -17).send('room', -15)
+
+    if TRANSPOSE:                     # the whole song in another key: the pitched band parts move with the voice
+        for tr in (b.piano, b.bass):
+            tr._notes = [n._replace(pitch=n.pitch + TRANSPOSE) for n in tr._notes]
+        names = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B']
+        s.key = Key(f"{names[(10 + TRANSPOSE) % 12]} major")      # what sounds (the mp3's key tag)
 
     # ============================================================== the arc (the conductor's ride on the master input)
     # the first A soft, every part a little more, the C's lift; the solo from its statement to the climax in its C,
@@ -284,9 +323,10 @@ def build() -> Song:
                   'head_out': [(31.5, -1.5), (32, -0.8, 'smooth'), (63.5, -0.8), (64, 1.0, 'smooth')]})
 
     # ============================================================== master (MASTER.md): the jazz tone (the mids -2.3 dB at
-    # 1 kHz), x1.2 width above the mono bass (the sung sections read 13 % wide: a centred voice), the limiter only making
+    # 1 kHz), x1.6 width above the mono bass (the dry centred voice left the sung sections 10-14 % wide at x1.2: now
+    # 17-18 %, mono sum -0.8 dB), the low-mid bell 250 Hz -0.5 (G sits lower), the limiter only making
     # up the eq - the post-pass's +1.3 dB drive cost LRA (5.0 -> 4.8)
-    mastering.apply(s, eq={'low.freq': 60, 'low.gain': 0.0, 'low.q': 0.7071, 'peak1.freq': 250, 'peak1.gain': 0.7,
+    mastering.apply(s, eq={'low.freq': 60, 'low.gain': 0.0, 'low.q': 0.7071, 'peak1.freq': 250, 'peak1.gain': -0.5,
                            'peak1.q': 1.0, 'peak2.freq': 1000, 'peak2.gain': -2.3, 'peak2.q': 1.0},
-                    width=1.2, limiter={'ceiling': -1.2, 'release': 250.0}, loudness_change=0.6)
+                    width=1.6, limiter={'ceiling': -1.2, 'release': 250.0}, loudness_change=0.6)
     return s

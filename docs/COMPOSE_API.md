@@ -366,7 +366,7 @@ print(lead.hero)                                # what it did (also printed by b
 
 **`hero(sound=None, family=None, *, genre=None, bed=(), competitors=(), sections=None, double=None, octave=None,
 air=True, chain=True, space=True, plate=None, echo=None, duck=True, carve=True, dips=True, ride=True, throws=True,
-**stages)`**. `sound`: a Track (the wrapper replaces its sound by the hero build of it - the song's own inserts after
+grit=None, **stages)`** (`grit`: the vocal's guitar-amp options, "Vocals" below). `sound`: a Track (the wrapper replaces its sound by the hero build of it - the song's own inserts after
 the patch chain stay - and applies the mix rules; returns the track, `track.hero` = the log and options), or a patch
 name / Patch / Instrument / None (returns a Patch; the mix rules need a track). `family`: a preset, family or alias
 (below); None = inferred from the sound (`heroes.infer`: a hero patch -> its preset, the patch name's words -
@@ -426,7 +426,7 @@ classical: no ride). The mixer treats a hero track as the lead (`mixer.infer_rol
 | `brass` (trumpet) | sampled/solo_trumpet (VSCO 2); takes: VPO (Iowa) trumpet x2; octave: SSO trombone | -1.5 dB 420 Hz, -2 dB 1.2 kHz, -1.5 dB 4.8 kHz; 2:1 -23 dB 20 ms; tube 6 dB; +1.5 dB 2.8 kHz, +2 dB 8.5 kHz; exciter | hero_plate -14, hall -14, echo -24 -> -8 | 2 / 3 @ 2.2 kHz / +1.5 / -2 | -1.8 |
 | `woodwind` (flute) | sampled/solo_flute (VSCO 2); takes: SSO flute; octave: clarinet | hp 200, -1.5 dB 450 Hz; 1.8:1 -21 dB 25 ms; tape; +1 dB 3 kHz, +2.5 dB 9 kHz | hero_plate -14, hall -10, echo -24 -> -9 | 2 / 3 @ 2.2 kHz / +1 / -1.5 | -0.7 |
 | `voice` (choir) | sampled/choir (VPO "ah") | -2 dB 300 Hz; 2:1 -21 dB 15 ms; tube 5 dB; +2 dB 3.2 kHz, +3 dB 10 kHz; exciter; vocal doubler 9 ct | hero_plate -12, hall -14, echo -20 -> -6 | 2.5 / 3 @ 3 kHz / +1.5 / -2 | -2.5 |
-| `vocal` (a sung vocal) | the vocal track's own takes (agentsound.singer; no library patch) | hp 90, -2 dB 280 Hz, -1 dB 1 kHz; 3:1 -22 dB 8 ms; deesser 7 kHz -8 dB; tube 3 dB; +2 dB 3.5 kHz, +2.5 dB 11 kHz | hero_plate -12, echo -20 -> -6 | 2.5 / 3 @ 3 kHz / +1.5 / -2.5 | 0 |
+| `vocal` (a sung vocal) | the vocal track's own takes (agentsound.singer; no library patch) | hp 90, -2 dB 280 Hz, -1 dB 1 kHz; 3:1 -22 dB 8 ms; tube 3 dB; +2 dB 3.5 kHz, +2.5 dB 11 kHz; deesser 7 kHz -8 dB (after the boosts) | DRY: vocal_plate (1.0 s, 60 ms pre-delay) pop -21 / rock -20 / jazz, ballad -25; no constant echo; throws -60 -> -10 on section ends (pop / rock), none (jazz / ballad) | 2.5 / 3 @ 3 kHz / +1.5 / -2.5 | 0 |
 | `organ` | sampled/tonewheel_organ (+ its Leslie) | -2 dB 250 Hz, +1 dB 800 Hz; 2:1 -21 dB; tube 8 dB; +1.5 dB 2.5 / 8 kHz | hall -14, echo -26 -> -10 (no plate) | 2 / 2.5 @ 1.5 kHz / +1 / -2 | -0.2 |
 | `generic` | sampled/solo_cello (any other sound) | hp 60, -2 dB 300 Hz; 1.8:1 -21 dB 20 ms; tape; +1.5 dB 2.8 kHz, +2 dB 9 kHz | hero_plate -16, hall -12, echo -24 -> -8 | 2.5 / 3 @ 2.5 kHz / +1 / -2 | -1.6 |
 
@@ -770,7 +770,7 @@ vox = singer.sing(s, MELODY, "City lights are calling out -, each window gold an
                   voice='hanami', style='pop', seed=3, memory=mem)      # creates track 'vocal'
 hero(vox.track, family='vocal', bed=[pad], competitors=[piano])          # the vocal chain + mix rules
 for d in (singer.double(vox, pan=-0.55), singer.double(vox, pan=0.55)):  # doubles: SUNG again, other takes
-    hero(d.track, family='vocal', ride=False, throws=False, duck=False, carve=False, dips=False)
+    hero(d.track, family='vocal', ride=False, throws=False, duck=False, carve=False, dips=False)  # same dry space
 harm = singer.harmony(vox, steps=2, key='C major')                       # a third above, sung (not shifted)
 print(vox.describe())                                                    # the moves, beat by beat
 ```
@@ -798,8 +798,8 @@ than an unstressed one, a closed vowel - ih, uh - on a long or top note, a run o
 `python -m agentsound lyrics "..." [--voice hanami]` prints words -> syllables -> notes. The lyricist role:
 `roles/lyricist.md`.
 
-**sing() options**: `voice` (a voicebank id), `style` (`pop`, `ballad`, `rock`; any STYLES key as an override:
-`vib_ct=35`, `fall=0` ...), `mode` (a fixed voice mode: `'core'` / `'soft'` / `'power'` or a bank speaker such as
+**sing() options**: `voice` (a voicebank id), `style` (`pop`, `rock`; the calm, intimate `jazz` and `ballad`; any
+STYLES / `STYLE_EXTRAS` key as an override: `vib_ct=35`, `fall=0`, `expr=0.6` ...), `mode` (a fixed voice mode: `'core'` / `'soft'` / `'power'` or a bank speaker such as
 `'tiger_glam'`; default: the dynamics blend core / soft / power per frame), `transpose`, `moves=False` (the robotic
 baseline), `pitch` (`'hybrid'` default: the voicebank's own pitch predictor - transitions learned from the recorded
 singer - with the player's moves on top, its own wobble smoothed under a planned vibrato; `'player'`: the player's
@@ -834,10 +834,65 @@ as long as the sung phrase, so the hero's echo throws find the phrase ends. `sin
 instrument when you create the track yourself (`s.track('vocal', singer.voice('hanami'))`); its level is the voice's
 calibration (manifest `level_db`: the part lands near -18 LUFS like a library patch).
 
+**The styles**: `pop` and `rock` sing outgoing (scoops into openers and peaks, a 5.5-5.8 Hz vibrato, falls); `jazz`
+and `ballad` are calm and intimate (recipes/HUMAN_FEEDBACK.md: "die Stimme viel zu aufgeregt, sollte ruhiger sein"): the
+bank's soft mode as the base (`base_soft` over `base_core`: Hanami's Nectar ~64 % of the vowels) and its power mode only
+on the loudest peaks (`power_knee`), few small scoops (12-25 % chances, ~24 ct) and the voicebank pitch model's own
+approach / wobble damped (`expr` 0.45-0.5 instead of 0.85; `model_vib` 0.4-0.45 of its wobble left on held notes), a
+slow (4.6-4.8 Hz), narrow (16-26 ct), late (0.55-0.6 s) vibrato on notes of 0.85+ s only, no falls / doits, a narrow
+touch range and small accents, smooth legato (longer glides, little overshoot); SUNG SOFT (`sing_soft`: "leiser
+singen lassen und nachtraeglich lauter machen" - every model, duration / pitch / acoustic, sings the bank's soft mode
+alone, no core / power crossfade; the level comes back as a static make-up gain on the take's sampler zone, before the
+chain: `makeup_db`, default `singer.SOFT_MAKEUP_DB[bank]` - Hanami's soft mode is not quieter, -0.7 dB; her acoustic
+model has no energy / breathiness / voicing / tension input, only speaker, gender, velocity = consonant speed, depth)
+and LAID BACK ("sie klingt gerusht": `late_ms` 30-34 + `late_first_ms` 14-16 - the vowels ~35 ms behind the beat, a
+phrase's first ~50 ms, so with ~70 ms of consonants before the vowel the syllable's P-centre lands on the beat
+instead of ~20 ms ahead). `STYLE_EXTRAS` (`expr`, `model_vib`, `base_core`, `power_knee`, `sing_soft`, `makeup_db`,
+`late_first_ms`) default to the old behaviour, so pop / rock takes stay cached. Measured on
+jane-street-bossa (the old ballad + overrides -> `jazz`, whole song): scooped openers 53 % -> 15 % (median -82 -> -37
+ct), settle p90 141 -> 70 ms, held-note pitch wobble +-21 -> +-4 ct (p90 38 -> 12), soft mode 23 % -> 64 % of the
+vowels, power 8 % -> 0.4 %, the takes' gain lane p10-p90 -1.5..+2.2 -> -0.6..+0.8 dB.
+
 **The vocal hero** (`hero(track, family='vocal')`, `agentsound/patches/hero_vocal.py`): high-pass 90 Hz, -2 dB mud at
-280 Hz, 3:1 vocal compressor (8 ms), the `deesser` (engine effect: split band above 7 kHz, up to -8 dB; a male voice:
-`deess={'freq': 5500}`), a touch of tube, +2 dB presence at 3.5 kHz, a +2.5 dB air shelf, the breath stage; the vocal
-plate, echo throws on phrase ends; the bed ducks and steps out of 3 kHz, competitors -2.5 dB at 3 kHz.
+280 Hz, 3:1 vocal compressor (8 ms), a touch of tube, +2 dB presence at 3.5 kHz, a +2.5 dB air shelf, then the
+`deesser` (engine effect: split band above 7 kHz, up to -8 dB; a male voice: `deess={'freq': 5500}`) AFTER those boosts
+(`hero_vocal.VOCAL_ORDER`: they would bring the sibilants back), the breath stage; the bed ducks and steps out of
+3 kHz, competitors -2.5 dB at 3 kHz.
+Its space is DRY and CLOSE by default (HUMAN_FEEDBACK: "der Gesang hat immer viel Hall"): its own short plate
+(`bus/vocal_plate`: RT60 1.0 s, 60 ms pre-delay, the send band 300 Hz-8 kHz) at the genre's level
+(`hero_vocal.VOCAL_SPACE`, by `hero(..., genre=)` or, without one, by the singing style): pop -21 dB / rock -20 dB = the
+return ~16 / 15 LU under the dry voice, jazz / ballad / classical -25 dB = ~20 LU; no constant echo - echo only as
+deliberate throws on the last phrase end of each section (pop / rock, -60 -> -10 dB), none for jazz / ballad; the
+vocal inherits no band hall / room (a patch's sends are dropped). Doubles and harmonies get the same space. Why: a
+return within ~10 LU of the voice is a wash on every held vowel (the old chain: plate -12 + echo -20 + throws read
+-4 LU on the pop demo, -10 LU on the jazz song); 15-18 LU under it a dense band masks the return while the voice sings
+and only a short tail shows in the gaps; a sparse trio exposes every gap (18-22 LU: a close-miked club voice). Measured
+(`python songs/_demo_vocal/wetness.py songs/<slug>`: every non-vocal track muted, the returns vs the dry voice over the
+same gated blocks, the tail after phrase ends, the takes' own tails - the DiffSinger takes are dry, ~-51 dB 30-250 ms
+after the last phoneme): jane-street-bossa -9.7 -> -20.6 LU (30 dB down after a phrase end in 1.0 -> 0.1 s), the pop
+demo -3.9 -> -14.7 LU, the rock demo -5.1 -> -15.1 LU (`hero_vocal.VOCAL_SPACE_MEASURED`). Ask for more space by hand:
+`vox.track.send('vocal_plate', -18)` / `vox.track.send(s.hall(), -16)` (a send the song sets stays), `throws=True` (jazz) / `throws=False`, `echo=False`, `plate='bus/hero_plate'` (the old big plate).
+
+**Grit: the guitar amp on the voice** (`hero(vox.track, family='vocal', grit=...)`; the engine's tube `amp`, the
+guitar heroes' head; `agentsound/patches/hero_vocal.py` GRIT):
+
+| grit | how | sound |
+|---|---|---|
+| `'light'` | PARALLEL: a post-fader send into the bus `<track>_grit` (`bus/vocal_grit_light`: eq 300 Hz-5 kHz 24 dB/oct -> amp 2 stages gain 3.5, no bright cap, mid 7, treble / presence down -> speaker eq hp 250 / lp 4.5 kHz), blended -9 dB under the clean vocal | a little edge on the vowels |
+| `'crunch'` | the same with `bus/vocal_grit_crunch` (gain 6 + a 4 dB overdrive push, master 6: saturated), -5 dB under | audibly rough, a rock vocal |
+| `'megaphone'` | INSERT: the hero chain's `amp` stage = the voice band-limited twice (550 Hz-3.8 kHz, 48 dB/oct, a +5 dB horn resonance at 1.8 kHz) -> the amp driven -> the horn band again; the presence stage loses its air shelf | a bullhorn / telephone-PA voice: an effect for a line, an intro, a bridge |
+
+The parallel grits leave the clean chain untouched, so every consonant comes through it (recipes/HUMAN_FEEDBACK.md: "out
+verliert sein t"); the grit only roughens the vowels. The send cancels the track's fader (re-synced when the song
+compiles, so a later mix move keeps it): the amp always sees the chain's own level - the calibrated drive -, and the
+bus follows the fader at `blend` under the clean track. Level-matched: each amp's output is set so the bus at blend 0
+equals the clean vocal, and the track is trimmed so clean + grit lands at the clean level (`heroes.grit_trim(blend,
+rho)` = -10 log10(1 + g^2 + 2 rho g), g = 10^(blend/20); light -0.75 dB, crunch -1.19 dB; megaphone -0.4 dB).
+Measured on songs/_demo_vocal (Hanami; `python songs/_demo_vocal/grit_ab.py` writes the A/B mp3s + README.txt +
+grit_ab.json to `out/grit_ab/`): see `hero_vocal.GRIT_MEASURED`. Tweak: `grit={'amount': 'crunch', 'blend': -7,
+'gain': 7}` (keys `blend`, `gain` = the amp's gain, `send`, `trim`, `bus`; a new blend re-derives the trim);
+`heroes.grit(track, 'crunch')` adds it to a track that is no hero (a double). The build logs it (`hero ... grit: ...`)
+and `singer.check` counts the `<track>_grit` bus with the vocal for intelligibility.
 
 **The ears**: the build prints `vocals ...` lines (`singer.check(report)`): intelligibility (the lead vocal owns >= 40 %
 of the mix's 2.5-6 kHz presence band), a competitor masking the words there, the vocal buried under another track in
@@ -881,9 +936,13 @@ zero-shot singer's reference recording (`licensed-render` of a manifest voice, `
    onnxruntime honours only on the CPU). Either way the cached takes make every later render identical.
 3. `python -m agentsound voicebanks --check`.
 
-Complete example with A/B files: `songs/_demo_vocal` (`python songs/_demo_vocal/make_ab.py`: `vocal_demo.mp3` produced
+Calm-vocal A/B: `python songs/jane-street-bossa/calm_ab.py` (the calm style, + sing soft, + a minor third lower,
++ a stepwise A, + laid back, or a sparse A with fewer words; the delivery numbers of `wetness.py` - take_character,
+timing, line_shape - per variant). Dry-vocal A/B: `python songs/jane-street-bossa/dry_ab.py` (one chorus: the old wet + old singing, dry + old singing,
+dry + calm jazz singing, level-matched, with the numbers) and `python songs/_demo_vocal_rock/grit_rock_dry.py` (TIGER
+clean vs crunch over the rock band with the dry space). Complete example with A/B files: `songs/_demo_vocal` (`python songs/_demo_vocal/make_ab.py`: `vocal_demo.mp3` produced
 over a band, `vocal_dry.mp3`, `ab_robotic.mp3` vs `ab_singer.mp3`, `ab_pitch_model.mp3`, `ab_player_pitch.mp3`,
-`ab_tiger.mp3`).
+`ab_tiger.mp3`; `python songs/_demo_vocal/grit_ab.py`: the grit A/B in `out/grit_ab/`).
 
 ## Vocoder and speech (robot voices, no singer)
 

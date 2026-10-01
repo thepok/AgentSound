@@ -1,4 +1,59 @@
-# Down on Jane Street - A&R (round 2)
+# Down on Jane Street - A&R (round 3: the calm version)
+
+Judged build: `out/mix.mp3` / `report.json` of the calm version (fix/dry-vocals: 100 BPM - 20 % slower than 126 -,
+G major, the sparse A words, sung soft + laid back, the dry vocal space), `mix` and `master --check` re-run on it,
+the singer's diction ears, the phrase lengths (song seconds), overview.png. No jazz reference: `compare` skipped.
+Same hat as the producer this round (the coordinator asked for a short pass) - weigh it accordingly.
+
+```
+verdict: ship
+summary: A slow, calm bossa ballad now: the voice sits dry and close, lower and behind the beat, with room to
+         breathe between the lines; the band still grooves under it and the piano solo still climbs to the peak.
+```
+
+## Checks of the slowdown (126 -> 100 BPM)
+
+- Groove: the bossa kit at 100 BPM got soft 16th ghost taps between the brush 8ths (35 %, velocity 14-22: GHOSTS),
+  so the swirl does not thin out; the drums sit -16.1 / -15.8 dB under the voice in the head / head_out (window
+  -16..-13), the bass -6.5 / -6.6 (window -6.5..-3) - on the edges, inside. The shaker read "nearly inaudible" at the
+  slower tempo (fewer shakes): +2 dB more; 0 warnings after.
+- The piano solo keeps its arc: section -16.7 LUFS, its climax the song's loudest short-term moment (-11.9 LUFS).
+- Timing: the lay-back is in ms (vowels ~35 ms behind, phrase starts ~50): at 100 BPM that is 6 % / 8 % of a beat
+  (7 % / 10 % at 126) - still on / just behind the beat, no drag.
+- Breath: the longest sung phrase grew to 8.1 s ("the candle leans your way, the waiter wipes the table" - an 8th rest
+  after 'way' was too short to split the take): the B now breathes at rests >= 0.28 s (split_s), the longest phrase is
+  4.5 s, the held last "rain" 5.2 s.
+- Diction: no coda warning (the shortest word-final consonant 46 ms; at 126 BPM three legato codas read 35 ms).
+- Dynamics: voice 17.0 dB, piano 10.1, bass 6.1 per phrase; flat_dynamics 0. 0 clicks, true peak -1.20 dBTP.
+
+## Issues (most severe first)
+
+1. [minor] Low end heavier in G: sub +3.8, low-mid +3.4 dB over the jazz profile (Bb: +1.1 / +2.6). The master check
+   calls it a tone note (its suggestion even adds 0.7 dB at 60 Hz), HUMAN_FEEDBACK: 1-3 dB polish is not heard.
+   owner: mix-engineer   fix: optional, -1.5 dB more on the bass bell (53 Hz) or a 120 Hz high-pass on the comping.
+2. [minor] The tag's band sits low under the voice (rhythm -17.5, bass -7.9 vs the windows' -16 / -6.5): a soft
+   tag by design, the mixer moves nothing.  owner: arranger   fix: optional, tag kit vel 0.6 -> 0.7.
+3. [minor] Width x1.6 on the master (the dry voice is centred): the intro / solo read 88 / 93 % wide above 150 Hz
+   ('ok', the window tops at 80). owner: mastering-engineer   fix: optional, x1.45 if the solo sounds too spread.
+4. [minor, from round 2] the final chord's ring is short.
+
+## HUMAN_FEEDBACK checklist (the new entries)
+
+- [x] Dry, close vocal: its returns ~20 LU under the dry voice, no echo, no band room.
+- [x] Calm, not "aufgeregt": sung soft (Nectar alone), few small scoops, slow narrow late vibrato, no falls, the
+      line mostly stepwise and a minor third lower (4 % of the sung time at / above D5).
+- [x] Not "gerusht": laid back (the syllables land on the beat), fewer words on longer notes in the A's, 20 % slower.
+- [x] Everything of round 2's list still holds (song not loop, voice in front, real dynamics, warm piano, jazz drums
+      behind, produced space, 0 clicks).
+
+## Keep
+
+The hook (now E5 on "Jane"), "Ordered two, drank them both", "let the taxis pass", "I'm not the one who's late" /
+"now you can keep the wait"; the bossa comping under the voice; the solo's arc; the single harmony line.
+
+---
+
+# Round 2 (126 BPM, Bb)
 
 Judged build: `out/mix.mp3` / `mix.wav` / `report.json` of 2026-10-01 19:54 (commit eb671bf; `check` recompiles to a
 byte-identical `song.render.json`, so the render is current), `mix` and `master --check --platform dynamic` re-run on

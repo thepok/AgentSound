@@ -1,3 +1,11 @@
+# Round 3 (the calm version: 100 BPM, G major, the dry voice)
+
+- width x1.2 -> x1.6: the dry, centred voice (no hall / room on it any more) left the sung sections 9.5-14 % wide above 150 Hz ('narrow', target 15-80 %); at x1.6 head 16.8 %, head_out 18.2 %, tag 24 % (lush), correlation 0.66 (the mono sum 0.8 dB quieter). The intro / solo read 88 / 93 % ('ok').
+- the 250 Hz bell +0.7 -> -0.5 dB: a minor third lower the low mids read +3.3 dB over the jazz profile.
+- result: -15.6 LUFS-I, true peak -1.20 dBTP, LRA 5.9 LU, PLR 14.6, 0 clicks; `master --check` all ok.
+
+# Round 2
+
 # Down on Jane Street - master
 
 Platform `dynamic` (jazz: dynamics first), profile `jazz` (-16..-13 LUFS, LRA 5-14, PLR >= 9), no reference (none

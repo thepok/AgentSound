@@ -134,15 +134,33 @@ STYLES = {
                 accent=0.12, breath_db=-4.0, breath_min_s=0.25, drift_ct=5.0,
                 power=0.55, soft=0.55, base_power=0.0, base_soft=0.0, pitch_power=0.03,
                 spice_every=2, link=True, steps=24),
-    'ballad': dict(vel=(56, 100), late_ms=14.0, jitter_ms=12.0, cons=1.12, speed=0.92, cons_share=0.4,
-                   glide_ms=100.0, melisma_glide=0.6, overshoot_ct=10.0,
-                   scoop_first=0.5, scoop_leap=0.6, scoop_peak=0.7, scoop_ct=60.0, scoop_ms=150.0,
-                   vib_other=0.75, vib_peak=1.0, vib_ct=30.0, peak_vib_ct=44.0, vib_hz=5.2, vib_delay=0.38,
-                   vib_grow=0.6, vib_min_s=0.6, wobble=0.18,
-                   fall=0.1, doit=0.0, fall_semis=-1.6, release=0.85, taper=0.7, swell=0.6, messa=0.5,
-                   accent=0.14, breath_db=-3.0, breath_min_s=0.25, drift_ct=6.0,
-                   power=0.35, soft=0.8, base_power=0.0, base_soft=0.2, pitch_power=0.03,
-                   spice_every=4, link=True, steps=24),
+    # the calm, intimate styles (HUMAN_FEEDBACK "Vocals": "im Jazz-Song ist die Stimme viel zu aufgeregt, sollte
+    # ruhiger sein"): the soft mode as the base and the power mode only on the loudest peaks, few small scoops (and the
+    # pitch model's own approach / wobble damped: expr, model_vib), a slow, narrow vibrato that starts late and only on
+    # long notes, no falls / doits, small swings, smooth legato; SUNG SOFT ("leiser singen lassen und dann nachtraeglich
+    # lauter machen": every model in the soft mode alone, the level back by the zone's make-up) and LAID BACK ("sie
+    # klingt gerusht": the vowels ~30-40 ms behind the beat, a phrase's first ~50 ms - with ~75 ms of consonants before
+    # the vowel the syllable's P-centre lands on the beat instead of ~20 ms ahead of it)
+    'jazz': dict(vel=(60, 88), late_ms=34.0, jitter_ms=5.0, cons=1.05, speed=0.9, cons_share=0.4,
+                 glide_ms=110.0, melisma_glide=0.7, overshoot_ct=3.0,
+                 scoop_first=0.12, scoop_leap=0.15, scoop_peak=0.2, scoop_ct=40.0, scoop_ms=110.0,
+                 vib_other=0.35, vib_peak=0.75, vib_ct=16.0, peak_vib_ct=24.0, vib_hz=4.6, vib_delay=0.6,
+                 vib_grow=0.8, vib_min_s=0.9, wobble=0.1,
+                 fall=0.0, doit=0.0, fall_semis=-1.2, release=0.9, taper=0.6, swell=0.3, messa=0.2,
+                 accent=0.07, breath_db=-4.0, breath_min_s=0.25, drift_ct=4.0,
+                 power=0.6, soft=0.5, base_power=0.0, base_soft=1.0, pitch_power=0.0,
+                 spice_every=8, link=True, steps=24,
+                 expr=0.45, model_vib=0.4, base_core=0.6, power_knee=0.35, sing_soft=True, late_first_ms=16.0),
+    'ballad': dict(vel=(58, 92), late_ms=30.0, jitter_ms=6.0, cons=1.08, speed=0.92, cons_share=0.4,
+                   glide_ms=105.0, melisma_glide=0.65, overshoot_ct=4.0,
+                   scoop_first=0.15, scoop_leap=0.2, scoop_peak=0.25, scoop_ct=45.0, scoop_ms=120.0,
+                   vib_other=0.4, vib_peak=0.8, vib_ct=18.0, peak_vib_ct=26.0, vib_hz=4.8, vib_delay=0.55,
+                   vib_grow=0.75, vib_min_s=0.85, wobble=0.12,
+                   fall=0.0, doit=0.0, fall_semis=-1.2, release=0.9, taper=0.65, swell=0.4, messa=0.3,
+                   accent=0.08, breath_db=-4.0, breath_min_s=0.25, drift_ct=4.0,
+                   power=0.6, soft=0.5, base_power=0.0, base_soft=0.8, pitch_power=0.0,
+                   spice_every=8, link=True, steps=24,
+                   expr=0.5, model_vib=0.45, base_core=0.7, power_knee=0.3, sing_soft=True, late_first_ms=14.0),
     'rock': dict(vel=(76, 116), late_ms=0.0, jitter_ms=8.0, cons=0.9, speed=1.1, cons_share=0.45,
                  glide_ms=65.0, melisma_glide=0.5, overshoot_ct=18.0,
                  scoop_first=0.6, scoop_leap=0.75, scoop_peak=0.9, scoop_ct=95.0, scoop_ms=110.0,
@@ -153,6 +171,25 @@ STYLES = {
                  power=0.8, soft=0.3, base_power=0.2, base_soft=0.0, pitch_power=0.05,
                  spice_every=2, link=True, steps=24),
 }
+STYLE_EXTRAS = {'expr': 0.85, 'model_vib': 1.0, 'base_core': 1.0, 'power_knee': 0.0, 'sing_soft': False,
+                'makeup_db': None, 'late_first_ms': 0.0}
+"""Style keys with a default (a style that leaves them out - pop, rock - renders as before): expr = the voicebank pitch
+model's expressiveness in pitch='hybrid' / 'model' (0..1: lower = flatter, its own scoops into notes and its wobble
+smaller), model_vib = how much of the pitch model's own wobble stays on the steady part of a held note outside a
+planned vibrato (1 = all, 0.25 = a quarter: only the singer's own late vibrato is heard), base_core = the core mode's
+weight in the colour blend (below 1 with base_soft: the soft mode is the base), power_knee = the loudness (0..1 of the
+blend's range) above which the power mode comes in (0.6: only the loudest peaks). sing_soft: SING SOFT, THEN MAKE UP
+THE GAIN - the voicebank is driven with its softest inputs (100 % of the soft mode for the acoustic, the duration and
+the pitch model: no core / power crossfade at all; Hanami's acoustic model takes no energy / breathiness / voicing /
+tension input - only speaker, gender, velocity = consonant speed, depth, steps) and the level is restored by a static
+make-up gain on the take's sampler zone (before the vocal chain, as a quieter singer closer to the mic): makeup_db
+(None: the bank's SOFT_MAKEUP_DB). The calm comes from the delivery, not from the level. late_first_ms: extra
+lay-back of a phrase's first vowel (a calm singer starts phrases behind the beat)."""
+SOFT_MAKEUP_DB = {'hanami': -0.7}
+"""sing_soft's make-up gain per voicebank (dB on the take's zone): the level difference of the soft-mode takes against
+the blended ones, measured on the same parts (songs/jane-street-bossa/calm_ab.py)."""
+PARAMS_NOT_SUNG = ('makeup_db',)
+"""Style keys that do not change the takes (left out of the cache key): the make-up gain sits on the zone."""
 """Per style: vel (touch range), timing (late_ms lay-back, jitter_ms), consonants (cons: x the model's length, speed:
 the voicebank's consonant-speed embedding, cons_share: the most of a note before them the consonants may take),
 glides (glide_ms, melisma_glide x in runs, overshoot_ct), scoops (chances: scoop_first / _leap / _peak, scoop_ct,
@@ -161,7 +198,8 @@ vib_min_s, wobble), phrase ends (fall, doit, fall_semis, release, taper), air (s
 per velocity step), breath_db (the breath's level), breath_min_s (the shortest gap that gets a breath), drift_ct,
 voice colour (power / soft: how far the dynamics blend in the power / soft mode, base_power / base_soft, pitch_power
 per semitone above the phrase), spice_every (bars between two falls / doits / big scoops), link, steps (diffusion
-steps)."""
+steps); STYLE_EXTRAS (expr, model_vib, base_core, power_knee). 'jazz' and 'ballad' are the calm, intimate styles,
+'pop' and 'rock' the outgoing ones."""
 
 
 # ------------------------------------------------------------------------------------------------ memory
@@ -318,8 +356,8 @@ def sing(target, line, lyrics: str, at=0.0, *, voice: str = 'hanami', style: str
     """Sing `line` with `lyrics` at `at` (beat or Section) -> a Vocal (the part; .track is the vocal track).
 
     target: the Song (creates / reuses track `track_id` with the voice) or a vocal track (singer.voice()).
-    voice: a voicebank id of assets/voices/manifest.json ('hanami', 'tiger'). style: STYLES ('pop', 'ballad',
-    'rock'); overrides= any STYLES key (vib_ct=35, fall=0, ...). vel: (lo, hi) for humanize.touch phrase arcs (None:
+    voice: a voicebank id of assets/voices/manifest.json ('hanami', 'tiger'). style: STYLES ('pop', 'rock'; the calm
+    'jazz', 'ballad'); overrides= any STYLES / STYLE_EXTRAS key (vib_ct=35, fall=0, expr=0.6 ...). vel: (lo, hi) for humanize.touch phrase arcs (None:
     the style's; False keeps the line's velocities). mode: a fixed voice mode for the part ('core' / 'soft' / 'power'
     or a bank speaker name, e.g. 'tiger_glam'; None: the dynamics blend the bank's core / soft / power modes).
     transpose: semitones (e.g. -12 for a male voice). moves=False: the robotic baseline (see the module docstring).
@@ -339,8 +377,8 @@ def sing(target, line, lyrics: str, at=0.0, *, voice: str = 'hanami', style: str
     if pitch == 'hybrid':      # the pitch model already approaches notes from below: the player's scoops are smaller
         S['scoop_ct'] *= HYBRID_SCOOP
     for k, v in overrides.items():
-        if k not in S:
-            raise SingerError(f"sing(): unknown option {k!r} (a STYLES key: {', '.join(S)})")
+        if k not in S and k not in STYLE_EXTRAS:
+            raise SingerError(f"sing(): unknown option {k!r} (a STYLES key: {', '.join(list(S) + list(STYLE_EXTRAS))})")
         S[k] = v
     bank = _vb.get(voice)
     song, track = _vocal_track(target, track_id, bank, pan, gain_db)
@@ -532,11 +570,14 @@ def _plan(notes, phrases, S, song, sd, memory, moves_on, gestures, base):
         name = {'vib': 'vibrato'}.get(kind, kind)
         plan[hit][name] = {**plan[hit].get(name, {}), **params, 'hand': True}
         log.append((round(notes[hit].start, 4), name, plan[hit][name]))
-    # timing feel: correlated jitter on the vowel onsets
+    # timing feel: correlated jitter on the vowel onsets (+ the extra lay-back of a phrase's first vowel)
     walk = 0.0
+    firsts = {ph[0] for ph in phrases}
+    lf = float(S.get('late_first_ms', 0.0))
     for i, n in enumerate(notes):
         walk = 0.6 * walk + 0.4 * (2 * rng.random() - 1)
-        plan[i]['late_ms'] = round(S['late_ms'] + S['jitter_ms'] * walk * (0.5 if n.kind != 'syllable' else 1.0), 2)
+        plan[i]['late_ms'] = round(S['late_ms'] + S['jitter_ms'] * walk * (0.5 if n.kind != 'syllable' else 1.0)
+                                   + (lf if i in firsts else 0.0), 2)
     log.sort(key=lambda x: x[0])
     return plan, log, budget
 
@@ -609,7 +650,7 @@ def _phrase_spec(vo: Vocal, ph: list) -> dict:
     if 0 <= k < len(vo.phrases) - 1:
         rest = song.seconds(vo.notes[vo.phrases[k + 1][0]].start) - song.seconds(z.start + z.dur)
     return dict(format=FORMAT, bank=vo.bank.id, bank_sha=vo.bank.entry.get('sha256', ''), style=vo.style,
-                params=S, notes=ns, seed=vo.seed, take=vo.take, formant=vo.formant, moves=vo.moves_on,
+                params={k: v for k, v in S.items() if k not in PARAMS_NOT_SUNG}, notes=ns, seed=vo.seed, take=vo.take, formant=vo.formant, moves=vo.moves_on,
                 pitch=vo.pitch_mode, mode=vo.mode, rest_after=round(min(9.0, rest), 4),
                 release_vowel=RELEASE_VOWEL if RELEASE_VOWEL in _bank_phonemes(vo.bank) else None)
 
@@ -674,7 +715,16 @@ def _dur_job(spec: dict) -> dict:
     wd.append(1)
     wdur.append(max(1, round(0.3 / FR)))
     midi.append(groups[-1]['m'])
-    return {'op': 'duration', 'phonemes': ph, 'word_div': wd, 'word_dur': wdur, 'ph_midi': midi}
+    job = {'op': 'duration', 'phonemes': ph, 'word_div': wd, 'word_dur': wdur, 'ph_midi': midi}
+    if spec['params'].get('sing_soft') and spec['moves']:
+        job['speaker'] = {_soft_speaker(spec): 1.0}
+    return job
+
+
+def _soft_speaker(spec: dict) -> str:
+    """The bank's soft mode (sing_soft: every model sings with it)."""
+    b = _vb.get(spec['bank'])
+    return b.mode(spec['mode']) if spec.get('mode') else b.mode('soft')
 
 
 def _groups(ns: list) -> list:
@@ -909,6 +959,7 @@ def _timeline(spec: dict, cons: list, bank) -> dict:
     else:
         moves, vmask = [0.0] * len(ftime), [0] * len(ftime)
     midi = _pitch_curve(spec, groups, ftime, rng, mv, S, moves)
+    steady = _steady_mask(groups, ftime) if mv and S.get('model_vib', 1.0) < 1.0 else None
     for e in dic:                                             # the frames each coda / release really gets
         i = next(i for i, (p, a, b) in enumerate(toks) if p == e['ph'] and abs(a - e['a']) < 1e-4)
         e['f'] = (bounds[i], bounds[i + 1])
@@ -926,7 +977,29 @@ def _timeline(spec: dict, cons: list, bank) -> dict:
     return {'phonemes': [p for p, _, _ in toks], 'durations': durs, 'offset_s': t0, 'frames': nf, 'midi': midi,
             'vowels': [round(g['V'], 5) for g in groups], 'moves': [round(x, 4) for x in moves], 'vibmask': vmask,
             'gain': gain, 'mix': mix, 'diction': diction,
-            'tokens': [(p, round(a, 4), round(b, 4)) for p, a, b in toks]}
+            'tokens': [(p, round(a, 4), round(b, 4)) for p, a, b in toks],
+            **({'steadymask': steady, 'model_vib': float(S['model_vib'])} if steady is not None else {})}
+
+
+STEADY_MIN_S = 0.45
+"""A note is 'held' for model_vib when it sounds at least this long: its steady part runs from 0.12 s after its onset
+to 0.06 s before its end (the transitions into and out of it stay the model's)."""
+
+
+def _steady_mask(groups, ftime) -> list:
+    nf = len(ftime)
+    mask = [0] * nf
+    for g in groups:
+        for j, n in enumerate(g['notes']):
+            st = g['V'] if j == 0 else n['t']
+            end = g['end'] if j == len(g['notes']) - 1 else g['notes'][j + 1]['t']
+            if end - st < STEADY_MIN_S:
+                continue
+            a, b = st + 0.12, end - 0.06
+            for f, x in enumerate(ftime):
+                if a <= x <= b:
+                    mask[f] = 1
+    return mask
 
 
 def _segments(groups: list, mv: bool) -> list:
@@ -1019,15 +1092,18 @@ def _move_lane(groups, segs, S, ftime) -> tuple[list, list]:
 def _hybrid(model: list, plan: dict) -> list:
     """pitch='hybrid': the voicebank pitch model's own curve (its natural transitions, preparations and overshoots)
     with the player's moves on top: under a planned vibrato the model's own wobble is smoothed out (a 190 ms moving
-    average) so the two never stack."""
+    average) so the two never stack; a calm style (model_vib < 1) keeps only that share of the model's wobble on the
+    steady part of every held note too (plan 'steadymask')."""
     nf = len(model)
     moves, mask = plan['moves'], plan['vibmask']
+    steady, keep = plan.get('steadymask'), float(plan.get('model_vib', 1.0))
     w = max(1, round(0.19 / FR / 2))
     out = list(model)
     for f in range(nf):
-        if mask[f]:
+        if mask[f] or (steady and steady[f]):
             a, b = max(0, f - w), min(nf, f + w + 1)
-            out[f] = sum(model[a:b]) / (b - a)
+            sm = sum(model[a:b]) / (b - a)
+            out[f] = sm if mask[f] else sm + keep * (model[f] - sm)
     return [round(out[f] + moves[f], 4) for f in range(nf)]
 
 
@@ -1150,6 +1226,8 @@ def _air_and_colour(spec, groups, ftime, toks, t0, mv, S, bank, rng, dic=()):
             for f in range(max(0, fa), min(nf, fb + 1)):
                 br[f] = S['breath_db']
     gain = [round(a_db[f] + br[f] + lift[f], 3) for f in range(nf)]
+    if S.get('sing_soft'):           # sing soft: the soft mode alone, no core / power crossfade
+        return gain, {bank.mode('soft'): 1.0}
     # colour: soft when quiet, power when loud / high
     soft_n = bank.mode('soft')
     pow_n = bank.mode('power')
@@ -1162,9 +1240,10 @@ def _air_and_colour(spec, groups, ftime, toks, t0, mv, S, bank, rng, dic=()):
         x = max(-1.0, min(1.0, lvl / 6.0))
         i = max(0, bisect.bisect_right(sst, t) - 1)
         hi = max(0.0, segs[i]['m'] - pm)
-        ps = S['base_power'] + max(0.0, x) * S['power'] + hi * S['pitch_power']
+        knee = S.get('power_knee', 0.0)
+        ps = S['base_power'] + max(0.0, x - knee) / (1.0 - knee) * S['power'] + hi * S['pitch_power']
         ss = S['base_soft'] + max(0.0, -x) * S['soft']
-        w_core.append(1.0)
+        w_core.append(float(S.get('base_core', 1.0)))
         w_soft.append(round(min(1.5, ss), 4))
         w_pow.append(round(min(1.5, ps), 4))
     mix = {core: w_core}
@@ -1202,8 +1281,10 @@ def _pitch_job(p: dict, spec: dict, bank) -> dict:
         note_dur.append(e - cur)
         cur = e
     return {'op': 'pitch', 'phonemes': p['phonemes'], 'ph_dur': p['durations'], 'note_midi': note_midi,
-            'note_rest': note_rest, 'note_dur': note_dur, 'pitch': p['midi'], 'expr': 0.85, 'retake': True,
-            'speaker': {bank.mode('core'): 1.0}, 'steps': 10}
+            'note_rest': note_rest, 'note_dur': note_dur, 'pitch': p['midi'],
+            'expr': float(spec['params'].get('expr', STYLE_EXTRAS['expr'])), 'retake': True,
+            'speaker': {(_soft_speaker(spec) if spec['params'].get('sing_soft') and spec['moves']
+                         else bank.mode('core')): 1.0}, 'steps': 10}
 
 
 def _sing_job(p: dict, spec: dict, bank, path: Path) -> dict:
@@ -1235,6 +1316,9 @@ def _write_track(song, t) -> None:
             t_start = song.seconds(a.start) + off + vo.offset_ms / 1000.0
             st = tm.beat_at(max(0.0, t_start)) if t_start > 0 else 0.0
             zone = {'file': str(path.resolve()).replace(os.sep, '/'), 'root': key, 'lo': key, 'hi': key}
+            mk = makeup_db(vo)
+            if mk:
+                zone['gain'] = round(mk, 3)
             if t_start < 0:          # a take whose breath / consonants start before the song: skip that much of it
                 zone['offset'] = int(round(-t_start * SR))
             # the trigger lasts as long as the sung notes (one-shot: the file plays out anyway); the phrase ends where
@@ -1252,6 +1336,16 @@ def _write_track(song, t) -> None:
     t.instrument = ins
     t._notes = notes
     t._origin = ['singer.render'] * len(notes)
+
+
+def makeup_db(vo) -> float:
+    """The static make-up gain (dB, on the take's zone) of a part sung with sing_soft (0 otherwise)."""
+    S = vo.params
+    if not S.get('sing_soft') or not vo.moves_on:
+        return 0.0
+    if S.get('makeup_db') is not None:
+        return float(S['makeup_db'])
+    return float(SOFT_MAKEUP_DB.get(vo.bank.id, 0.0))
 
 
 def phrase_notes(track) -> list:
@@ -1287,8 +1381,9 @@ def double(vo: Vocal, *, pan: float = -0.6, take: int | None = None, offset_ms: 
     ov = dict(vib_ct=vo.params['vib_ct'] * depth, peak_vib_ct=vo.params['peak_vib_ct'] * depth,
               scoop_ct=vo.params['scoop_ct'] * depth, fall=vo.params['fall'] * 0.5, doit=0.0)
     for k, v in overrides.items():
-        if k not in STYLES['pop']:
-            raise SingerError(f"double(): unknown option {k!r} (a STYLES key: {', '.join(STYLES['pop'])})")
+        if k not in STYLES['pop'] and k not in STYLE_EXTRAS:
+            raise SingerError(f"double(): unknown option {k!r} (a STYLES key: "
+                              f"{', '.join(list(STYLES['pop']) + list(STYLE_EXTRAS))})")
         ov[k] = v
     return _resing(vo, take=take, formant=fm, offset_ms=off, track_id=tid, pan=pan, gain_db=gain_db, overrides=ov)
 
@@ -1357,7 +1452,8 @@ def check(report, vocals=None, *, presence_min: float = 40.0, rival: float = 0.6
     """The vocal's ears on a build's report (report.json path or dict): findings [{'severity', 'code', 'node',
     'message'}].
       intelligibility  the words live at 2-6 kHz (the report's 'presence' band): the lead vocal should own at least
-                       `presence_min` % of the mix there; a competitor (keys, guitars, pads ...) with more than
+                       `presence_min` % of the mix there (its grit bus '<id>_grit', hero(..., grit=), counted with
+                       it); a competitor (keys, guitars, pads ...) with more than
                        `rival` x the vocal's share masks the words (fix: its presence dip / the vocal hero's carve);
       buried           the vocal under the loudest other track in the sections it sings;
       harsh            more than `harsh` % of the vocal's own energy in 2.5-6 kHz (de-ess / less presence);
@@ -1367,13 +1463,17 @@ def check(report, vocals=None, *, presence_min: float = 40.0, rival: float = 0.6
     rep = report if isinstance(report, dict) else json.loads(Path(report).read_text(encoding='utf-8'))
     nodes = {n['id']: n for n in rep.get('nodes', [])}
     if vocals is None:
-        vocals = [i for i in nodes if re.match(r'^(vocal|vox|lead_vocal)', i) and not re.search(r'_(dbl|harm)', i)]
+        vocals = [i for i in nodes if re.match(r'^(vocal|vox|lead_vocal)', i) and not re.search(r'_(dbl|harm)', i)
+                  and not nodes[i].get('bus')]
     out = []
     for vid in vocals:
         v = nodes.get(vid)
         if v is None:
             continue
         share = (v.get('mixSharePct') or {}).get('presence', 0.0)
+        grit = nodes.get(f'{vid}_grit')       # hero(..., grit=): the parallel amp bus is part of the vocal
+        if grit is not None:
+            share = min(100.0, share + (grit.get('mixSharePct') or {}).get('presence', 0.0))
         if share < presence_min:
             out.append(dict(severity='warn', code='vocal_intelligibility', node=vid,
                             message=f"{vid!r} owns only {share:.0f} % of the mix's 2.5-6 kHz presence band (the words "
