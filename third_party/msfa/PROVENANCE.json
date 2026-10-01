@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "component": "MSFA DX7 DSP subset",
+  "upstream": {"name":"Dexed","url":"https://github.com/asb2m10/dexed","commit":"618b318792e74386b7afc910d1365827e770222e","tag":"v0.9.4"},
+  "license": "Apache-2.0",
+  "licenseFile": "third_party/msfa/LICENSE-APACHE-2.0.txt",
+  "auditDate": "2026-08-29",
+  "files": [
+    {"upstreamPath":"Source/msfa/aligned_buf.h","localPath":"third_party/msfa/aligned_buf.h","license":"Apache-2.0","localChanges":"Added explicit cstddef/cstdint includes and modification notice."},
+    {"upstreamPath":"Source/msfa/controllers.h","localPath":"third_party/msfa/controllers.h","license":"Apache-2.0","localChanges":"Removed Dexed.h include and TRACE call; added modification notice."},
+    {"upstreamPath":"Source/msfa/dx7note.cc","localPath":"third_party/msfa/dx7note.cc","license":"Apache-2.0","localChanges":"Added release-only updates for active voices; deterministic recycled gain/feedback reset and sync-off free-running phase initialization; added modification notice."},
+    {"upstreamPath":"Source/msfa/dx7note.h","localPath":"third_party/msfa/dx7note.h","license":"Apache-2.0","localChanges":"Declared release-only active-voice updates and deterministic free-running phase initialization; added modification notice."},
+    {"upstreamPath":"Source/msfa/env.cc","localPath":"third_party/msfa/env.cc","license":"Apache-2.0","localChanges":"Removed unused Dexed.h include; added modification notice."},
+    {"upstreamPath":"Source/msfa/env.h","localPath":"third_party/msfa/env.h","license":"Apache-2.0","localChanges":"Added click-safe live release-rate update method and modification notice."},
+    {"upstreamPath":"Source/msfa/exp2.cc","localPath":"third_party/msfa/exp2.cc","license":"Apache-2.0","localChanges":"None."},
+    {"upstreamPath":"Source/msfa/exp2.h","localPath":"third_party/msfa/exp2.h","license":"Apache-2.0","localChanges":"None."},
+    {"upstreamPath":"Source/msfa/fm_core.cc","localPath":"third_party/msfa/fm_core.cc","license":"Apache-2.0","localChanges":"Added sample-interleaved multi-operator feedback-ring dispatch for DX7 algorithms 4 and 6."},
+    {"upstreamPath":"Source/msfa/fm_core.h","localPath":"third_party/msfa/fm_core.h","license":"Apache-2.0","localChanges":"None."},
+    {"upstreamPath":"Source/msfa/fm_op_kernel.cc","localPath":"third_party/msfa/fm_op_kernel.cc","license":"Apache-2.0","localChanges":"Added sample-interleaved two- and three-operator feedback-ring kernel."},
+    {"upstreamPath":"Source/msfa/fm_op_kernel.h","localPath":"third_party/msfa/fm_op_kernel.h","license":"Apache-2.0","localChanges":"Declared Msound2 multi-operator feedback-ring kernel."},
+    {"upstreamPath":"Source/msfa/freqlut.cc","localPath":"third_party/msfa/freqlut.cc","license":"Apache-2.0","localChanges":"None."},
+    {"upstreamPath":"Source/msfa/freqlut.h","localPath":"third_party/msfa/freqlut.h","license":"Apache-2.0","localChanges":"None."},
+    {"upstreamPath":"Source/msfa/lfo.cc","localPath":"third_party/msfa/lfo.cc","license":"Apache-2.0","localChanges":"None."},
+    {"upstreamPath":"Source/msfa/lfo.h","localPath":"third_party/msfa/lfo.h","license":"Apache-2.0","localChanges":"None."},
+    {"upstreamPath":"Source/msfa/pitchenv.cc","localPath":"third_party/msfa/pitchenv.cc","license":"Apache-2.0","localChanges":"None."},
+    {"upstreamPath":"Source/msfa/pitchenv.h","localPath":"third_party/msfa/pitchenv.h","license":"Apache-2.0","localChanges":"None."},
+    {"upstreamPath":"Source/msfa/sin.cc","localPath":"third_party/msfa/sin.cc","license":"Apache-2.0","localChanges":"None."},
+    {"upstreamPath":"Source/msfa/sin.h","localPath":"third_party/msfa/sin.h","license":"Apache-2.0","localChanges":"None."},
+    {"upstreamPath":"Source/msfa/synth.h","localPath":"third_party/msfa/synth.h","license":"Apache-2.0","localChanges":"Removed Dexed tracing declaration/macros; added modification notice."}
+  ],
+  "excluded": ["Dexed application and JUCE sources","Dexed librarian, UI, presets, and plugin wrappers","Source/msfa/module.h (not in the adapter dependency closure)"]
+}

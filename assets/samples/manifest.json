@@ -1,0 +1,4596 @@
+{
+ "packs": [
+  {
+   "id": "avl-blonde-bop",
+   "title": "AVL Drumkits: Blonde Bop (TAMA bop kit, sticks), 27 articulations x 5 velocities",
+   "url": "http://www.bandshed.net/sounds/AVLDrumkits_SFZ/BLONDE_BOP_SFZ.zip",
+   "license": "CC-BY-SA-3.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "category": "drums",
+   "genres": [
+    "jazz"
+   ],
+   "size": 18874368,
+   "format": "SFZ+WAV",
+   "attribution": "Glen MacArthur (AVL Drumkits)",
+   "homepage": "http://www.bandshed.net/avldrumkits/",
+   "notes": "file names carry GM note numbers; music made with it needs no credit"
+  },
+  {
+   "id": "freepats-tenor-sax",
+   "title": "FreePats Tenor Saxophone (from VCSL, looped)",
+   "url": "https://freepats.zenvoid.org/Reed/TenorSaxophone/TenorSaxophone-SFZ-20200717.tar.xz",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "sax",
+   "genres": [
+    "jazz",
+    "pop"
+   ],
+   "size": 41733324,
+   "format": "SFZ+WAV",
+   "homepage": "https://freepats.zenvoid.org/"
+  },
+  {
+   "id": "upright-piano-kw",
+   "title": "FreePats Upright Piano KW (Kawai upright, 2 velocity layers)",
+   "url": "https://freepats.zenvoid.org/Piano/UprightPianoKW/UprightPianoKW-SFZ-20220221.7z",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "piano",
+   "genres": [
+    "jazz",
+    "pop",
+    "rock"
+   ],
+   "size": 72142028,
+   "format": "SFZ+WAV",
+   "homepage": "https://freepats.zenvoid.org/"
+  },
+  {
+   "id": "meatbass",
+   "title": "Karoryfer Meatbass (1958 upright bass: pizz 4 vel x 4 rr, arco, noises)",
+   "url": "https://github.com/sfzinstruments/karoryfer.meatbass/releases/download/v1.001/Karoryfer.Meatbass.v1.001.zip",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "bass",
+   "genres": [
+    "jazz",
+    "classical"
+   ],
+   "size": 255433113,
+   "format": "SFZ+WAV",
+   "attribution": "Karoryfer Samples",
+   "homepage": "https://shop.karoryfer.com/pages/free-samples"
+  },
+  {
+   "id": "swirly-drums",
+   "title": "Karoryfer Swirly Drums (brush kit: snare stirs/sweeps 9-13 s, taps, ride, hats, toms)",
+   "url": "https://github.com/sfzinstruments/karoryfer.swirly-drums/releases/download/v1.104/Swirly.Drums_1104.zip",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "drums",
+   "genres": [
+    "jazz"
+   ],
+   "size": 868640358,
+   "format": "SFZ+WAV",
+   "attribution": "Karoryfer Samples",
+   "homepage": "https://shop.karoryfer.com/pages/free-swirly-drums",
+   "notes": "THE brush kit with real sweeps; wet/wetter copies included"
+  },
+  {
+   "id": "big-rusty-drums",
+   "title": "Karoryfer Big Rusty Drums (80s kit: sticks, brushes, mallets; close + OH mics)",
+   "url": "https://github.com/sfzinstruments/karoryfer.big-rusty-drums/releases/download/v1.100/Big_Rusty_Drums_1100.zip",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "drums",
+   "genres": [
+    "rock",
+    "pop",
+    "jazz"
+   ],
+   "size": 619600000,
+   "format": "SFZ+FLAC",
+   "attribution": "Karoryfer Samples",
+   "homepage": "https://shop.karoryfer.com/pages/free-samples"
+  },
+  {
+   "id": "salamander-grand",
+   "title": "Salamander Grand Piano V3 48 kHz / 24 bit (Yamaha C5, 16 velocity layers)",
+   "url": "https://freepats.zenvoid.org/Piano/SalamanderGrandPiano/SalamanderGrandPianoV3+20161209_48khz24bit.tar.xz",
+   "license": "CC-BY-3.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+   "category": "piano",
+   "genres": [
+    "jazz",
+    "classical",
+    "pop",
+    "rock"
+   ],
+   "size": 1257871769,
+   "format": "SFZ+WAV",
+   "attribution": "Alexander Holm",
+   "homepage": "https://freepats.zenvoid.org/Piano/acoustic-grand-piano.html",
+   "notes": "includes hammer release and string resonance samples"
+  },
+  {
+   "id": "sso",
+   "title": "Sonatina Symphonic Orchestra 4.0 (sections + solos, choir, harp, harpsichord, organ, celesta)",
+   "url": "https://github.com/peastman/sso/archive/refs/tags/v4.0.zip",
+   "license": "CC-Sampling-Plus-1.0",
+   "licenseUrl": "https://creativecommons.org/licenses/sampling+/1.0/",
+   "category": "orchestra",
+   "genres": [
+    "classical",
+    "film"
+   ],
+   "size": 1350000000,
+   "format": "SFZ+WAV/FLAC",
+   "attribution": "Sonatina Symphonic Orchestra (Mattias Westlund, Peter Eastman)",
+   "homepage": "https://github.com/peastman/sso",
+   "notes": "size estimated (GitHub archive has no length)"
+  },
+  {
+   "id": "vsco2-ce",
+   "title": "VSCO 2 Community Edition 1.1.0 (chamber orchestra: strings, winds, brass, percussion, keys)",
+   "url": "https://github.com/sgossner/VSCO-2-CE/archive/refs/tags/1.1.0.zip",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "orchestra",
+   "genres": [
+    "classical",
+    "film"
+   ],
+   "size": 2390000000,
+   "format": "SFZ+WAV",
+   "attribution": "Versilian Studios",
+   "homepage": "https://github.com/sgossner/VSCO-2-CE",
+   "notes": "file names are one octave low: map from the SFZ key centres; size estimated"
+  },
+  {
+   "id": "vcsl",
+   "title": "VCSL 1.2.2 Versilian Community Sample Library (percussion, harp, 5 harpsichords, organs, keys, winds, world)",
+   "url": "https://www.dropbox.com/s/t9i75ur4i0x0n1j/VCSL-1.2.2-RC.zip?dl=1",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "multi",
+   "genres": [
+    "classical",
+    "jazz",
+    "pop",
+    "world"
+   ],
+   "size": 4047406738,
+   "format": "SFZ+WAV",
+   "filename": "VCSL-1.2.2-RC.zip",
+   "attribution": "Versilian Studios",
+   "homepage": "https://github.com/sgossner/VCSL"
+  },
+  {
+   "id": "vpo-wav",
+   "title": "Virtual Playing Orchestra 3.2 wave files (full orchestra: strings, winds, brass solo+section, percussion, harp, celesta, choir)",
+   "url": "https://archive.org/download/virtual-playing-orchestra-3-2-wave-files/Virtual-Playing-Orchestra3-2-wave-files.zip",
+   "license": "Royalty-free",
+   "licenseUrl": "http://virtualplaying.com/virtual-playing-orchestra/",
+   "category": "orchestra",
+   "genres": [
+    "classical",
+    "film"
+   ],
+   "attribution": "Virtual Playing Orchestra by Paul Battersby (virtualplaying.com); sources: Sonatina Symphonic Orchestra, No Budget Orchestra, VSCO 2 CE, Univ. of Iowa MIS, Philharmonia, Mattias Westlund, stamperadam",
+   "homepage": "http://virtualplaying.com/virtual-playing-orchestra/",
+   "size": 616114842,
+   "format": "WAV",
+   "notes": "Samples only; SFZ mapping is in vpo-scripts-standard/-performance (paths ../libs, unpack into same root); music use unrestricted incl. commercial, components are CC0/CC-Sampling-Plus-1.0/CC-BY-SA; no resale of the library"
+  },
+  {
+   "id": "vpo-scripts-standard",
+   "title": "Virtual Playing Orchestra 3.3 standard SFZ scripts (velocity-driven, keyswitch and DXF variants)",
+   "url": "https://virtualplaying.com/vp-downloads/Virtual-Playing-Orchestra3-3-standard-scripts.zip",
+   "license": "Royalty-free",
+   "licenseUrl": "http://virtualplaying.com/virtual-playing-orchestra/",
+   "category": "orchestra",
+   "genres": [
+    "classical",
+    "film"
+   ],
+   "attribution": "Virtual Playing Orchestra by Paul Battersby (virtualplaying.com)",
+   "homepage": "http://virtualplaying.com/virtual-playing-orchestra/",
+   "size": 544010,
+   "format": "SFZ",
+   "notes": "Mapping only, requires vpo-wav unpacked alongside; uses keyswitches and CC crossfades (DXF)"
+  },
+  {
+   "id": "vpo-scripts-performance",
+   "title": "Virtual Playing Orchestra 3.3 performance SFZ scripts (mod-wheel dynamics)",
+   "url": "https://virtualplaying.com/vp-downloads/Virtual-Playing-Orchestra3-3-performance-scripts.zip",
+   "license": "Royalty-free",
+   "licenseUrl": "http://virtualplaying.com/virtual-playing-orchestra/",
+   "category": "orchestra",
+   "genres": [
+    "classical",
+    "film"
+   ],
+   "attribution": "Virtual Playing Orchestra by Paul Battersby (virtualplaying.com)",
+   "homepage": "http://virtualplaying.com/virtual-playing-orchestra/",
+   "size": 361503,
+   "format": "SFZ",
+   "notes": "Mapping only, requires vpo-wav unpacked alongside; dynamics on CC1"
+  },
+  {
+   "id": "nbo-2",
+   "title": "No Budget Orchestra 2 (solo+section strings, flute/clarinet/bassoon, trumpet/trombone, timpani, percussion, choir 'Oh')",
+   "url": "https://www.bandshed.net/sounds/sfz/nbo_2.zip",
+   "license": "CC-BY-SA-4.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+   "category": "orchestra",
+   "genres": [
+    "classical",
+    "film"
+   ],
+   "attribution": "No Budget Orchestra by Jeff Glatt; per-instrument sample credits in license.txt files (bwv662, clarinet_pablo_proj, MTG, ldk1609, Mihai Sorohan, ...)",
+   "homepage": "https://github.com/ssj71/No-Budget-Orchestra",
+   "size": 644373027,
+   "format": "SFZ+WAV",
+   "notes": "Mixed licenses per instrument: SFZ and Jeff Glatt sets CC-BY-SA-4.0; Freesound-derived sets list Sampling+/CC0/BY/BY-NC without specifying (possible NC); choir = Mihai Sorohan terms (music use ok, no resale); heavily looped"
+  },
+  {
+   "id": "philharmonia-all",
+   "title": "Philharmonia Orchestra sound samples (solo strings, woodwinds, brass, percussion; many dynamics and articulations)",
+   "url": "https://philharmonia-assets.s3-eu-west-1.amazonaws.com/uploads/2020/02/12112005/all-samples.zip",
+   "license": "Freeware-no-redistribution",
+   "licenseUrl": "https://philharmonia.co.uk/resources/sound-samples/",
+   "category": "orchestra",
+   "genres": [
+    "classical",
+    "film"
+   ],
+   "attribution": "Philharmonia Orchestra sound samples",
+   "homepage": "https://philharmonia.co.uk/resources/sound-samples/",
+   "size": 260849422,
+   "format": "MP3",
+   "nested": true,
+   "convert": [
+    "mp3"
+   ],
+   "notes": "Commercial music use allowed, must not be sold or shared as-is (samples/sampler instruments); lossy MP3, needs trimming of leading silence; solo instruments only, no piccolo; contains __MACOSX junk"
+  },
+  {
+   "id": "sso-sf2",
+   "title": "Sonatina Symphonic Orchestra as 57 SF2 files (sections, solos, chorus, harp, percussion, piano)",
+   "url": "https://archive.org/download/SonatinaSymphonicOrchestraSF2/Sonatina%20Symphonic%20Orchestra%20SF2.zip",
+   "license": "CC-Sampling-Plus-1.0",
+   "licenseUrl": "https://creativecommons.org/licenses/sampling+/1.0/",
+   "category": "orchestra",
+   "genres": [
+    "classical",
+    "film"
+   ],
+   "attribution": "Sonatina Symphonic Orchestra by Mattias Westlund, CC Sampling Plus 1.0",
+   "homepage": "https://archive.org/details/SonatinaSymphonicOrchestraSF2",
+   "size": 512093492,
+   "format": "SF2",
+   "notes": "Older SSO 1.x content (v4.0 SFZ is newer); archive.org labels it CC-BY-3.0 but source license is Sampling Plus: attribution, no advertising use"
+  },
+  {
+   "id": "karoryfer-bigcat-cello",
+   "title": "Karoryfer x bigcat Cello (solo cello: sustain non-vibrato, staccato, pizzicato, harmonics, slides, noises)",
+   "url": "https://github.com/sfzinstruments/karoryfer-bigcat.cello/releases/download/v1.001/Karoryfer_Bigcat_cello.v1.001.zip",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "strings",
+   "genres": [
+    "classical",
+    "film"
+   ],
+   "attribution": "Karoryfer Samples x bigcat instruments (credit optional)",
+   "homepage": "https://shop.karoryfer.com/pages/free-karoryfer-x-bigcat-cello",
+   "size": 132605500,
+   "format": "SFZ+WAV",
+   "notes": "Sampled every minor third, 479 samples, close-miked without vibrato; also contains Kontakt files (ignore)"
+  },
+  {
+   "id": "karoryfer-war-tuba",
+   "title": "Karoryfer War Tuba (solo tuba, over 1000 samples, folk-punk playing)",
+   "url": "https://github.com/sfzinstruments/karoryfer.war-tuba/releases/download/v.1001/Karoryfer_War_Tuba_v1001.zip",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "brass",
+   "genres": [
+    "world",
+    "film"
+   ],
+   "attribution": "Karoryfer Samples (credit optional)",
+   "homepage": "https://shop.karoryfer.com/pages/free-war-tuba",
+   "size": 109132637,
+   "format": "SFZ+WAV",
+   "notes": "Not orchestral in style (folk-punk tuba)"
+  },
+  {
+   "id": "freepats-concert-harp-sf2",
+   "title": "FreePats Concert Harp (VCSL samples, 2 velocity layers)",
+   "url": "https://freepats.zenvoid.org/OrchestralStrings/ConcertHarp/ConcertHarp-SF2-20200702.tar.xz",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "harp",
+   "genres": [
+    "classical",
+    "film"
+   ],
+   "attribution": "FreePats project, samples from Versilian Community Sample Library (credit optional)",
+   "homepage": "https://freepats.zenvoid.org/OrchestralStrings/harp.html",
+   "size": 9513292,
+   "format": "SF2",
+   "notes": "tar.xz archive"
+  },
+  {
+   "id": "freepats-concert-harp",
+   "title": "FreePats Concert Harp (VCSL samples, 2 velocity layers)",
+   "url": "https://freepats.zenvoid.org/OrchestralStrings/ConcertHarp/ConcertHarp-SFZ-20200702.tar.xz",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "harp",
+   "genres": [
+    "classical",
+    "film"
+   ],
+   "attribution": "FreePats project, samples from Versilian Community Sample Library (credit optional)",
+   "homepage": "https://freepats.zenvoid.org/OrchestralStrings/harp.html",
+   "size": 9502812,
+   "format": "SFZ+WAV",
+   "notes": "SFZ twin of freepats-concert-harp-sf2"
+  },
+  {
+   "id": "freepats-timpani-sf2",
+   "title": "FreePats Timpani (VCSL samples, round robins)",
+   "url": "https://github.com/freepats/timpani/releases/download/2024-08-10/Timpani-SF2-20240810.7z",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "percussion",
+   "genres": [
+    "classical",
+    "film"
+   ],
+   "attribution": "FreePats project, samples from Versilian Community Sample Library (credit optional)",
+   "homepage": "https://freepats.zenvoid.org/Percussion/orchestral-percussion.html",
+   "size": 4723477,
+   "format": "SF2",
+   "notes": "7z archive; SFZ+WAV variant has more round-robin layers"
+  },
+  {
+   "id": "freepats-timpani",
+   "title": "FreePats Timpani (VCSL samples, round robins)",
+   "url": "https://github.com/freepats/timpani/releases/download/2024-08-10/Timpani-SFZ+FLAC-20240810.7z",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "percussion",
+   "genres": [
+    "classical",
+    "film"
+   ],
+   "attribution": "FreePats project, samples from Versilian Community Sample Library (credit optional)",
+   "homepage": "https://freepats.zenvoid.org/Percussion/orchestral-percussion.html",
+   "size": 9373264,
+   "format": "SFZ+FLAC",
+   "notes": "SFZ twin of freepats-timpani-sf2: more round-robin layers"
+  },
+  {
+   "id": "freepats-tubular-bells-sf2",
+   "title": "FreePats Tubular Bells (VCSL samples)",
+   "url": "https://github.com/freepats/tubular-bells1/releases/download/2024-11-30/TubularBells-SF2-20241130.7z",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "percussion",
+   "genres": [
+    "classical",
+    "film"
+   ],
+   "attribution": "FreePats project, samples from Versilian Community Sample Library (credit optional)",
+   "homepage": "https://freepats.zenvoid.org/ChromaticPercussion/tubular-bells.html",
+   "size": 9677397,
+   "format": "SF2",
+   "notes": "7z archive"
+  },
+  {
+   "id": "freepats-tubular-bells",
+   "title": "FreePats Tubular Bells (VCSL samples)",
+   "url": "https://github.com/freepats/tubular-bells1/releases/download/2024-11-30/TubularBells-SFZ+FLAC-20241130.7z",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "percussion",
+   "genres": [
+    "classical",
+    "film"
+   ],
+   "attribution": "FreePats project, samples from Versilian Community Sample Library (credit optional)",
+   "homepage": "https://freepats.zenvoid.org/ChromaticPercussion/tubular-bells.html",
+   "size": 14042014,
+   "format": "SFZ+FLAC",
+   "notes": "SFZ twin of freepats-tubular-bells-sf2"
+  },
+  {
+   "id": "freepats-xylophone-sf2",
+   "title": "FreePats Xylophone, medium mallets (VCSL samples)",
+   "url": "https://freepats.zenvoid.org/ChromaticPercussion/Xylophone1/Xylophone-MediumMallets-SF2-20200706.tar.xz",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "percussion",
+   "genres": [
+    "classical",
+    "film"
+   ],
+   "attribution": "FreePats project, samples from Versilian Community Sample Library (credit optional)",
+   "homepage": "https://freepats.zenvoid.org/ChromaticPercussion/xylophone.html",
+   "size": 1756892,
+   "format": "SF2",
+   "notes": "tar.xz archive"
+  },
+  {
+   "id": "freepats-xylophone",
+   "title": "FreePats Xylophone, medium mallets (VCSL samples)",
+   "url": "https://freepats.zenvoid.org/ChromaticPercussion/Xylophone1/Xylophone-MediumMallets-SFZ-20200706.tar.xz",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "percussion",
+   "genres": [
+    "classical",
+    "film"
+   ],
+   "attribution": "FreePats project, samples from Versilian Community Sample Library (credit optional)",
+   "homepage": "https://freepats.zenvoid.org/ChromaticPercussion/xylophone.html",
+   "size": 4528996,
+   "format": "SFZ+WAV",
+   "notes": "SFZ twin of freepats-xylophone-sf2"
+  },
+  {
+   "id": "freepats-church-organ-emulation-sf2",
+   "title": "FreePats Church Organ Emulation (stops rendered from the Aeolus organ synth)",
+   "url": "https://freepats.zenvoid.org/Organ/ChurchOrganEmulation/ChurchOrganEmulation-SF2-20190924.tar.xz",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "organ",
+   "genres": [
+    "classical",
+    "film"
+   ],
+   "attribution": "FreePats project (credit optional)",
+   "homepage": "https://freepats.zenvoid.org/Organ/pipe-organ.html",
+   "size": 12895300,
+   "format": "SF2",
+   "notes": "tar.xz archive; synthesized (Aeolus), not recorded pipes"
+  },
+  {
+   "id": "freepats-church-organ-emulation",
+   "title": "FreePats Church Organ Emulation (stops rendered from the Aeolus organ synth)",
+   "url": "https://freepats.zenvoid.org/Organ/ChurchOrganEmulation/ChurchOrganEmulation-SFZ-20190924.tar.xz",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "organ",
+   "genres": [
+    "classical",
+    "film"
+   ],
+   "attribution": "FreePats project (credit optional)",
+   "homepage": "https://freepats.zenvoid.org/Organ/pipe-organ.html",
+   "size": 13033856,
+   "format": "SFZ+WAV",
+   "notes": "SFZ twin of freepats-church-organ-emulation-sf2"
+  },
+  {
+   "id": "lars-palo-burea-church",
+   "title": "Lars Palo Burea Church organ (3 manuals + pedal, 33 stops orig / 63 ext)",
+   "url": "https://familjenpalo.se/sites/default/files/sampleset/packages/BureaChurch.orgue",
+   "license": "CC-BY-SA-2.5",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.5/",
+   "category": "organ",
+   "genres": [
+    "classical",
+    "film"
+   ],
+   "attribution": "Burea Church sample set by Lars Palo (familjenpalo.se), CC BY-SA 2.5 (Sweden)",
+   "homepage": "https://familjenpalo.se/vpo/download/",
+   "size": 818040215,
+   "format": "GrandOrgue(zip)+WAV",
+   "archive": "zip",
+   "notes": "ShareAlike; one folder per stop, registrations must be mixed; loop/release markers in WAVs unverified"
+  },
+  {
+   "id": "lars-palo-pitea-mhs",
+   "title": "Lars Palo Pitea School of Music organ (3 manuals + pedal, 35 stops orig / 61 ext)",
+   "url": "https://familjenpalo.se/sites/default/files/sampleset/packages/PiteaMHS20250727.orgue",
+   "license": "CC-BY-SA-2.5",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.5/",
+   "category": "organ",
+   "genres": [
+    "classical",
+    "film"
+   ],
+   "attribution": "Pitea MHS sample set by Lars Palo (familjenpalo.se), CC BY-SA 2.5 (Sweden)",
+   "homepage": "https://familjenpalo.se/vpo/download/",
+   "size": 1047973302,
+   "format": "GrandOrgue(zip)+WAV",
+   "archive": "zip",
+   "notes": "ShareAlike; one folder per stop, registrations must be mixed; loop/release markers in WAVs unverified"
+  },
+  {
+   "id": "lars-palo-burea-choir-organ",
+   "title": "Lars Palo Burea Church choir organ (1 manual + pedal, 7 stops)",
+   "url": "https://familjenpalo.se/sites/default/files/sampleset/packages/BureaChoir20160108.orgue",
+   "license": "CC-BY-SA-2.5",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.5/",
+   "category": "organ",
+   "genres": [
+    "classical",
+    "film"
+   ],
+   "attribution": "Burea Church choir organ sample set by Lars Palo (familjenpalo.se), CC BY-SA 2.5 (Sweden)",
+   "homepage": "https://familjenpalo.se/vpo/download/",
+   "size": 643276926,
+   "format": "GrandOrgue(zip)+WAV",
+   "archive": "zip",
+   "notes": "ShareAlike; ZIP confirmed by PK header; one folder per stop; loop/release markers in WAVs unverified"
+  },
+  {
+   "id": "ethan-winer-bassoon",
+   "title": "Ethan Winer Bassoon (minor thirds, 2 velocity layers)",
+   "url": "http://ethanwiner.com/bassoon.zip",
+   "license": "Royalty-free",
+   "licenseUrl": "http://ethanwiner.com/ewsf2.html",
+   "category": "woodwinds",
+   "genres": [
+    "classical",
+    "film"
+   ],
+   "homepage": "http://ethanwiner.com/ewsf2.html",
+   "size": 4827956,
+   "format": "SF2",
+   "notes": "Any use incl. commercial, no attribution required"
+  },
+  {
+   "id": "ethan-winer-cello-solo",
+   "title": "Ethan Winer Cello Solo (minor thirds, multiple velocity levels)",
+   "url": "http://ethanwiner.com/cello_solo.zip",
+   "license": "Royalty-free",
+   "licenseUrl": "http://ethanwiner.com/ewsf2.html",
+   "category": "strings",
+   "genres": [
+    "classical",
+    "film"
+   ],
+   "homepage": "http://ethanwiner.com/ewsf2.html",
+   "size": 4626604,
+   "format": "SF2",
+   "notes": "Any use incl. commercial, no attribution required"
+  },
+  {
+   "id": "ethan-winer-glockenspiel",
+   "title": "Ethan Winer Glockenspiel (stereo, live room)",
+   "url": "http://ethanwiner.com/glockenspiel.zip",
+   "license": "Royalty-free",
+   "licenseUrl": "http://ethanwiner.com/ewsf2.html",
+   "category": "percussion",
+   "genres": [
+    "classical",
+    "film"
+   ],
+   "homepage": "http://ethanwiner.com/ewsf2.html",
+   "size": 3277726,
+   "format": "SF2",
+   "notes": "Any use incl. commercial, no attribution required"
+  },
+  {
+   "id": "ethan-winer-tubular-bells",
+   "title": "Ethan Winer Tubular Bells",
+   "url": "http://ethanwiner.com/tubular_bells.zip",
+   "license": "Royalty-free",
+   "licenseUrl": "http://ethanwiner.com/ewsf2.html",
+   "category": "percussion",
+   "genres": [
+    "classical",
+    "film"
+   ],
+   "homepage": "http://ethanwiner.com/ewsf2.html",
+   "size": 1601511,
+   "format": "SF2",
+   "notes": "Any use incl. commercial, no attribution required"
+  },
+  {
+   "id": "ethan-winer-triangle",
+   "title": "Ethan Winer Triangle",
+   "url": "http://ethanwiner.com/triangle.zip",
+   "license": "Royalty-free",
+   "licenseUrl": "http://ethanwiner.com/ewsf2.html",
+   "category": "percussion",
+   "genres": [
+    "classical",
+    "film"
+   ],
+   "homepage": "http://ethanwiner.com/ewsf2.html",
+   "size": 292420,
+   "format": "SF2",
+   "notes": "Any use incl. commercial, no attribution required"
+  },
+  {
+   "id": "ethan-winer-sleigh-bells",
+   "title": "Ethan Winer Sleigh Bells",
+   "url": "http://ethanwiner.com/sleigh_bells.zip",
+   "license": "Royalty-free",
+   "licenseUrl": "http://ethanwiner.com/ewsf2.html",
+   "category": "percussion",
+   "genres": [
+    "classical",
+    "film"
+   ],
+   "homepage": "http://ethanwiner.com/ewsf2.html",
+   "size": 2165710,
+   "format": "SF2",
+   "notes": "Any use incl. commercial, no attribution required"
+  },
+  {
+   "id": "ethan-winer-tambourine",
+   "title": "Ethan Winer Tambourine",
+   "url": "http://ethanwiner.com/tambourine.zip",
+   "license": "Royalty-free",
+   "licenseUrl": "http://ethanwiner.com/ewsf2.html",
+   "category": "percussion",
+   "genres": [
+    "classical",
+    "film"
+   ],
+   "homepage": "http://ethanwiner.com/ewsf2.html",
+   "size": 138943,
+   "format": "SF2",
+   "notes": "Any use incl. commercial, no attribution required"
+  },
+  {
+   "id": "salamander-grand-v3-sf2",
+   "title": "Salamander Grand Piano V3 (Yamaha C5, 16 vel layers) SF2",
+   "url": "https://freepats.zenvoid.org/Piano/SalamanderGrandPiano/SalamanderGrandPiano-SF2-V3+20200602.tar.xz",
+   "license": "CC-BY-3.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+   "category": "piano",
+   "genres": [
+    "jazz",
+    "classical",
+    "pop",
+    "film"
+   ],
+   "attribution": "Alexander Holm (Salamander Grand Piano)",
+   "homepage": "https://freepats.zenvoid.org/Piano/acoustic-grand-piano.html",
+   "size": 310397984,
+   "format": "SF2",
+   "notes": "SF2 build of Salamander V3 (FreePats); tar.xz"
+  },
+  {
+   "id": "upright-piano-kw-sf2",
+   "title": "Upright Piano KW (Kawai upright, 2 vel layers) SF2",
+   "url": "https://freepats.zenvoid.org/Piano/UprightPianoKW/UprightPianoKW-SF2-20220221.7z",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "piano",
+   "genres": [
+    "jazz",
+    "pop"
+   ],
+   "homepage": "https://freepats.zenvoid.org/Piano/acoustic-grand-piano.html",
+   "size": 28832466,
+   "format": "SF2",
+   "notes": "SF2 version of the queued SFZ pack; 7z archive"
+  },
+  {
+   "id": "ydp-grand-piano-sf2",
+   "title": "YDP Grand Piano (Yamaha Disklavier Pro samples) SF2",
+   "url": "https://freepats.zenvoid.org/Piano/YDP-GrandPiano/YDP-GrandPiano-SF2-20160804.tar.bz2",
+   "license": "CC-BY-3.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+   "category": "piano",
+   "genres": [
+    "jazz",
+    "classical",
+    "pop"
+   ],
+   "attribution": "Zenph Studios (Yamaha Disklavier Pro samples for OLPC), FreePats",
+   "homepage": "https://freepats.zenvoid.org/Piano/acoustic-grand-piano.html",
+   "size": 36737684,
+   "format": "SF2",
+   "notes": "Small grand SF2; tar.bz2"
+  },
+  {
+   "id": "osiris-piano",
+   "title": "Osiris Piano (Yamaha C2 played quietly, soft pedal, multi-mic, 1242 samples)",
+   "url": "https://github.com/sfzinstruments/Osiris_Piano/releases/download/v0.925/Osiris_Piano_0925.zip",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "piano",
+   "genres": [
+    "jazz",
+    "film",
+    "classical"
+   ],
+   "homepage": "https://shop.karoryfer.com/pages/free-osiris-piano",
+   "size": 458671376,
+   "format": "SFZ+FLAC",
+   "notes": "Versilian + Karoryfer KVRDC 2026; intimate ballad piano; SFZ uses ARIA extensions, FLAC needs ffmpeg"
+  },
+  {
+   "id": "headroom-piano",
+   "title": "Headroom Piano (Yamaha C3, 5 vel layers, close + Decca mics, 300 samples)",
+   "url": "https://github.com/sfzinstruments/BengtNilsson.HeadroomPiano/archive/refs/heads/master.zip",
+   "license": "CC-BY-4.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+   "category": "piano",
+   "genres": [
+    "jazz",
+    "classical",
+    "pop"
+   ],
+   "attribution": "Bengt Nilsson (Headroom Piano), SFZ mapping by kinwie",
+   "homepage": "https://github.com/sfzinstruments/BengtNilsson.HeadroomPiano",
+   "size": 156227297,
+   "format": "SFZ+FLAC",
+   "notes": "Streamed GitHub archive, no Content-Length; size = git tree file total (estimate)"
+  },
+  {
+   "id": "splendid-grand-piano",
+   "title": "Splendid Grand Piano (AKAI Steinway, 4 vel layers)",
+   "url": "https://github.com/sfzinstruments/SplendidGrandPiano/archive/refs/heads/master.zip",
+   "license": "Public-Domain",
+   "licenseUrl": "https://github.com/sfzinstruments/SplendidGrandPiano#readme",
+   "category": "piano",
+   "genres": [
+    "jazz",
+    "classical",
+    "pop"
+   ],
+   "homepage": "https://github.com/sfzinstruments/SplendidGrandPiano",
+   "size": 76861502,
+   "format": "SFZ+FLAC",
+   "notes": "PD claim (AKAI release ~2000) per repo README, unverified; streamed archive, size = git tree total (estimate)"
+  },
+  {
+   "id": "greg-sullivan-epianos",
+   "title": "Greg Sullivan E-Pianos (Wurlitzer EP200 4 vel, Yamaha CP80, Hohner Pianet T)",
+   "url": "https://github.com/sfzinstruments/GregSullivan.E-Pianos/archive/refs/heads/master.zip",
+   "license": "CC-BY-3.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+   "category": "epiano",
+   "genres": [
+    "jazz",
+    "funk",
+    "pop"
+   ],
+   "attribution": "Greg Sullivan (E-Pianos), SFZ mapping by kinwie",
+   "homepage": "https://github.com/sfzinstruments/GregSullivan.E-Pianos",
+   "size": 21484396,
+   "format": "SFZ+FLAC",
+   "notes": "172 samples (Wurli 42, CP80 81, Pianet 49); streamed archive, size = git tree total (estimate)"
+  },
+  {
+   "id": "jrhodes3d-wav",
+   "title": "jRhodes3d WAV (1977 Rhodes Mk I Stage 73, up to 5 vel layers, mono/stereo/vibrato sets)",
+   "url": "https://github.com/jlearman/jRhodes3d-wav/archive/refs/heads/main.zip",
+   "license": "CC-BY-NC-4.0",
+   "licenseUrl": "https://github.com/jlearman/jRhodes3d-wav/blob/main/LICENSE",
+   "category": "epiano",
+   "genres": [
+    "jazz",
+    "funk",
+    "pop",
+    "synthwave"
+   ],
+   "attribution": "Jeff Learman (jRhodes3)",
+   "homepage": "https://github.com/jlearman/jRhodes3d-wav",
+   "size": 160000000,
+   "format": "WAV",
+   "notes": "NC applies only to redistributing samples, music made with it is CC0 per author; keep out of public repo; streamed archive, size rough estimate (~1.7x FLAC edition)"
+  },
+  {
+   "id": "jrhodes3d",
+   "title": "jRhodes3d SFZ (1977 Rhodes Mk I, full-length unlooped, 5 vel layers)",
+   "url": "https://github.com/sfzinstruments/jlearman.jRhodes3d/archive/refs/heads/master.zip",
+   "license": "CC-BY-NC-4.0",
+   "licenseUrl": "https://github.com/sfzinstruments/jlearman.jRhodes3d/blob/master/LICENSE",
+   "category": "epiano",
+   "genres": [
+    "jazz",
+    "funk",
+    "pop",
+    "synthwave"
+   ],
+   "attribution": "Jeff Learman (jRhodes3)",
+   "homepage": "https://github.com/sfzinstruments/jlearman.jRhodes3d",
+   "size": 97000420,
+   "format": "SFZ+FLAC",
+   "notes": "Same samples as jrhodes3d-wav plus SFZ mappings; NC only for redistributing samples, music OK (CC0); streamed archive, size = git tree total (estimate)"
+  },
+  {
+   "id": "jrhodes3c",
+   "title": "jRhodes3c SFZ (1977 Rhodes Mk I, short looped samples, 5 vel layers)",
+   "url": "https://github.com/sfzinstruments/jlearman.jRhodes3c/archive/refs/heads/master.zip",
+   "license": "CC-BY-NC-SA-4.0",
+   "licenseUrl": "https://github.com/sfzinstruments/jlearman.jRhodes3c/blob/master/LICENSE",
+   "category": "epiano",
+   "genres": [
+    "jazz",
+    "funk",
+    "pop",
+    "synthwave"
+   ],
+   "attribution": "Jeff Learman (jRhodes3)",
+   "homepage": "https://github.com/sfzinstruments/jlearman.jRhodes3c",
+   "size": 19262821,
+   "format": "SFZ+FLAC",
+   "notes": "NC-SA only for redistributing samples, use in music allowed; streamed archive, size = git tree total (estimate)"
+  },
+  {
+   "id": "karoryfer-sneakybass",
+   "title": "Sneakybass (quiet double bass pizz, chromatic, 4 RR, pluck/finger/ghost/mute)",
+   "url": "https://github.com/sfzinstruments/karoryfer.sneakybass/releases/download/v1.000/Sneakybass_v1.000.zip",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "bass",
+   "genres": [
+    "jazz"
+   ],
+   "homepage": "https://shop.karoryfer.com/pages/free-samples",
+   "size": 340462855,
+   "format": "SFZ+WAV",
+   "notes": "Same 1958 Otto Rubner bass as Meatbass; one dynamic per articulation; filenames note_articulation_rrN"
+  },
+  {
+   "id": "dsmolken-double-bass",
+   "title": "D. Smolken Double Bass (pizz p/m/f x 4 RR at 11 pitches, arco, body noises)",
+   "url": "https://github.com/sfzinstruments/dsmolken.double-bass/releases/download/v1.001/DSmolken.double_bass.v1.001.zip",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "bass",
+   "genres": [
+    "jazz",
+    "classical"
+   ],
+   "homepage": "https://github.com/sfzinstruments/dsmolken.double-bass",
+   "size": 265232156,
+   "format": "SFZ+WAV",
+   "notes": "Older sibling of Meatbass (same instrument)"
+  },
+  {
+   "id": "karoryfer-ergo-eub",
+   "title": "Ergo EUB (electric upright bass)",
+   "url": "https://github.com/sfzinstruments/karoryfer.ergo/releases/download/v1.001/Karoryfer.Ergo_EUB.v1.001.zip",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "bass",
+   "genres": [
+    "jazz",
+    "funk",
+    "pop"
+   ],
+   "homepage": "https://github.com/sfzinstruments/karoryfer.ergo",
+   "size": 200612492,
+   "format": "SFZ+WAV",
+   "notes": "398 WAV"
+  },
+  {
+   "id": "iowa-doublebass-pizz-1644",
+   "title": "Iowa MIS Double Bass 2012 pizz (pp/mf/ff per string, 16/44.1 stereo)",
+   "url": "https://theremin.music.uiowa.edu/sound%20files/MIS/Strings/doublebass2012/Bass.pizz.stereo.1644.1.zip",
+   "license": "Iowa-MIS-unrestricted",
+   "licenseUrl": "https://theremin.music.uiowa.edu/MIS.html",
+   "category": "bass",
+   "genres": [
+    "classical",
+    "jazz"
+   ],
+   "homepage": "https://theremin.music.uiowa.edu/MISdoublebass2012.html",
+   "size": 118349235,
+   "format": "AIFF",
+   "notes": "Classical pizz, anechoic; one AIFF per string/range, needs slicing into notes; contains __MACOSX junk"
+  },
+  {
+   "id": "iowa-doublebass-pizz-2496",
+   "title": "Iowa MIS Double Bass 2012 pizz (pp/mf/ff per string, 24/96 stereo)",
+   "url": "https://theremin.music.uiowa.edu/sound%20files/MIS/Strings/doublebass2012/Bass.pizz.stereo.2496.zip",
+   "license": "Iowa-MIS-unrestricted",
+   "licenseUrl": "https://theremin.music.uiowa.edu/MIS.html",
+   "category": "bass",
+   "genres": [
+    "classical",
+    "jazz"
+   ],
+   "homepage": "https://theremin.music.uiowa.edu/MISdoublebass2012.html",
+   "size": 746859851,
+   "format": "AIFF",
+   "notes": "Hi-res version of iowa-doublebass-pizz-1644; needs slicing"
+  },
+  {
+   "id": "iowa-doublebass-arco-1644",
+   "title": "Iowa MIS Double Bass 2012 arco (pp/mf/ff per string, 16/44.1 stereo)",
+   "url": "https://theremin.music.uiowa.edu/sound%20files/MIS/Strings/doublebass2012/Bass.arco.stereo.1644.1.zip",
+   "license": "Iowa-MIS-unrestricted",
+   "licenseUrl": "https://theremin.music.uiowa.edu/MIS.html",
+   "category": "strings",
+   "genres": [
+    "classical",
+    "film"
+   ],
+   "homepage": "https://theremin.music.uiowa.edu/MISdoublebass2012.html",
+   "size": 150707791,
+   "format": "AIFF",
+   "notes": "Bowed; needs slicing"
+  },
+  {
+   "id": "freepats-fingerbass-yr",
+   "title": "FreePats Finger Bass YR (electric bass, fingered)",
+   "url": "https://github.com/freepats/electric-bass-YR/releases/download/2019-09-30/FingerBassYR-SFZ+WAV-20190930.7z",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "bass",
+   "genres": [
+    "funk",
+    "pop",
+    "rock",
+    "jazz"
+   ],
+   "homepage": "https://freepats.zenvoid.org/ElectricGuitar/clean-electric-bass.html",
+   "size": 5300760,
+   "format": "SFZ+WAV",
+   "notes": "7z archive"
+  },
+  {
+   "id": "freepats-fingerbass-yr-sf2",
+   "title": "FreePats Finger Bass YR (electric bass, fingered) SF2",
+   "url": "https://github.com/freepats/electric-bass-YR/releases/download/2019-09-30/FingerBassYR-SF2-20190930.7z",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "bass",
+   "genres": [
+    "funk",
+    "pop",
+    "rock",
+    "jazz"
+   ],
+   "homepage": "https://freepats.zenvoid.org/ElectricGuitar/clean-electric-bass.html",
+   "size": 2613000,
+   "format": "SF2",
+   "notes": "7z archive"
+  },
+  {
+   "id": "virtuosity-drums",
+   "title": "Virtuosity Drums (jazz club kit with sticks, 6 mics, ride/flat ride/pedal hat, GM perc)",
+   "url": "https://github.com/sfzinstruments/virtuosity_drums/releases/download/v0.925/Virtuosity_Drums_v0.925.zip",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "drums",
+   "genres": [
+    "jazz",
+    "funk",
+    "pop"
+   ],
+   "homepage": "https://github.com/sfzinstruments/virtuosity_drums",
+   "size": 1227151376,
+   "format": "SFZ+FLAC",
+   "notes": "Mostly FLAC plus some WAV; sticks only, pairs with Swirly Drums for brushes"
+  },
+  {
+   "id": "karoryfer-frankensnare",
+   "title": "Frankensnare (many snares incl. brush hits on 4 snares)",
+   "url": "https://github.com/sfzinstruments/karoryfer.frankensnare/releases/download/v2.100/Frankensnare_2100.zip",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "drums",
+   "genres": [
+    "jazz",
+    "rock",
+    "pop",
+    "funk"
+   ],
+   "homepage": "https://github.com/sfzinstruments/karoryfer.frankensnare",
+   "size": 365639598,
+   "format": "SFZ+FLAC",
+   "notes": "3 mics per snare"
+  },
+  {
+   "id": "karoryfer-unruly-drums",
+   "title": "Unruly Drums (kit with three snares, kick with snare wires)",
+   "url": "https://github.com/sfzinstruments/karoryfer.unruly-drums/releases/download/v1.100/Unruly_Drums_1100.zip",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "drums",
+   "genres": [
+    "rock",
+    "pop"
+   ],
+   "homepage": "https://github.com/sfzinstruments/karoryfer.unruly-drums",
+   "size": 676343466,
+   "format": "SFZ+FLAC",
+   "notes": "Sample format assumed from sibling Karoryfer kits, not listed"
+  },
+  {
+   "id": "karoryfer-hat-with-the-phat",
+   "title": "The Hat With The Phat (giant hi-hat from two ride cymbals)",
+   "url": "https://github.com/sfzinstruments/Karoryfer.TheHatWithThePhat/releases/download/v1.001/The.Hat.With.The.Phat.bank.zip",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "drums",
+   "genres": [
+    "rock",
+    "electronic",
+    "pop"
+   ],
+   "homepage": "https://github.com/sfzinstruments/Karoryfer.TheHatWithThePhat",
+   "size": 666069141,
+   "format": "SFZ+WAV",
+   "notes": "Sample format not listed (assumed)"
+  },
+  {
+   "id": "avl-blonde-bop-sf2",
+   "title": "AVL Blonde Bop (TAMA bop kit, sticks, 5 vel layers) SF2",
+   "url": "http://www.bandshed.net/sounds/AVLDrumkits_SF2/Blonde_Bop_LV2.sf2",
+   "license": "CC-BY-SA-3.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "category": "drums",
+   "genres": [
+    "jazz"
+   ],
+   "attribution": "AV Linux / Glen MacArthur (AVL Drumkits)",
+   "homepage": "https://www.bandshed.net/avldrumkits/",
+   "size": 31399792,
+   "format": "SF2",
+   "notes": "SF2 of the queued SFZ kit; no brushes"
+  },
+  {
+   "id": "avl-blonde-bop-hotrod",
+   "title": "AVL Blonde Bop Hot Rods (TAMA bop kit played with rods, 5 vel layers)",
+   "url": "http://www.bandshed.net/sounds/AVLDrumkits_SFZ/BLONDE_BOP_HR_SFZ.zip",
+   "license": "CC-BY-SA-3.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "category": "drums",
+   "genres": [
+    "jazz"
+   ],
+   "attribution": "AV Linux / Glen MacArthur (AVL Drumkits)",
+   "homepage": "https://www.bandshed.net/avldrumkits/",
+   "size": 16892964,
+   "format": "SFZ+WAV",
+   "notes": "Filenames carry GM note numbers; music needs no credit"
+  },
+  {
+   "id": "avl-blonde-bop-hotrod-sf2",
+   "title": "AVL Blonde Bop Hot Rods (rods, 5 vel layers) SF2",
+   "url": "http://www.bandshed.net/sounds/AVLDrumkits_SF2/Blonde_Bop_HR_LV2.sf2",
+   "license": "CC-BY-SA-3.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "category": "drums",
+   "genres": [
+    "jazz"
+   ],
+   "attribution": "AV Linux / Glen MacArthur (AVL Drumkits)",
+   "homepage": "https://www.bandshed.net/avldrumkits/",
+   "size": 30456658,
+   "format": "SF2",
+   "notes": "Music needs no credit; SA applies to modified samples"
+  },
+  {
+   "id": "avl-black-pearl",
+   "title": "AVL Black Pearl (Pearl rock kit, 22in kick)",
+   "url": "http://www.bandshed.net/sounds/AVLDrumkits_SFZ/BLACK_PEARL_2023_repack.zip",
+   "license": "CC-BY-SA-3.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "category": "drums",
+   "genres": [
+    "rock",
+    "pop",
+    "funk"
+   ],
+   "attribution": "AV Linux / Glen MacArthur (AVL Drumkits)",
+   "homepage": "https://www.bandshed.net/avldrumkits/",
+   "size": 14176289,
+   "format": "SFZ+WAV",
+   "notes": "GM-numbered filenames"
+  },
+  {
+   "id": "avl-black-pearl-sf2",
+   "title": "AVL Black Pearl (Pearl rock kit) SF2",
+   "url": "http://www.bandshed.net/sounds/AVLDrumkits_SF2/Black_Pearl_4_LV2.sf2",
+   "license": "CC-BY-SA-3.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "category": "drums",
+   "genres": [
+    "rock",
+    "pop",
+    "funk"
+   ],
+   "attribution": "AV Linux / Glen MacArthur (AVL Drumkits)",
+   "homepage": "https://www.bandshed.net/avldrumkits/",
+   "size": 19448258,
+   "format": "SF2",
+   "notes": "SF2 version"
+  },
+  {
+   "id": "avl-red-zeppelin",
+   "title": "AVL Red Zeppelin (Ludwig kit, 26in kick, 24in ride)",
+   "url": "http://www.bandshed.net/sounds/AVLDrumkits_SFZ/RED_ZEPPELIN_2023_repack.zip",
+   "license": "CC-BY-SA-3.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "category": "drums",
+   "genres": [
+    "rock"
+   ],
+   "attribution": "AV Linux / Glen MacArthur (AVL Drumkits)",
+   "homepage": "https://www.bandshed.net/avldrumkits/",
+   "size": 17853157,
+   "format": "SFZ+WAV",
+   "notes": "GM-numbered filenames"
+  },
+  {
+   "id": "avl-red-zeppelin-sf2",
+   "title": "AVL Red Zeppelin (Ludwig kit) SF2",
+   "url": "http://www.bandshed.net/sounds/AVLDrumkits_SF2/Red_Zeppelin_4_LV2.sf2",
+   "license": "CC-BY-SA-3.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "category": "drums",
+   "genres": [
+    "rock"
+   ],
+   "attribution": "AV Linux / Glen MacArthur (AVL Drumkits)",
+   "homepage": "https://www.bandshed.net/avldrumkits/",
+   "size": 26470546,
+   "format": "SF2",
+   "notes": "SF2 version"
+  },
+  {
+   "id": "avl-buskmans-holiday",
+   "title": "AVL Buskmans Holiday (cajon, congas, shakers, tambourines, claps, stomp, bucket)",
+   "url": "http://www.bandshed.net/sounds/AVLDrumkits_SFZ/BUSKMANS_HOLIDAY_SFZ.zip",
+   "license": "CC-BY-SA-3.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "category": "percussion",
+   "genres": [
+    "world",
+    "pop",
+    "funk"
+   ],
+   "attribution": "AV Linux / Glen MacArthur (AVL Drumkits)",
+   "homepage": "https://www.bandshed.net/avldrumkits/",
+   "size": 21738818,
+   "format": "SFZ+WAV",
+   "notes": "GM-numbered filenames"
+  },
+  {
+   "id": "avl-buskmans-holiday-sf2",
+   "title": "AVL Buskmans Holiday (hand percussion kit) SF2",
+   "url": "http://www.bandshed.net/sounds/AVLDrumkits_SF2/Buskmans_Holiday.sf2",
+   "license": "CC-BY-SA-3.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "category": "percussion",
+   "genres": [
+    "world",
+    "pop",
+    "funk"
+   ],
+   "attribution": "AV Linux / Glen MacArthur (AVL Drumkits)",
+   "homepage": "https://www.bandshed.net/avldrumkits/",
+   "size": 44513548,
+   "format": "SF2",
+   "notes": "SF2 version"
+  },
+  {
+   "id": "orangetree-jazz-funk-kit",
+   "title": "Orange Tree Jazz Funk Kit (bop kick, snare, toms, ride, flat ride; sticks, multi-sampled)",
+   "url": "https://www.orangetreesamples.com/download/JazzFunkKit.zip",
+   "license": "Freeware-no-redistribution",
+   "licenseUrl": "https://www.orangetreesamples.com/blog/free-jazz-funk-drum-sample-library",
+   "category": "drums",
+   "genres": [
+    "jazz",
+    "funk"
+   ],
+   "homepage": "https://www.orangetreesamples.com/blog/free-jazz-funk-drum-sample-library",
+   "size": 141123599,
+   "format": "WAV",
+   "notes": "Commercial music OK, no credit; no redistribution, no editing/reselling of the soundset (License Agreement.pdf); WAVs load as-is, keep local"
+  },
+  {
+   "id": "pettinhouse-brush-kit",
+   "title": "Pettinhouse Brush Kits (5 kits: brush jazz, country jazz, rock; brush hits, short swishes)",
+   "url": "https://www.pettinhouse.com/Brush.zip",
+   "license": "Freeware-no-redistribution",
+   "licenseUrl": "https://www.pettinhouse.com/html/download.html",
+   "category": "drums",
+   "genres": [
+    "jazz",
+    "rock"
+   ],
+   "homepage": "https://www.pettinhouse.com/html/download.html",
+   "size": 79083030,
+   "format": "WAV",
+   "notes": "Any music production OK, sounds may be modified; no redistribution/upload (License.txt); also Kontakt .kt2; no long sweeps"
+  },
+  {
+   "id": "drumgizmo-drskit",
+   "title": "DrumGizmo DRSKit 2.1 (handcrafted DRS kit, multi-mic, sticks)",
+   "url": "https://drumgizmo.org/kits/DRSKit/DRSKit2_1.zip",
+   "license": "CC-BY-4.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+   "category": "drums",
+   "genres": [
+    "rock",
+    "pop",
+    "jazz",
+    "funk"
+   ],
+   "attribution": "DrumGizmo team and Jes Eiler (DRSDrums)",
+   "homepage": "https://drumgizmo.org/wiki/doku.php?id=kits:drskit",
+   "size": 2803397710,
+   "format": "WAV",
+   "notes": "DrumGizmo XML + multichannel WAV (one channel per mic), needs a custom mapper"
+  },
+  {
+   "id": "muldjordkit",
+   "title": "MuldjordKit (Tama Superstar, 2 kicks, 4 toms, cymbals; FreePats build)",
+   "url": "https://github.com/freepats/muldjordkit/releases/download/2020-10-18/MuldjordKit-SFZ+WAV-20201018.7z",
+   "license": "CC-BY-4.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+   "category": "drums",
+   "genres": [
+    "rock",
+    "pop"
+   ],
+   "attribution": "Lars Muldjord (MuldjordKit / DrumGizmo), FreePats",
+   "homepage": "https://freepats.zenvoid.org/Percussion/acoustic-drum-kit.html",
+   "size": 233554549,
+   "format": "SFZ+WAV",
+   "notes": "7z archive; sticks, rock/metal oriented"
+  },
+  {
+   "id": "muldjordkit-sf2",
+   "title": "MuldjordKit (Tama Superstar kit; FreePats build) SF2",
+   "url": "https://github.com/freepats/muldjordkit/releases/download/2020-10-18/MuldjordKit-SF2-20201018.7z",
+   "license": "CC-BY-4.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+   "category": "drums",
+   "genres": [
+    "rock",
+    "pop"
+   ],
+   "attribution": "Lars Muldjord (MuldjordKit / DrumGizmo), FreePats",
+   "homepage": "https://freepats.zenvoid.org/Percussion/acoustic-drum-kit.html",
+   "size": 54877940,
+   "format": "SF2",
+   "notes": "7z archive"
+  },
+  {
+   "id": "naked-drums",
+   "title": "Wilkinson Audio Naked Drums (multi-mic kit, 10 RR, up to 5 vel layers)",
+   "url": "https://github.com/sfzinstruments/WilkinsonAudio.NakedDrums/archive/refs/heads/master.zip",
+   "license": "CC-BY-4.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+   "category": "drums",
+   "genres": [
+    "rock",
+    "pop",
+    "funk"
+   ],
+   "attribution": "Wilkinson Audio (Naked Drums), SFZ by sfzinstruments",
+   "homepage": "https://github.com/sfzinstruments/WilkinsonAudio.NakedDrums",
+   "size": 1285021024,
+   "format": "SFZ+FLAC",
+   "notes": "Streamed archive, size = git tree total (estimate); sticks"
+  },
+  {
+   "id": "mtg-solo-sax",
+   "title": "MTG Solo Saxophones (soprano/alto/tenor/baritone; tenor 33 notes x p/f, breath + key noises)",
+   "url": "https://github.com/sfzinstruments/MTG.SoloSax/archive/refs/heads/master.zip",
+   "license": "CC-BY-4.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+   "category": "sax",
+   "genres": [
+    "jazz",
+    "pop",
+    "funk"
+   ],
+   "attribution": "MTG (Music Technology Group, UPF) Freesound samples; SFZ by kinwie",
+   "homepage": "https://github.com/sfzinstruments/MTG.SoloSax",
+   "size": 110931965,
+   "format": "SFZ+FLAC",
+   "notes": "24/48 mono, looped; streamed archive, size = git tree total (estimate)"
+  },
+  {
+   "id": "karoryfer-weresax",
+   "title": "Weresax (alto sax, chromatic, p/f x 2 RR x 2 mics)",
+   "url": "https://github.com/sfzinstruments/karoryfer.weresax/releases/download/v1.003/Karoryfer.Weresax.v.1.003.zip",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "sax",
+   "genres": [
+    "jazz",
+    "funk",
+    "pop",
+    "rock"
+   ],
+   "homepage": "https://github.com/sfzinstruments/karoryfer.weresax",
+   "size": 197565664,
+   "format": "SFZ+WAV",
+   "notes": "Samples folder and README say alto (shop page says tenor); mics: clean condenser + overdriven dynamic"
+  },
+  {
+   "id": "karoryfer-bear-sax",
+   "title": "Bear Sax (1926 Conn baritone: sustain, marcato, staccato, subtone, growl)",
+   "url": "https://github.com/sfzinstruments/karoryfer.bear-sax/releases/download/v1.004/Karoryfer.Bear_Sax.v1.004.zip",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "sax",
+   "genres": [
+    "jazz",
+    "funk",
+    "rock"
+   ],
+   "homepage": "https://github.com/sfzinstruments/karoryfer.bear-sax",
+   "size": 131505201,
+   "format": "SFZ+WAV",
+   "notes": "755 WAV"
+  },
+  {
+   "id": "freepats-tenor-sax-sf2",
+   "title": "FreePats Tenor Saxophone (VCSL-derived, looped) SF2",
+   "url": "https://freepats.zenvoid.org/Reed/TenorSaxophone/TenorSaxophone-SF2-20200717.tar.bz2",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "sax",
+   "genres": [
+    "jazz",
+    "pop"
+   ],
+   "homepage": "https://freepats.zenvoid.org/Reed/saxophone.html",
+   "size": 25757059,
+   "format": "SF2",
+   "notes": "SF2 version of the queued SFZ pack; tar.bz2"
+  },
+  {
+   "id": "iowa-altosax-vib-ff-2014",
+   "title": "Iowa MIS Eb Alto Sax 2014, vibrato ff (per-note 24/96 stereo)",
+   "url": "https://theremin.music.uiowa.edu/sound%20files/MIS%20Pitches%20-%202014/Woodwinds/Eb%20Alto%20Saxophone/AltoSax.vib.ff.stereo.zip",
+   "license": "Iowa-MIS-unrestricted",
+   "licenseUrl": "https://theremin.music.uiowa.edu/MIS.html",
+   "category": "sax",
+   "genres": [
+    "jazz",
+    "classical"
+   ],
+   "homepage": "https://theremin.music.uiowa.edu/MISaltosaxophone.html",
+   "size": 16271265,
+   "format": "AIFF",
+   "notes": "Anechoic, classical tone; ff only"
+  },
+  {
+   "id": "iowa-altosax-novib-ff-2014",
+   "title": "Iowa MIS Eb Alto Sax 2014, non-vibrato ff (per-note 24/96 stereo)",
+   "url": "https://theremin.music.uiowa.edu/sound%20files/MIS%20Pitches%20-%202014/Woodwinds/Eb%20Alto%20Saxophone/AltoSax.NoVib.ff.stereo.zip",
+   "license": "Iowa-MIS-unrestricted",
+   "licenseUrl": "https://theremin.music.uiowa.edu/MIS.html",
+   "category": "sax",
+   "genres": [
+    "jazz",
+    "classical"
+   ],
+   "homepage": "https://theremin.music.uiowa.edu/MISaltosaxophone.html",
+   "size": 13203510,
+   "format": "AIFF",
+   "notes": "Anechoic, classical tone; ff only"
+  },
+  {
+   "id": "iowa-altosax-novib-ff",
+   "title": "Iowa MIS Alto Sax (pre-2012) non-vibrato ff, mono runs",
+   "url": "https://theremin.music.uiowa.edu/sound%20files/MIS/Woodwinds/altosaxophone/AltoSax.NoVib.ff.zip",
+   "license": "Iowa-MIS-unrestricted",
+   "licenseUrl": "https://theremin.music.uiowa.edu/MIS.html",
+   "category": "sax",
+   "genres": [
+    "jazz",
+    "classical"
+   ],
+   "homepage": "https://theremin.music.uiowa.edu/MISaltosaxophone.html",
+   "size": 8722472,
+   "format": "AIFF",
+   "notes": "3 AIFF runs, need slicing into notes"
+  },
+  {
+   "id": "iowa-altosax-novib-mf",
+   "title": "Iowa MIS Alto Sax (pre-2012) non-vibrato mf, mono runs",
+   "url": "https://theremin.music.uiowa.edu/sound%20files/MIS/Woodwinds/altosaxophone/AltoSax.NoVib.mf.zip",
+   "license": "Iowa-MIS-unrestricted",
+   "licenseUrl": "https://theremin.music.uiowa.edu/MIS.html",
+   "category": "sax",
+   "genres": [
+    "jazz",
+    "classical"
+   ],
+   "homepage": "https://theremin.music.uiowa.edu/MISaltosaxophone.html",
+   "size": 8073913,
+   "format": "AIFF",
+   "notes": "AIFF runs, need slicing into notes"
+  },
+  {
+   "id": "iowa-altosax-novib-pp",
+   "title": "Iowa MIS Alto Sax (pre-2012) non-vibrato pp, mono runs",
+   "url": "https://theremin.music.uiowa.edu/sound%20files/MIS/Woodwinds/altosaxophone/AltoSax.NoVib.pp.zip",
+   "license": "Iowa-MIS-unrestricted",
+   "licenseUrl": "https://theremin.music.uiowa.edu/MIS.html",
+   "category": "sax",
+   "genres": [
+    "jazz",
+    "classical"
+   ],
+   "homepage": "https://theremin.music.uiowa.edu/MISaltosaxophone.html",
+   "size": 8336731,
+   "format": "AIFF",
+   "notes": "AIFF runs, need slicing into notes"
+  },
+  {
+   "id": "mslp-vibes",
+   "title": "MSLP Vibes (vibraphone, chromatic F3-F6, 1 layer, 37 samples)",
+   "url": "http://www.bandshed.net/sounds/sfz/vibes.zip",
+   "license": "CC-BY-NC-3.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by-nc/3.0/",
+   "category": "percussion",
+   "genres": [
+    "jazz",
+    "film",
+    "pop"
+   ],
+   "attribution": "Music Sample Library Project (Erick Kvist), performed by Joakim Linde",
+   "homepage": "https://sfzinstruments.github.io/melodic-percussion/mslp_vibes/",
+   "size": 19867513,
+   "format": "SFZ+WAV",
+   "notes": "NC: enclosed readme explicitly allows selling music made with it, but not the samples; keep local"
+  },
+  {
+   "id": "discord-sfz-gm-bank",
+   "title": "Discord SFZ GM Bank (WIP GM set; CC0 jRhodes EP1, pianos, bass, kits)",
+   "url": "https://github.com/sfzinstruments/Discord-SFZ-GM-Bank/archive/refs/heads/master.zip",
+   "license": "Mixed-CC0-CC-BY",
+   "licenseUrl": "https://github.com/sfzinstruments/Discord-SFZ-GM-Bank#licenses",
+   "category": "multi",
+   "genres": [
+    "jazz",
+    "pop"
+   ],
+   "homepage": "https://github.com/sfzinstruments/Discord-SFZ-GM-Bank",
+   "size": 183818240,
+   "format": "SFZ+WAV",
+   "notes": "Per-instrument license in each .sfz (only CC0/CC-BY allowed); work in progress, some kits are dummies; streamed archive, size = repo size (estimate)"
+  },
+  {
+   "id": "musescore-general-sf2",
+   "title": "MuseScore_General.sf2 v0.2 (GM/GS, jazz + brush kits, Splendid piano)",
+   "url": "https://ftp.osuosl.org/pub/musescore/soundfont/MuseScore_General/MuseScore_General.sf2",
+   "license": "MIT",
+   "licenseUrl": "https://ftp.osuosl.org/pub/musescore/soundfont/MuseScore_General/MuseScore_General_License.md",
+   "category": "soundfont",
+   "genres": [
+    "jazz",
+    "pop",
+    "classical",
+    "rock",
+    "film"
+   ],
+   "attribution": "Frank Wen (FluidR3), Michael Cowgill (FluidR3Mono), S. Christian Collins",
+   "homepage": "https://musescore.org",
+   "size": 215614036,
+   "format": "SF2",
+   "notes": "MIT requires keeping the copyright notice; brush kit has only one swirl sample; sidegrade to GeneralUser GS 2.0.3"
+  },
+  {
+   "id": "fluidr3-gm2",
+   "title": "FluidR3 GM2-2 SoundFont (GM/GM2 bank)",
+   "url": "https://ftp.osuosl.org/pub/musescore/soundfont/fluid-soundfont.zip",
+   "license": "MIT",
+   "licenseUrl": "https://ftp.osuosl.org/pub/musescore/soundfont/MuseScore_General/MuseScore_General_License.md",
+   "category": "soundfont",
+   "genres": [
+    "pop",
+    "classical",
+    "rock",
+    "jazz"
+   ],
+   "attribution": "Frank Wen (Fluid R3)",
+   "homepage": "https://ftp.osuosl.org/pub/musescore/soundfont/",
+   "size": 131834190,
+   "format": "SF2",
+   "notes": "Zip with 'FluidR3 GM2-2.SF2' (141.5 MiB) and a .doc readme"
+  },
+  {
+   "id": "fluid-soundfont-debian",
+   "title": "fluid-soundfont 3.1 (FluidR3_GM.sf2 + FluidR3_GS.sf2, Debian source)",
+   "url": "http://deb.debian.org/debian/pool/main/f/fluid-soundfont/fluid-soundfont_3.1.orig.tar.gz",
+   "license": "MIT",
+   "licenseUrl": "https://opensource.org/licenses/MIT",
+   "category": "soundfont",
+   "genres": [
+    "pop",
+    "classical",
+    "rock",
+    "jazz"
+   ],
+   "attribution": "Frank Wen (Fluid R3)",
+   "homepage": "https://packages.debian.org/sid/fluid-soundfont-gm",
+   "size": 134835922,
+   "format": "SF2",
+   "notes": "Overlaps with fluidr3-gm2; tarball contents per Debian package, not listed"
+  },
+  {
+   "id": "freepats-gm-sf2",
+   "title": "FreePats General MIDI set (incomplete: 45 melodic + 43 perc entries) SF2",
+   "url": "https://freepats.zenvoid.org/SoundSets/FreePats-GeneralMIDI/FreePatsGM-SF2-20221026.7z",
+   "license": "GPL-3.0-or-later-with-exception",
+   "licenseUrl": "https://freepats.zenvoid.org/SoundSets/general-midi.html",
+   "category": "soundfont",
+   "genres": [
+    "pop",
+    "classical",
+    "rock"
+   ],
+   "homepage": "https://freepats.zenvoid.org/SoundSets/general-midi.html",
+   "size": 237775919,
+   "format": "SF2",
+   "notes": "GPL-3+ with FreePats special exception (see page); incomplete GM set; 7z archive"
+  },
+  {
+   "id": "karoryfer-gogodze-phu-vol-ii",
+   "title": "Gogodze Phu Vol II: variable-fidelity drum kit, 7 mics",
+   "url": "https://github.com/sfzinstruments/karoryfer.gogodze-phu-vol-ii/releases/download/v1.001/Karoryfer_Gogodze_Phu_vol_II.v1.001.zip",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "drums",
+   "genres": [
+    "indie",
+    "rock",
+    "pop"
+   ],
+   "homepage": "https://shop.karoryfer.com/pages/free-samples",
+   "size": 139517148,
+   "format": "SFZ+WAV",
+   "notes": "Mics front/kick/OH/retro/side/snare/window; lo-fi to hi-fi"
+  },
+  {
+   "id": "drumgizmo-muldjordkit",
+   "title": "MuldjordKit 3 (DrumGizmo): Tama kit, 2 kicks, 4 toms, 16 mics",
+   "url": "https://drumgizmo.org/kits/MuldjordKit/MuldjordKit3.zip",
+   "license": "CC-BY-4.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+   "category": "drums",
+   "genres": [
+    "rock",
+    "metal"
+   ],
+   "attribution": "Drum samples provided by DrumGizmo.org (MuldjordKit)",
+   "homepage": "https://drumgizmo.org/wiki/doku.php?id=kits:muldjordkit",
+   "size": 2536576789,
+   "format": "DrumGizmo XML+WAV",
+   "notes": "16-channel WAV per hit; needs DrumGizmo-XML converter"
+  },
+  {
+   "id": "drumgizmo-aasimonster",
+   "title": "The Aasimonster 2.1 (DrumGizmo): death-metal kit, 16 channels",
+   "url": "https://drumgizmo.org/kits/Aasimonster/aasimonster2_1.zip",
+   "license": "CC-BY-4.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+   "category": "drums",
+   "genres": [
+    "metal"
+   ],
+   "attribution": "Drum samples provided by DrumGizmo.org (The Aasimonster)",
+   "homepage": "https://drumgizmo.org/wiki/doku.php?id=kits:the_aasimonster",
+   "size": 2416291882,
+   "format": "DrumGizmo XML+WAV",
+   "notes": "Multichannel WAV per hit; niche (extreme metal); needs DrumGizmo-XML converter"
+  },
+  {
+   "id": "drumgizmo-crocellkit-stereo-mix",
+   "title": "CrocellKit stereo mix (DrumGizmo): double pedal, 4 toms, chinas, splashes",
+   "url": "https://drumgizmo.org/kits/CrocellKit/CrocellKit_Stereo_MIX.rar",
+   "license": "CC-BY-4.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+   "category": "drums",
+   "genres": [
+    "metal",
+    "rock"
+   ],
+   "attribution": "Drum samples provided by DrumGizmo.org (CrocellKit)",
+   "homepage": "https://drumgizmo.org/wiki/doku.php?id=kits:crocellkit",
+   "size": 561035551,
+   "format": "DrumGizmo XML+WAV",
+   "notes": "Stereo mixdown of the 15-mic kit; contents not inspected (rar); extract with Windows bsdtar"
+  },
+  {
+   "id": "drumgizmo-drskit-sfz",
+   "title": "DRSKit v1.0 SFZ port: per-mic stereo FLAC (kinwie mapping)",
+   "url": "https://github.com/sfzinstruments/DrumGizmo.DRSKit/archive/refs/heads/master.zip",
+   "license": "CC-BY-4.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+   "category": "drums",
+   "genres": [
+    "rock",
+    "pop",
+    "jazz"
+   ],
+   "attribution": "Drum samples provided by DrumGizmo.org (DRSKit)",
+   "homepage": "https://sfzinstruments.github.io/drums/drs_kit/",
+   "size": 754200000,
+   "format": "SFZ+FLAC",
+   "filename": "DrumGizmo.DRSKit-master.zip",
+   "notes": "Size estimated from sfzinstruments listing (GitHub archive sends no Content-Length); older v1.0 of DRSKit"
+  },
+  {
+   "id": "salamander-drumkit",
+   "title": "Salamander Drumkit: birch kit, 2 snares, many RR, few vel layers",
+   "url": "https://archive.org/download/SalamanderDrumkit/salamanderDrumkit.tar.bz2",
+   "license": "CC-BY-SA-3.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/",
+   "category": "drums",
+   "genres": [
+    "rock",
+    "indie",
+    "pop"
+   ],
+   "attribution": "Salamander Drumkit by Alexander Holm",
+   "homepage": "https://archive.org/details/SalamanderDrumkit",
+   "size": 387611727,
+   "format": "SFZ+WAV",
+   "notes": "Share-alike applies only if samples are modified/redistributed; produced music is free"
+  },
+  {
+   "id": "fiedler-mf-natural-drumset",
+   "title": "MF Natural Drumset (Fiedler): Sonor kit, sticks+brushes, 7 vel x 4 RR",
+   "url": "http://www.fiedler-audio.de/cc-sounds/mf-natural-drumkit-ogg.zip",
+   "license": "CC-BY-NC-SA-3.0-music-ok",
+   "licenseUrl": "https://www.fiedler-audio.de/creative-commons-library/",
+   "category": "drums",
+   "genres": [
+    "rock",
+    "pop",
+    "jazz"
+   ],
+   "attribution": "Markus Fiedler (fiedler-audio.de)",
+   "homepage": "https://www.fiedler-audio.de/creative-commons-library/",
+   "size": 77975126,
+   "format": "SFZ+OGG",
+   "notes": "Modified CC BY-NC-SA 3.0: commercial music production explicitly allowed, not in sample libraries; lossy OGG source"
+  },
+  {
+   "id": "hydrogen-forzee-stereo",
+   "title": "Forzee Stereo Drumkit (Hydrogen): multi-velocity stereo kit",
+   "url": "https://sourceforge.net/projects/hydrogen/files/Sound%20Libraries/Main%20sound%20libraries/ForzeeStereo.h2drumkit/download",
+   "license": "GPL-2.0",
+   "licenseUrl": "https://www.gnu.org/licenses/old-licenses/gpl-2.0.html",
+   "category": "drums",
+   "genres": [
+    "rock",
+    "pop"
+   ],
+   "homepage": "https://sourceforge.net/projects/hydrogen/files/Sound%20Libraries/Main%20sound%20libraries/",
+   "size": 130085817,
+   "format": "h2drumkit",
+   "archive": "tar",
+   "filename": "ForzeeStereo.h2drumkit",
+   "notes": "Contents not inspected; h2drumkit = tar(.gz) with drumkit.xml + samples"
+  },
+  {
+   "id": "hydrogen-bja-pacific",
+   "title": "BJA Pacific (Hydrogen): acoustic drum kit",
+   "url": "https://sourceforge.net/projects/hydrogen/files/Sound%20Libraries/Main%20sound%20libraries/BJA_Pacific.h2drumkit/download",
+   "license": "CC-BY-SA-3.0-US",
+   "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/us/",
+   "category": "drums",
+   "genres": [
+    "rock",
+    "pop"
+   ],
+   "homepage": "https://sourceforge.net/projects/hydrogen/files/Sound%20Libraries/Main%20sound%20libraries/",
+   "size": 16423346,
+   "format": "h2drumkit",
+   "archive": "tar",
+   "filename": "BJA_Pacific.h2drumkit",
+   "notes": "Contents not inspected; small older kit"
+  },
+  {
+   "id": "sampleradar-drum-samples",
+   "title": "SampleRadar 1000 drum samples: acoustic close/room kits, 230 snares, electro kits",
+   "url": "https://cdn.mos.musicradar.com/audio/samples/musicradar-drum-samples.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/news/drums/1000-free-drum-samples",
+   "category": "drums",
+   "genres": [
+    "rock",
+    "pop",
+    "funk"
+   ],
+   "homepage": "https://www.musicradar.com/news/drums/1000-free-drum-samples",
+   "size": 267171953,
+   "format": "WAV",
+   "notes": "One-shots with 4-9 hit variations per piece (no mapped layers); 66 REX loops unusable"
+  },
+  {
+   "id": "sampleradar-essential-drumkit",
+   "title": "SampleRadar essential drum kit samples: 13 genre kits",
+   "url": "https://cdn.mos.musicradar.com/audio/samples/musicradar-essential-drumkit-samples.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/news/sampleradar-494-free-essential-drum-kit-samples",
+   "category": "drums",
+   "genres": [
+    "pop",
+    "rock"
+   ],
+   "homepage": "https://www.musicradar.com/news/sampleradar-494-free-essential-drum-kit-samples",
+   "size": 31681823,
+   "format": "WAV",
+   "notes": "Mixed acoustic/electronic kits; contains __MACOSX junk"
+  },
+  {
+   "id": "sampleradar-radio-ready-drums",
+   "title": "SampleRadar radio-ready drums: kits in clean/crunch/wide/xtracomp + beats",
+   "url": "https://cdn.mos.musicradar.com/audio/sampleradar-radio-ready-drums-samples.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/news/sampleradar-radio-ready-drums",
+   "category": "drums",
+   "genres": [
+    "pop",
+    "rock"
+   ],
+   "homepage": "https://www.musicradar.com/news/sampleradar-radio-ready-drums",
+   "size": 179971455,
+   "format": "WAV",
+   "notes": "Processed one-shots plus beat loops; contains __MACOSX junk"
+  },
+  {
+   "id": "sampleradar-hats-cymbals-gongs",
+   "title": "SampleRadar hats, cymbals and gongs: acoustic and machine",
+   "url": "https://cdn.mos.musicradar.com/audio/samples/sampleradar-hats-cymbals-gongs-sample-pack.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/news/sampleradar-free-hi-hat-cymbal-samples",
+   "category": "drums",
+   "genres": [
+    "rock",
+    "pop"
+   ],
+   "homepage": "https://www.musicradar.com/news/sampleradar-free-hi-hat-cymbal-samples",
+   "size": 91849917,
+   "format": "WAV",
+   "notes": "66 acoustic cymbals, 49 acoustic hats plus machine/synth"
+  },
+  {
+   "id": "sampleradar-80s-pop-drums",
+   "title": "SampleRadar 80s pop drums",
+   "url": "https://cdn.mos.musicradar.com/audio/samples/sampleradar-80s-pop-drums-samples.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/news/sampleradar-free-80s-pop-drums-samples",
+   "category": "drums",
+   "genres": [
+    "pop"
+   ],
+   "homepage": "https://www.musicradar.com/news/sampleradar-free-80s-pop-drums-samples",
+   "size": 60380073,
+   "format": "WAV",
+   "notes": "Contents not inspected"
+  },
+  {
+   "id": "sampleradar-realworld-drums",
+   "title": "SampleRadar real-world drum samples",
+   "url": "https://cdn.mos.musicradar.com/audio/samples/musicradar-realworld-drum-samples.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/news/tech/sampleradar-285-free-real-world-drum-samples-533702",
+   "category": "drums",
+   "genres": [
+    "indie",
+    "pop"
+   ],
+   "homepage": "https://www.musicradar.com/news/tech/sampleradar-285-free-real-world-drum-samples-533702",
+   "size": 97560871,
+   "format": "WAV",
+   "notes": "Contents not inspected"
+  },
+  {
+   "id": "sampleradar-metal-drums",
+   "title": "SampleRadar heavy metal drum loops (acoustic + electronic)",
+   "url": "https://cdn.mos.musicradar.com/audio/samples/musicradar-metal-drum-samples.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/news/guitars/sampleradar-252-free-heavy-metal-drum-samples-249396",
+   "category": "loops",
+   "genres": [
+    "metal"
+   ],
+   "homepage": "https://www.musicradar.com/news/guitars/sampleradar-252-free-heavy-metal-drum-samples-249396",
+   "size": 129974425,
+   "format": "WAV",
+   "notes": "Tempo-locked loops, not one-shots"
+  },
+  {
+   "id": "sampleradar-instant-drum-fills",
+   "title": "SampleRadar instant drum fills",
+   "url": "https://cdn.mos.musicradar.com/audio/samples/musicradar-instant-fill-samples.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/news/free-drum-fill-samples",
+   "category": "loops",
+   "genres": [
+    "rock",
+    "pop"
+   ],
+   "homepage": "https://www.musicradar.com/news/free-drum-fill-samples",
+   "size": 229122114,
+   "format": "WAV",
+   "notes": "Tempo-locked fill loops"
+  },
+  {
+   "id": "freepats-fsbs-clean",
+   "title": "FreePats FSBS clean electric guitar: 2 vel x 4 RR",
+   "url": "https://github.com/freepats/electric-guitar-FSBS-clean/releases/download/2026-08-07/EGuitarFSBS-clean-SFZ+FLAC-20260807.7z",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "guitar",
+   "genres": [
+    "pop",
+    "rock",
+    "funk",
+    "indie"
+   ],
+   "homepage": "https://freepats.zenvoid.org/ElectricGuitar/clean-electric-guitar.html",
+   "size": 123736791,
+   "format": "SFZ+FLAC",
+   "notes": "Fender bridge pickup through amp/FX; single notes only (no mutes/chords); SF2 variant 135.6 MB (SFZ+FLAC variant: smaller download, and some SFZ+WAV 7z files use a Delta+BZip2 filter bsdtar cannot read)"
+  },
+  {
+   "id": "freepats-fsbs-jazz",
+   "title": "FreePats FSBS jazz-tone electric guitar: 2 vel x 4 RR",
+   "url": "https://github.com/freepats/electric-guitar-FSBS-jazz/releases/download/2026-08-07/EGuitarFSBS-jazz-SFZ+WAV-20260807.7z",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "guitar",
+   "genres": [
+    "pop",
+    "jazz",
+    "funk"
+   ],
+   "homepage": "https://freepats.zenvoid.org/ElectricGuitar/clean-electric-guitar.html",
+   "size": 202496655,
+   "format": "SFZ+WAV",
+   "notes": "Single notes only"
+  },
+  {
+   "id": "freepats-fsbs-dist1",
+   "title": "FreePats FSBS distorted electric guitar #1: 2 vel x 4 RR",
+   "url": "https://github.com/freepats/electric-guitar-FSBS-dist1/releases/download/2022-09-11/EGuitarFSBS-dist1-SFZ+FLAC-20220911.7z",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "guitar",
+   "genres": [
+    "rock",
+    "metal"
+   ],
+   "homepage": "https://freepats.zenvoid.org/ElectricGuitar/distorted-electric-guitar.html",
+   "size": 314238934,
+   "format": "SFZ+FLAC",
+   "notes": "Single notes only (leads/sustains), no power chords; SF2 variant 332.6 MB (SFZ+FLAC variant: smaller download, and some SFZ+WAV 7z files use a Delta+BZip2 filter bsdtar cannot read)"
+  },
+  {
+   "id": "freepats-fsbs-dist2",
+   "title": "FreePats FSBS distorted electric guitar #2: 2 vel x 4 RR",
+   "url": "https://github.com/freepats/electric-guitar-FSBS-dist2/releases/download/2022-09-11/EGuitarFSBS-dist2-SFZ+WAV-20220911.7z",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "guitar",
+   "genres": [
+    "rock",
+    "metal"
+   ],
+   "homepage": "https://freepats.zenvoid.org/ElectricGuitar/distorted-electric-guitar.html",
+   "size": 256818771,
+   "format": "SFZ+WAV",
+   "notes": "Single notes only"
+  },
+  {
+   "id": "freepats-fsbs-direct",
+   "title": "FreePats FSBS direct (DI) electric guitar for amp simulation",
+   "url": "https://github.com/freepats/electric-guitar-FSBS-direct/releases/download/2022-09-11/EGuitarFSBS-direct-SFZ+FLAC-20220911.7z",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "guitar",
+   "genres": [
+    "rock",
+    "pop",
+    "metal",
+    "indie"
+   ],
+   "homepage": "https://freepats.zenvoid.org/ElectricGuitar/clean-electric-guitar.html",
+   "size": 77076723,
+   "format": "SFZ+FLAC",
+   "notes": "Raw DI, needs amp sim + cab IR; SF2 variant 63.3 MB (SFZ+FLAC variant: smaller download, and some SFZ+WAV 7z files use a Delta+BZip2 filter bsdtar cannot read)"
+  },
+  {
+   "id": "karoryfer-black-and-green-guitars",
+   "title": "Black And Green Guitars: 2 DI hollowbodies, sustain/staccato/hammer-on/feedback, p/mf/f, 4 RR",
+   "url": "https://github.com/sfzinstruments/karoryfer.black-and-green-guitars/releases/download/v1.000/Karoryfer_Black_And_Green_Guitars_1000.zip",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "guitar",
+   "genres": [
+    "indie",
+    "rock",
+    "pop"
+   ],
+   "homepage": "https://shop.karoryfer.com/pages/free-samples",
+   "size": 481838512,
+   "format": "SFZ+WAV",
+   "notes": "DI recordings; pair with amp sim/cab IR"
+  },
+  {
+   "id": "karoryfer-emilyguitar",
+   "title": "Emilyguitar: Epiphone SG flatwounds, 4 dynamics, 5 RR, mutes, chord mappings",
+   "url": "https://github.com/sfzinstruments/karoryfer.emilyguitar/releases/download/v1.001/Karoryfer.Emilyguitar.v1.001.zip",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "guitar",
+   "genres": [
+    "indie",
+    "rock",
+    "pop"
+   ],
+   "homepage": "https://shop.karoryfer.com/pages/free-samples",
+   "size": 103484350,
+   "format": "SFZ+WAV",
+   "notes": "Simple general-purpose electric"
+  },
+  {
+   "id": "karoryfer-shinyguitar",
+   "title": "Shinyguitar: archtop, electric (pickup) and acoustic (mic) sets, 4 vel, mutes",
+   "url": "https://github.com/sfzinstruments/karoryfer.shinyguitar/releases/download/v1.002/Karoryfer.Shinyguitar.v1.002.zip",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "guitar",
+   "genres": [
+    "jazz",
+    "pop",
+    "indie"
+   ],
+   "homepage": "https://shop.karoryfer.com/pages/free-samples",
+   "size": 368411844,
+   "format": "SFZ+WAV"
+  },
+  {
+   "id": "sampleradar-heavy-metal-guitar",
+   "title": "SampleRadar heavy metal guitar: power-chord and chug one-shots per root + riffs",
+   "url": "https://cdn.mos.musicradar.com/audio/samples/musicradar-heavy-metal-samples.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/news/guitars/sampleradar-400-free-heavy-metal-guitar-samples-228007",
+   "category": "guitar",
+   "genres": [
+    "metal",
+    "rock"
+   ],
+   "homepage": "https://www.musicradar.com/news/guitars/sampleradar-400-free-heavy-metal-guitar-samples-228007",
+   "size": 596077879,
+   "format": "WAV",
+   "notes": "3 amped guitars; one-shots per root A-G (E hi/lo), no vel layers; riffs are loops"
+  },
+  {
+   "id": "sampleradar-funk-soul-guitar",
+   "title": "SampleRadar funk and soul guitar loops: amped, DI, pedals",
+   "url": "https://cdn.mos.musicradar.com/audio/musicradar-funk-soul-guitar-samples.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/news/sampleradar-funk-soul-guitar-samples",
+   "category": "loops",
+   "genres": [
+    "funk",
+    "pop"
+   ],
+   "homepage": "https://www.musicradar.com/news/sampleradar-funk-soul-guitar-samples",
+   "size": 153058372,
+   "format": "WAV",
+   "notes": "Loops 90-120 bpm"
+  },
+  {
+   "id": "sampleradar-funk-guitar",
+   "title": "SampleRadar funk guitar samples",
+   "url": "https://cdn.mos.musicradar.com/audio/samples/musicradar-funk-guitar-samples.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/news/tech/sampleradar-289-free-funk-guitar-samples-518861",
+   "category": "loops",
+   "genres": [
+    "funk"
+   ],
+   "homepage": "https://www.musicradar.com/news/tech/sampleradar-289-free-funk-guitar-samples-518861",
+   "size": 287044123,
+   "format": "WAV",
+   "notes": "Contents not inspected; 110 bpm loops per article"
+  },
+  {
+   "id": "sampleradar-chunky-guitar-drum",
+   "title": "SampleRadar chunky guitar and drum: chugs, riffs, lead snippets, beats",
+   "url": "https://cdn.mos.musicradar.com/audio/samples/musicradar-chunky-guitar-drum-samples.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/news/tech/sampleradar-437-free-chunky-guitar-and-drum-samples-391923",
+   "category": "loops",
+   "genres": [
+    "rock",
+    "metal"
+   ],
+   "homepage": "https://www.musicradar.com/news/tech/sampleradar-437-free-chunky-guitar-and-drum-samples-391923",
+   "size": 200664695,
+   "format": "WAV",
+   "notes": "Mostly loops"
+  },
+  {
+   "id": "sampleradar-guitar-bass",
+   "title": "SampleRadar guitar and bass loops",
+   "url": "https://cdn.mos.musicradar.com/audio/samples/musicradar-guitar-bass-samples.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/news/tech/sampleradar-272-free-guitar-and-bass-samples-240528",
+   "category": "loops",
+   "genres": [
+    "rock",
+    "indie"
+   ],
+   "homepage": "https://www.musicradar.com/news/tech/sampleradar-272-free-guitar-and-bass-samples-240528",
+   "size": 99580617,
+   "format": "WAV",
+   "notes": "Loops 120-170 bpm"
+  },
+  {
+   "id": "sampleradar-western-guitar",
+   "title": "SampleRadar western guitar samples",
+   "url": "https://cdn.mos.musicradar.com/audio/samples/musicradar-western-guitar-samples.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/news/tech/sampleradar-174-free-western-guitar-samples-627124",
+   "category": "loops",
+   "genres": [
+    "rock",
+    "indie"
+   ],
+   "homepage": "https://www.musicradar.com/news/tech/sampleradar-174-free-western-guitar-samples-627124",
+   "size": 211563458,
+   "format": "WAV",
+   "notes": "Contents not inspected"
+  },
+  {
+   "id": "sampleradar-urban-rock",
+   "title": "SampleRadar urban rock samples",
+   "url": "https://cdn.mos.musicradar.com/audio/samples/musicradar-urban-rock-samples.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/news/tech/sampleradar-162-free-urban-rock-samples-306390",
+   "category": "loops",
+   "genres": [
+    "rock"
+   ],
+   "homepage": "https://www.musicradar.com/news/tech/sampleradar-162-free-urban-rock-samples-306390",
+   "size": 197176033,
+   "format": "WAV",
+   "notes": "Contents not inspected"
+  },
+  {
+   "id": "sampleradar-hip-rock",
+   "title": "SampleRadar hip-rock samples",
+   "url": "https://cdn.mos.musicradar.com/audio/samples/musicradar-hip-rock-samples.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/news/tech/sampleradar-332-free-hip-rock-samples-572060",
+   "category": "loops",
+   "genres": [
+    "rock"
+   ],
+   "homepage": "https://www.musicradar.com/news/tech/sampleradar-332-free-hip-rock-samples-572060",
+   "size": 268671307,
+   "format": "WAV",
+   "notes": "Contents not inspected"
+  },
+  {
+   "id": "freepats-fss-steel-guitar",
+   "title": "FreePats FSS steel-string acoustic guitar (Seagull, FlameStudios subset)",
+   "url": "https://freepats.zenvoid.org/Guitar/FSS-SteelStringGuitar/FSS-SteelStringGuitar-SFZ-20200521.tar.xz",
+   "license": "GPL-3.0-with-FreePats-exception",
+   "licenseUrl": "https://freepats.zenvoid.org/licenses.html#GPL_exception",
+   "category": "guitar",
+   "genres": [
+    "pop",
+    "rock",
+    "indie"
+   ],
+   "homepage": "https://freepats.zenvoid.org/Guitar/steel-acoustic-guitar.html",
+   "size": 13130512,
+   "format": "SFZ+WAV",
+   "notes": "GPL exception: compositions using the sounds are not covered by GPL; small subset"
+  },
+  {
+   "id": "freepats-spanish-classical-guitar",
+   "title": "FreePats Spanish classical (nylon) guitar",
+   "url": "https://freepats.zenvoid.org/Guitar/SpanishClassicalGuitar/SpanishClassicalGuitar-SFZ+FLAC-20190618.7z",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "guitar",
+   "genres": [
+    "pop",
+    "world"
+   ],
+   "homepage": "https://freepats.zenvoid.org/Guitar/acoustic-guitar.html",
+   "size": 7262494,
+   "format": "SFZ+FLAC",
+   "notes": "2008 recording, AKG Perception 120 (SFZ+FLAC variant: the SFZ+WAV 7z uses a Delta+BZip2 filter bsdtar cannot read)"
+  },
+  {
+   "id": "fiedler-natural-concert-guitar",
+   "title": "Natural Concert Guitar (Fiedler): nylon, 4 vel x 3 RR, release samples",
+   "url": "http://www.fiedler-audio.de/cc-sounds/mf-natural-concert-guitar-ogg.zip",
+   "license": "CC-BY-NC-SA-3.0-music-ok",
+   "licenseUrl": "https://www.fiedler-audio.de/creative-commons-library/",
+   "category": "guitar",
+   "genres": [
+    "pop",
+    "world"
+   ],
+   "attribution": "Markus Fiedler (fiedler-audio.de)",
+   "homepage": "https://www.fiedler-audio.de/creative-commons-library/",
+   "size": 12850869,
+   "format": "SFZ+OGG",
+   "notes": "Commercial music production explicitly allowed; lossy OGG source"
+  },
+  {
+   "id": "sampleradar-acoustic-guitar",
+   "title": "SampleRadar acoustic guitar loops (85/120 bpm)",
+   "url": "https://cdn.mos.musicradar.com/audio/samples/musicradar-acoustic-guitar-samples.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/news/tech/sampleradar-266-free-acoustic-guitar-samples-362664",
+   "category": "loops",
+   "genres": [
+    "pop",
+    "indie"
+   ],
+   "homepage": "https://www.musicradar.com/news/tech/sampleradar-266-free-acoustic-guitar-samples-362664",
+   "size": 426174974,
+   "format": "WAV",
+   "notes": "Loops only"
+  },
+  {
+   "id": "sampleradar-undercover",
+   "title": "SampleRadar undercover: guitar chords per key, horn swells, loops",
+   "url": "https://cdn.mos.musicradar.com/audio/samples/musicradar-undercover-samples.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/news/tech/sampleradar-300-free-undercover-samples-627142",
+   "category": "multi",
+   "genres": [
+    "pop",
+    "indie"
+   ],
+   "homepage": "https://www.musicradar.com/news/tech/sampleradar-300-free-undercover-samples-627142",
+   "size": 313269699,
+   "format": "WAV",
+   "notes": "Chord one-shots per key; horn swells per key"
+  },
+  {
+   "id": "karoryfer-black-and-blue-basses",
+   "title": "Black And Blue Basses: 5-string fingered hollowbody + picked solidbody, pp-ff, up to 8 RR",
+   "url": "https://github.com/sfzinstruments/karoryfer.black-and-blue-basses/releases/download/v1.002/Black_And_Blue_Basses_1002.zip",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "bass",
+   "genres": [
+    "rock",
+    "pop",
+    "indie",
+    "funk"
+   ],
+   "homepage": "https://shop.karoryfer.com/pages/free-samples",
+   "size": 1008690586,
+   "format": "SFZ+WAV",
+   "notes": "Ghost notes, staccato, behind-the-bridge, release samples"
+  },
+  {
+   "id": "karoryfer-fashionbass",
+   "title": "Fashionbass: 5 dynamics x 5 RR, mutes, palm mute, muted strums",
+   "url": "https://github.com/sfzinstruments/karoryfer.fashionbass/releases/download/v1.001/Karoryfer.Fashionbass.v1.001.zip",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "bass",
+   "genres": [
+    "pop",
+    "rock",
+    "indie"
+   ],
+   "homepage": "https://shop.karoryfer.com/pages/free-samples",
+   "size": 316328061,
+   "format": "SFZ+WAV"
+  },
+  {
+   "id": "karoryfer-growlybass",
+   "title": "Growlybass: Squier Jazz bass, 4 dynamics, staccato, scrape, 5 RR",
+   "url": "https://github.com/sfzinstruments/karoryfer.growlybass/releases/download/v1.002/Karoryfer.Growlybass.v1.002.zip",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "bass",
+   "genres": [
+    "rock",
+    "funk",
+    "pop"
+   ],
+   "homepage": "https://shop.karoryfer.com/pages/free-samples",
+   "size": 167454256,
+   "format": "SFZ+WAV"
+  },
+  {
+   "id": "karoryfer-swagbass",
+   "title": "Swagbass: p/f/fff, muted slap and palm noises",
+   "url": "https://github.com/sfzinstruments/karoryfer.swagbass/releases/download/v1.001/Karoryfer.Swagbass.v1.001.zip",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "bass",
+   "genres": [
+    "funk",
+    "pop"
+   ],
+   "homepage": "https://shop.karoryfer.com/pages/free-samples",
+   "size": 144579232,
+   "format": "SFZ+WAV"
+  },
+  {
+   "id": "karoryfer-pastabass",
+   "title": "Pastabass: Squier Bass VI, 4 vel x 4 RR, 4 pickup settings",
+   "url": "https://github.com/sfzinstruments/karoryfer.pastabass/releases/download/v1.101/Karoryfer.Pastabass.v1.101.zip",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "bass",
+   "genres": [
+    "indie",
+    "rock"
+   ],
+   "homepage": "https://shop.karoryfer.com/pages/free-samples",
+   "size": 315271331,
+   "format": "SFZ+WAV",
+   "notes": "Bass VI also usable as baritone guitar"
+  },
+  {
+   "id": "karoryfer-big-little-bass",
+   "title": "Big Little Bass: hollowbody bass played high up, p/f x 5 RR",
+   "url": "https://github.com/sfzinstruments/karoryfer.big-little-bass/releases/download/v1.000/Big_Little_Bass_1000.zip",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "bass",
+   "genres": [
+    "indie",
+    "pop"
+   ],
+   "homepage": "https://shop.karoryfer.com/pages/free-samples",
+   "size": 263554264,
+   "format": "SFZ+WAV",
+   "notes": "Thumpy, bass-ukulele-like"
+  },
+  {
+   "id": "fiedler-precision-e-bass",
+   "title": "Precision E-Bass (Fiedler): 8 vel, finger/slap/pop splits, fret noise, slides",
+   "url": "http://www.fiedler-audio.de/cc-sounds/mf-precission-e-bass-ogg.zip",
+   "license": "CC-BY-NC-SA-3.0-music-ok",
+   "licenseUrl": "https://www.fiedler-audio.de/creative-commons-library/",
+   "category": "bass",
+   "genres": [
+    "funk",
+    "pop",
+    "rock"
+   ],
+   "attribution": "Markus Fiedler (fiedler-audio.de)",
+   "homepage": "https://www.fiedler-audio.de/creative-commons-library/",
+   "size": 14024911,
+   "format": "SFZ+OGG",
+   "notes": "Only slap/pop source found but thin (9 slap, 4 pop files); music production allowed; lossy OGG"
+  },
+  {
+   "id": "freepats-bass-yr-picked",
+   "title": "FreePats Bass YR picked (Yamaha RBX)",
+   "url": "https://github.com/freepats/electric-bass-YR/releases/download/2019-09-30/PickedBassYR-SFZ+WAV-20190930.7z",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "bass",
+   "genres": [
+    "pop",
+    "rock"
+   ],
+   "homepage": "https://freepats.zenvoid.org/ElectricGuitar/clean-electric-bass.html",
+   "size": 4715304,
+   "format": "SFZ+WAV",
+   "notes": "Thin: single layer, no RR"
+  },
+  {
+   "id": "sampleradar-bass-guitar",
+   "title": "SampleRadar bass guitar: loops, arpeggios, open fifths, long tones",
+   "url": "https://cdn.mos.musicradar.com/audio/samples/musicradar-bass-guitar-samples.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/news/tech/sampleradar-392-free-bass-guitar-samples-537264",
+   "category": "bass",
+   "genres": [
+    "rock",
+    "pop"
+   ],
+   "homepage": "https://www.musicradar.com/news/tech/sampleradar-392-free-bass-guitar-samples-537264",
+   "size": 242674350,
+   "format": "WAV",
+   "notes": "Mostly loops; long-tone one-shots unnamed by pitch"
+  },
+  {
+   "id": "sampleradar-bass-boutique",
+   "title": "SampleRadar bass boutique samples",
+   "url": "https://cdn.mos.musicradar.com/audio/samples/musicradar-bass-boutique-samples.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/news/tech/sampleradar-195-free-bass-boutique-samples-627150",
+   "category": "bass",
+   "genres": [
+    "rock",
+    "pop"
+   ],
+   "homepage": "https://www.musicradar.com/news/tech/sampleradar-195-free-bass-boutique-samples-627150",
+   "size": 113259935,
+   "format": "WAV",
+   "notes": "Contents not inspected"
+  },
+  {
+   "id": "sampleradar-soulful-keys",
+   "title": "SampleRadar soulful keys: 5 EPs, 3 FM pianos, 4 drawbar organs as multisamples + chord hits",
+   "url": "https://cdn.mos.musicradar.com/audio/sampleradar-soulful-keys-samples.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/news/sampleradar-soulful-keys-samples",
+   "category": "epiano",
+   "genres": [
+    "pop",
+    "funk",
+    "jazz"
+   ],
+   "homepage": "https://www.musicradar.com/news/sampleradar-soulful-keys-samples",
+   "size": 603422140,
+   "format": "SFZ+WAV",
+   "notes": "Multis every minor third C1-C6, 1 layer, note-named WAV + 12 sfz; also loops"
+  },
+  {
+   "id": "sampleradar-funk-keys",
+   "title": "SampleRadar funk keys loops: EP, organ, clav-style, brass synth",
+   "url": "https://cdn.mos.musicradar.com/audio/musicradar-funk-keys-samples.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/music-tech/samples/sampleradar-273-free-funk-keys-samples",
+   "category": "loops",
+   "genres": [
+    "funk"
+   ],
+   "homepage": "https://www.musicradar.com/music-tech/samples/sampleradar-273-free-funk-keys-samples",
+   "size": 132216465,
+   "format": "WAV",
+   "notes": "Loops only"
+  },
+  {
+   "id": "freepats-rock-organ",
+   "title": "FreePats rock organ (Hammond emulation)",
+   "url": "https://freepats.zenvoid.org/Organ/RockOrganEmulation/RockOrganEmulation-SFZ-20190715.tar.xz",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "organ",
+   "genres": [
+    "rock",
+    "pop",
+    "funk"
+   ],
+   "homepage": "https://freepats.zenvoid.org/Organ/electric-organ.html",
+   "size": 12576272,
+   "format": "SFZ+WAV",
+   "notes": "Derived from setBfree synth recordings, not a real tonewheel"
+  },
+  {
+   "id": "freepats-drawbar-organ",
+   "title": "FreePats drawbar organ (Hammond emulation)",
+   "url": "https://freepats.zenvoid.org/Organ/DrawbarOrganEmulation/DrawbarOrganEmulation-SFZ-20190712.tar.xz",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "organ",
+   "genres": [
+    "rock",
+    "pop",
+    "funk"
+   ],
+   "homepage": "https://freepats.zenvoid.org/Organ/electric-organ.html",
+   "size": 6042972,
+   "format": "SFZ+WAV",
+   "notes": "Derived from setBfree synth recordings, not a real tonewheel"
+  },
+  {
+   "id": "freepats-percussive-organ",
+   "title": "FreePats percussive organ (Hammond emulation)",
+   "url": "https://freepats.zenvoid.org/Organ/PercussiveOrganEmulation/PercussiveOrganEmulation-SFZ-20190715.tar.xz",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "organ",
+   "genres": [
+    "rock",
+    "pop",
+    "funk"
+   ],
+   "homepage": "https://freepats.zenvoid.org/Organ/electric-organ.html",
+   "size": 12423412,
+   "format": "SFZ+WAV",
+   "notes": "Derived from setBfree synth recordings, not a real tonewheel"
+  },
+  {
+   "id": "vcsl-keys",
+   "title": "VCSL Keys: upright pianos Y and Knight, grands, harpsichords",
+   "url": "https://versilian-studios.com/Distro/VCSL_Keys.zip",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "piano",
+   "genres": [
+    "pop",
+    "rock",
+    "indie"
+   ],
+   "homepage": "https://versilian-studios.com/vcsl-keys/",
+   "size": 655370475,
+   "format": "SFZ+FLAC",
+   "notes": "Uprights relevant for pop; may overlap classical/jazz agents"
+  },
+  {
+   "id": "freepats-old-piano-fb",
+   "title": "FreePats Old Piano FB: honky-tonk player piano",
+   "url": "https://github.com/freepats/old-piano-FB/releases/download/2020-04-01/PianoFB-SFZ+WAV-20200401.7z",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "piano",
+   "genres": [
+    "rock",
+    "pop",
+    "indie"
+   ],
+   "homepage": "https://freepats.zenvoid.org/Piano/honky-tonk-piano.html",
+   "size": 51138061,
+   "format": "SFZ+WAV"
+  },
+  {
+   "id": "lithalean-clavinet",
+   "title": "Clavinet (Lithalean): 60 chromatic notes x 4 vel, 24-bit",
+   "url": "https://musical-artifacts.com/artifacts/646/Clavinet.zip",
+   "license": "Unclear",
+   "licenseUrl": "https://musical-artifacts.com/artifacts/646",
+   "category": "keys",
+   "genres": [
+    "funk",
+    "rock",
+    "pop"
+   ],
+   "homepage": "https://musical-artifacts.com/artifacts/646",
+   "size": 57271531,
+   "format": "SFZ+WAV",
+   "nested": true,
+   "notes": "UNCLEAR LICENSE ('gray' on musical-artifacts, provenance unknown); zip also holds a Clavinet.sfz.zip duplicate"
+  },
+  {
+   "id": "lithalean-wurlitzer",
+   "title": "Wurlitzer electric piano (Lithalean): 75 samples",
+   "url": "https://musical-artifacts.com/artifacts/645/Wurlitzer.zip",
+   "license": "Unclear",
+   "licenseUrl": "https://musical-artifacts.com/artifacts/645",
+   "category": "epiano",
+   "genres": [
+    "pop",
+    "rock",
+    "funk"
+   ],
+   "homepage": "https://musical-artifacts.com/artifacts/645",
+   "size": 44075832,
+   "format": "SFZ+WAV",
+   "nested": true,
+   "notes": "UNCLEAR LICENSE ('gray' on musical-artifacts, provenance unknown); zip also holds a Wurlitzer.sfz.zip duplicate"
+  },
+  {
+   "id": "karoryfer-caveman-cosmonaut",
+   "title": "Caveman Cosmonaut: 80s Polish analog combo keys (organ, strings, brass-like)",
+   "url": "https://github.com/sfzinstruments/karoryfer.caveman-cosmonaut/releases/download/v1.001/Karoryfer.Caveman_Cosmonaut.v1.001.zip",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "keys",
+   "genres": [
+    "indie",
+    "rock"
+   ],
+   "homepage": "https://shop.karoryfer.com/pages/free-samples",
+   "size": 97546345,
+   "format": "SFZ+WAV",
+   "notes": "Colour instrument"
+  },
+  {
+   "id": "sampleradar-prog-rock",
+   "title": "SampleRadar prog rock: loop kits with organ, phaser-Rhodes, bass, lead guitar one-shots",
+   "url": "https://cdn.mos.musicradar.com/audio/samples/musicradar-prog-rock-samples.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/news/tech/sampleradar-347-free-prog-rock-samples-271141",
+   "category": "multi",
+   "genres": [
+    "rock"
+   ],
+   "homepage": "https://www.musicradar.com/news/tech/sampleradar-347-free-prog-rock-samples-271141",
+   "size": 369331205,
+   "format": "WAV",
+   "notes": "Mostly loops; 'Kit' folders hold 13-21 one-shots per instrument"
+  },
+  {
+   "id": "sampleradar-funk",
+   "title": "SampleRadar funk loops: bass, clavinet, EP, guitar, organ, piano, beats",
+   "url": "https://cdn.mos.musicradar.com/audio/samples/musicradar-funk-samples.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/news/guitars/sampleradar-376-free-funk-samples-228702",
+   "category": "loops",
+   "genres": [
+    "funk"
+   ],
+   "homepage": "https://www.musicradar.com/news/guitars/sampleradar-376-free-funk-samples-228702",
+   "size": 172131766,
+   "format": "WAV",
+   "notes": "Loops only"
+  },
+  {
+   "id": "sampleradar-soul-funk",
+   "title": "SampleRadar soul and funk loops: bass, beats, guitars, Rhodes, organ",
+   "url": "https://cdn.mos.musicradar.com/audio/samples/musicradar-soul-funk-samples.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/news/tech/sampleradar-393-free-soul-and-funk-samples-378865",
+   "category": "loops",
+   "genres": [
+    "funk",
+    "pop"
+   ],
+   "homepage": "https://www.musicradar.com/news/tech/sampleradar-393-free-soul-and-funk-samples-378865",
+   "size": 223959893,
+   "format": "WAV",
+   "notes": "Loops only"
+  },
+  {
+   "id": "sampleradar-pop",
+   "title": "SampleRadar pop loops: bass, beats, synth",
+   "url": "https://cdn.mos.musicradar.com/audio/samples/musicradar-pop-samples.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/news/tech/sampleradar-462-free-pop-samples-406182",
+   "category": "loops",
+   "genres": [
+    "pop"
+   ],
+   "homepage": "https://www.musicradar.com/news/tech/sampleradar-462-free-pop-samples-406182",
+   "size": 297277824,
+   "format": "WAV",
+   "notes": "Loops only"
+  },
+  {
+   "id": "sampleradar-yacht-rock",
+   "title": "SampleRadar yacht rock samples",
+   "url": "https://cdn.mos.musicradar.com/musicradar-yacht-rock-samples.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/music-tech/samples/sampleradar-142-free-yacht-rock-samples",
+   "category": "loops",
+   "genres": [
+    "rock",
+    "pop"
+   ],
+   "homepage": "https://www.musicradar.com/music-tech/samples/sampleradar-142-free-yacht-rock-samples",
+   "size": 206910077,
+   "format": "WAV",
+   "notes": "Contents not inspected"
+  },
+  {
+   "id": "freepats-world-percussion",
+   "title": "FreePats world percussion: cajon, bongos, egg shaker, tambourine, hand clap, conga, maracas",
+   "url": "https://github.com/freepats/world-percussion/releases/download/2020-09-05/WorldPercussion-SFZ+WAV-20200905.7z",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "percussion",
+   "genres": [
+    "pop",
+    "rock",
+    "world",
+    "funk"
+   ],
+   "homepage": "https://freepats.zenvoid.org/Percussion/world-and-rare-percussion.html",
+   "size": 8749854,
+   "format": "SFZ+WAV",
+   "notes": "Round-robin layers; also claves, castanets, darbuka"
+  },
+  {
+   "id": "karoryfer-gogodze-phu-vol-i",
+   "title": "Gogodze Phu Vol I: cajon (2 mics) and Ghanaian bobobo drums, 4 vel x 6 RR",
+   "url": "https://github.com/sfzinstruments/karoryfer.gogodze-phu-vol-i/releases/download/v1.001/Karoryfer.Gogodze_Phu_vol_I.v1.001.zip",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "category": "percussion",
+   "genres": [
+    "world",
+    "pop",
+    "indie"
+   ],
+   "homepage": "https://shop.karoryfer.com/pages/free-samples",
+   "size": 31249753,
+   "format": "SFZ+WAV"
+  },
+  {
+   "id": "hydrogen-gimme-a-hand",
+   "title": "Gimme A Hand 1.0 (Hydrogen): handclaps",
+   "url": "https://sourceforge.net/projects/hydrogen/files/Sound%20Libraries/Main%20sound%20libraries/Gimme%20A%20Hand%201.0.h2drumkit/download",
+   "license": "GPL",
+   "licenseUrl": "https://www.gnu.org/licenses/",
+   "category": "percussion",
+   "genres": [
+    "pop",
+    "rock",
+    "funk"
+   ],
+   "homepage": "https://sourceforge.net/projects/hydrogen/files/Sound%20Libraries/Main%20sound%20libraries/",
+   "size": 1933087,
+   "format": "h2drumkit",
+   "archive": "tar",
+   "filename": "Gimme A Hand 1.0.h2drumkit",
+   "notes": "GPL version unspecified in Hydrogen feed; contents not inspected"
+  },
+  {
+   "id": "sampleradar-stabs",
+   "title": "SampleRadar stabs: horn, string, orch, guitar, organ, piano, bass, synth stabs",
+   "url": "https://cdn.mos.musicradar.com/audio/samples/musicradar-stab-samples.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/news/sampleradar-stab-samples-1",
+   "category": "brass",
+   "genres": [
+    "pop",
+    "funk",
+    "rock"
+   ],
+   "homepage": "https://www.musicradar.com/news/sampleradar-stab-samples-1",
+   "size": 62316497,
+   "format": "WAV",
+   "notes": "Only 8 horn and 5 string stabs; one-shots"
+  },
+  {
+   "id": "sampleradar-ska",
+   "title": "SampleRadar ska: brass section phrases per key, organ, bass, solo horns, beats",
+   "url": "https://cdn.mos.musicradar.com/audio/samples/musicradar-ska-samples.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/news/tech/sampleradar-320-free-ska-samples-269269",
+   "category": "brass",
+   "genres": [
+    "pop",
+    "rock"
+   ],
+   "homepage": "https://www.musicradar.com/news/tech/sampleradar-320-free-ska-samples-269269",
+   "size": 389087286,
+   "format": "WAV",
+   "notes": "Brass phrases at 130 bpm, per key; loops rather than multisamples"
+  },
+  {
+   "id": "sampleradar-percussion",
+   "title": "SampleRadar percussion: cajon and other hand percussion",
+   "url": "https://cdn.mos.musicradar.com/audio/samples/musicradar-percussion-samples.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/news/tech/sampleradar-204-free-percussion-samples-523942",
+   "category": "percussion",
+   "genres": [
+    "pop",
+    "world"
+   ],
+   "homepage": "https://www.musicradar.com/news/tech/sampleradar-204-free-percussion-samples-523942",
+   "size": 41196730,
+   "format": "WAV",
+   "notes": "Includes fills"
+  },
+  {
+   "id": "sampleradar-percussion-loops",
+   "title": "SampleRadar percussion loops: cabasa, cowbell, guiro, shaker etc.",
+   "url": "https://cdn.mos.musicradar.com/audio/samples/musicradar-percussion-loops.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/news/sampleradar-percussion-loops-samples-1",
+   "category": "loops",
+   "genres": [
+    "pop",
+    "funk",
+    "world"
+   ],
+   "homepage": "https://www.musicradar.com/news/sampleradar-percussion-loops-samples-1",
+   "size": 163131062,
+   "format": "WAV",
+   "notes": "Loops 90+ bpm"
+  },
+  {
+   "id": "sampleradar-handheld-noisemakers",
+   "title": "SampleRadar handheld noisemaker samples",
+   "url": "https://cdn.mos.musicradar.com/musicradar-handheld-noisemaker-samples.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/news/sampleradar-handheld-noisemaker-samples",
+   "category": "fx",
+   "genres": [
+    "indie",
+    "pop"
+   ],
+   "homepage": "https://www.musicradar.com/news/sampleradar-handheld-noisemaker-samples",
+   "size": 625698327,
+   "format": "WAV",
+   "notes": "Toy/noisemaker one-shots; contains .DS_Store junk"
+  },
+  {
+   "id": "jester-brutal-ir-pack",
+   "title": "Jester's Brutal Pack: 15 4x12 cab IRs (V30, G12F-60, DV-77; SM57/e606/PDMIC75)",
+   "url": "https://darwinscat.com/sound-utils/cabinet-ir-utility/samples/jesters-brutal-pack.zip",
+   "license": "CC0-1.0",
+   "licenseUrl": "https://darwinscat.com/sound-utils/cabinet-ir-utility",
+   "category": "ir",
+   "genres": [
+    "metal",
+    "rock"
+   ],
+   "homepage": "https://www.jester-dyne-productions.com/brutal-ir-pack/",
+   "size": 3920737,
+   "format": "WAV",
+   "notes": "44.1 and 48 kHz versions; contains .DS_Store"
+  },
+  {
+   "id": "jester-emerald-ir-pack",
+   "title": "Jester's Emerald Pack: 6 Marshall 1960AX Greenback IRs (SM57/e606)",
+   "url": "https://darwinscat.com/sound-utils/cabinet-ir-utility/samples/jesters-emerald-pack.zip",
+   "license": "Freeware-commercial-use",
+   "licenseUrl": "https://www.jester-dyne-productions.com/emerald-ir-pack/",
+   "category": "ir",
+   "genres": [
+    "rock",
+    "pop",
+    "indie"
+   ],
+   "homepage": "https://www.jester-dyne-productions.com/emerald-ir-pack/",
+   "size": 557422,
+   "format": "WAV",
+   "notes": "'Absolutely free even for commercial use'; redistribution terms not stated"
+  },
+  {
+   "id": "kalthallen-cabs-free",
+   "title": "Kalthallen Cabs Free: 4x12 cab IRs for heavy rhythm, tube and SS power amps",
+   "url": "https://shop.kalthallen.de/wp-content/uploads/2022/05/KalthallenCabsIR.rar",
+   "license": "Freeware-no-redistribution",
+   "licenseUrl": "https://shop.kalthallen.de/wp-content/uploads/2016/11/EULA.txt",
+   "category": "ir",
+   "genres": [
+    "metal",
+    "rock"
+   ],
+   "homepage": "https://shop.kalthallen.de/?page_id=423",
+   "size": 6331107,
+   "format": "WAV",
+   "notes": "Donationware EULA: no copying/redistribution/modification of the files; 44.1 and 96 kHz; rar via Windows bsdtar"
+  },
+  {
+   "id": "conners-ir-library",
+   "title": "Conner's IR Library 2.0: 738 IRs incl. JC-120, practice amps, rotary speaker, spaces",
+   "url": "https://github.com/itsmusician/IR-Library/releases/download/v2.0.0/Conners-IR-Library_v2.0.0.zip",
+   "license": "MIT",
+   "licenseUrl": "https://github.com/itsmusician/IR-Library/blob/main/License.md",
+   "category": "ir",
+   "genres": [
+    "rock",
+    "pop",
+    "indie"
+   ],
+   "homepage": "https://github.com/itsmusician/IR-Library",
+   "size": 674227175,
+   "format": "WAV",
+   "notes": "Mostly creative/space IRs; guitar-relevant: Speakers/Amplifiers and Speakers/Rotary"
+  },
+  {
+   "id": "david-fau-casquel-guitar-irs",
+   "title": "David Fau Casquel guitar IRs: 6 amp/cab IRs",
+   "url": "https://musical-artifacts.com/artifacts/156/ImpulseResponses.zip",
+   "license": "CC-BY-3.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+   "category": "ir",
+   "genres": [
+    "rock",
+    "metal"
+   ],
+   "attribution": "David Fau Casquel",
+   "homepage": "https://musical-artifacts.com/artifacts/156",
+   "size": 1634742,
+   "format": "WAV",
+   "notes": "Small personal set; also mirrored at archive.org/details/ImpulseResponses"
+  },
+  {
+   "id": "overdriven-e112-65-classd-ssp1-v1-0",
+   "title": "Overdriven.fr cab IR: DE 1x12 Celestion G12-65, class-D (SSP1)",
+   "url": "https://overdriven.fr/overdriven/index.php/download/german-112-12-65-ssp1-classd/?wpdmdl=5270",
+   "license": "Freeware-no-redistribution",
+   "licenseUrl": "https://overdriven.fr/overdriven/index.php/about/",
+   "category": "ir",
+   "genres": [
+    "rock",
+    "metal",
+    "indie",
+    "pop"
+   ],
+   "homepage": "https://overdriven.fr/overdriven/index.php/de-112-12-65-class-d-home-studio-edition-free-guitar-cab-impulse-responses-download/",
+   "size": 292401,
+   "format": "WAV",
+   "archive": "zip",
+   "filename": "Overdriven-E112-65-CLASSD-SSP1-v1.0.zip",
+   "notes": "24-bit 44.1 kHz multi-mic/position IRs; free for commercial music, no rehosting/redistribution"
+  },
+  {
+   "id": "overdriven-e112-bvv-ssp2-v1-0",
+   "title": "Overdriven.fr cab IR: DE 1x12 BV30V, class-D (G4 SSP2)",
+   "url": "https://overdriven.fr/overdriven/index.php/download/de-112-bv30v-ssp2-classd-g4/?wpdmdl=7506",
+   "license": "Freeware-no-redistribution",
+   "licenseUrl": "https://overdriven.fr/overdriven/index.php/about/",
+   "category": "ir",
+   "genres": [
+    "rock",
+    "metal",
+    "indie",
+    "pop"
+   ],
+   "homepage": "https://overdriven.fr/overdriven/index.php/de-112-bv30v-g4-free-guitar-cab-impulse-responses-download/",
+   "size": 453504,
+   "format": "WAV",
+   "archive": "zip",
+   "filename": "Overdriven-E112-BVV-SSP2-v1.0.zip",
+   "notes": "24-bit 44.1 kHz multi-mic/position IRs; free for commercial music, no rehosting/redistribution"
+  },
+  {
+   "id": "overdriven-e112-cv-classd-ssp2-v1-0",
+   "title": "Overdriven.fr cab IR: DE 1x12 CV, class-D (G4 SSP2)",
+   "url": "https://overdriven.fr/overdriven/index.php/download/de-112-cv-ssp2-classd-g4/?wpdmdl=8171",
+   "license": "Freeware-no-redistribution",
+   "licenseUrl": "https://overdriven.fr/overdriven/index.php/about/",
+   "category": "ir",
+   "genres": [
+    "rock",
+    "metal",
+    "indie",
+    "pop"
+   ],
+   "homepage": "https://overdriven.fr/overdriven/index.php/de-112-cv-g4-free-guitar-cab-impulse-responses-download/",
+   "size": 462987,
+   "format": "WAV",
+   "archive": "zip",
+   "filename": "Overdriven-E112-CV-CLASSD-SSP2-v1.0.zip",
+   "notes": "24-bit 44.1 kHz multi-mic/position IRs; free for commercial music, no rehosting/redistribution"
+  },
+  {
+   "id": "overdriven-e112-gm-g4-ssp2-v1-0",
+   "title": "Overdriven.fr cab IR: DE 1x12 GM, class-D (G4 SSP2)",
+   "url": "https://overdriven.fr/overdriven/index.php/download/de-112-gm-ssp2-classd-g4/?wpdmdl=6874",
+   "license": "Freeware-no-redistribution",
+   "licenseUrl": "https://overdriven.fr/overdriven/index.php/about/",
+   "category": "ir",
+   "genres": [
+    "rock",
+    "metal",
+    "indie",
+    "pop"
+   ],
+   "homepage": "https://overdriven.fr/overdriven/index.php/de-112-gm-g4-free-guitar-cab-impulse-responses-download/",
+   "size": 637897,
+   "format": "WAV",
+   "archive": "zip",
+   "filename": "Overdriven-E112-GM-G4-SSP2-v1.0.zip",
+   "notes": "24-bit 44.1 kHz multi-mic/position IRs; free for commercial music, no rehosting/redistribution"
+  },
+  {
+   "id": "overdriven-e112-gov-classd-ssp1-v1-0",
+   "title": "Overdriven.fr cab IR: DE 1x12 Eminence Governor, class-D (SSP1)",
+   "url": "https://overdriven.fr/overdriven/index.php/download/german-112-gov-ssp1-classd/?wpdmdl=5229",
+   "license": "Freeware-no-redistribution",
+   "licenseUrl": "https://overdriven.fr/overdriven/index.php/about/",
+   "category": "ir",
+   "genres": [
+    "rock",
+    "metal",
+    "indie",
+    "pop"
+   ],
+   "homepage": "https://overdriven.fr/overdriven/index.php/de-112-gov-home-studio-edition-free-guitar-cab-impulse-responses-download/",
+   "size": 506965,
+   "format": "WAV",
+   "archive": "zip",
+   "filename": "Overdriven-E112-GOV-CLASSD-SSP1-v1.0.zip",
+   "notes": "24-bit 44.1 kHz multi-mic/position IRs; free for commercial music, no rehosting/redistribution"
+  },
+  {
+   "id": "overdriven-de-112-t75-g4-classd-ssp2-v1-0",
+   "title": "Overdriven.fr cab IR: DE 1x12 Celestion G12T-75, class-D (G4 SSP2)",
+   "url": "https://overdriven.fr/overdriven/index.php/download/de-112-t-75-ssp2-classd-g4/?wpdmdl=6626",
+   "license": "Freeware-no-redistribution",
+   "licenseUrl": "https://overdriven.fr/overdriven/index.php/about/",
+   "category": "ir",
+   "genres": [
+    "rock",
+    "metal",
+    "indie",
+    "pop"
+   ],
+   "homepage": "https://overdriven.fr/overdriven/index.php/de-112-t-75-g4-free-guitar-cab-impulse-responses-download/",
+   "size": 363652,
+   "format": "WAV",
+   "archive": "zip",
+   "filename": "Overdriven-DE-112-T75-G4-CLASSD-SSP2-v1.0.zip",
+   "notes": "24-bit 44.1 kHz multi-mic/position IRs; free for commercial music, no rehosting/redistribution"
+  },
+  {
+   "id": "overdriven-e112-t75-classd-ssp1-v1-0",
+   "title": "Overdriven.fr cab IR: DE 1x12 Celestion G12T-75, class-D (SSP1)",
+   "url": "https://overdriven.fr/overdriven/index.php/download/german-112-t75-ssp1-classd/?wpdmdl=4903",
+   "license": "Freeware-no-redistribution",
+   "licenseUrl": "https://overdriven.fr/overdriven/index.php/about/",
+   "category": "ir",
+   "genres": [
+    "rock",
+    "metal",
+    "indie",
+    "pop"
+   ],
+   "homepage": "https://overdriven.fr/overdriven/index.php/de-112-t75-home-studio-edition-free-guitar-cab-impulse-responses-download/",
+   "size": 221638,
+   "format": "WAV",
+   "archive": "zip",
+   "filename": "Overdriven-E112-T75-CLASSD-SSP1-v1.0.zip",
+   "notes": "24-bit 44.1 kHz multi-mic/position IRs; free for commercial music, no rehosting/redistribution"
+  },
+  {
+   "id": "overdriven-e112-v30-classd-ssp1-v1-0",
+   "title": "Overdriven.fr cab IR: DE 1x12 Celestion V30, class-D (SSP1)",
+   "url": "https://overdriven.fr/overdriven/index.php/download/german-112-v30-ssp1-classd/?wpdmdl=4847",
+   "license": "Freeware-no-redistribution",
+   "licenseUrl": "https://overdriven.fr/overdriven/index.php/about/",
+   "category": "ir",
+   "genres": [
+    "rock",
+    "metal",
+    "indie",
+    "pop"
+   ],
+   "homepage": "https://overdriven.fr/overdriven/index.php/de-112-v30-home-studio-edition-free-guitar-cab-impulse-responses-download/",
+   "size": 621258,
+   "format": "WAV",
+   "archive": "zip",
+   "filename": "Overdriven-E112-V30-CLASSD-SSP1-v1.0.zip",
+   "notes": "24-bit 44.1 kHz multi-mic/position IRs; free for commercial music, no rehosting/redistribution"
+  },
+  {
+   "id": "overdriven-e112-vt-classd-ssp2-v1-0",
+   "title": "Overdriven.fr cab IR: DE 1x12 VT, class-D (G4 SSP2)",
+   "url": "https://overdriven.fr/overdriven/index.php/download/de-112-vt-ssp2-classd-g4/?wpdmdl=8106",
+   "license": "Freeware-no-redistribution",
+   "licenseUrl": "https://overdriven.fr/overdriven/index.php/about/",
+   "category": "ir",
+   "genres": [
+    "rock",
+    "metal",
+    "indie",
+    "pop"
+   ],
+   "homepage": "https://overdriven.fr/overdriven/index.php/de-112-vt-g4-free-guitar-cab-impulse-responses-download/",
+   "size": 416558,
+   "format": "WAV",
+   "archive": "zip",
+   "filename": "Overdriven-E112-VT-CLASSD-SSP2-v1.0.zip",
+   "notes": "24-bit 44.1 kHz multi-mic/position IRs; free for commercial music, no rehosting/redistribution"
+  },
+  {
+   "id": "overdriven-e112-k100-g4-ssp2-v1-0",
+   "title": "Overdriven.fr cab IR: E112 Celestion G12K-100 (G4 SSP2)",
+   "url": "https://overdriven.fr/overdriven/index.php/download/e112-k-100-ssp2-classd/?wpdmdl=6271",
+   "license": "Freeware-no-redistribution",
+   "licenseUrl": "https://overdriven.fr/overdriven/index.php/about/",
+   "category": "ir",
+   "genres": [
+    "rock",
+    "metal",
+    "indie",
+    "pop"
+   ],
+   "homepage": "https://overdriven.fr/overdriven/index.php/e112-k-100-free-guitar-cab-impulse-responses-download/",
+   "size": 978855,
+   "format": "WAV",
+   "archive": "zip",
+   "filename": "Overdriven-E112-K100-G4-SSP2-v1.0.zip",
+   "notes": "24-bit 44.1 kHz multi-mic/position IRs; free for commercial music, no rehosting/redistribution"
+  },
+  {
+   "id": "overdriven-e112-p50e-classd-ssp2-v1-0",
+   "title": "Overdriven.fr cab IR: E112 P50E, class-D (SSP2)",
+   "url": "https://overdriven.fr/overdriven/index.php/download/e112-p50-ssp2-classd/?wpdmdl=6231",
+   "license": "Freeware-no-redistribution",
+   "licenseUrl": "https://overdriven.fr/overdriven/index.php/about/",
+   "category": "ir",
+   "genres": [
+    "rock",
+    "metal",
+    "indie",
+    "pop"
+   ],
+   "homepage": "https://overdriven.fr/overdriven/index.php/e112-p50-home-studio-edition-free-guitar-cab-impulse-responses-download/",
+   "size": 443089,
+   "format": "WAV",
+   "archive": "zip",
+   "filename": "Overdriven-E112-P50E-CLASSD-SSP2-v1.0.zip",
+   "notes": "24-bit 44.1 kHz multi-mic/position IRs; free for commercial music, no rehosting/redistribution"
+  },
+  {
+   "id": "overdriven-fb-vet30-g4-ssp2-v1-0",
+   "title": "Overdriven.fr cab IR: Fatboy 2x12 WGS Veteran 30, class-D (G4 SSP2)",
+   "url": "https://overdriven.fr/overdriven/index.php/download/fb-212-vet30-ssp2-classd-g4/?wpdmdl=8229",
+   "license": "Freeware-no-redistribution",
+   "licenseUrl": "https://overdriven.fr/overdriven/index.php/about/",
+   "category": "ir",
+   "genres": [
+    "rock",
+    "metal",
+    "indie",
+    "pop"
+   ],
+   "homepage": "https://overdriven.fr/overdriven/index.php/fb-212-vet30-g4-free-guitar-cab-impulse-responses-download/",
+   "size": 521426,
+   "format": "WAV",
+   "archive": "zip",
+   "filename": "Overdriven-FB-VET30-G4-SSP2-v1.0.zip",
+   "notes": "24-bit 44.1 kHz multi-mic/position IRs; free for commercial music, no rehosting/redistribution"
+  },
+  {
+   "id": "overdriven-calif-r112-v30-tubepreamp2-v1-0",
+   "title": "Overdriven.fr cab IR: Calif R112 Celestion V30, tube preamp",
+   "url": "https://overdriven.fr/overdriven/index.php/download/overdriven-calif-r112-v30-tubepreamp2-v1-0-zip/?wpdmdl=3582",
+   "license": "Freeware-no-redistribution",
+   "licenseUrl": "https://overdriven.fr/overdriven/index.php/about/",
+   "category": "ir",
+   "genres": [
+    "rock",
+    "metal",
+    "indie",
+    "pop"
+   ],
+   "homepage": "https://overdriven.fr/overdriven/index.php/ir-calif-r112-celestion-v30-home-studio-edition-free-guitar-cab-impulse-responses-download/",
+   "size": 1375143,
+   "format": "WAV",
+   "archive": "zip",
+   "filename": "Overdriven-Calif-R112-V30-TubePreamp2-v1.0.zip",
+   "notes": "24-bit 44.1 kHz multi-mic/position IRs; free for commercial music, no rehosting/redistribution"
+  },
+  {
+   "id": "overdriven-e112-g12-65-kt88-tubepreamp2-v1-0",
+   "title": "Overdriven.fr cab IR: DE 1x12 Celestion G12-65, KT88 tube amp",
+   "url": "https://overdriven.fr/overdriven/index.php/download/german-112-g1265-tubepreamp2-kt88/?wpdmdl=4802",
+   "license": "Freeware-no-redistribution",
+   "licenseUrl": "https://overdriven.fr/overdriven/index.php/about/",
+   "category": "ir",
+   "genres": [
+    "rock",
+    "metal",
+    "indie",
+    "pop"
+   ],
+   "homepage": "https://overdriven.fr/overdriven/index.php/ir-de-112-12-65-kt88-home-studio-edition-free-guitar-cab-impulse-responses-download/",
+   "size": 388080,
+   "format": "WAV",
+   "archive": "zip",
+   "filename": "Overdriven-E112-G12-65-KT88-TubePreamp2-v1.0.zip",
+   "notes": "24-bit 44.1 kHz multi-mic/position IRs; free for commercial music, no rehosting/redistribution"
+  },
+  {
+   "id": "overdriven-german-112-demon-tubepreamp2-v1-0",
+   "title": "Overdriven.fr cab IR: German 1x12 Hesu Demon, tube preamp",
+   "url": "https://overdriven.fr/overdriven/index.php/download/german-112-demon-tubepreamp2-v1-0-zip/?wpdmdl=3440",
+   "license": "Freeware-no-redistribution",
+   "licenseUrl": "https://overdriven.fr/overdriven/index.php/about/",
+   "category": "ir",
+   "genres": [
+    "rock",
+    "metal",
+    "indie",
+    "pop"
+   ],
+   "homepage": "https://overdriven.fr/overdriven/index.php/ir-german-112-hesu-demon-home-studio-edition-free-guitar-cab-impulse-responses-download/",
+   "size": 241262,
+   "format": "WAV",
+   "archive": "zip",
+   "filename": "Overdriven-German-112-Demon-TubePreamp2-v1.0.zip",
+   "notes": "24-bit 44.1 kHz multi-mic/position IRs; free for commercial music, no rehosting/redistribution"
+  },
+  {
+   "id": "overdriven-o112-clead-tubepreamp2-v1-0",
+   "title": "Overdriven.fr cab IR: O112 Celestion Classic Lead, tube preamp",
+   "url": "https://overdriven.fr/overdriven/index.php/download/overdriven-o112-clead-tubepreamp2-v1-0-zip/?wpdmdl=3044",
+   "license": "Freeware-no-redistribution",
+   "licenseUrl": "https://overdriven.fr/overdriven/index.php/about/",
+   "category": "ir",
+   "genres": [
+    "rock",
+    "metal",
+    "indie",
+    "pop"
+   ],
+   "homepage": "https://overdriven.fr/overdriven/index.php/ir-overdriven-112-celestion-classic-lead-home-studio-edition-free-guitar-cab-impulse-responses-download/",
+   "size": 169128,
+   "format": "WAV",
+   "archive": "zip",
+   "filename": "Overdriven-O112-CLEAD-TubePreamp2-v1.0.zip",
+   "notes": "24-bit 44.1 kHz multi-mic/position IRs; free for commercial music, no rehosting/redistribution"
+  },
+  {
+   "id": "overdriven-112-celestion-h30-tubepreamp2-v1-2",
+   "title": "Overdriven.fr cab IR: 1x12 Celestion G12H30, tube preamp",
+   "url": "https://overdriven.fr/overdriven/index.php/download/overdriven112-celestion-g12h30-tubepreamp2-v1-1-zip/?wpdmdl=2820",
+   "license": "Freeware-no-redistribution",
+   "licenseUrl": "https://overdriven.fr/overdriven/index.php/about/",
+   "category": "ir",
+   "genres": [
+    "rock",
+    "metal",
+    "indie",
+    "pop"
+   ],
+   "homepage": "https://overdriven.fr/overdriven/index.php/ir-overdriven-112-celestion-g12h30-home-studio-edition-free-guitar-cab-impulse-responses-download/",
+   "size": 342951,
+   "format": "WAV",
+   "archive": "zip",
+   "filename": "Overdriven-112-Celestion-H30-TubePreamp2-v1.2.zip",
+   "notes": "24-bit 44.1 kHz multi-mic/position IRs; free for commercial music, no rehosting/redistribution"
+  },
+  {
+   "id": "overdriven-o212-t75-tubepreamp2-v1-0",
+   "title": "Overdriven.fr cab IR: O212 Celestion G12T-75, tube preamp",
+   "url": "https://overdriven.fr/overdriven/index.php/download/overdriven-o212-t75-tubepreamp2-v1-0-zip/?wpdmdl=3151",
+   "license": "Freeware-no-redistribution",
+   "licenseUrl": "https://overdriven.fr/overdriven/index.php/about/",
+   "category": "ir",
+   "genres": [
+    "rock",
+    "metal",
+    "indie",
+    "pop"
+   ],
+   "homepage": "https://overdriven.fr/overdriven/index.php/ir-overdriven-212-celestion-g12-t75-home-studio-edition-free-guitar-cab-impulse-responses-download/",
+   "size": 250614,
+   "format": "WAV",
+   "archive": "zip",
+   "filename": "Overdriven-O212-T75-TubePreamp2-v1.0.zip",
+   "notes": "24-bit 44.1 kHz multi-mic/position IRs; free for commercial music, no rehosting/redistribution"
+  },
+  {
+   "id": "overdriven-calif-212-v30-kt88-ssp1-v1-1",
+   "title": "Overdriven.fr cab IR: Calif 2x12 Celestion V30, KT88 (SSP1)",
+   "url": "https://overdriven.fr/overdriven/index.php/download/overdriven-calif-r212-v30-ssp1-kt88/?wpdmdl=3860",
+   "license": "Freeware-no-redistribution",
+   "licenseUrl": "https://overdriven.fr/overdriven/index.php/about/",
+   "category": "ir",
+   "genres": [
+    "rock",
+    "metal",
+    "indie",
+    "pop"
+   ],
+   "homepage": "https://overdriven.fr/overdriven/index.php/ir-r212-v30-uk-kt88-home-studio-edition-free-guitar-cab-impulse-responses-download/",
+   "size": 654363,
+   "format": "WAV",
+   "archive": "zip",
+   "filename": "Overdriven-Calif-212-V30-KT88-SSP1-v1.1.zip",
+   "notes": "24-bit 44.1 kHz multi-mic/position IRs; free for commercial music, no rehosting/redistribution"
+  },
+  {
+   "id": "overdriven-uk-112-t75-ssp1-v1-0",
+   "title": "Overdriven.fr cab IR: UK 1x12 Celestion G12T-75 (SSP1)",
+   "url": "https://overdriven.fr/overdriven/index.php/download/overdriven-uk-112-t75-ssp1-v1-0-zip/?wpdmdl=3733",
+   "license": "Freeware-no-redistribution",
+   "licenseUrl": "https://overdriven.fr/overdriven/index.php/about/",
+   "category": "ir",
+   "genres": [
+    "rock",
+    "metal",
+    "indie",
+    "pop"
+   ],
+   "homepage": "https://overdriven.fr/overdriven/index.php/ir-uk-112-celestion-g12t75-home-studio-edition-free-guitar-cab-impulse-responses-download/",
+   "size": 548758,
+   "format": "WAV",
+   "archive": "zip",
+   "filename": "Overdriven-UK-112-T75-SSP1-v1.0.zip",
+   "notes": "24-bit 44.1 kHz multi-mic/position IRs; free for commercial music, no rehosting/redistribution"
+  },
+  {
+   "id": "overdriven-uk-112-v30-tubepreamp2-v1-0",
+   "title": "Overdriven.fr cab IR: UK 1x12 Celestion V30, tube preamp",
+   "url": "https://overdriven.fr/overdriven/index.php/download/uk-112-v30-tubepreamp2-v1-0-zip/?wpdmdl=3240",
+   "license": "Freeware-no-redistribution",
+   "licenseUrl": "https://overdriven.fr/overdriven/index.php/about/",
+   "category": "ir",
+   "genres": [
+    "rock",
+    "metal",
+    "indie",
+    "pop"
+   ],
+   "homepage": "https://overdriven.fr/overdriven/index.php/ir-uk-112-celestion-v30-home-studio-edition-free-guitar-cab-impulse-responses-download/",
+   "size": 383891,
+   "format": "WAV",
+   "archive": "zip",
+   "filename": "UK-112-V30-TubePreamp2-v1.0.zip",
+   "notes": "24-bit 44.1 kHz multi-mic/position IRs; free for commercial music, no rehosting/redistribution"
+  },
+  {
+   "id": "overdriven-uk-112-gov-ssp1-v1-0",
+   "title": "Overdriven.fr cab IR: UK 1x12 Eminence Governor (SSP1)",
+   "url": "https://overdriven.fr/overdriven/index.php/download/overdriven-uk-112-gov-ssp1-v1-0-zip/?wpdmdl=3698",
+   "license": "Freeware-no-redistribution",
+   "licenseUrl": "https://overdriven.fr/overdriven/index.php/about/",
+   "category": "ir",
+   "genres": [
+    "rock",
+    "metal",
+    "indie",
+    "pop"
+   ],
+   "homepage": "https://overdriven.fr/overdriven/index.php/ir-uk-112-eminence-the-governor-home-studio-edition-free-guitar-cab-impulse-responses-download/",
+   "size": 550251,
+   "format": "WAV",
+   "archive": "zip",
+   "filename": "Overdriven-UK-112-Gov-SSP1-v1.0.zip",
+   "notes": "24-bit 44.1 kHz multi-mic/position IRs; free for commercial music, no rehosting/redistribution"
+  },
+  {
+   "id": "overdriven-uk-112-demon-ssp1-v1-0",
+   "title": "Overdriven.fr cab IR: UK 1x12 Hesu Demon (SSP1)",
+   "url": "https://overdriven.fr/overdriven/index.php/download/overdriven-uk-112-demon-ssp1-v1-0-zip/?wpdmdl=3628",
+   "license": "Freeware-no-redistribution",
+   "licenseUrl": "https://overdriven.fr/overdriven/index.php/about/",
+   "category": "ir",
+   "genres": [
+    "rock",
+    "metal",
+    "indie",
+    "pop"
+   ],
+   "homepage": "https://overdriven.fr/overdriven/index.php/ir-uk-112-hesu-demon-home-studio-edition-free-guitar-cab-impulse-responses-download/",
+   "size": 384683,
+   "format": "WAV",
+   "archive": "zip",
+   "filename": "Overdriven-UK-112-Demon-SSP1-v1.0.zip",
+   "notes": "24-bit 44.1 kHz multi-mic/position IRs; free for commercial music, no rehosting/redistribution"
+  },
+  {
+   "id": "overdriven-uk-112-stealth-65-ssp1-v1-2",
+   "title": "Overdriven.fr cab IR: UK 1x12 Jensen Tornado Stealth 65 (SSP1)",
+   "url": "https://overdriven.fr/overdriven/index.php/download/overdriven-uk-112-stealth-65-ssp1-v1-0-zip/?wpdmdl=3643",
+   "license": "Freeware-no-redistribution",
+   "licenseUrl": "https://overdriven.fr/overdriven/index.php/about/",
+   "category": "ir",
+   "genres": [
+    "rock",
+    "metal",
+    "indie",
+    "pop"
+   ],
+   "homepage": "https://overdriven.fr/overdriven/index.php/ir-uk-112-jensen-tornado-stealth-65-home-studio-edition-free-guitar-cab-impulse-responses-download/",
+   "size": 378967,
+   "format": "WAV",
+   "archive": "zip",
+   "filename": "Overdriven-UK-112-Stealth-65-SSP1-v1.2.zip",
+   "notes": "24-bit 44.1 kHz multi-mic/position IRs; free for commercial music, no rehosting/redistribution"
+  },
+  {
+   "id": "overdriven-fb-gb-classd-ssp1-v1-0",
+   "title": "Overdriven.fr cab IR: Fatboy 2x12 Greenback, class-D (SSP1)",
+   "url": "https://overdriven.fr/overdriven/index.php/download/overdriven-fatboy-gb-ssp1-classd/?wpdmdl=4239",
+   "license": "Freeware-no-redistribution",
+   "licenseUrl": "https://overdriven.fr/overdriven/index.php/about/",
+   "category": "ir",
+   "genres": [
+    "rock",
+    "metal",
+    "indie",
+    "pop"
+   ],
+   "homepage": "https://overdriven.fr/overdriven/index.php/ir-uk-212-green-class-d-home-studio-edition-free-guitar-cab-impulse-responses-download/",
+   "size": 400721,
+   "format": "WAV",
+   "archive": "zip",
+   "filename": "Overdriven-FB-GB-CLASSD-SSP1-v1.0.zip",
+   "notes": "24-bit 44.1 kHz multi-mic/position IRs; free for commercial music, no rehosting/redistribution"
+  },
+  {
+   "id": "overdriven-fb-gb-kt88-ssp1-v1-0",
+   "title": "Overdriven.fr cab IR: Fatboy 2x12 Greenback, KT88 (SSP1)",
+   "url": "https://overdriven.fr/overdriven/index.php/download/overdriven-uk212-gb-ssp1-kt88/?wpdmdl=4182",
+   "license": "Freeware-no-redistribution",
+   "licenseUrl": "https://overdriven.fr/overdriven/index.php/about/",
+   "category": "ir",
+   "genres": [
+    "rock",
+    "metal",
+    "indie",
+    "pop"
+   ],
+   "homepage": "https://overdriven.fr/overdriven/index.php/ir-uk-212-green-kt88-home-studio-edition-free-guitar-cab-impulse-responses-download/",
+   "size": 863767,
+   "format": "WAV",
+   "archive": "zip",
+   "filename": "Overdriven-FB-GB-KT88-SSP1-v1.0.zip",
+   "notes": "24-bit 44.1 kHz multi-mic/position IRs; free for commercial music, no rehosting/redistribution"
+  },
+  {
+   "id": "overdriven-fb-k100-kt88-ssp1-v1-2",
+   "title": "Overdriven.fr cab IR: Zilla Fatboy 2x12 Celestion G12K-100, KT88",
+   "url": "https://overdriven.fr/overdriven/index.php/download/overdriven-fatboy-k100-ssp1-kt88/?wpdmdl=3811",
+   "license": "Freeware-no-redistribution",
+   "licenseUrl": "https://overdriven.fr/overdriven/index.php/about/",
+   "category": "ir",
+   "genres": [
+    "rock",
+    "metal",
+    "indie",
+    "pop"
+   ],
+   "homepage": "https://overdriven.fr/overdriven/index.php/ir-zilla-fatboy-212-celestion-g12k100-kt88-home-studio-edition-free-guitar-cab-impulse-responses-download/",
+   "size": 1299868,
+   "format": "WAV",
+   "archive": "zip",
+   "filename": "Overdriven-FB-K100-KT88-SSP1-v1.2.zip",
+   "notes": "24-bit 44.1 kHz multi-mic/position IRs; free for commercial music, no rehosting/redistribution"
+  },
+  {
+   "id": "overdriven-fb-v30-kt88-ssp1-v1-0",
+   "title": "Overdriven.fr cab IR: Zilla Fatboy 2x12 Celestion V30, KT88",
+   "url": "https://overdriven.fr/overdriven/index.php/download/overdriven-fatboy-v30-ssp1-kt88/?wpdmdl=3794",
+   "license": "Freeware-no-redistribution",
+   "licenseUrl": "https://overdriven.fr/overdriven/index.php/about/",
+   "category": "ir",
+   "genres": [
+    "rock",
+    "metal",
+    "indie",
+    "pop"
+   ],
+   "homepage": "https://overdriven.fr/overdriven/index.php/ir-zilla-fatboy-212-celestion-v30-kt88-home-studio-edition-free-guitar-cab-impulse-responses-download/",
+   "size": 297731,
+   "format": "WAV",
+   "archive": "zip",
+   "filename": "Overdriven-FB-V30-KT88-SSP1-v1.0.zip",
+   "notes": "24-bit 44.1 kHz multi-mic/position IRs; free for commercial music, no rehosting/redistribution"
+  },
+  {
+   "id": "overdriven-m212-gb55-classd-ssp2-v1-0",
+   "title": "Overdriven.fr cab IR: M 2x12 GB55, class-D (G4 SSP2)",
+   "url": "https://overdriven.fr/overdriven/index.php/download/m212-gb55-ssp2-classd-g4/?wpdmdl=8359",
+   "license": "Freeware-no-redistribution",
+   "licenseUrl": "https://overdriven.fr/overdriven/index.php/about/",
+   "category": "ir",
+   "genres": [
+    "rock",
+    "metal",
+    "indie",
+    "pop"
+   ],
+   "homepage": "https://overdriven.fr/overdriven/index.php/m-212-gb55-g4-free-guitar-cab-impulse-responses-download/",
+   "size": 504477,
+   "format": "WAV",
+   "archive": "zip",
+   "filename": "Overdriven-M212-GB55-CLASSD-SSP2-v1.0.zip",
+   "notes": "24-bit 44.1 kHz multi-mic/position IRs; free for commercial music, no rehosting/redistribution"
+  },
+  {
+   "id": "overdriven-m212-vint-l-g4-classd-ssp2-v1-0",
+   "title": "Overdriven.fr cab IR: M 2x12 VINT-L, class-D (G4 SSP2)",
+   "url": "https://overdriven.fr/overdriven/index.php/download/m-212-l-vint-ssp2-classd-g4/?wpdmdl=6890",
+   "license": "Freeware-no-redistribution",
+   "licenseUrl": "https://overdriven.fr/overdriven/index.php/about/",
+   "category": "ir",
+   "genres": [
+    "rock",
+    "metal",
+    "indie",
+    "pop"
+   ],
+   "homepage": "https://overdriven.fr/overdriven/index.php/m-212-l-vint-g4-free-guitar-cab-impulse-responses-download/",
+   "size": 652837,
+   "format": "WAV",
+   "archive": "zip",
+   "filename": "Overdriven-M212-VINT-L-G4-CLASSD-SSP2-v1.0.zip",
+   "notes": "24-bit 44.1 kHz multi-mic/position IRs; free for commercial music, no rehosting/redistribution"
+  },
+  {
+   "id": "overdriven-m212-p50-ssp2-v1-0",
+   "title": "Overdriven.fr cab IR: M 2x12 P50, class-D (G4 SSP2)",
+   "url": "https://overdriven.fr/overdriven/index.php/download/m212-p50-ssp2-classd-g4/?wpdmdl=7533",
+   "license": "Freeware-no-redistribution",
+   "licenseUrl": "https://overdriven.fr/overdriven/index.php/about/",
+   "category": "ir",
+   "genres": [
+    "rock",
+    "metal",
+    "indie",
+    "pop"
+   ],
+   "homepage": "https://overdriven.fr/overdriven/index.php/m212-p50-g4-free-guitar-cab-impulse-responses-download/",
+   "size": 982684,
+   "format": "WAV",
+   "archive": "zip",
+   "filename": "Overdriven-M212-P50-SSP2-v1.0.zip",
+   "notes": "24-bit 44.1 kHz multi-mic/position IRs; free for commercial music, no rehosting/redistribution"
+  },
+  {
+   "id": "overdriven-r112-v30-g4-ssp2-v1-0",
+   "title": "Overdriven.fr cab IR: R 1x12 Celestion V30, class-D (G4 SSP2)",
+   "url": "https://overdriven.fr/overdriven/index.php/download/r112-v30-ssp2-classd-g4/?wpdmdl=8203",
+   "license": "Freeware-no-redistribution",
+   "licenseUrl": "https://overdriven.fr/overdriven/index.php/about/",
+   "category": "ir",
+   "genres": [
+    "rock",
+    "metal",
+    "indie",
+    "pop"
+   ],
+   "homepage": "https://overdriven.fr/overdriven/index.php/r-112-v30-g4-free-guitar-cab-impulse-responses-download/",
+   "size": 446457,
+   "format": "WAV",
+   "archive": "zip",
+   "filename": "Overdriven-R112-V30-G4-SSP2-v1.0.zip",
+   "notes": "24-bit 44.1 kHz multi-mic/position IRs; free for commercial music, no rehosting/redistribution"
+  },
+  {
+   "id": "overdriven-r112-v30-classd-ssp1-v1-0",
+   "title": "Overdriven.fr cab IR: R 1x12 Celestion V30 (UK), class-D (SSP1)",
+   "url": "https://overdriven.fr/overdriven/index.php/download/calif-f112-v30-ssp1-classd/?wpdmdl=4824",
+   "license": "Freeware-no-redistribution",
+   "licenseUrl": "https://overdriven.fr/overdriven/index.php/about/",
+   "category": "ir",
+   "genres": [
+    "rock",
+    "metal",
+    "indie",
+    "pop"
+   ],
+   "homepage": "https://overdriven.fr/overdriven/index.php/r-112-v30-uk-home-studio-edition-free-guitar-cab-impulse-responses-download/",
+   "size": 499845,
+   "format": "WAV",
+   "archive": "zip",
+   "filename": "Overdriven-R112-V30-CLASSD-SSP1-v1.0.zip",
+   "notes": "24-bit 44.1 kHz multi-mic/position IRs; free for commercial music, no rehosting/redistribution"
+  },
+  {
+   "id": "overdriven-uk-112-v30-classd-ssp1-v1-0",
+   "title": "Overdriven.fr cab IR: UK 1x12 Celestion V30, class-D (SSP1)",
+   "url": "https://overdriven.fr/overdriven/index.php/download/uk-112-v30-ssp1-classd/?wpdmdl=4983",
+   "license": "Freeware-no-redistribution",
+   "licenseUrl": "https://overdriven.fr/overdriven/index.php/about/",
+   "category": "ir",
+   "genres": [
+    "rock",
+    "metal",
+    "indie",
+    "pop"
+   ],
+   "homepage": "https://overdriven.fr/overdriven/index.php/uk-112-v30-class-d-home-studio-edition-free-guitar-cab-impulse-responses-download/",
+   "size": 415150,
+   "format": "WAV",
+   "archive": "zip",
+   "filename": "Overdriven-UK-112-V30-CLASSD-SSP1-v1.0.zip",
+   "notes": "24-bit 44.1 kHz multi-mic/position IRs; free for commercial music, no rehosting/redistribution"
+  },
+  {
+   "id": "overdriven-fb-dem-classd-ssp1-v1-0",
+   "title": "Overdriven.fr cab IR: Fatboy 2x12 Hesu Demon, class-D (SSP1)",
+   "url": "https://overdriven.fr/overdriven/index.php/download/uk-212-demon-ssp1-class-d/?wpdmdl=4450",
+   "license": "Freeware-no-redistribution",
+   "licenseUrl": "https://overdriven.fr/overdriven/index.php/about/",
+   "category": "ir",
+   "genres": [
+    "rock",
+    "metal",
+    "indie",
+    "pop"
+   ],
+   "homepage": "https://overdriven.fr/overdriven/index.php/uk-212-demon-home-studio-edition-free-guitar-cab-impulse-responses-download/",
+   "size": 194789,
+   "format": "WAV",
+   "archive": "zip",
+   "filename": "Overdriven-FB-DEM-CLASSD-SSP1-v1.0.zip",
+   "notes": "24-bit 44.1 kHz multi-mic/position IRs; free for commercial music, no rehosting/redistribution"
+  },
+  {
+   "id": "overdriven-fb-dem-kt88-ssp1-v1-0",
+   "title": "Overdriven.fr cab IR: Fatboy 2x12 Hesu Demon, KT88 (SSP1)",
+   "url": "https://overdriven.fr/overdriven/index.php/download/overdriven-uk-212-demon-ssp1-kt88/?wpdmdl=4363",
+   "license": "Freeware-no-redistribution",
+   "licenseUrl": "https://overdriven.fr/overdriven/index.php/about/",
+   "category": "ir",
+   "genres": [
+    "rock",
+    "metal",
+    "indie",
+    "pop"
+   ],
+   "homepage": "https://overdriven.fr/overdriven/index.php/uk-212-demon-kt88-home-studio-edition-free-guitar-cab-impulse-responses-download/",
+   "size": 513673,
+   "format": "WAV",
+   "archive": "zip",
+   "filename": "Overdriven-FB-DEM-KT88-SSP1-v1.0.zip",
+   "notes": "24-bit 44.1 kHz multi-mic/position IRs; free for commercial music, no rehosting/redistribution"
+  },
+  {
+   "id": "overdriven-212-gov-ssp2-v1-0",
+   "title": "Overdriven.fr cab IR: 2x12 Eminence Governor, class-D (SSP2)",
+   "url": "https://overdriven.fr/overdriven/index.php/download/212-gov-ssp2-classd/?wpdmdl=5925",
+   "license": "Freeware-no-redistribution",
+   "licenseUrl": "https://overdriven.fr/overdriven/index.php/about/",
+   "category": "ir",
+   "genres": [
+    "rock",
+    "metal",
+    "indie",
+    "pop"
+   ],
+   "homepage": "https://overdriven.fr/overdriven/index.php/uk212-gov-home-studio-edition-free-guitar-cab-impulse-responses-download/",
+   "size": 312051,
+   "format": "WAV",
+   "archive": "zip",
+   "filename": "Overdriven-212-GOV-SSP2-v1.0.zip",
+   "notes": "24-bit 44.1 kHz multi-mic/position IRs; free for commercial music, no rehosting/redistribution"
+  },
+  {
+   "id": "overdriven-us-412-v30-classd-ssp1-v1-1",
+   "title": "Overdriven.fr cab IR: US 4x12 Celestion V30, class-D (SSP1)",
+   "url": "https://overdriven.fr/overdriven/index.php/download/overdriven-us412-v30-ssp1-class-d/?wpdmdl=4715",
+   "license": "Freeware-no-redistribution",
+   "licenseUrl": "https://overdriven.fr/overdriven/index.php/about/",
+   "category": "ir",
+   "genres": [
+    "rock",
+    "metal",
+    "indie",
+    "pop"
+   ],
+   "homepage": "https://overdriven.fr/overdriven/index.php/us-412-v30-home-studio-edition-free-guitar-cab-impulse-responses-download/",
+   "size": 811492,
+   "format": "WAV",
+   "archive": "zip",
+   "filename": "Overdriven-US-412-V30-CLASSD-SSP1-v1.1.zip",
+   "notes": "24-bit 44.1 kHz multi-mic/position IRs; free for commercial music, no rehosting/redistribution"
+  },
+  {
+   "id": "sampleradar-80s-synths",
+   "title": "SampleRadar 80s synths: 24 multisampled Arturia-V 80s synths (CZ, DX, Fairlight, Jupiter-8, Matrix-12, OB, Prophet, Synclavier) + loops",
+   "url": "https://cdn.mos.musicradar.com/audio/samples/sampleradar-80s-synths-free-sample-pack.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/news/sampleradar-free-80s-synth-samples",
+   "category": "synth",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop"
+   ],
+   "homepage": "https://www.musicradar.com/news/sampleradar-free-80s-synth-samples",
+   "size": 1002744506,
+   "format": "WAV 24-bit/44.1 stereo + SFZ",
+   "notes": "Multisamples C1-C4 at C/D#/F#/A, note-named files + 24 SFZ; loop points only in WAV smpl chunks/SFZ (sampler needs explicit loopStart/loopEnd); __MACOSX junk"
+  },
+  {
+   "id": "sampleradar-976-classic-synth",
+   "title": "SampleRadar 976 classic synth: real ARP Solina string/brass multis, ARP Odyssey, Roland System-100, TR-808/909/SR-16/DDM-110 hits",
+   "url": "https://cdn.mos.musicradar.com/audio/samples/musicradar-synth-samples.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/news/tech/sampleradar-976-free-classic-synth-samples-225241",
+   "category": "multi",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop"
+   ],
+   "homepage": "https://www.musicradar.com/news/tech/sampleradar-976-free-classic-synth-samples-225241",
+   "size": 301951480,
+   "format": "WAV 16-bit/44.1",
+   "notes": "Solina Violin/Viola/Cello/Contrabass/Horn/Trumpet (modulated + unmodulated, 12-29 notes each), Odyssey 5x36 and System-100 multis; 193 real drum machine hits"
+  },
+  {
+   "id": "sampleradar-classic-synth-pop",
+   "title": "SampleRadar classic synth pop: 124 drum hits, 12 synth multis (Moog brass, vintage strings, SH-09, CS-5), loops, FX",
+   "url": "https://cdn.mos.musicradar.com/audio/samples/sampleradar-free-classic-synth-pop-samples.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/news/sampleradar-free-classic-synth-pop-samples",
+   "category": "multi",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop"
+   ],
+   "homepage": "https://www.musicradar.com/news/sampleradar-free-classic-synth-pop-samples",
+   "size": 292909402,
+   "format": "WAV 24-bit/44.1",
+   "notes": "Multis 9-22 notes each; 97 loops and 57 beats are tempo-bound"
+  },
+  {
+   "id": "sampleradar-analogue-polysynths",
+   "title": "SampleRadar analogue polysynths: 16 Prophet/Juno/Jupiter-style poly patches x 36 notes + 337 chord hits",
+   "url": "https://cdn.mos.musicradar.com/audio/musicradar-analogue-polysynths-samples.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/news/sampleradar-analogue-polysynths-samples",
+   "category": "synth",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop"
+   ],
+   "homepage": "https://www.musicradar.com/news/sampleradar-analogue-polysynths-samples",
+   "size": 1219888057,
+   "format": "WAV 16-bit/44.1 stereo",
+   "notes": "White-key multisamples C0-C5, note-named; source synths not named (likely soft synths through Arsenal R24/ISA828); .nki files unusable"
+  },
+  {
+   "id": "sampleradar-midi-orchestra",
+   "title": "SampleRadar MIDI orchestra: 22 vintage ROM/sampler orchestral multis (TronStrings, DX100, CZ, Akai S01, 80s short brass) + chord hits",
+   "url": "https://cdn.mos.musicradar.com/audio/musicradar-midi-orchestra-samples.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/music-tech/samples/sampleradar-533-free-midi-orchestra-samples",
+   "category": "orchestra",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop"
+   ],
+   "homepage": "https://www.musicradar.com/music-tech/samples/sampleradar-533-free-midi-orchestra-samples",
+   "size": 313029319,
+   "format": "WAV 16-bit/44.1",
+   "notes": "282 multisample WAVs (7-15 notes each, note-named), 125 chord hits, 123 loops"
+  },
+  {
+   "id": "sampleradar-70s-synths",
+   "title": "SampleRadar 70s synths: chord hits and pad lines (Solina, CS-80, Mellotron, Moog, ARP, SEM emulations)",
+   "url": "https://cdn.mos.musicradar.com/audio/samples/sampleradar-free-70s-synth-samples.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/news/sampleradar-free-70s-synth-samples",
+   "category": "synth",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop"
+   ],
+   "homepage": "https://www.musicradar.com/news/sampleradar-free-70s-synth-samples",
+   "size": 615976597,
+   "format": "WAV 24-bit/44.1",
+   "notes": "Arturia V Collection emulations through outboard; 92 chord hits (8 per patch), 79 tempo pad lines"
+  },
+  {
+   "id": "sampleradar-spiritual",
+   "title": "SampleRadar spiritual: choir chord hits (new-age/fake choir), Tron and Ahh choir loops, organs, prayer bowls",
+   "url": "https://cdn.mos.musicradar.com/audio/samples/musicradar-spiritual-samples.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/news/tech/sampleradar-346-free-spiritual-samples-626733",
+   "category": "choir",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop"
+   ],
+   "homepage": "https://www.musicradar.com/news/tech/sampleradar-346-free-spiritual-samples-626733",
+   "size": 540640957,
+   "format": "WAV 24-bit/44.1",
+   "notes": "Choir chords: New_Age_Choir 50, Fake_Choir 37; other choir material is tempo loops"
+  },
+  {
+   "id": "sampleradar-transition-tools",
+   "title": "SampleRadar transition tools: 250 risers, sweeps, impacts, drops, whooshes, lasers",
+   "url": "https://cdn.mos.musicradar.com/audio/samples/musicradar-transition-samples.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/news/sampleradar-250-transition-tools-samples",
+   "category": "fx",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop"
+   ],
+   "homepage": "https://www.musicradar.com/news/sampleradar-250-transition-tools-samples",
+   "size": 320758628,
+   "format": "WAV 24-bit/44.1",
+   "notes": "Single flat folder, descriptive file names"
+  },
+  {
+   "id": "sampleradar-fx",
+   "title": "SampleRadar FX: reverse cymbals, reverses, radio noise/scratching, spinbacks and stops, SH-101 FX, synth noises",
+   "url": "https://cdn.mos.musicradar.com/audio/samples/musicradar-fx-samples.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/news/tech/sampleradar-395-free-fx-and-sweetener-samples-236648",
+   "category": "fx",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop"
+   ],
+   "homepage": "https://www.musicradar.com/news/tech/sampleradar-395-free-fx-and-sweetener-samples-236648",
+   "size": 276095426,
+   "format": "WAV 24-bit/44.1",
+   "notes": "FX half of the 395 FX & sweeteners giveaway: reverse cymbals 18, reverses 30, radio 30, spinbacks/stops 23"
+  },
+  {
+   "id": "sampleradar-sweeteners",
+   "title": "SampleRadar sweeteners: atmospheric drones, pads and textures (395 FX & sweeteners pack)",
+   "url": "https://cdn.mos.musicradar.com/audio/samples/musicradar-sweetener-samples.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/news/tech/sampleradar-395-free-fx-and-sweetener-samples-236648",
+   "category": "fx",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop"
+   ],
+   "homepage": "https://www.musicradar.com/news/tech/sampleradar-395-free-fx-and-sweetener-samples-236648",
+   "size": 348424036,
+   "format": "WAV",
+   "notes": "Sweetener half of the 395 FX & sweeteners giveaway; some note-named multis (e.g. AlienMinstrals C0-C4)"
+  },
+  {
+   "id": "sampleradar-noise-hiss-crackle",
+   "title": "SampleRadar noise, hiss and crackle: tape noise, vinyl noise, white noise, filtered noise sweeps, noise hits",
+   "url": "https://cdn.mos.musicradar.com/audio/samples/musicradar-noise-hiss-crackle-samples.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/news/tech/sampleradar-502-free-noise-hiss-and-crackle-samples-627134",
+   "category": "fx",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop"
+   ],
+   "homepage": "https://www.musicradar.com/news/tech/sampleradar-502-free-noise-hiss-and-crackle-samples-627134",
+   "size": 262559016,
+   "format": "WAV 16-bit/44.1",
+   "notes": "Tape_Noise 10, Vinyl_Noise 88, White_Noise_Raw 13, Filtered_Noise 149, Gated_Seq_Noise 130, noise hits 82"
+  },
+  {
+   "id": "sampleradar-synth-impacts",
+   "title": "SampleRadar synth impacts: 136 synth impacts + 110 synth-drum impacts",
+   "url": "https://cdn.mos.musicradar.com/audio/samples/sampleradar-synth-impacts-samples.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/news/sampleradar-free-synth-impacts-samples",
+   "category": "fx",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop"
+   ],
+   "homepage": "https://www.musicradar.com/news/sampleradar-free-synth-impacts-samples",
+   "size": 164249597,
+   "format": "WAV 16-bit/44.1",
+   "notes": "Oscillator/noise-based impacts, one-shots"
+  },
+  {
+   "id": "sampleradar-tape-treated",
+   "title": "SampleRadar tape treated: cassette drum hits, cassette sounds, tape FX one-shots, tape-worn synth multis, tape loops",
+   "url": "https://cdn.mos.musicradar.com/audio/samples/sampleradar-tape-treated-samples.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/news/sampleradar-tape-treated-samples",
+   "category": "fx",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop"
+   ],
+   "homepage": "https://www.musicradar.com/news/sampleradar-tape-treated-samples",
+   "size": 424085423,
+   "format": "WAV 24-bit/44.1",
+   "notes": "Cassette Drum Hits 137, Cassette Sounds 17, FX single shots 105, Multis 73, Tape Loops 55, Tape Beats 100"
+  },
+  {
+   "id": "sampleradar-vinyl-style",
+   "title": "SampleRadar vinyl-style: crackle, skipped-record FX, vinyl drum hits and loops",
+   "url": "https://cdn.mos.musicradar.com/audio/samples/musicradar-vinyl-style-samples.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/news/tech/sampleradar-243-free-vinyl-style-samples-277010",
+   "category": "fx",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop"
+   ],
+   "homepage": "https://www.musicradar.com/news/tech/sampleradar-243-free-vinyl-style-samples-277010",
+   "size": 111805023,
+   "format": "WAV 16-bit/44.1",
+   "notes": "Crackle 20, SkippedStuff 65, DrumHits 68, Hits 20, Drumloops 70"
+  },
+  {
+   "id": "sampleradar-338-fx",
+   "title": "SampleRadar 338 FX: old sci-fi FX, robot voice FX, industrial ambience, abstract FX, hydrophone collage",
+   "url": "https://cdn.mos.musicradar.com/audio/samples/musicradar-effect-samples.zip",
+   "license": "Royalty-free-no-redistribution",
+   "licenseUrl": "https://www.musicradar.com/news/tech/sampleradar-338-free-fx-samples-287277",
+   "category": "fx",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop"
+   ],
+   "homepage": "https://www.musicradar.com/news/tech/sampleradar-338-free-fx-samples-287277",
+   "size": 475234378,
+   "format": "WAV 24-bit/44.1",
+   "notes": "Old SciFi Raw 112, Robot Voice FX 78, Industrial Ambience 26"
+  },
+  {
+   "id": "tidal-drum-machines",
+   "title": "tidal-drum-machines: 72 drum machines, 2774 one-shots (LinnDrum, LM-1, DMX, TR-808/909/707/727, SDS-5, SP-12, Drumulator...)",
+   "url": "https://github.com/geikha/tidal-drum-machines/archive/refs/heads/main.zip",
+   "license": "Unclear-free-download",
+   "licenseUrl": "https://github.com/geikha/tidal-drum-machines",
+   "category": "drums",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop"
+   ],
+   "homepage": "https://github.com/geikha/tidal-drum-machines",
+   "size": 251817616,
+   "format": "WAV 16/24-bit/44.1",
+   "filename": "tidal-drum-machines-main.zip",
+   "notes": "LICENSE UNCLEAR: repo has no LICENSE and no source credits (ritchse/ URL redirects here); size = unpacked WAV total (GitHub archive sends no Content-Length); folders bd/sd/hh/oh/cp/cr/rd/ht/mt/lt need GM renaming"
+  },
+  {
+   "id": "hyperreal-linndrum",
+   "title": "Hyperreal LinnDrum: 30 one-shots (kick, snares, hats, toms, congas, cabasa, crash, ride, clap)",
+   "url": "http://machines.hyperreal.org/manufacturers/Linn/LinnDrum/samples/linndrum.zip",
+   "license": "Unclear-free-download",
+   "licenseUrl": "http://machines.hyperreal.org/manufacturers/Linn/LinnDrum/samples/",
+   "category": "drums",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop"
+   ],
+   "homepage": "http://machines.hyperreal.org/manufacturers/Linn/LinnDrum/samples/",
+   "size": 1135153,
+   "format": "WAV 16-bit/44.1 mono",
+   "notes": "LICENSE UNCLEAR: user-contributed Hyperreal Music Machines upload, no license stated (sampled by majortom@muc.de)"
+  },
+  {
+   "id": "hyperreal-tr808-fischer",
+   "title": "Hyperreal TR-808 Michael Fischer set (1994): 116 hits across knob positions (BD 25, CY 25, toms, congas, SD...)",
+   "url": "http://machines.hyperreal.org/manufacturers/Roland/TR-808/samples/TR808all.zip",
+   "license": "Freeware-free-to-use",
+   "licenseUrl": "http://machines.hyperreal.org/manufacturers/Roland/TR-808/samples/",
+   "category": "drums",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop"
+   ],
+   "homepage": "http://machines.hyperreal.org/manufacturers/Roland/TR-808/samples/",
+   "size": 7591522,
+   "format": "WAV 16-bit/44.1 mono",
+   "notes": "LICENSE UNCLEAR: readme only states the samples are absolutely free, no formal license; per-voice folders BD/SD/CH/OH/CP/CY..."
+  },
+  {
+   "id": "hyperreal-tr909",
+   "title": "Hyperreal TR-909: 160 one-shots, all voices incl. parameter variations",
+   "url": "http://machines.hyperreal.org/manufacturers/Roland/TR-909/samples/TR909all.zip",
+   "license": "Unclear-free-download",
+   "licenseUrl": "http://machines.hyperreal.org/manufacturers/Roland/TR-909/samples/",
+   "category": "drums",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop"
+   ],
+   "homepage": "http://machines.hyperreal.org/manufacturers/Roland/TR-909/samples/",
+   "size": 4297280,
+   "format": "WAV 16-bit/44.1 mono",
+   "notes": "LICENSE UNCLEAR: user-contributed Hyperreal Music Machines upload, no license stated; coded file names (e.g. BT0A0D0.WAV), see TR909.TXT on the page"
+  },
+  {
+   "id": "hyperreal-tr707",
+   "title": "Hyperreal TR-707: 15 one-shots",
+   "url": "http://machines.hyperreal.org/manufacturers/Roland/TR-707/samples/tr707.zip",
+   "license": "Unclear-free-download",
+   "licenseUrl": "http://machines.hyperreal.org/manufacturers/Roland/TR-707/samples/",
+   "category": "drums",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop"
+   ],
+   "homepage": "http://machines.hyperreal.org/manufacturers/Roland/TR-707/samples/",
+   "size": 403334,
+   "format": "WAV 16-bit/44.1 mono",
+   "notes": "LICENSE UNCLEAR: user-contributed Hyperreal Music Machines upload, no license stated"
+  },
+  {
+   "id": "hyperreal-tr606",
+   "title": "Hyperreal TR-606: 8 one-shots",
+   "url": "http://machines.hyperreal.org/manufacturers/Roland/TR-606/samples/tr606kit.zip",
+   "license": "Unclear-free-download",
+   "licenseUrl": "http://machines.hyperreal.org/manufacturers/Roland/TR-606/samples/",
+   "category": "drums",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop"
+   ],
+   "homepage": "http://machines.hyperreal.org/manufacturers/Roland/TR-606/samples/",
+   "size": 284674,
+   "format": "WAV 16-bit/44.1 mono",
+   "notes": "LICENSE UNCLEAR: user-contributed Hyperreal Music Machines upload, no license stated"
+  },
+  {
+   "id": "hyperreal-tr727",
+   "title": "Hyperreal TR-727: 13 Latin percussion one-shots",
+   "url": "http://machines.hyperreal.org/manufacturers/Roland/TR-727/samples/tr727.zip",
+   "license": "Unclear-free-download",
+   "licenseUrl": "http://machines.hyperreal.org/manufacturers/Roland/TR-727/samples/",
+   "category": "drums",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop"
+   ],
+   "homepage": "http://machines.hyperreal.org/manufacturers/Roland/TR-727/samples/",
+   "size": 460442,
+   "format": "WAV 16-bit/44.1 mono",
+   "notes": "LICENSE UNCLEAR: user-contributed Hyperreal Music Machines upload, no license stated"
+  },
+  {
+   "id": "hyperreal-cr8000",
+   "title": "Hyperreal Roland CompuRhythm CR-8000: 13 one-shots",
+   "url": "http://machines.hyperreal.org/manufacturers/Roland/CompuRhythm/samples/cr8kkit.zip",
+   "license": "Unclear-free-download",
+   "licenseUrl": "http://machines.hyperreal.org/manufacturers/Roland/CompuRhythm/samples/",
+   "category": "drums",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop"
+   ],
+   "homepage": "http://machines.hyperreal.org/manufacturers/Roland/CompuRhythm/samples/",
+   "size": 281379,
+   "format": "WAV 16-bit/44.1 mono",
+   "notes": "LICENSE UNCLEAR: user-contributed Hyperreal Music Machines upload, no license stated"
+  },
+  {
+   "id": "hyperreal-tr505",
+   "title": "Hyperreal TR-505: 16 one-shots",
+   "url": "http://machines.hyperreal.org/manufacturers/Roland/TR-505/samples/tr505.zip",
+   "license": "Unclear-free-download",
+   "licenseUrl": "http://machines.hyperreal.org/manufacturers/Roland/TR-505/samples/",
+   "category": "drums",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop"
+   ],
+   "homepage": "http://machines.hyperreal.org/manufacturers/Roland/TR-505/samples/",
+   "size": 396117,
+   "format": "WAV 16-bit/44.1 mono",
+   "notes": "LICENSE UNCLEAR: user-contributed Hyperreal Music Machines upload, no license stated"
+  },
+  {
+   "id": "hyperreal-tr626",
+   "title": "Hyperreal TR-626: 30 one-shots",
+   "url": "http://machines.hyperreal.org/manufacturers/Roland/TR-626/samples/roland-tr626.zip",
+   "license": "Unclear-free-download",
+   "licenseUrl": "http://machines.hyperreal.org/manufacturers/Roland/TR-626/samples/",
+   "category": "drums",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop"
+   ],
+   "homepage": "http://machines.hyperreal.org/manufacturers/Roland/TR-626/samples/",
+   "size": 869693,
+   "format": "WAV 16-bit/44.1 mono",
+   "notes": "LICENSE UNCLEAR: user-contributed Hyperreal Music Machines upload, no license stated"
+  },
+  {
+   "id": "hyperreal-drumtraks",
+   "title": "Hyperreal Sequential Drumtraks: 13 one-shots",
+   "url": "http://machines.hyperreal.org/manufacturers/Sequential/Drumtraks/samples/Drumtraks.zip",
+   "license": "Unclear-free-download",
+   "licenseUrl": "http://machines.hyperreal.org/manufacturers/Sequential/Drumtraks/samples/",
+   "category": "drums",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop"
+   ],
+   "homepage": "http://machines.hyperreal.org/manufacturers/Sequential/Drumtraks/samples/",
+   "size": 555885,
+   "format": "WAV 16-bit/44.1 mono",
+   "notes": "LICENSE UNCLEAR: user-contributed Hyperreal Music Machines upload, no license stated"
+  },
+  {
+   "id": "hyperreal-sequential-tom",
+   "title": "Hyperreal Sequential Circuits Tom: 8 one-shots",
+   "url": "http://machines.hyperreal.org/manufacturers/Sequential/Tom/samples/sc-tom.zip",
+   "license": "Unclear-free-download",
+   "licenseUrl": "http://machines.hyperreal.org/manufacturers/Sequential/Tom/samples/",
+   "category": "drums",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop"
+   ],
+   "homepage": "http://machines.hyperreal.org/manufacturers/Sequential/Tom/samples/",
+   "size": 219524,
+   "format": "WAV 16-bit/44.1 mono",
+   "notes": "LICENSE UNCLEAR: user-contributed Hyperreal Music Machines upload, no license stated"
+  },
+  {
+   "id": "hyperreal-rx21",
+   "title": "Hyperreal Yamaha RX21: 9 one-shots",
+   "url": "http://machines.hyperreal.org/manufacturers/Yamaha/RX/samples/rx21.zip",
+   "license": "Unclear-free-download",
+   "licenseUrl": "http://machines.hyperreal.org/manufacturers/Yamaha/RX/samples/",
+   "category": "drums",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop"
+   ],
+   "homepage": "http://machines.hyperreal.org/manufacturers/Yamaha/RX/samples/",
+   "size": 283395,
+   "format": "WAV 16-bit/44.1 mono",
+   "notes": "LICENSE UNCLEAR: user-contributed Hyperreal Music Machines upload, no license stated"
+  },
+  {
+   "id": "hyperreal-rz1",
+   "title": "Hyperreal Casio RZ-1: 12 one-shots",
+   "url": "http://machines.hyperreal.org/manufacturers/Casio/RZ-1/samples/casiorz1.zip",
+   "license": "Unclear-free-download",
+   "licenseUrl": "http://machines.hyperreal.org/manufacturers/Casio/RZ-1/samples/",
+   "category": "drums",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop"
+   ],
+   "homepage": "http://machines.hyperreal.org/manufacturers/Casio/RZ-1/samples/",
+   "size": 291741,
+   "format": "WAV 16-bit/44.1 mono",
+   "notes": "LICENSE UNCLEAR: user-contributed Hyperreal Music Machines upload, no license stated; odd nested WINDOWS/Desktop path inside zip"
+  },
+  {
+   "id": "hyperreal-kpr77",
+   "title": "Hyperreal Korg KPR-77: 8 one-shots",
+   "url": "http://machines.hyperreal.org/manufacturers/Korg/KPR-77/samples/kpr77kit.zip",
+   "license": "Unclear-free-download",
+   "licenseUrl": "http://machines.hyperreal.org/manufacturers/Korg/KPR-77/samples/",
+   "category": "drums",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop"
+   ],
+   "homepage": "http://machines.hyperreal.org/manufacturers/Korg/KPR-77/samples/",
+   "size": 334937,
+   "format": "WAV 16-bit/44.1 mono",
+   "notes": "LICENSE UNCLEAR: user-contributed Hyperreal Music Machines upload, no license stated"
+  },
+  {
+   "id": "hyperreal-dr110",
+   "title": "Hyperreal Boss DR-110: 6 one-shots",
+   "url": "http://machines.hyperreal.org/manufacturers/Boss/DR-110/samples/dr110kit.zip",
+   "license": "Unclear-free-download",
+   "licenseUrl": "http://machines.hyperreal.org/manufacturers/Boss/DR-110/samples/",
+   "category": "drums",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop"
+   ],
+   "homepage": "http://machines.hyperreal.org/manufacturers/Boss/DR-110/samples/",
+   "size": 259595,
+   "format": "WAV 16-bit/44.1 mono",
+   "notes": "LICENSE UNCLEAR: user-contributed Hyperreal Music Machines upload, no license stated"
+  },
+  {
+   "id": "mellotron-sfz",
+   "title": "Mellotron-SFZ (Leisureland samples): 23 Mellotron tapes x 36 notes (MkII violins, string section, 8 choir, flute, brass, cello...)",
+   "url": "https://github.com/ExistentiaVirae/Mellotron-SFZ/archive/refs/heads/main.zip",
+   "license": "Free-to-use-not-in-commercial-software",
+   "licenseUrl": "https://github.com/ExistentiaVirae/Mellotron-SFZ",
+   "category": "multi",
+   "genres": [
+    "synthwave",
+    "rock",
+    "pop",
+    "film"
+   ],
+   "attribution": "Mellotron samples by Bernie Kornowicz (leisureland.us), SFZ by ExistentiaVirae",
+   "homepage": "https://github.com/ExistentiaVirae/Mellotron-SFZ",
+   "size": 543801215,
+   "format": "WAV 16-bit/44.1 mono + SFZ",
+   "filename": "Mellotron-SFZ-main.zip",
+   "notes": "LICENSE UNCLEAR: sample owner (quoted in README; leisureland.us unreachable) allows free use but not in commercial for-profit software; music use OK; size = sum of repo files"
+  },
+  {
+   "id": "fairlight-cmi-library-1-3",
+   "title": "Fairlight CMI Sound Library Rev 1.3: 566 original 8-bit samples (ORCH1-13 incl. ORCH5, CHOIR, AAHH, SARARR, strings, brass)",
+   "url": "https://archive.org/download/cmi-sound-library-rev-1.3/CMI%20Sound%20Library%20Rev%201.3.zip",
+   "license": "Unclear-free-download",
+   "licenseUrl": "https://archive.org/details/cmi-sound-library-rev-1.3",
+   "category": "multi",
+   "genres": [
+    "synthwave",
+    "pop",
+    "electronic"
+   ],
+   "homepage": "https://archive.org/details/cmi-sound-library-rev-1.3",
+   "size": 5900135,
+   "format": "WAV 8-bit/14080 Hz mono",
+   "notes": "LICENSE UNCLEAR: Fairlight factory library extracted from the QasarBeach demo, anonymous archive.org upload without license; one sample per voice (no key mapping)"
+  },
+  {
+   "id": "voxengo-im-reverbs",
+   "title": "Voxengo IM Reverbs: 38 modelled IRs (halls, churches, rooms, silo, cabinets)",
+   "url": "https://www.voxengo.com/files/impulses/IMreverbs.zip",
+   "license": "Voxengo-royalty-free",
+   "licenseUrl": "https://www.voxengo.com/impulses/",
+   "category": "ir",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop",
+    "film"
+   ],
+   "attribution": "Voxengo",
+   "homepage": "https://www.voxengo.com/impulses/",
+   "size": 7070884,
+   "format": "WAV 16-bit/44.1 stereo",
+   "notes": "Royalty-free for any purpose incl. commercial; files may not be sold or redistributed for profit"
+  },
+  {
+   "id": "echothief",
+   "title": "EchoThief IR library: 115 real North American spaces (stairwells, underpasses, caves, brutalism, venues)",
+   "url": "https://www.echothief.com/wp-content/uploads/2024/07/EchoThiefImpulseResponseLibrary.zip",
+   "license": "EchoThief-derivative-ok",
+   "licenseUrl": "https://www.echothief.com/downloads/",
+   "category": "ir",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop",
+    "film"
+   ],
+   "attribution": "EchoThief Impulse Response Library, Chris Warren",
+   "homepage": "https://www.echothief.com/",
+   "size": 29344334,
+   "format": "WAV 24-bit/44.1 stereo",
+   "notes": "License PDF in zip allows derivative work such as convolution reverb, other uses by permission; .DS_Store junk"
+  },
+  {
+   "id": "mit-ir-survey",
+   "title": "MIT IR Survey (Traer & McDermott): 270 everyday real-world spaces",
+   "url": "https://mcdermottlab.mit.edu/Reverb/IRMAudio/Audio.zip",
+   "license": "CC-BY-4.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+   "category": "ir",
+   "genres": [
+    "film",
+    "electronic"
+   ],
+   "attribution": "Traer & McDermott (2016), MIT McDermott Lab IR Survey",
+   "homepage": "https://mcdermottlab.mit.edu/Reverb/IR_Survey.html",
+   "size": 11660005,
+   "format": "WAV 24-bit/32 kHz mono",
+   "notes": "LICENSE UNCLEAR: CC BY 4.0 per Hugging Face mirror, not stated on the MIT page; research IRs, not musical halls"
+  },
+  {
+   "id": "hopkins-irs",
+   "title": "Greg Hopkins IRs: 223 IRs (EMT 140, Ecoplate, AKG BX20 spring, Lexicon 480L/PCM60/300, Yamaha REV7, spaces)",
+   "url": "https://www.dropbox.com/scl/fo/vfup5zwd81bpc2gsyi828/AKuoXO0yIq4mIdnPqfrqSOU?rlkey=43gb44voipzpbkntlulvaij5j&dl=1",
+   "license": "CC-BY-unverified",
+   "licenseUrl": "https://oramics.github.io/sampled/IR/EMT140-Plate/",
+   "category": "ir",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop",
+    "film"
+   ],
+   "attribution": "Greg Hopkins, Hopkins Media Services",
+   "homepage": "https://www.facebook.com/hopkinsmediaservices/",
+   "size": 401973620,
+   "format": "WAV",
+   "filename": "Hopkins Impulse Responses.zip",
+   "notes": "LICENSE UNCLEAR: CC Attribution per Sampled metadata for the EMT set only, author site dead; Dropbox folder zip built on the fly (no resume), contents not inspected"
+  },
+  {
+   "id": "samplicity-bricasti-m7",
+   "title": "Samplicity Bricasti M7 IRs 2023-10: 134 presets (27 halls, 23 plates, 35 rooms, 17 chambers, 15 ambiences, 17 spaces)",
+   "url": "https://cdn.samplicity.com/downloads/Samplicity%20-%20Bricasti%20IRs%20version%202023-10.zip",
+   "license": "Freeware-free-of-charge-as-is",
+   "licenseUrl": "https://samplicity.com/downloads/",
+   "category": "ir",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop",
+    "film"
+   ],
+   "attribution": "Samplicity",
+   "homepage": "https://samplicity.com/downloads/",
+   "size": 1010987594,
+   "format": "WAV 32-bit float 44.1/48k",
+   "notes": "LICENSE UNCLEAR: offered free of charge and as-is, no explicit usage grant; L/R stereo pairs + 4-ch quad files (engine reads 2 channels: use left-right folders)"
+  },
+  {
+   "id": "grant-nelson-lexicon-480l",
+   "title": "Grant Nelson (Big Gee's) Lexicon 480L: 54 IRs incl. gated ambience, halls, plates, rooms",
+   "url": "https://grantnelson.co/download/bglex480.zip",
+   "license": "Unclear-free-download",
+   "licenseUrl": "https://grantnelson.co/article/1/lexicon-480l-free-impulse-responses",
+   "category": "ir",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop",
+    "film"
+   ],
+   "attribution": "Grant Nelson",
+   "homepage": "https://grantnelson.co/article/1/lexicon-480l-free-impulse-responses",
+   "size": 21998729,
+   "format": "AIFF + Altiverb/Space Designer presets",
+   "convert": [
+    "aif",
+    "aiff"
+   ],
+   "notes": "LICENSE UNCLEAR: released as a free download, no license text; AIFF converted to WAV"
+  },
+  {
+   "id": "little-devil-224xl-01-concert-hall",
+   "title": "Little Devil Lexicon 224XL IRs: 01 Concert Hall",
+   "url": "https://www.dropbox.com/scl/fi/0gy94g2e46xbrwf5w3vav/01-Concert-Hall.zip?rlkey=959qte7dah82i1ak64z9k3m7r&dl=1",
+   "license": "Unclear-free-download",
+   "licenseUrl": "http://littledevilstudios.com.au/2015/03/lexicon-224xl-impulse-response-library/",
+   "category": "ir",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop",
+    "film"
+   ],
+   "attribution": "Little Devil Studios",
+   "homepage": "http://littledevilstudios.com.au/2015/03/lexicon-224xl-impulse-response-library/",
+   "size": 11304260,
+   "format": "WAV 24-bit/96k",
+   "filename": "01 Concert Hall.zip",
+   "notes": "LICENSE UNCLEAR: offered as a free download, no terms stated; true stereo as .L/.R WAV pairs; Avid Space WAV set"
+  },
+  {
+   "id": "little-devil-224xl-02-bright-hall",
+   "title": "Little Devil Lexicon 224XL IRs: 02 Bright Hall",
+   "url": "https://www.dropbox.com/scl/fi/ua6ptkiq0zth73oywupsd/02-Bright-Hall.zip?rlkey=5s5wfpyn9rqh85q2q9gmm3odf&dl=1",
+   "license": "Unclear-free-download",
+   "licenseUrl": "http://littledevilstudios.com.au/2015/03/lexicon-224xl-impulse-response-library/",
+   "category": "ir",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop",
+    "film"
+   ],
+   "attribution": "Little Devil Studios",
+   "homepage": "http://littledevilstudios.com.au/2015/03/lexicon-224xl-impulse-response-library/",
+   "size": 8179473,
+   "format": "WAV 24-bit/96k",
+   "filename": "02 Bright Hall.zip",
+   "notes": "LICENSE UNCLEAR: offered as a free download, no terms stated; true stereo as .L/.R WAV pairs; Avid Space WAV set"
+  },
+  {
+   "id": "little-devil-224xl-03-dark-hall",
+   "title": "Little Devil Lexicon 224XL IRs: 03 Dark Hall",
+   "url": "https://www.dropbox.com/scl/fi/3xmnyqgb86fiuvlevvece/03-Dark-Hall.zip?rlkey=53a61avjvdtd02dbf78oug3jv&dl=1",
+   "license": "Unclear-free-download",
+   "licenseUrl": "http://littledevilstudios.com.au/2015/03/lexicon-224xl-impulse-response-library/",
+   "category": "ir",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop",
+    "film"
+   ],
+   "attribution": "Little Devil Studios",
+   "homepage": "http://littledevilstudios.com.au/2015/03/lexicon-224xl-impulse-response-library/",
+   "size": 12929849,
+   "format": "WAV 24-bit/96k",
+   "filename": "03 Dark Hall.zip",
+   "notes": "LICENSE UNCLEAR: offered as a free download, no terms stated; true stereo as .L/.R WAV pairs; Avid Space WAV set"
+  },
+  {
+   "id": "little-devil-224xl-06-chamber",
+   "title": "Little Devil Lexicon 224XL IRs: 06 Chamber",
+   "url": "https://www.dropbox.com/scl/fi/d7hpeyjuupcp0949s9378/06-Chamber.zip?rlkey=borqp74i5xfxple4dea6rbjer&dl=1",
+   "license": "Unclear-free-download",
+   "licenseUrl": "http://littledevilstudios.com.au/2015/03/lexicon-224xl-impulse-response-library/",
+   "category": "ir",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop",
+    "film"
+   ],
+   "attribution": "Little Devil Studios",
+   "homepage": "http://littledevilstudios.com.au/2015/03/lexicon-224xl-impulse-response-library/",
+   "size": 1593832,
+   "format": "WAV 24-bit/96k",
+   "filename": "06 Chamber.zip",
+   "notes": "LICENSE UNCLEAR: offered as a free download, no terms stated; true stereo as .L/.R WAV pairs; Avid Space WAV set"
+  },
+  {
+   "id": "little-devil-224xl-08-rich-chamber",
+   "title": "Little Devil Lexicon 224XL IRs: 08 Rich Chamber",
+   "url": "https://www.dropbox.com/scl/fi/c2uqdgv1yk6hibbgunpjd/08-Rich-Chamber.zip?rlkey=spefozwvmtvqs4lxazr41gtxs&dl=1",
+   "license": "Unclear-free-download",
+   "licenseUrl": "http://littledevilstudios.com.au/2015/03/lexicon-224xl-impulse-response-library/",
+   "category": "ir",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop",
+    "film"
+   ],
+   "attribution": "Little Devil Studios",
+   "homepage": "http://littledevilstudios.com.au/2015/03/lexicon-224xl-impulse-response-library/",
+   "size": 14475215,
+   "format": "WAV 24-bit/96k",
+   "filename": "08 Rich Chamber.zip",
+   "notes": "LICENSE UNCLEAR: offered as a free download, no terms stated; true stereo as .L/.R WAV pairs; Avid Space WAV set"
+  },
+  {
+   "id": "little-devil-224xl-07-dark-chamber",
+   "title": "Little Devil Lexicon 224XL IRs: 07 Dark Chamber",
+   "url": "https://www.dropbox.com/scl/fi/uguvkod0sickh8q1j4xf8/07-Dark-Chamber.zip?rlkey=otykmnjnl2v3yag24bm5ezqxn&dl=1",
+   "license": "Unclear-free-download",
+   "licenseUrl": "http://littledevilstudios.com.au/2015/03/lexicon-224xl-impulse-response-library/",
+   "category": "ir",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop",
+    "film"
+   ],
+   "attribution": "Little Devil Studios",
+   "homepage": "http://littledevilstudios.com.au/2015/03/lexicon-224xl-impulse-response-library/",
+   "size": 9661400,
+   "format": "WAV 24-bit/96k",
+   "filename": "07 Dark Chamber.zip",
+   "notes": "LICENSE UNCLEAR: offered as a free download, no terms stated; true stereo as .L/.R WAV pairs; Avid Space WAV set"
+  },
+  {
+   "id": "little-devil-224xl-04-room",
+   "title": "Little Devil Lexicon 224XL IRs: 04 Room",
+   "url": "https://www.dropbox.com/scl/fi/ehdk07bf3n6fi86fvt3la/04-Room.zip?rlkey=dqnxeiyjenc9jk2lfibugz792&dl=1",
+   "license": "Unclear-free-download",
+   "licenseUrl": "http://littledevilstudios.com.au/2015/03/lexicon-224xl-impulse-response-library/",
+   "category": "ir",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop",
+    "film"
+   ],
+   "attribution": "Little Devil Studios",
+   "homepage": "http://littledevilstudios.com.au/2015/03/lexicon-224xl-impulse-response-library/",
+   "size": 4301160,
+   "format": "WAV 24-bit/96k",
+   "filename": "04 Room.zip",
+   "notes": "LICENSE UNCLEAR: offered as a free download, no terms stated; true stereo as .L/.R WAV pairs; Avid Space WAV set"
+  },
+  {
+   "id": "little-devil-224xl-05-small-room",
+   "title": "Little Devil Lexicon 224XL IRs: 05 Small Room",
+   "url": "https://www.dropbox.com/scl/fi/7gtlyc2u6c5j1iya02aas/05-Small-Room.zip?rlkey=dezyvz85af8vkygzbmk90sghu&dl=1",
+   "license": "Unclear-free-download",
+   "licenseUrl": "http://littledevilstudios.com.au/2015/03/lexicon-224xl-impulse-response-library/",
+   "category": "ir",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop",
+    "film"
+   ],
+   "attribution": "Little Devil Studios",
+   "homepage": "http://littledevilstudios.com.au/2015/03/lexicon-224xl-impulse-response-library/",
+   "size": 12254159,
+   "format": "WAV 24-bit/96k",
+   "filename": "05 Small Room.zip",
+   "notes": "LICENSE UNCLEAR: offered as a free download, no terms stated; true stereo as .L/.R WAV pairs; Avid Space WAV set"
+  },
+  {
+   "id": "little-devil-224xl-09-inverse-room",
+   "title": "Little Devil Lexicon 224XL IRs: 09 Inverse Room",
+   "url": "https://www.dropbox.com/scl/fi/3924y3guwqyohx0bsrkgt/09-Inverse-Room.zip?rlkey=pry3o2636vxqsbi1plnsebfic&dl=1",
+   "license": "Unclear-free-download",
+   "licenseUrl": "http://littledevilstudios.com.au/2015/03/lexicon-224xl-impulse-response-library/",
+   "category": "ir",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop",
+    "film"
+   ],
+   "attribution": "Little Devil Studios",
+   "homepage": "http://littledevilstudios.com.au/2015/03/lexicon-224xl-impulse-response-library/",
+   "size": 3554892,
+   "format": "WAV 24-bit/96k",
+   "filename": "09 Inverse Room.zip",
+   "notes": "LICENSE UNCLEAR: offered as a free download, no terms stated; true stereo as .L/.R WAV pairs; Avid Space WAV set"
+  },
+  {
+   "id": "little-devil-224xl-10-plate",
+   "title": "Little Devil Lexicon 224XL IRs: 10 Plate",
+   "url": "https://www.dropbox.com/scl/fi/xws8u66fgzn7m7cet8n7r/10-Plate.zip?rlkey=c1669663fztp2wlfv4xebo1xa&dl=1",
+   "license": "Unclear-free-download",
+   "licenseUrl": "http://littledevilstudios.com.au/2015/03/lexicon-224xl-impulse-response-library/",
+   "category": "ir",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop",
+    "film"
+   ],
+   "attribution": "Little Devil Studios",
+   "homepage": "http://littledevilstudios.com.au/2015/03/lexicon-224xl-impulse-response-library/",
+   "size": 11325400,
+   "format": "WAV 24-bit/96k",
+   "filename": "10 Plate.zip",
+   "notes": "LICENSE UNCLEAR: offered as a free download, no terms stated; true stereo as .L/.R WAV pairs; Avid Space WAV set"
+  },
+  {
+   "id": "little-devil-224xl-13-cd-plate-a",
+   "title": "Little Devil Lexicon 224XL IRs: 13 CD Plate A",
+   "url": "https://www.dropbox.com/scl/fi/xp69q031017aze76p749c/13-CD-Plate-A.zip?rlkey=ds5vvs8f2zmwu05e72o6u6821&dl=1",
+   "license": "Unclear-free-download",
+   "licenseUrl": "http://littledevilstudios.com.au/2015/03/lexicon-224xl-impulse-response-library/",
+   "category": "ir",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop",
+    "film"
+   ],
+   "attribution": "Little Devil Studios",
+   "homepage": "http://littledevilstudios.com.au/2015/03/lexicon-224xl-impulse-response-library/",
+   "size": 1507519,
+   "format": "WAV 24-bit/96k",
+   "filename": "13 CD Plate A.zip",
+   "notes": "LICENSE UNCLEAR: offered as a free download, no terms stated; true stereo as .L/.R WAV pairs; Avid Space WAV set"
+  },
+  {
+   "id": "little-devil-224xl-12-cd-plate-b",
+   "title": "Little Devil Lexicon 224XL IRs: 12 CD Plate B",
+   "url": "https://www.dropbox.com/scl/fi/6bm4v0e9930rx7lara7st/12-CD-Plate-B.zip?rlkey=aosy1gkkjl0qy9546n14qpy4i&dl=1",
+   "license": "Unclear-free-download",
+   "licenseUrl": "http://littledevilstudios.com.au/2015/03/lexicon-224xl-impulse-response-library/",
+   "category": "ir",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop",
+    "film"
+   ],
+   "attribution": "Little Devil Studios",
+   "homepage": "http://littledevilstudios.com.au/2015/03/lexicon-224xl-impulse-response-library/",
+   "size": 4008432,
+   "format": "WAV 24-bit/96k",
+   "filename": "12 CD Plate B.zip",
+   "notes": "LICENSE UNCLEAR: offered as a free download, no terms stated; true stereo as .L/.R WAV pairs; Avid Space WAV set"
+  },
+  {
+   "id": "little-devil-224xl-14-rich-plate",
+   "title": "Little Devil Lexicon 224XL IRs: 14 Rich Plate",
+   "url": "https://www.dropbox.com/scl/fi/7hrfof09zm0lyglrtgmee/14-Rich-Plate.zip?rlkey=jxjlmbo3mmrjux5ki5lsh140b&dl=1",
+   "license": "Unclear-free-download",
+   "licenseUrl": "http://littledevilstudios.com.au/2015/03/lexicon-224xl-impulse-response-library/",
+   "category": "ir",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop",
+    "film"
+   ],
+   "attribution": "Little Devil Studios",
+   "homepage": "http://littledevilstudios.com.au/2015/03/lexicon-224xl-impulse-response-library/",
+   "size": 13627458,
+   "format": "WAV 24-bit/96k",
+   "filename": "14 Rich Plate.zip",
+   "notes": "LICENSE UNCLEAR: offered as a free download, no terms stated; true stereo as .L/.R WAV pairs; Avid Space WAV set"
+  },
+  {
+   "id": "little-devil-224xl-11-small-plate",
+   "title": "Little Devil Lexicon 224XL IRs: 11 Small Plate",
+   "url": "https://www.dropbox.com/scl/fi/ydbhaa3uew2nx3bzr8tkx/11-Small-Plate.zip?rlkey=30olczej3mv01zwzpxathxe4j&dl=1",
+   "license": "Unclear-free-download",
+   "licenseUrl": "http://littledevilstudios.com.au/2015/03/lexicon-224xl-impulse-response-library/",
+   "category": "ir",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop",
+    "film"
+   ],
+   "attribution": "Little Devil Studios",
+   "homepage": "http://littledevilstudios.com.au/2015/03/lexicon-224xl-impulse-response-library/",
+   "size": 11243091,
+   "format": "WAV 24-bit/96k",
+   "filename": "11 Small Plate.zip",
+   "notes": "LICENSE UNCLEAR: offered as a free download, no terms stated; true stereo as .L/.R WAV pairs; Avid Space WAV set"
+  },
+  {
+   "id": "little-devil-224xl-ts-halls",
+   "title": "Little Devil Lexicon 224XL true-stereo IRs: Halls",
+   "url": "https://www.dropbox.com/scl/fi/6ta1a16lbg2i0dufcn4xg/Halls.zip?rlkey=de7h2otj7rqmccak2u7hyqbm2&dl=1",
+   "license": "Unclear-free-download",
+   "licenseUrl": "http://littledevilstudios.com.au/2015/03/lexicon-224xl-impulse-response-library/",
+   "category": "ir",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop",
+    "film"
+   ],
+   "attribution": "Little Devil Studios",
+   "homepage": "http://littledevilstudios.com.au/2015/03/lexicon-224xl-impulse-response-library/",
+   "size": 39061069,
+   "format": "WAV 24-bit/96k",
+   "filename": "Halls.zip",
+   "notes": "LICENSE UNCLEAR: offered as a free download, no terms stated; true stereo as .L/.R WAV pairs; true-stereo set (Reverberate)"
+  },
+  {
+   "id": "little-devil-224xl-ts-rooms",
+   "title": "Little Devil Lexicon 224XL true-stereo IRs: Rooms",
+   "url": "https://www.dropbox.com/scl/fi/nze0mi5q9a97iqten4n06/Rooms.zip?rlkey=8w1t58esk20kcmr9jw3urjg30&dl=1",
+   "license": "Unclear-free-download",
+   "licenseUrl": "http://littledevilstudios.com.au/2015/03/lexicon-224xl-impulse-response-library/",
+   "category": "ir",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop",
+    "film"
+   ],
+   "attribution": "Little Devil Studios",
+   "homepage": "http://littledevilstudios.com.au/2015/03/lexicon-224xl-impulse-response-library/",
+   "size": 14563253,
+   "format": "WAV 24-bit/96k",
+   "filename": "Rooms.zip",
+   "notes": "LICENSE UNCLEAR: offered as a free download, no terms stated; true stereo as .L/.R WAV pairs; true-stereo set (Reverberate)"
+  },
+  {
+   "id": "little-devil-224xl-ts-chambers",
+   "title": "Little Devil Lexicon 224XL true-stereo IRs: Chambers",
+   "url": "https://www.dropbox.com/scl/fi/9c3sumthmjzwfjsa21jj9/Chambers.zip?rlkey=t4yaq3hri9nwnroy24urg29nl&dl=1",
+   "license": "Unclear-free-download",
+   "licenseUrl": "http://littledevilstudios.com.au/2015/03/lexicon-224xl-impulse-response-library/",
+   "category": "ir",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop",
+    "film"
+   ],
+   "attribution": "Little Devil Studios",
+   "homepage": "http://littledevilstudios.com.au/2015/03/lexicon-224xl-impulse-response-library/",
+   "size": 30459893,
+   "format": "WAV 24-bit/96k",
+   "filename": "Chambers.zip",
+   "notes": "LICENSE UNCLEAR: offered as a free download, no terms stated; true stereo as .L/.R WAV pairs; true-stereo set (Reverberate)"
+  },
+  {
+   "id": "little-devil-224xl-ts-plates",
+   "title": "Little Devil Lexicon 224XL true-stereo IRs: Plates",
+   "url": "https://www.dropbox.com/scl/fi/v6lchraz0tf5slxkzeg2f/Plates.zip?rlkey=128alf3cbyvgsjl5hpqrybu6y&dl=1",
+   "license": "Unclear-free-download",
+   "licenseUrl": "http://littledevilstudios.com.au/2015/03/lexicon-224xl-impulse-response-library/",
+   "category": "ir",
+   "genres": [
+    "synthwave",
+    "electronic",
+    "pop",
+    "film"
+   ],
+   "attribution": "Little Devil Studios",
+   "homepage": "http://littledevilstudios.com.au/2015/03/lexicon-224xl-impulse-response-library/",
+   "size": 48521771,
+   "format": "WAV 24-bit/96k",
+   "filename": "Plates.zip",
+   "notes": "LICENSE UNCLEAR: offered as a free download, no terms stated; true stereo as .L/.R WAV pairs; true-stereo set (Reverberate)"
+  }
+ ]
+}
