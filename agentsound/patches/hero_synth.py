@@ -48,7 +48,8 @@ from ..vamod import env, lfo
 from . import inst, layer
 from . import sampled, synthwave_leads_fx  # noqa: F401  (the layers' source patches must be registered first)
 
-VERSION = 1
+VERSION = 2  # v2: hero/darksynth_lead's sync layer without the patch's own micro-pitch double (it sat before the tube
+#              drive, which then ground the doubled voices together; the chain's 'double' after the drive is the width)
 
 # Stack patch levels (gain_db), audition-calibrated to -18.0 LUFS.
 LEVELS = {'synth_lead': 1.9, 'synth_piano': -1.5, 'darksynth_lead': 4.6}
@@ -71,6 +72,14 @@ def _voice(**kw):
                    env(a=0.0, d=0.07, id='scoop') >> ('pitch', -22)])
     p.update(kw)
     return inst.va(**p)
+
+
+def _sync_dry():
+    """synthwave/sync_lead without its micro-pitch double: the darksynth hero drives the layers (tube drive, before
+    its eq) and doubles after that - a doubler in front of the drive would be ground into it."""
+    from . import get
+    p = get('synthwave/sync_lead')
+    return p.with_fx(*[f for f in p.fx if f.type != 'microshift'], replace=True)
 
 
 def _octave(**kw):
@@ -215,7 +224,7 @@ _reg('synth_piano',
            'saw into the last chorus.')
 
 _reg('darksynth_lead',
-     layer('synthwave/sync_lead', 'sync', pedal=False, **{'amp.velocity': 1.0, 'filter.velocity': 1.2, 'cutoff': 2600}),
+     layer(_sync_dry(), 'sync', pedal=False, **{'amp.velocity': 1.0, 'filter.velocity': 1.2, 'cutoff': 2600}),
      layer(_octave(osc1__wave='saw', cutoff=700, filter__drive=0.6), 'octave', transpose=-12, level=-11, pedal=False,
            keys=('G#4', 'C8'), keyfade=5),
      stages={'drive': {'mode': 'tube', 'drive': 8, 'tone': -1},

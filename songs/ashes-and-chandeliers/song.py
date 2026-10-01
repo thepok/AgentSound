@@ -97,6 +97,8 @@ MIX = {
         'plate': {'riff': 4.0, 'anthem': 6.0, 'anthem2': 6.0, 'solo': 6.0, 'riff2': 4.0, 'break': 4.0},
         'hall': {'riff': 3.0, 'anthem': 5.5, 'anthem2': 4.0, 'solo': 6.0, 'riff2': 3.0, 'break': 3.0},
         'room': {'riff': 2.0, 'anthem': 3.0, 'anthem2': 3.0, 'solo': 3.0, 'riff2': 2.0, 'break': 2.0},
+        # (the rock band's room is two returns now: the kit's crushed drum_room and the band's clean room)
+        'drum_room': {'riff': 2.0, 'anthem': 3.0, 'anthem2': 3.0, 'solo': 3.0, 'riff2': 2.0, 'break': 2.0},
     },
     'eq': {
         # the mid / presence surplus (mid +4.3, presence +3.5 vs the film balance): the hall return's honk and edge,

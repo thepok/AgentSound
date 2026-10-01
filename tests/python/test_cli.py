@@ -270,6 +270,10 @@ class AnalysisSettings(unittest.TestCase):
         self.assertNotIn('analysis', r)
         with self.assertRaisesRegex(cli.CliError, 'my.py: ANALYSIS: unknown analysis profile'):
             cli.apply_analysis({}, {'profile': 'x'}, None, 'my.py: ANALYSIS')
+        # the compiler's own keys (silent notes, a singer's phrase-trigger tracks) pass through untouched
+        r = {'analysis': {'audioOnsets': ['vocal'], 'silentNotes': [{'track': 'x'}]}}
+        self.assertEqual(cli.apply_analysis(r, {'profile': 'jazz'}), {'profile': 'jazz'})
+        self.assertEqual(r['analysis'], {'profile': 'jazz', 'audioOnsets': ['vocal'], 'silentNotes': [{'track': 'x'}]})
 
     def test_song_file_analysis_and_profile_flag(self):
         d = self.song("\nANALYSIS = {'profile': 'synthwave', 'loudness': [-12, -9]}\n")

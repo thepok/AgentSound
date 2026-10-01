@@ -74,6 +74,23 @@ Curve parseCurve(const json& v, const std::string& path) {
     fail(path, "curve must be linear|exp|smooth|step, got '" + s + "'");
 }
 
+// "post" | "prefader" | "prefx" | "pre:<i>" (i: 0..999; checked against the tapped node's chain later).
+int parseTap(const json& object, const std::string& path) {
+    if (!object.contains("tap")) return kTapPost;
+    const std::string where = path + ".tap";
+    if (!object.at("tap").is_string()) fail(where, "must be a string: post|prefader|prefx|pre:<insert index>");
+    const std::string s = object.at("tap").get<std::string>();
+    if (s == "post") return kTapPost;
+    if (s == "prefader") return kTapPreFader;
+    if (s == "prefx") return 0;
+    if (s.rfind("pre:", 0) == 0) {
+        const std::string d = s.substr(4);
+        if (!d.empty() && d.size() <= 3 && std::all_of(d.begin(), d.end(), [](char c) { return c >= '0' && c <= '9'; }))
+            return std::stoi(d);
+    }
+    fail(where, "must be post|prefader|prefx|pre:<insert index>, got '" + s + "'");
+}
+
 std::vector<FxSpec> parseFx(const json& node, const std::string& path) {
     std::vector<FxSpec> chain;
     if (!node.contains("fx")) return chain;
@@ -81,7 +98,7 @@ std::vector<FxSpec> parseFx(const json& node, const std::string& path) {
     if (!fx.is_array()) fail(path + ".fx", "must be an array");
     for (std::size_t i = 0; i < fx.size(); ++i) {
         const std::string p = path + ".fx[" + std::to_string(i) + "]";
-        allowOnly(fx[i], p, {"type", "params", "sidechain"});
+        allowOnly(fx[i], p, {"type", "params", "sidechain", "tap"});
         FxSpec spec;
         spec.path = p;
         spec.type = string(fx[i], "type", p);
@@ -90,6 +107,9 @@ std::vector<FxSpec> parseFx(const json& node, const std::string& path) {
             spec.params = fx[i].at("params");
         }
         if (fx[i].contains("sidechain")) spec.sidechain = string(fx[i], "sidechain", p);
+        if (fx[i].contains("tap") && spec.sidechain.empty())
+            fail(p + ".tap", "taps the sidechain key, but this effect has no \"sidechain\"");
+        spec.sidechainTap = parseTap(fx[i], p);
         chain.push_back(std::move(spec));
     }
     return chain;
@@ -193,9 +213,10 @@ void parseSource(const json& src, const std::string& sp, ModulatorSpec& m) {
             m.loop = src.at("loop").get<bool>();
         }
     } else if (type == "follow") {
-        allowOnly(src, sp, {"type", "node", "attackMs", "releaseMs", "gainDb"});
+        allowOnly(src, sp, {"type", "node", "attackMs", "releaseMs", "gainDb", "tap"});
         m.source = ModSource::Follow;
         m.followNode = string(src, "node", sp);
+        m.followTap = parseTap(src, sp);
         m.attackMs = number(src, "attackMs", sp, 0.0, kMaxFollowMs, 5.0);
         m.releaseMs = number(src, "releaseMs", sp, 0.0, kMaxFollowMs, 120.0);
         m.gainDb = number(src, "gainDb", sp, -kMaxFollowGainDb, kMaxFollowGainDb, 0.0);
@@ -300,12 +321,23 @@ void parseMix(const json& node, const std::string& path, NodeSpec& spec) {
     }
     if (node.contains("sends")) {
         const json& s = node.at("sends");
-        if (!s.is_object()) fail(path + ".sends", "must be an object {busId: dB}");
+        if (!s.is_object()) fail(path + ".sends", "must be an object {busId: dB | {\"db\": dB, \"tap\": ...}}");
         for (auto it = s.begin(); it != s.end(); ++it) {
-            if (!it.value().is_number()) fail(path + ".sends." + it.key(), "must be a number (dB)");
-            const double db = it.value().get<double>();
-            if (!std::isfinite(db) || db < -120 || db > 24) fail(path + ".sends." + it.key(), "must be in -120..24 dB");
-            spec.sends.emplace_back(it.key(), static_cast<float>(db));
+            const std::string sp = path + ".sends." + it.key();
+            SendSpec send;
+            send.bus = it.key();
+            double db = 0.0;
+            if (it.value().is_object()) {
+                allowOnly(it.value(), sp, {"db", "tap"});
+                db = number(it.value(), "db", sp, -120.0, 24.0);
+                send.tap = parseTap(it.value(), sp);
+            } else {
+                if (!it.value().is_number()) fail(sp, "must be a number (dB) or {\"db\": dB, \"tap\": \"prefader\"}");
+                db = it.value().get<double>();
+                if (!std::isfinite(db) || db < -120 || db > 24) fail(sp, "must be in -120..24 dB");
+            }
+            send.db = static_cast<float>(db);
+            spec.sends.push_back(std::move(send));
         }
     }
 }
@@ -377,7 +409,7 @@ std::vector<MeterPoint> parseMeter(const json& a, const std::string& path) {
 
 // "analysis": {"profile": "synthwave", "loudness": [-12, -9]}, both optional.
 AnalysisSpec parseAnalysis(const json& a, const std::string& path) {
-    allowOnly(a, path, {"profile", "loudness", "silentNotes"});
+    allowOnly(a, path, {"profile", "loudness", "silentNotes", "audioOnsets"});
     AnalysisSpec spec;
     if (a.contains("profile")) {
         spec.profile = string(a, "profile", path);
@@ -428,10 +460,27 @@ AnalysisSpec parseAnalysis(const json& a, const std::string& path) {
             spec.silentNotes.push_back(std::move(h));
         }
     }
+    if (a.contains("audioOnsets")) {
+        // ["vocal", ...]: tracks whose notes are phrase triggers (agentsound.singer) - note dynamics from the audio
+        const json& list = a.at("audioOnsets");
+        const std::string lp = path + ".audioOnsets";
+        if (!list.is_array()) fail(lp, "must be an array of track ids");
+        for (const json& t : list) {
+            if (!t.is_string() || t.get<std::string>().empty()) fail(lp, "must hold track ids (strings)");
+            spec.audioOnsets.push_back(t.get<std::string>());
+        }
+    }
     return spec;
 }
 
 }  // namespace
+
+std::string tapName(int tap) {
+    if (tap == kTapPost) return "post";
+    if (tap == kTapPreFader) return "prefader";
+    if (tap == 0) return "prefx";
+    return "pre:" + std::to_string(tap);
+}
 
 const char* modFieldName(ModField field) {
     switch (field) {
@@ -707,23 +756,39 @@ SongSpec parseSong(const json& doc) {
         return std::any_of(song.nodes.begin(), song.nodes.end(),
                            [&](const NodeSpec& n) { return n.kind == NodeSpec::Kind::Track && n.id == id; });
     };
+    auto nodeById = [&](const std::string& id) -> const NodeSpec* {
+        for (const NodeSpec& n : song.nodes)
+            if (n.id == id) return &n;
+        return nullptr;
+    };
+    // "pre:<i>" must name an insert point of the tapped node: 0 (its dry input) .. its fx count (= prefader).
+    auto checkTap = [&](int tap, const NodeSpec& tapped, const std::string& where) {
+        if (tap >= 0 && tap > static_cast<int>(tapped.fx.size())) {
+            fail(where, "'pre:" + std::to_string(tap) + "': '" + tapped.id + "' has " + std::to_string(tapped.fx.size()) +
+                            " insert(s), so pre:0 (= prefx) .. pre:" + std::to_string(tapped.fx.size()) + " (= prefader)");
+        }
+    };
     for (std::size_t i = 0; i < song.analysis.silentNotes.size(); ++i) {
         const std::string& t = song.analysis.silentNotes[i].track;
         if (!isTrack(t)) fail(root + ".analysis.silentNotes[" + std::to_string(i) + "].track", "'" + t + "' is not a track id");
     }
+    for (const std::string& t : song.analysis.audioOnsets)
+        if (!isTrack(t)) fail(root + ".analysis.audioOnsets", "'" + t + "' is not a track id");
     for (const auto& n : song.nodes) {
         if (n.kind != NodeSpec::Kind::Master && n.output != "master" && !isBus(n.output)) {
             fail(n.path + ".output", "'" + n.output + "' is not a bus id or 'master'");
         }
         if (n.output == n.id) fail(n.path + ".output", "a bus cannot output to itself");
-        for (const auto& [bus, db] : n.sends) {
-            if (!isBus(bus)) fail(n.path + ".sends." + bus, "'" + bus + "' is not a bus id");
-            if (bus == n.id) fail(n.path + ".sends." + bus, "a bus cannot send to itself");
+        for (const auto& s : n.sends) {
+            if (!isBus(s.bus)) fail(n.path + ".sends." + s.bus, "'" + s.bus + "' is not a bus id");
+            if (s.bus == n.id) fail(n.path + ".sends." + s.bus, "a bus cannot send to itself");
+            checkTap(s.tap, n, n.path + ".sends." + s.bus + ".tap");
         }
         for (const auto& fx : n.fx) {
             if (fx.sidechain.empty()) continue;
             if (!ids.count(fx.sidechain)) fail(fx.path + ".sidechain", "'" + fx.sidechain + "' is not a track or bus id");
             if (fx.sidechain == n.id) fail(fx.path + ".sidechain", "a node cannot key its own effect");
+            checkTap(fx.sidechainTap, *nodeById(fx.sidechain), fx.path + ".tap");
         }
         const bool track = n.kind == NodeSpec::Kind::Track;
         const std::string noNotes = n.kind == NodeSpec::Kind::Bus ? "a bus has no notes" : "the master has no notes";
@@ -733,6 +798,7 @@ SongSpec parseSong(const json& doc) {
                 if (m.followNode == "master") fail(sp + ".node", "'master' cannot be followed (every node feeds it)");
                 if (!ids.count(m.followNode)) fail(sp + ".node", "'" + m.followNode + "' is not a track or bus id");
                 if (m.followNode == n.id) fail(sp + ".node", "a node cannot follow its own output");
+                checkTap(m.followTap, *nodeById(m.followNode), sp + ".tap");
             }
             if (m.source == ModSource::Envelope) {
                 if (m.trigger.empty() && !track) {

@@ -49,6 +49,8 @@ struct Part {
     std::vector<std::string> automated;                   // NodeRouting::automated
     as::json instrumentParams = as::json::object();       // NodeRouting::instrumentParams
     std::function<double(int k, const Note&)> levelDb;   // level of note k (dB re full scale); default: from velocity
+    std::vector<Note> triggers;                           // the routing's notes instead of `notes` (a singer's phrase triggers)
+    bool audioOnsets{false};                              // NodeRouting::audioOnsets (render JSON analysis.audioOnsets)
     std::vector<float> L, R;
 };
 
@@ -116,7 +118,8 @@ json analyse(std::vector<Part>& parts, const std::string& profile, const std::st
         r.instrument = parts[i].instrument;
         r.automated = parts[i].automated;
         r.instrumentParams = parts[i].instrumentParams;
-        for (const Note& n : parts[i].notes) {
+        r.audioOnsets = parts[i].audioOnsets;
+        for (const Note& n : parts[i].triggers.empty() ? parts[i].notes : parts[i].triggers) {
             r.notes.emplace_back(n.beat, n.dur);
             r.tones.push_back({n.pitch, n.vel});
         }
@@ -368,6 +371,24 @@ void testAudioOnsetsAndProfiles() {
           "a lead whose post-compressor gain stage is automated (fx.<i>.output / gain): automated dynamics -> fine");
     check(!(*node(rn, "lead"))["dynamics"].contains("automatedDynamics") && finding(rn, "lead") == "warn",
           "eq band gains, sends and non-index fx paths are not dynamics automation -> still warns");
+
+    // A singer's vocal: the audio is a sung line with real dynamics, the track's notes are one trigger per phrase (2
+    // bars, velocity 127). Judged from the triggers it reads flat; with analysis.audioOnsets the ear hears the audio.
+    auto vocal = [](bool audio) {
+        std::vector<Part> p;
+        Part v{"vocal"};
+        v.notes = melody(67, [](int k) { return 55 + static_cast<int>(63.0 * (0.5 + 0.5 * std::sin(2.0 * kPi * k / 9.0))); });
+        for (int b = 0; b < kBars; b += 2) v.triggers.push_back({b * 4.0, 7.5, 60, 127});
+        v.audioOnsets = audio;
+        p.push_back(v);
+        return p;
+    };
+    std::vector<Part> vt = vocal(false), va = vocal(true);
+    const json rvt = analyse(vt, "jazz"), rva = analyse(va, "jazz");
+    check(finding(rvt, "vocal") == "warn", "a vocal judged by its phrase triggers (one velocity): flat_dynamics (the false alarm)");
+    const json& dva = (*node(rva, "vocal"))["dynamics"];
+    check(dva["onsets"] == "audio" && finding(rva, "vocal").empty(),
+          "with audioOnsets: the onsets come from the audio and the sung dynamics pass");
 }
 
 }  // namespace

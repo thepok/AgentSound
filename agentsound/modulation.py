@@ -336,15 +336,20 @@ def gate(pattern: str, rate='1/16', *, depth=24.0, glide=0.0, base=None, curve='
 
 
 def follow(node, *, attack: float = 5.0, release: float = 120.0, gain_db: float = 0.0, pitches=None,
-           min=None, max=None, depth=None, base=None, curve='linear', name=None) -> Mod:  # noqa: A002
+           min=None, max=None, depth=None, base=None, curve='linear', name=None, tap=None) -> Mod:  # noqa: A002
     """Envelope follower of another track / bus (its post-fader level, like a sidechain key): 0 when it is
     silent, 1 at full scale (a key peaking at -6 dBFS gives 0.5; gain_db drives it harder).
     attack / release in ms. pitches='kick' follows only those notes of a drum track (muted key track).
+    tap= where it listens: post-fader (default), 'prefader', 'prefx' or 'pre:<fx name>' (agentsound.patches.TAPS).
         bass.modulate('instrument.cutoff', follow(kit, pitches='kick', min=300, max=2500, curve='exp'))
         pad.modulate('gainDb', follow('lead', depth=-6))     # duck the pad under the lead"""
+    from .patches import check_tap
     m = Mod('follow', name)
     m.node = node
     m.pitches = _pitches(pitches)
+    t = check_tap(tap, 'follow()')
+    if t is not None:
+        m.source['tap'] = t
     m.source['attackMs'] = m._field('attackMs', attack, 'follow() attack (ms)', 0.0, 10000.0)
     m.source['releaseMs'] = m._field('releaseMs', release, 'follow() release (ms)', 0.0, 10000.0)
     g = m._field('gainDb', gain_db, 'follow() gain_db', -48.0, 48.0)

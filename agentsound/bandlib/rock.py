@@ -428,6 +428,14 @@ def ROOM_CRUSH():
                          name='room_crush')
 
 
+ROOM_CROSSFEED = 0.5
+"""rock_band's band room (the clean return of the drum-room IR): each side fed into the other before the 2-channel
+IR, so a hard-panned rhythm guitar gets a room on both sides that still leans to its own."""
+ROOM_GAIN = 2.5
+"""dB on rock_band's clean band room: the level the band's sends met in the shared crushed room (measured on
+the-drummer-speaks section B: the band-only room -39.7 dB RMS crushed, -42.4 clean: +2.5)."""
+
+
 def GTR_POST():
     """The rhythm guitars after the amp: the lows under 100 Hz to the bass, the body (300 Hz) kept, the fizz above 9
     kHz down."""
@@ -471,9 +479,15 @@ def rock_band(song, *, without=(), sounds=None, ids=None, keys: str = 'organ', g
     b = Builder(song, 'rock_band', without=without, sounds=sounds, ids=ids, analysis={'profile': 'rock'},
                 notes=ROCK_NOTES)
     s = song
-    room = b.bus('room', (_patches.get('bus/ir_drum_room').fx if installed('voxengo-im-reverbs')
-                          else [fx.reverb(type='room', mix=1.0, decay=0.8, size=0.4, predelay=4, lowcut=180,
-                                          highcut=9000)]) + [ROOM_CRUSH()])
+    vox = installed('voxengo-im-reverbs')
+    algo_room = [fx.reverb(type='room', mix=1.0, decay=0.8, size=0.4, predelay=4, lowcut=180, highcut=9000)]
+    # two returns of the one live room: the drums' room mics crushed (drum_room: the room swells between the hits) and
+    # the band's clean room (room: bass, guitars, lead, keys - they used to share the crushed return, so everything
+    # pumped with the drums). The room IR is 2-channel (one centred source): crossfeed gives the hard-panned guitars
+    # a room on both sides instead of a one-sided one.
+    drum_room = b.bus('drum_room', (_patches.get('bus/ir_drum_room').fx if vox else algo_room) + [ROOM_CRUSH()])
+    room = b.bus('room', ([_patches.get('bus/ir_drum_room').fx[0].but(crossfeed=ROOM_CROSSFEED)] if vox
+                          else algo_room), gain_db=ROOM_GAIN)
     plate = b.bus('plate', _patches.get('bus/ir_plate').fx if installed('little-devil-224xl-13-cd-plate-a')
                   else _patches.get('bus/plate').fx)
     echo = b.bus('echo', [fx.delay(mode='pingpong', balanced='off', time=0.75, feedback=0.28, mix=1.0,
@@ -484,7 +498,7 @@ def rock_band(song, *, without=(), sounds=None, ids=None, keys: str = 'organ', g
             fx=[_eq(low__freq=70, low__gain=1.5, peak1__freq=420, peak1__gain=-2.0, peak1__q=1.0,
                     peak2__freq=150, peak2__gain=-2.5, peak2__q=1.0, peak3__freq=4500, peak3__gain=1.0, peak3__q=0.8),
                 PUNCH()],
-            sends={room: -5, plate: -20}, humanize=(5, 8, 3))
+            sends={drum_room: -5, plate: -20}, humanize=(5, 8, 3))
     # the bass: picked Growlybass into an SVT-style rig (sampled_guitars.bass_rig: the tube amp growls in the mids,
     # the time-aligned DI under it carries the lows and the pick) - the old tube saturator at mix 0.55 left the DI
     # nearly clean (centroid 383 vs the DI's 371 Hz); the rig: 553 Hz, +2.4 / +3.8 dB at 0.6-1.2 / 1.2-2.5 kHz

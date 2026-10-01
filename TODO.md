@@ -15,6 +15,8 @@ it. Add new findings here instead of losing them in a report.
   horn / oboe, 3 short sections) as the lead and judged none of the 15 other sections ("no lead plays in half its
   bars"); the theme moves between violins I, the flutes / oboes doubling it and the fugato's entering voice - mixed
   by hand from per-section stem levels (songs/unbowed/MIX.md). The MIX dict has no `roles` key (strict), so the CLI cannot be told either.
+  Partly done: a track with `track.feature(section)` is now the lead of that section (`mixer.features(song)`: a bass
+  or piano solo is judged against the soloist - jane-street-bossa); a general per-section `lead=` is still open.
 - **Choir samples speak slowly at low velocity - the patches.** The attack slows as velocity drops, so a soft answer
   took about 0.4 s to be heard. `orch.Choir` handles it by default now (the speaking velocity + the written level on
   an expression / dynamics lane, early starts), but a choir track played directly (`track.play`, `orch.perform` on the
@@ -128,6 +130,51 @@ it. Add new findings here instead of losing them in a report.
   `make_ab.py soulx`.
 
 ## Medium: tools, engine and library
+
+- **Signal-chain order review (fix/chain-order): verify by ear, and what it left open.** Judged by numbers and
+  level-matched A/B clips only (`songs/<slug>/out/chain_ab/`: kestrel-bay solo + bed stems, the-drummer-speaks chorus /
+  verse + the rooms alone, chrome-leviathan chorus + the leads / stab alone, ghosts-of-ocean-drive sax solo, unbowed
+  t1 hall). Open:
+  - The orchestra hall's crossfeed (0.5) made the Musikverein return mid-heavy (its two IR channels are alike):
+    `HALL_WIDTH` +0.3 gives most of the side back (not on the church IR: it went 257 % wide); whether the hall now
+    sounds around the listener or just narrower needs an ear. The trims were measured on two demos: the hall returns
+    of ashes-and-chandeliers (-0.8 LUFS) and film_orchestra (-0.5) came out a little lower. The library's 2-channel returns (`bus/ir_concert_hall`, `ir_salon`, `ir_church`, `ir_opera`,
+    `ir_hall_large`, `ir_drum_room`) and the jazz salon still have no crossfeed (solo piano / jazz songs untouched).
+  - rock_band's clean band room (crossfeed 0.5, +2.5 dB, measured on one song) is narrower than the shared crushed
+    room was (width 82 -> 69 % on the-drummer-speaks): listen to the rooms-only clip before more rock songs.
+  - The hero synths (`hero/synth`, `hero/piano_synth`) keep a doubling layer (halo micro-shift / the piano layer's
+    chorus) before their compressor / tape: allowed in `chain_order.ALLOW`; the clean fix is the doubler after the
+    chain stages (a layer-level 'post' fx) - it changes measured heroes, so not done in the review.
+  - A pre-fader / pre-insert key does not follow the key's fader: only the hero wrapper moves the thresholds with
+    it (`HeroInfo.key_fx`); `s.sidechain(..., tap=...)` by hand needs its threshold set for the hotter signal. A
+    `tap`-aware threshold helper (or a ducker 'keyGain' param) would make that automatic.
+  - Patch sends cannot carry a tap (only node sends: `sends={bus: (dB, tap)}`); a patch-level parallel bus send
+    would need it.
+  - `bands.master_chain` lives in bandlib/rock.py (rock, pop and jazz use it); the synthwave presets replace the
+    master (`master.use`) and the orchestra checks for a limiter itself - one shared guard in agentsound/bands.py.
+
+- **Vocal jazz needs a piano that answers the voice** (songs/jane-street-bossa, the first sung jazz song). Under
+  the voice the piano comps with `jazz.comp(answer=line)`, but its short answers in the voice's rests (an echo of
+  the hook, a run into the next phrase) were written by hand per part (`FILL_*` notation at the gap positions) and
+  harmonized through `jazz.chorus` with `fill=0`. A `pianist.answers(vocal_line, prog, bpm=, register=, density=)`
+  (fills sized to every rest >= 1 beat, ending before the voice re-enters, never above the voice while it sings)
+  would make it a building block. Also: `jazz.chorus(comp=...)` on a band without a `comp` track (the `bossa`
+  preset) fails on `None.play` - place the comping on the piano or raise a clear error.
+- **The vocal hero's jazz defaults**: `hero(family='vocal', genre='jazz')` still writes echo throws on every phrase
+  end and a -12 dB hero plate: the sung sections read -8.5 LU of reverb (jazz -20..-10). jane-street-bossa turned
+  them off by hand (`echo=False, throws=False`, plate -17, the band's room -15 -> -12.9 LU). The jazz profile could
+  carry those defaults (throws off, plate -17, the band's room send).
+- **Diction warnings flicker between takes**: a nasal coda in legato gets exactly the warn length (35 ms vs "< 35 ms"
+  for a nasal) - 'on' read 46 ms in take 0 and 35 ms in take 1 of the same line. The singer's legato minimum for
+  nasals should sit a few ms over the ear's threshold.
+- **Section renders report silent notes after the section end**: `build --section head` warned silent_notes on every
+  track for notes in the bar after the section (bars 41-43 of a 9-40 section) - the full render has none.
+- **`s.arc(within=)` steps need a hold point**: a `(beat, dB, 'smooth')` mark ramps from the previous point over the
+  whole span; a step at a part boundary needs `(beat - 0.5, old)` written before it. `within` could take step marks.
+- **`bands.make('bossa', without=('guitar', ...))`** keeps the piano at pan -0.5 (placed opposite a guitar): the trio
+  leaned 1.8 dB left until the song moved it to -0.25.
+- **No jazz reference in `assets/refrences/`**: the straight-jazz songs are judged against the profile only (a Beegie
+  Adair trio track, the user's model, and a vocal jazz track would make `compare` useful).
 
 - **Compact song code, phase 2: genre packages on top of the notation** (phase 1 = `agentsound.notation` + the
   foundation helpers; migrated with byte-identical render JSON: ashes-and-chandeliers 993 -> 870 lines,

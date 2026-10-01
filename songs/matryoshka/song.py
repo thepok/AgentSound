@@ -158,6 +158,9 @@ def build() -> Song:
                                                      (chorus4.start, -16, 'smooth'), (coda.start - 1, -16),
                                                      (coda.start, -30, 'smooth'), (coda.bar(8), -30),
                                                      (coda.bar(12), -14, 'smooth')])
+    # the glass layer's own chorus feeds the hero piano's chain (its 'catch' peak compressor): 14-16 dB under the
+    # piano it only rides along on the hardest hits - kept as voiced (no chain-order warning)
+    piano.allow_order("the quiet chorused glass layer under the hero piano's peak catch")
     piano.gain_db -= 2.0                                # peaked +0.9 dBFS before the master
     # A&R round 1: the choruses read narrow (width 9-15 %): the melody layer opened from the hero's 0.4
     piano.instrument = piano.instrument.but(**{'layers.high.width': 0.7})

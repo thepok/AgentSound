@@ -26,7 +26,7 @@ from __future__ import annotations
 from ..vamod import env, lfo
 from . import Patch, fx, inst, register
 
-VERSION = 5
+VERSION = 6  # v6: synthwave/brass_lead drives before its chorus (chain order)
 
 
 def _reg(name, instrument=None, fx_=(), sends=None, notes=''):
@@ -163,10 +163,10 @@ _reg('synthwave/brass_lead',
              amp__attack=0.025, amp__decay=0.6, amp__sustain=0.85, amp__release=0.25, amp__velocity=0.4,
              mods=[lfo('sine', hz=5.3, delay=0.5, fade=0.5, id='vib') >> ('pitch', 10)],
              hpf=120, polyphony=8, level=-3.0),
-     [fx.chorus(mode='I', mix=0.3), fx.saturator(mode='tape', drive=3), _shift(detune=8, mix=0.3)],
+     [fx.saturator(mode='tape', drive=3), fx.chorus(mode='I', mix=0.3), _shift(detune=8, mix=0.3)],
      sends={'hall': -10, 'plate': -14},
      notes="""
-Bold OB-X / Jupiter synth brass lead: detuned saws (2-voice unison) with a slow-attack filter envelope 'blat' (60 ms), chorus, tape drive and a
+Bold OB-X / Jupiter synth brass lead: detuned saws (2-voice unison) with a slow-attack filter envelope 'blat' (60 ms), tape drive, chorus and a
 micro-pitch doubler (~43 % wide, v1 31 %: a brass section rather than one player).
 Play: lead lines and fanfares in C4-C6, and stabs/chords (poly 8).
 Use: chorus hooks, brass stabs on off-beats, unison riffs with the bass an octave or two below.
@@ -175,7 +175,8 @@ vibrato mod.vib.amount 0-20 ct.
 Sends: hall -10, plate -14.
 Level: -17.9 LUFS on the phrase at gain 0 (level -3.0); 4-note chords land ~-13.7 LUFS, so give chord/stab tracks gain_db -4.
 Note: `audition` guesses 'chord' from the name; use --notes phrase to hear it as a lead.
-v2 (lush pass: + microshift doubler, hall -12 -> -10, plate -16 -> -14).""")
+v2 (lush pass: + microshift doubler, hall -12 -> -10, plate -16 -> -14). v3: the tape drive before the chorus (it used to
+grind the chorus's moving copies together: drive first, then the modulation).""")
 
 _reg('synthwave/dx_lead',
      inst.dx7('LEAD BRASS', detune=7, width=0.5, brightness=-0.1, modwheel=0.1, level=5.0),

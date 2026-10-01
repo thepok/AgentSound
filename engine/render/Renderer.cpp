@@ -114,6 +114,7 @@ struct Mod {
     std::size_t trigCursor{0};
     int held{0};                // notes currently held on trigNode (envelope gate)
     int followNode{-1};
+    int followTap{kTapPost};    // kTapPost or an insert point of followNode (resolved like a send's)
     double follow{0.0};         // follower level (linear amplitude)
     std::array<double, 2> coefMs{-1.0, -1.0};
     std::array<double, 2> coef{1.0, 1.0};   // follower attack / release one-pole coefficients
@@ -130,6 +131,7 @@ struct Mod {
 struct Send {
     int target{};
     float db{};
+    int tap{kTapPost};               // kTapPost, or an insert point resolved to 0..fx count (prefader = fx count)
     dsp::Smoother gain;
 };
 
@@ -138,6 +140,10 @@ struct Node {
     std::unique_ptr<Instrument> instrument;
     std::vector<std::unique_ptr<Effect>> fx;
     std::vector<int> fxKey;          // node index of each fx's sidechain key, -1 if none
+    std::vector<int> fxKeyTap;       // where on the key node: kTapPost or an insert point 0..its fx count
+    // Tap buffers: tapL/R[i] = the signal entering insert i (i = fx count: after the inserts, pre-fader).
+    // Allocated (one block) only for the points a send / sidechain key / follower reads; empty otherwise.
+    std::vector<std::vector<float>> tapL, tapR;
     int output{-1};                  // node index, -1 for master
     std::vector<Send> sends;
     std::vector<Target> targets;
@@ -314,13 +320,16 @@ public:
                 } catch (const ConfigError& e) {
                     throw ConfigError(fs.path + ": " + e.what());
                 }
-                node.fxKey.push_back(fs.sidechain.empty() ? -1 : indexOf(fs.sidechain));
+                const int key = fs.sidechain.empty() ? -1 : indexOf(fs.sidechain);
+                node.fxKey.push_back(key);
+                node.fxKeyTap.push_back(key < 0 ? kTapPost : resolveTap(fs.sidechainTap, key));
             }
-            for (const auto& [busId, db] : spec.sends) {
+            for (const SendSpec& ss : spec.sends) {
                 Send s;
-                s.target = indexOf(busId);
-                s.db = db;
-                s.gain.prepare(song.sampleRate, kFaderSmoothSeconds, dsp::dbToGain(db));
+                s.target = indexOf(ss.bus);
+                s.db = ss.db;
+                s.tap = resolveTap(ss.tap, i);
+                s.gain.prepare(song.sampleRate, kFaderSmoothSeconds, dsp::dbToGain(ss.db));
                 node.sends.push_back(std::move(s));
             }
             float gl, gr;
@@ -347,7 +356,39 @@ public:
             }
             preroll(node, startBeat);  // after bindControls: needs the modulator lanes
         }
+        // Tap buffers for every pre-fader / pre-insert point something reads (sends, keys, followers).
+        for (Node& node : nodes_) {
+            node.tapL.resize(node.fx.size() + 1);
+            node.tapR.resize(node.fx.size() + 1);
+        }
+        auto need = [&](int nodeIndex, int tap) {
+            if (tap == kTapPost) return;
+            Node& t = nodes_[static_cast<std::size_t>(nodeIndex)];
+            t.tapL[static_cast<std::size_t>(tap)].assign(kBlock, 0.0f);
+            t.tapR[static_cast<std::size_t>(tap)].assign(kBlock, 0.0f);
+        };
+        for (int i = 0; i < n; ++i) {
+            Node& node = nodes_[static_cast<std::size_t>(i)];
+            for (const Send& s : node.sends) need(i, s.tap);
+            for (std::size_t f = 0; f < node.fxKey.size(); ++f)
+                if (node.fxKey[f] >= 0) need(node.fxKey[f], node.fxKeyTap[f]);
+            for (const Mod& m : node.mods)
+                if (m.followNode >= 0) need(m.followNode, m.followTap);
+        }
         order_ = topologicalOrder();
+    }
+
+    // A node's signal at `tap` for this block: its output (post-fader, pre-mute) or a tap buffer.
+    static const float* tapSignal(const Node& node, int tap, int channel) {
+        if (tap == kTapPost) return channel == 0 ? node.outL.data() : node.outR.data();
+        const auto i = static_cast<std::size_t>(tap);
+        return channel == 0 ? node.tapL[i].data() : node.tapR[i].data();
+    }
+
+    // "prefader" -> the point after the last insert of the tapped node; post and insert points as they are.
+    int resolveTap(int tap, int nodeIndex) const {
+        if (tap != kTapPreFader) return tap;
+        return static_cast<int>(song_.nodes[static_cast<std::size_t>(nodeIndex)].fx.size());
     }
 
     std::vector<Node>& nodes() { return nodes_; }
@@ -470,13 +511,13 @@ private:
         } else if (t.rfind("send.", 0) == 0) {
             const std::string bus = t.substr(5);
             for (std::size_t s = 0; s < spec.sends.size(); ++s) {
-                if (spec.sends[s].first == bus) target.sendIndex = static_cast<int>(s);
+                if (spec.sends[s].bus == bus) target.sendIndex = static_cast<int>(s);
             }
             if (target.sendIndex < 0) badTarget(where, t, "needs a matching entry in 'sends'");
             target.kind = Target::Kind::Send;
             target.lo = -120.0;
             target.hi = 24.0;
-            target.fallback = spec.sends[static_cast<std::size_t>(target.sendIndex)].second;
+            target.fallback = spec.sends[static_cast<std::size_t>(target.sendIndex)].db;
         } else {
             badTarget(where, t, "is not a valid target (instrument.<p>, fx.<i>.<p>, gainDb, pan, send.<bus>)");
         }
@@ -502,7 +543,10 @@ private:
             m.origin = ms.startBeat.value_or(0.0);
             m.accumulate = ms.retrigger;
             m.seed = moduleSeed(song_.seed, spec.id, 1000 + static_cast<int>(i));
-            if (ms.source == ModSource::Follow) m.followNode = indexOf(ms.followNode);
+            if (ms.source == ModSource::Follow) {
+                m.followNode = indexOf(ms.followNode);
+                m.followTap = resolveTap(ms.followTap, m.followNode);
+            }
             if (ms.retrigger || ms.source == ModSource::Envelope) m.trigNode = ms.trigger.empty() ? self : indexOf(ms.trigger);
             m.target = targetSlot(node, resolveTarget(node, ms.target, ms.path + ".target"));
             node.targets[static_cast<std::size_t>(m.target)].mods.push_back(static_cast<int>(i));
@@ -763,11 +807,12 @@ private:
                     m.coef[c] = ms <= 0.0 ? 1.0 : 1.0 - std::exp(-1.0 / (ms * 0.001 * song_.sampleRate));
                 }
                 const Node& key = nodes_[static_cast<std::size_t>(m.followNode)];
+                const float* kL = tapSignal(key, m.followTap, 0);
+                const float* kR = tapSignal(key, m.followTap, 1);
                 const double g = std::pow(10.0, m.get(ModField::GainDb) / 20.0);
                 double env = m.follow;
                 for (int i = 0; i < n; ++i) {
-                    const auto si = static_cast<std::size_t>(i);
-                    const double x = std::max(std::fabs(key.outL[si]), std::fabs(key.outR[si])) * g;
+                    const double x = std::max(std::fabs(kL[i]), std::fabs(kR[i])) * g;
                     env += (x > env ? m.coef[0] : m.coef[1]) * (x - env);
                 }
                 m.follow = env < 1e-12 ? 0.0 : env;
@@ -998,10 +1043,18 @@ RenderResult renderSong(const SongSpec& song, const RenderOptions& options) {
                 std::fill(node.inR.begin(), node.inR.end(), 0.0f);
             }
             for (std::size_t f = 0; f < node.fx.size(); ++f) {
+                if (!node.tapL[f].empty()) {  // a pre-insert tap: the signal entering insert f
+                    std::copy(L, L + n, node.tapL[f].begin());
+                    std::copy(R, R + n, node.tapR[f].begin());
+                }
                 const int key = node.fxKey[f];
-                const float* kL = key >= 0 ? nodes[static_cast<std::size_t>(key)].outL.data() : nullptr;
-                const float* kR = key >= 0 ? nodes[static_cast<std::size_t>(key)].outR.data() : nullptr;
+                const float* kL = key >= 0 ? Graph::tapSignal(nodes[static_cast<std::size_t>(key)], node.fxKeyTap[f], 0) : nullptr;
+                const float* kR = key >= 0 ? Graph::tapSignal(nodes[static_cast<std::size_t>(key)], node.fxKeyTap[f], 1) : nullptr;
                 node.fx[f]->process(L, R, n, kL, kR);
+            }
+            if (!node.tapL[node.fx.size()].empty()) {  // the pre-fader tap: after the inserts
+                std::copy(L, L + n, node.tapL[node.fx.size()].begin());
+                std::copy(R, R + n, node.tapR[node.fx.size()].begin());
             }
             for (int i = 0; i < n; ++i) {
                 L[i] *= node.gainL.next();
@@ -1015,10 +1068,12 @@ RenderResult renderSong(const SongSpec& song, const RenderOptions& options) {
                 for (int i = 0; i < n; ++i) { out.inL[static_cast<std::size_t>(i)] += L[i]; out.inR[static_cast<std::size_t>(i)] += R[i]; }
                 for (auto& s : node.sends) {
                     Node& bus = nodes[static_cast<std::size_t>(s.target)];
+                    const float* sL = s.tap == kTapPost ? L : node.tapL[static_cast<std::size_t>(s.tap)].data();
+                    const float* sR = s.tap == kTapPost ? R : node.tapR[static_cast<std::size_t>(s.tap)].data();
                     for (int i = 0; i < n; ++i) {
                         const float g = s.gain.next();
-                        bus.inL[static_cast<std::size_t>(i)] += L[i] * g;
-                        bus.inR[static_cast<std::size_t>(i)] += R[i] * g;
+                        bus.inL[static_cast<std::size_t>(i)] += sL[i] * g;
+                        bus.inR[static_cast<std::size_t>(i)] += sR[i] * g;
                     }
                 }
             }

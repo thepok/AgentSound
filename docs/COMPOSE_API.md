@@ -106,12 +106,13 @@ or `patches.get('synthwave/supersaw_lead').but(cutoff=2500)`.
 | `s.beat_at(seconds, before=None)` | the beat at a song time (the inverse of `s.seconds`; `before=` a position: that many seconds before it) |
 | `s.ending(end, chords=[(comp, LH, 70), (piano, RH, 80, 0.25)], bass=(bass, 'Ab1', 7, 92), drums=(drums, jazz.last_stir(kit, 8, last=3)), rit=tag.bar(2), to=0.72, hold=2, length=4, room=(-13, -8), room_tracks=(), roll_bpm=None, pedal=True)` | the last chord of a ballad / jazz tune in one call: each chord rolled (`clip.strum`, `ms` per note at `roll_bpm` = the tempo at the ritardando's start x `to`) and placed `delay` beats late, the chord tracks' pedal lifted just before / down just after it, the bass note, the drums clip, the ritardando from `rit` (it stays slow), the fermata (`hold` / `seconds` / `length`), the room send ramp `(from_db, to_db)` to the section end (`until=` for a beat) on the chord tracks + `room_tracks`; leave any part out and write it by hand |
 | `s.set_tempo`, `s.tempo_ramp`, `s.ritardando`, `s.accelerando`, `s.fermata`, `s.rubato`, `s.lilt`, `s.tempo_at` | a moving tempo, see Tempo and meter |
-| `s.track(id, sound, *, fx=(), gain_db=0, pan=None, output='master', sends=None, mute=False)` | ids match `[a-z0-9_-]+` |
+| `s.track(id, sound, *, fx=(), pre=(), gain_db=0, pan=None, output='master', sends=None, mute=False)` | ids match `[a-z0-9_-]+`; `pre=` effects go IN FRONT of the patch chain (drive / compression before its chorus, doubler, echo: see Chain order), `fx=` after it |
 | `s.bus(id, fx=(), *, gain_db=0, pan=None, output='master', sends=None)` | group or return bus; `fx` may be a chain patch |
 | `s.hall(**p)`, `s.plate(**p)`, `s.echo(**p)`, `s.gated(**p)` | 100 % wet return buses (patches `bus/hall` etc. if the library has them); params go to the chain's reverb/delay/gatedreverb. A second call returns the same bus (with params it is an error) |
-| `s.gated(..., key=kit, pitches='snare')` | keyed gate: only those notes of the key track open the gatedreverb (muted ghost key track `<key>-key`, as for `sidechain`); `key=` alone keys from the whole track/bus; a later `s.gated(key=...)` keys an existing bus. See the gated-snare recipe under Production moves |
-| `s.sidechain(*targets, key, pitches=None, **ducker_params)` | pump targets from `key`; `pitches='kick'` keys only from those notes via a muted ghost track `<key>-key` (it shows as a silent node in the report) |
-| `s.carve(*targets, key, freq=2500, q=0.7, depth=4, **compressor_params)` | carve room for a lead: a keyed dynamic EQ on every target (a band-mode `compressor`: `band`, `bandq`, `range`) dips its `freq` band by up to `depth` dB while the key (the lead) plays and gives it back in the lead's gaps - the bed keeps its level and body, only the lead's presence band steps aside (`node.carve(key, ...)` for one node). Hero leads: `s.carve(strings, pad, piano, keys, key=sax, depth=4)` |
+| `s.gated(..., key=kit, pitches='snare')` | keyed gate: only those notes of the key track open the gatedreverb (muted ghost key track `<key>-key`, as for `sidechain`); `key=` alone keys from the whole track/bus; a later `s.gated(key=...)` keys an existing bus. Without `key=`: a gated bus fed only by a drum kit's own patch send (`synthwave/drums_outrun`'s `gated -6`) is keyed from that kit's snare / clap when the song compiles (the same thing); `key=False` keeps the gate on the bus input. See the gated-snare recipe under Production moves |
+| `s.sidechain(*targets, key, pitches=None, tap=None, **ducker_params)` | pump targets from `key`; `pitches='kick'` keys only from those notes via a muted ghost track `<key>-key` (it shows as a silent node in the report); `tap=` where the key is picked up (see Taps) |
+| `s.carve(*targets, key, freq=2500, q=0.7, depth=4, tap=None, **compressor_params)` | carve room for a lead: a keyed dynamic EQ on every target (a band-mode `compressor`: `band`, `bandq`, `range`) dips its `freq` band by up to `depth` dB while the key (the lead) plays and gives it back in the lead's gaps - the bed keeps its level and body, only the lead's presence band steps aside (`node.carve(key, ...)` for one node). Hero leads: `s.carve(strings, pad, piano, keys, key=sax, depth=4)` |
+| `node.allow_order('why')` | silence the chain-order warning of a node whose nonlinear-after-modulation order is intended (see Chain order) |
 | `s.master.add(fx...)`, `s.master.use('master/...')`, `s.master.gain_db`, `s.master.automate(...)` | master chain |
 | `node.fx['limiter'].set(gain=5.2)`, `track.fx['compressor'].set(attack=25)`, `track.fx['eq'].set({'peak1.gain': -3})`, `node.fx.index_of('ducker')` | a live chain (an `FXChain`) indexed by position, `name=` or type (a type that occurs twice is an error: index it or name it); `FX.set()` changes params in place - instead of `next(i for i, f in enumerate(t.fx) if f.type == ...)` |
 | `s.prog(spec, bars=1)`, `s.motif(spec, dur=0.5)` | progression / motif in the song key and meter; the progression is a `voicing.Harmony` (a Progression that voices itself, see Voicing) |
@@ -121,8 +122,47 @@ or `patches.get('synthwave/supersaw_lead').but(cutoff=2500)`.
 | `s.compile()` -> dict, `s.save(path)`, `s.describe()`, `s.warnings` | validation: unique ids, routing targets exist, no cycles (outputs, sends and sidechains), notes inside the song, automation targets resolvable and strictly increasing; **silent notes** (`agentsound.silent_notes`): every note of a sampler / kit / sfz / stack / drum-machine track that reaches no sample zone (a kit without that piece, a key outside the multisample's range, a velocity or keyswitch articulation without zones), no drum piece or only muted stack layers is a "silent notes: ..." warning (GM names / note names, bar:beat, the fix) and goes to the render JSON's `analysis.silentNotes` (the report's `silent_notes` warnings, next to what the render measured: docs/RENDER_FORMAT.md "Silent notes") |
 
 `sound` for a track: a `Patch`, a patch name, `inst.va(...)`/`inst.dx7('E.PIANO 1')`/`inst.drums(kit='linn')`
-or `{'type': ..., 'params': {...}}`. Patch fx come first, then `fx=`; `gain_db` adds to the patch level; `pan=None`
-keeps the patch pan; sends merge (patch sends to buses that don't exist are dropped with a warning).
+or `{'type': ..., 'params': {...}}`. `pre=` fx come first, then the patch fx, then `fx=`; `gain_db` adds to the patch
+level; `pan=None` keeps the patch pan; sends merge (patch sends to buses that don't exist are dropped with a warning).
+
+### Taps (where a send, a key or a follower listens)
+
+Every send, sidechain key and `follow()` modulator picks up its node **post-fader** by default (after the inserts,
+the fader and the pan: what you hear). `tap=` moves the pick-up point (render JSON `"tap"`, docs/RENDER_FORMAT.md
+"Taps"; render-identical when not used):
+
+| tap | the signal | use |
+|---|---|---|
+| `None` / `'post'` | after inserts, fader, pan | reverb / echo sends that follow the fader; keys that follow the mix |
+| `'prefader'` | after the inserts, before `gain_db`, pan and their lanes | **parallel buses**: a parallel compression / crush bus or a **grit bus** (a saturator / amp / bitcrush return blended under the clean track) keeps its blend when the fader rides - `sends={crush: (-6, 'prefader')}`, `track.send(grit, -10, tap='prefader')` |
+| `'prefx'` | the dry instrument (a bus: its summed input), before every insert | a key from what is played, not from its echo, reverb or saturation |
+| `'pre:<fx name / type / index>'` | the signal entering that insert of the tapped node | heroes: `'pre:air'` - the bed ducks under the notes, not under the echo tails, the throws or the hook ride |
+
+```python
+crush = s.bus('crush', [fx.compressor(threshold=-30, ratio=8, attack=3, release=80, makeup=10)], gain_db=-8)
+kit = s.track('drums', 'sampled/big_rusty_kit', sends={crush: (0, 'prefader')})   # NY compression, fader-proof
+s.sidechain(pad, key=lead, tap='pre:echo', depth=3)          # the lead's own echo leaves the pad alone
+bass.modulate('instrument.cutoff', follow(kit, tap='prefx', min=300, max=2000, curve='exp'))
+```
+
+`FX(..., sidechain=key, tap=...)` / `fx.ducker(sidechain='sax', tap='prefx')` set it on a keyed effect directly; a
+`'pre:<name>'` resolves against the key's chain when the song compiles (an unknown name is an error). A pre-fader key
+does not follow the key's fader: set its threshold for the louder signal there (the hero wrapper does it for you).
+
+### Chain order
+
+`Song.compile()` warns (`chain order: ...`, agentsound/chain_order.py) when a **nonlinear** effect (compressor,
+saturator, amp, bitcrush, a driven tape) follows a **time / modulation** effect (delay, reverb, convolver insert,
+chorus, ensemble, dimension, microshift, flanger, phaser, tremolo) in one insert chain - a stack layer's chain counts
+through the track's: the compressor brings an echo's repeats up to the note, the drive grinds a chorus's moving
+copies into a grainy wobble, a reverb tail pumps. Drive and compression go first: `s.track(..., pre=[fx.saturator(...)])`,
+`track.add_fx(..., first=True)`, a synthwave band role's `pre_fx`, the hero ORDER. Not flagged: keyed dynamics
+(ducks, carves), processing after a 100 %-wet time effect on a bus (a return: `bus/tape_echo`'s delay -> tape, a drum
+room -> crush), a fully wet convolver on a track (a guitar cabinet), wah before an amp, linear stages; the patches in
+`chain_order.ALLOW` (the hero synths' quiet doubling layers under their slow compressor) and nodes marked
+`node.allow_order('why')`. On the master: anything but a `utility` after the last limiter, or two limiters (two
+master chains stacked), is a warning too - the band presets add their master only to an empty master
+(`bandlib.rock.master_chain`: rock, pop, jazz; synthwave replaces it).
 
 **Section**: `.name .start .end .length .bars .span .meter .beats_per_bar`, `.bar(n, beat=0)`, `.beat(b)`, `.bar_starts(every=1)`, `beat in sec`; from `s.form`: `.prog`, `.parts`, `.part('A2')` (or an index).
 
@@ -140,7 +180,7 @@ keeps the patch pan; sends merge (patch sends to buses that don't exist are drop
 | `lane(target, {section: ...} \| [(position, value[, curve])], base=, glide=, default=, drops=, hold=, end=)`, `levels(...)` | section lanes ('gainDb' for levels; also on buses and the master): see Section plans |
 | `rise(end, length=16, pitch=, vel=, dur=, cutoff=(300, 12000), hpf=(20, 1500))` | a riser note opening its filters into `end` |
 | `groove(name_or_Groove)`, `humanize(timing_ms=4, vel=6, seed=None)` | applied at compile with the local song tempo (ms stay ms in a ritardando); drum tracks get per-drum offsets |
-| `automate(target, *point_lists, at=None)`, `send(bus, db)`, `to(bus)`, `add_fx(*fx, first=False)`, `duck(key=None, pitches=None, **p)` | also on buses (and `automate`/`add_fx` on the master); `at=` (a Section / beat / `(section, beats)`) makes the points' beats relative to it |
+| `automate(target, *point_lists, at=None)`, `send(bus, db, tap=None)`, `to(bus)`, `add_fx(*fx, first=False)`, `duck(key=None, pitches=None, tap=None, **p)`, `allow_order(why)` | also on buses (and `automate`/`add_fx` on the master); `at=` (a Section / beat / `(section, beats)`) makes the points' beats relative to it |
 | `modulate(target, *modulators, window=None)` | LFOs, step sequences, trance gates, followers, per-note envelopes, random steps driving a parameter (see Modulation); on tracks, buses and the master |
 | `.notes`, `.clip(start, end)` | inspect / copy a placed part |
 
@@ -342,8 +382,11 @@ family's octave-down layer). The shared chain, in this order (`heroes.ORDER`; a 
 `tone` (eq: high-pass, the family's mud / honk / box) -> `catch` (a fast peak compressor, pianos) -> `comp` (the
 bloom: <= 3:1, 15-30 ms attack so attacks and accents pass) -> `amp` (family fx) -> `drive` (saturator) -> `tape` ->
 `presence` (eq: bite 2.5-3.5 kHz, air shelf 8-10 kHz) -> `exciter` -> `chorus` / `double` (microshift) / `width` /
-`dimension` -> `echo` (its own, guitars) -> **`air`** (last: a utility named `air`, 0 dB - the BREATH stage).
-`**stages` override: `hero(t, family='brass', comp={'threshold': -20}, drive=False)`.
+`dimension` -> **`air`** (a utility named `air`, 0 dB - the BREATH stage: after every level-dependent and width stage)
+-> `echo` (its own, guitars: last, so an air lane - a whammy dip, a feedback swell - moves the note, not the echoes
+of the notes before it). `**stages` override: `hero(t, family='brass', comp={'threshold': -20}, drive=False)`. A
+preset's `post_source` moves named fx of its source patch behind the dynamic stages (the organ's Leslie: the
+compressor and the preamp drive in front of the rotor, not on its swirl).
 
 **The air stage** (`heroes.AIR_TARGET = 'fx.air.gain'`): within-note expression - a wind player's "mal kurz mehr,
 mal kurz weniger" air on a held note, a swell, an fp-crescendo - written as dB on `fx.air.gain` (`heroes.air(track,
@@ -354,10 +397,15 @@ of gain reduction) measures +3.0 dB at the output; the same push in front of the
 
 **The mix rules** (a Track given), each logged and each switchable (`False` = off, a number = the depth in dB):
 `space` - the preset's plate bus (`bus/hero_plate`, created as bus `hero_plate` if missing; the patch's own `plate`
-send moves there; `plate=` another bus / patch) and the echo send for the throws (the song's `echo` bus, any bus named
-`*echo*` / `*delay*`, else a new `s.echo()`; `echo=` a bus, `False` = none); `duck` - the bed ducks under the hero
-(`song.sidechain(*bed, key=hero, ...)`); `carve` - the bed's presence band dips while the hero plays (`song.carve`, a
-keyed dynamic EQ at the family's frequency); `dips` - competitors get a static presence dip (`mixer.add_eq_dip`, an
+send moves there; `plate=` another bus / patch; a preset hall send quieter than that plate is dropped - the plate is
+the hero's reverb, not plate + hall + echo; a hall at least as loud as the plate stays, the sung vocal keeps its sends)
+and the echo send for the throws (`echo=` a bus; else the song's bus named exactly `echo`, else a new `s.echo()`;
+`False` = none - a bus is no longer guessed from `*echo*` / `*delay*` in its name); `duck` - the bed ducks under the
+hero (`song.sidechain(*bed, key=hero, ...)`); `carve` - the bed's presence band dips while the hero plays
+(`song.carve`, a keyed dynamic EQ at the family's frequency). Both are keyed from the hero's tone **before** its air
+stage, echo, hook ride and fader (`tap='pre:air'`, `heroes.KEY_TAP`): the bed comes back under echo tails and throws,
+a ride does not deepen the duck; their thresholds follow the hero's fader at compile (a hero at -6 dB is keyed 6 dB
+hotter there, so the threshold moves up 6 dB). `dips` - competitors get a static presence dip (`mixer.add_eq_dip`, an
 eq named `hero_dip`); `ride` - the hero up in the hook sections (a utility `hero_ride` + an `fx.hero_ride.gain` lane,
 the mixer's ride points; `sections=` or the sections named chorus / drop / hook / refrain / lift / climax / finale /
 peak / head, plus the preset's own feature sections: the guitar heroes' `solo...` sections, mix key `feature`); `throws` - the echo send thrown up on every phrase end the track plays (`articulation.throws`; a guitar
@@ -798,8 +846,10 @@ it; and the diction (`singer.diction(song)`, from the takes' timelines - every t
 consonants under `timeline.diction` with their length and level vs the vowel): `coda_short` when a word-final
 consonant is shorter than its class's warn length (a stop 40 ms, a sibilant 50 ms ...: a too-short last note - give
 it more time or a gap after it), `coda_buried` when it sits > 3 dB under its vowel, and a summary line ("17 word-final
-consonants sung, the shortest ..."). The report's note-dynamics line for a vocal track reads "too few notes" (it sees one trigger per phrase): the
-dynamics live inside the takes.
+consonants sung, the shortest ..."). The dynamics live inside the takes (one trigger note per phrase at velocity
+127): the compiler names every vocal track in the render JSON's `analysis.audioOnsets`, so the report's note-dynamics
+ear hears the vocal from its audio onsets ("vocal lead 16.0 dB (214 notes (audio onsets))") instead of reading the
+triggers' one velocity as `flat_dynamics`.
 
 **Voices** (`python -m agentsound voicebanks [--check]`, `assets/voices/manifest.json`):
 
@@ -1591,7 +1641,7 @@ number of beats, or for `lfo` only `'5hz'`):
 | `lfo(shape='sine', rate='1/4', *, min/max \| depth, base, curve, phase=0, retrigger=False, name)` | shapes `sine` `triangle` (`tri`) `saw` (falls; `saw_down`) `ramp` (rises; `saw_up` - note the points-`lfo(a, b, ...)` calls the rising one `saw`: say `saw_up` / `saw_down` to be unambiguous) `square` `random` (S&H per cycle) `smoothrandom`. Phase 0 = cycle start: sine/triangle start at their minimum and peak mid-cycle; square is high first. `retrigger=True` restarts on each note of the track |
 | `steps(values, rate='1/16', *, glide=0, loop=True, depth, base, curve, name)` | step sequencer from the window start (or beat 0); `glide` = fraction of each step spent gliding in |
 | `gate(pattern, rate='1/16', *, depth=24, glide=0, base, curve, name)` | trance gate: `x` open, `.` closed (−depth), `0`-`9` partly open, `_` repeat, spaces/`\|` ignored. Any target: `gate('x..x', depth=2, curve='exp')` on a cutoff |
-| `follow(node, *, attack=5, release=120, gain_db=0, pitches=None, min/max \| depth, ...)` | envelope follower of a track/bus (post-fader level, ms times; 0 silent .. 1 full scale). `pitches='kick'` follows only those notes (muted key track) |
+| `follow(node, *, attack=5, release=120, gain_db=0, pitches=None, tap=None, min/max \| depth, ...)` | envelope follower of a track/bus (post-fader level, ms times; 0 silent .. 1 full scale). `pitches='kick'` follows only those notes (muted key track); `tap='prefx'` / `'prefader'` / `'pre:<fx>'` listens earlier (see Taps) |
 | `envelope(attack=0, decay='1/8', sustain=0, release=None, *, trigger=None, pitches=None, ...)` | linear ADSR in beats/note values, restarted by each note of this track or of `trigger=` (with `pitches=`); `release=None` = decay |
 | `sample_hold(rate='1/16', *, smooth=0, min/max \| depth, ...)` | seeded random steps (song seed: deterministic); `smooth=1` = continuous drift |
 
@@ -1743,6 +1793,10 @@ register is not the same as transposing the voiced chords.
   kit = s.track('drums', 'synthwave/drums_outrun')                  # its patch already sends -6 dB to 'gated'
   s.gated(gain_db=-2, hold=250, key=kit, pitches='snare')           # add 'clap'/'tom_*' to gate those too
   ```
+  A kit whose own patch feeds the gated bus (and nothing else does) gets this keying by itself when the song
+  compiles (`s.gated(key=False)` keeps the bus-input gate); the drum kits' whole-kit plate sends are light
+  (`synthwave/drums_linn` -16, `drums_808` -18): a hot plate on the whole kit washes the hats and cymbals - give the
+  snare its own track and send for a big snare plate.
   With `inst.drums(...)` give the kit `sends={'gated': -6}`. Shape it with the gatedreverb params: `hold` =
   burst length (about an 8th note: 60000 / bpm / 2 ms), `release` 10..40 ms (the abrupt cut), `predelay` 0..20,
   `decay` long (flat burst) or short (decaying). The key is the raw drum instrument (no inserts) at the kit's
@@ -2501,10 +2555,13 @@ a rest.
 | `sampled/alto_sax`, `trumpet`, `flute` (plain) | +3.0 | +0.1..0.2 (tone only) | +3.0 | `fx.air.gain` (+ the tone on the mic shelf) |
 | `sampled/tenor_sax`, `solo_trumpet`, `solo_flute`, `solo_clarinet`, `solo_trombone`, `trumpet_harmon`, `solo_violin`, `solo_horn` (live dynamics, no compressor) | +3.0 | +2.6..7.9 (with the louder layer's tone) | +3.0 | `instrument.dynamics` (`DYN_SENS` dB per unit; home lowered by `HEADROOM` 4 dB, made good on the mic stage) |
 
-The breath stage is `agentsound.heroes`' convention: a utility named `air` at the end of the chain, after every
-compressor and the saturation (every `hero/<preset>` has one; `air_stage(track)` inserts it when missing, so any
-compressed lead works). `mic_stage(track)` appends an eq named `mic` after it, always last (peak1 at 300 Hz =
-proximity, a gentle high shelf from 3.2 kHz = the axis, output = distance): the mic moves and the air's tone go there,
+The breath stage is `agentsound.heroes`' convention: a utility named `air` after every compressor and the saturation,
+before the instrument's own echo (every `hero/<preset>` has one; `air_stage(track)` inserts it when missing, so any
+compressed lead works). `mic_stage(track)` inserts an eq named `mic` where a microphone sits: in front of the
+compressor (the hero `comp` stage, else the first un-keyed compressor; appended at the end on an uncompressed chain or
+when its output carries the air itself) (peak1 at 300 Hz = proximity, a gentle high shelf from 3.2 kHz = the axis,
+output = distance - leaning in / turning away colours what the compressor, echo and ride then work on; it used to
+come after all of them): the mic moves and the air's tone go there,
 the room offsets to the track's reverb sends (plate / hall / room ...: not the echo, which `articulation.throws` owns),
 bend to `instrument.pitchbend`, the vibrato to the sampler's `vibrato` / `vibratorate` (every sampler layer of a stack;
 depth x (1 + couple x air dB)), else a pitch-bend lfo. A compressed chain gets the `accents` after the compressor (the
@@ -2525,7 +2582,7 @@ An instrument-agnostic SOLO builder: one wrapper that turns any player's vocabul
 dramatic arc - a low motif, call and response, repetition with variation, a speed burst, the climax, the resolution
 - with motivic development of the song's hook, breathing space (rests are part of the plan), an ornament budget
 (tricks stay spice: HUMAN_FEEDBACK "zu viele von diesen schnellen Zwei-Tasten-Wechseln") and a dynamics arc that is
-never flat. The instrument lives in its `Vocabulary` (the guitar's: `guitarist.vocabulary(...)`; the hornist's and
+never flat. The instrument lives in its `Vocabulary` (the guitar's: `guitarist.vocabulary(...)`; the pianist's, the hornist's and
 the drummer's plug in the same way); the soloist only plans.
 
 ```python
@@ -2578,6 +2635,20 @@ scoop_call, fall_off, sequence, run (fast), shake / growl (fast, where the famil
 (`agentsound.horn_vocab`: lines breathed by `hornist.arrange`; the default place: the notes + `hornist.render`). The
 same arc on both (`songs/_demo_soloist`, `tests/python/test_soloist.py`). A vocabulary's `range=(lo, hi)` is the
 instrument's solo range (`ctx.range`).
+`pianist.vocabulary(style='straight' | 'bar' | 'lush' | 'ballad', *, lh_track=None, lh='guide', lh_vel=56,
+lh_register=('C3', 'C4'), lh_density=0.5, lh_answers=None, pedal=True, register=('A4', 'D6'), floor='C4',
+ceiling='C7', vel=(58, 112), doubles=0.8, memory=None, moves=, weights=, phrase_bars=2, budget=, seed=0)` - the jazz
+pianist's solo (`agentsound.piano_vocab`): motif (the hook harmonized in 6ths / 3rds / guide tones), answer, riff,
+sequence, block (drop 2 / close / locked hands), octaves, blues (blues crushes, crushed graces, slip notes: spice),
+run / fourths (spice: a line first, the set piece crowning the phrase, a voiced landing), octave_run / tremolo /
+trill (fast: the climax), resolve. Every phrase is played by `pianist.arrange` with the move's voicing devices (no
+fills: the soloist plans the space; its ornaments budgeted in `memory=` - pass the song's `pianist.Memory()` so the
+solo and the heads share one budget), held / on-beat notes fitted to the chord under them (an avoid note moves a
+step to a chord tone or tension: the hook's E over a D7b9). `place` writes the right hand, the left hand
+(`pianist.left_hand` under the whole solo on `lh_track` - the comping track, or the piano track itself - answering
+the right hand's rests) and the harmony pedal lifted for the runs / 4ths / trills. A `soloist.Budget(...).save(beat)`
+inside the solo is spent by the phrase that contains it (the climax gets the trill; earlier phrases keep their fast
+figures `fast_every` bars away). `songs/jane-street-bossa`.
 
 **Material** (shared by every vocabulary; each takes a Ctx): `key_of`, `chord_tones(ctx, t)`, `pentatonic(ctx, t)` (minor
 pentatonic on minor / dominant chords, major on major ones, inside the key), `scale`, `snap`, `step`, `fold` / `fit`

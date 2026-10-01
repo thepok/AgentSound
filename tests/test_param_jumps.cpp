@@ -875,6 +875,8 @@ const std::map<std::string, std::string>& slowAllowed() {
         {"vocoder:lpc.bandwidth", "classic mode only (no effect in lpc mode)"},
         {"vocoder:lpc.width", "classic mode only (no effect in lpc mode)"},
         {"convolver.predelay", kDelayTime},
+        {"convolver.crossfeed", "changes what enters the IR (input side, smoothed 1.5 ms): the wet output follows over "
+                                "the room's decay - the tail already in the room keeps sounding, like moving the source"},
     };
     return m;
 }

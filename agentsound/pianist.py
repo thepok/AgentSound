@@ -48,7 +48,8 @@ from .theory import (Chord, ComposeError, Key, Progression, available_tensions, 
 __all__ = ['MOVES', 'DEVICES', 'STYLES', 'FILL_KINDS', 'ORNAMENTS', 'LH_STYLES', 'LH_METERS', 'FAST', 'SPICE',
            'Memory', 'trill', 'tremolo', 'mordent', 'inverted_mordent', 'turn', 'crush', 'blues_crush', 'slip_note',
            'repeated', 'roll', 'sweep', 'gliss', 'fourths', 'pentatonic_run', 'run', 'chromatic_run', 'octave_run',
-           'shake', 'alternating_hands', 'voicing', 'left_hand', 'pedal', 'arrange', 'Arrangement', 'crushes']
+           'shake', 'alternating_hands', 'voicing', 'left_hand', 'pedal', 'arrange', 'Arrangement', 'crushes',
+           'vocabulary']
 
 _EPS = 1e-6
 
@@ -1980,3 +1981,15 @@ def _fill_notes(kind, rng, p, k, g0, g1, before, after, b, fl, top_lim, ref_v, i
         c = repeated(dy, ln, b, rate=rng.uniform(6.5, 8.0), vel=fv, crescendo=0.5, seed=sd, at=a)
         return list(c)
     return []
+
+
+def vocabulary(style: str = 'straight', **kw):
+    """The jazz pianist's solo vocabulary for agentsound.soloist (agentsound.piano_vocab.vocabulary): the soloist's arc
+    (statement, call and response, development, burst, climax, resolution) played by the pianist's hands - each phrase
+    harmonized by arrange() with the move's voicing devices, the set pieces (runs, cascading 4ths, blues crushes, an
+    octave run, a trill or tremolo at the climax) budgeted, the left hand comping under the whole solo.
+
+        perf = soloist.solo(s, b.piano, pianist.vocabulary('straight', lh_track=b.comp), at=solo, prog=solo.prog,
+                            motif=HOOK, seed=3)"""
+    from .piano_vocab import vocabulary as _v
+    return _v(style, **kw)

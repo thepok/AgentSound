@@ -34,17 +34,20 @@ A hero is three things, and the wrapper does all of them from one table (PRESETS
        exciter   the top octave
        chorus / double / width / dimension   width without phasing (Juno chorus, micro-pitch double, M/S width,
                  Dimension-D) - mono-compatible
-       echo      the instrument's own stereo echo (guitars)
-       air       LAST: the BREATH stage (a utility named 'air', 0 dB). Within-note expression - a wind player's
-                 "mal kurz mehr, mal kurz weniger" air on a held note, a swell, an fp-crescendo - written on
-                 'fx.air.gain' (heroes.air(track, points)) lands after all the compression and saturation: a 3 dB
-                 push on a held note stays 3 dB at the output (AIR_TARGET)
+       air       the BREATH stage (a utility named 'air', 0 dB). Within-note expression - a wind player's
+                 "mal kurz mehr, mal kurz weniger" air on a held note, a swell, an fp-crescendo, a guitarist's
+                 whammy dip or feedback swell - written on 'fx.air.gain' (heroes.air(track, points)) lands after all
+                 the compression and saturation: a 3 dB push on a held note stays 3 dB at the output (AIR_TARGET);
+                 before the echo, so it moves the note and not the repeats of the notes before it
+       echo      the instrument's own stereo echo (guitars), last
    space: the sends (plate / hall / echo); in a song the family's plate bus (bus/hero_plate: big, bright,
    pre-delayed) and echo THROWS at the phrase ends instead of a constant echo.
 
 2. THE MIX RULES - when hero() gets a Track (and so the song): the bed (pads, strings, choir) ducks under the hero
    (song.sidechain keyed by it) and steps out of its presence band while the hero plays (song.carve: a keyed dynamic
-   EQ); competitors (keys, comping, rhythm guitars, arps) get a static presence dip (mixer.add_eq_dip: an eq named
+   EQ) - keyed from the hero's tone BEFORE its air / echo / ride stages and its fader (tap 'pre:air': KEY_TAP), so the
+   bed comes back under echo tails and throws and a hook ride does not deepen the duck (the thresholds follow the
+   fader, so the duck starts where a post-fader key would); competitors (keys, comping, rhythm guitars, arps) get a static presence dip (mixer.add_eq_dip: an eq named
    'hero_dip'); the hero is ridden up in the hook sections (a 'hero_ride' utility and its 'fx.hero_ride.gain' lane,
    the mixer's ride points); echo throws at every phrase end the track plays (articulation.throws, written when the
    song compiles, so notes placed after hero() count). The depths come from the preset; a genre (a mixer profile:
@@ -81,15 +84,16 @@ STAGES = {'tone': 'eq', 'catch': 'compressor', 'comp': 'compressor', 'deess': 'd
           'double': 'microshift', 'width': 'width', 'dimension': 'dimension', 'echo': 'delay'}
 """Stage -> engine fx type (None: a list of fx given by the preset)."""
 ORDER = ('tone', 'catch', 'comp', 'deess', 'amp', 'drive', 'tape', 'presence', 'exciter', 'chorus', 'double',
-         'width', 'dimension', 'echo', 'air')
-"""The shared hero chain in signal order (a preset may reorder: the darksynth drives before its eq; 'air' is always
-last)."""
+         'width', 'dimension', 'air', 'echo')
+"""The shared hero chain in signal order (a preset may reorder: the darksynth drives before its eq). 'air' comes after
+every level-dependent and colour / width stage but BEFORE the echo: a breath push, a whammy dip or a feedback swell
+on fx.air.gain moves the note, not the repeats of the notes before it."""
 DYNAMIC_STAGES = ('catch', 'comp', 'amp', 'drive', 'tape')
 """The level-dependent stages (the 'air' stage comes after all of them)."""
 AIR = 'air'
 AIR_TARGET = 'fx.air.gain'
-"""The breath / air-pressure stage: a utility named 'air' (gain 0 dB) at the end of the chain - after the compressor
-and the saturation - in every hero built by the wrapper. A player writes the within-note expression of a wind
+"""The breath / air-pressure stage: a utility named 'air' (gain 0 dB) after the compressor and the saturation (and
+before the instrument's own echo) in every hero built by the wrapper. A player writes the within-note expression of a wind
 player or a bowed string (a swell, a short push, an fp-crescendo: "mal kurz mehr, mal kurz weniger" air on a held
 note) as dB on
 'fx.air.gain' (heroes.air(track, points)): it lands AFTER the 6-9 dB of hero compression, so a 3 dB push stays a
@@ -140,10 +144,14 @@ def stage_fx(stage: str, value, named: bool = False) -> list:
 
 
 def air_order(stages: dict, order=ORDER) -> tuple:
-    """`order` with the 'air' stage last: after every level-dependent stage (DYNAMIC_STAGES: the compressors, amp,
-    drive, tape) and after the linear colour / width / echo stages too - so adding it changes nothing else in the
-    chain (the old heroes stay bit-identical at 0 dB: the fx before it keep their positions)."""
-    return tuple([s for s in order if s != AIR] + [AIR])
+    """`order` with the 'air' stage after every level-dependent stage (DYNAMIC_STAGES: the compressors, amp, drive,
+    tape) and the linear colour / width stages, right before the 'echo' (an air lane must not move the echoes of
+    earlier notes); last when the order has no echo. At 0 dB it changes nothing."""
+    rest = [s for s in order if s != AIR]
+    if 'echo' in rest:
+        i = rest.index('echo')
+        return tuple(rest[:i] + [AIR] + rest[i:])
+    return tuple(rest + [AIR])
 
 
 def chain(stages: dict, order=ORDER, named: bool = False, air: bool = False) -> list:
@@ -192,6 +200,8 @@ class Preset:
     octave: dict | None = None     # the octave layer spec; its 'mode' ('on' | 'muted' | 'off') is the default use
     double: str | None = None      # the default double mode: 'takes', 'shift' or None
     order: tuple = ORDER
+    post_source: tuple = ()        # names of the source patch's own fx that go after the chain's level-dependent
+    #                                stages (the organ's Leslie: the drive and compression go in front of the rotor)
     named: bool = True             # the chain's fx named after their stages ('tone', 'comp', ...)
     user_gain_db: float | None = None   # gain_db around another -18 LUFS-calibrated sound (None: gain_db)
     space: dict = field(default_factory=dict)
@@ -474,10 +484,24 @@ def build(preset, sound=None, *, double=None, octave=None, air: bool = True, nam
         lay = layers[0]
         src = patches.get(lay.source) if isinstance(lay.source, str) and patches.has(lay.source) else None
         aud = p.audition if (own and p.audition) else (src.audition if src is not None else p.audition)
-        return Patch(name, lay.instrument, fx=[f.copy() for f in lay.fx] + ch,
+        return Patch(name, lay.instrument, fx=_with_source([f.copy() for f in lay.fx], ch, p.post_source, lg),
                      gain_db=round(float(lay.params.get('level', 0.0)) + gain, 4),
                      pan=float(lay.params.get('pan', 0.0)), sends=sends, notes=notes, audition=aud)
     return Patch.layered(name, *layers, fx=ch, gain_db=gain, sends=sends, notes=notes, audition=p.audition)
+
+
+def _with_source(src_fx: list, ch: list, post: tuple, lg: list) -> list:
+    """The source's own fx, then the hero chain - except the source fx named in `post` (a preset's post_source), which
+    go right after the chain's last level-dependent stage (DYNAMIC_STAGES): drive and compression in front of a
+    Leslie / chorus, never on its modulation."""
+    moved = [f for f in src_fx if post and f.name in post]
+    if not moved:
+        return src_fx + ch
+    keep = [f for f in src_fx if f.name not in post]
+    at = max((i + 1 for i, f in enumerate(ch) if f.name in DYNAMIC_STAGES), default=0)
+    lg.append(f"source fx {', '.join(f.name for f in moved)} after the chain's "
+              f"{ch[at - 1].name if at else 'start'} (the drive / compression before them)")
+    return keep + ch[:at] + moved + ch[at:]
 
 
 def _sound_label(s) -> str:
@@ -516,6 +540,7 @@ class HeroInfo:
     echo_base: float | None = None
     throw_db: float | None = None
     ride_db: float = 0.0
+    key_fx: list = field(default_factory=list)   # (FX, threshold as set): the bed's duck / carve keyed pre-fader
     _lanes: list = field(default_factory=list)
 
     def lines(self) -> list[str]:
@@ -537,6 +562,10 @@ class HeroInfo:
         t._auto = [x for x in t._auto if id(x) not in mine]
         self._lanes = []
         self.compile_log = []
+        # the bed's keys listen before the hero's fader: their thresholds move with it (a hero at -6 dB is keyed
+        # 6 dB hotter there), so the duck starts where a post-fader key at the given threshold would
+        for f, base in self.key_fx:
+            f.params['threshold'] = round(min(0.0, max(-60.0, base - t.gain_db)), 3)
         if self.ride_db:
             names = _hook_names(song, self.sections, self.preset.mix_value('feature'))
             if names:
@@ -611,13 +640,35 @@ def _nodes(nodes) -> list:
 
 
 def _insert_air(track) -> str:
-    """Add the 'air' stage at the end of a track chain that has none (after its compressors / saturation); returns
-    the log text."""
+    """Add the 'air' stage to a track chain that has none: before its own echo (a delay named 'echo') when it has one,
+    else at the end (after its compressors / saturation); returns the log text."""
     from .patches import FX
     if any(f.name == AIR and f.type == 'utility' for f in track.fx):
         return "; its 'air' stage is there"
-    track.fx.append(FX('utility', {'gain': 0.0}, name=AIR))
-    return f"; 'air' stage added at the end of its chain ({AIR_TARGET})"
+    echo = next((i for i, f in enumerate(track.fx) if f.type == 'delay' and f.name == 'echo'), None)
+    if echo is None:
+        track.fx.append(FX('utility', {'gain': 0.0}, name=AIR))
+        return f"; 'air' stage added at the end of its chain ({AIR_TARGET})"
+    track.fx.insert(echo, FX('utility', {'gain': 0.0}, name=AIR))
+    return f"; 'air' stage added before its echo ({AIR_TARGET})"
+
+
+KEY_TAP = 'pre:air'
+"""Where the bed's duck / carve listen to a hero (agentsound.patches.TAPS): before its 'air' stage - after the tone,
+compression and saturation, before the breath lane, the echo, the hook ride and the fader. A post-fader key heard
+the echo tails and throws (the bed stayed ducked through them) and the ride (+1-2 dB in the hooks deepened the
+duck)."""
+
+
+def _key_tap(track, ride: bool) -> str:
+    """KEY_TAP when the track has its 'air' stage; else before its echo, else before the hero ride (added later by
+    the wrapper), else pre-fader."""
+    names = [f.name for f in track.fx]
+    if AIR in names:
+        return KEY_TAP
+    if 'echo' in names:
+        return 'pre:echo'
+    return 'pre:hero_ride' if ride else 'prefader'
 
 
 def _names(nodes) -> str:
@@ -635,17 +686,15 @@ def _depth(opt, default: float) -> float:
 
 
 def _echo_bus(song, echo):
-    """The echo bus for the throws: the given one, the song's 'echo', any bus named *echo* / *delay*, else a new
-    s.echo(). Returns (bus id, created)."""
+    """The echo bus for the throws, explicit: the given one (echo=bus / id), else the song's bus named exactly 'echo',
+    else a new s.echo(). (Any bus with 'echo' / 'delay' in its name used to be taken - a slapback, a pre-delayed hall
+    or a 'delay_fx' group could end up carrying the throws.) Returns (bus id, created)."""
     if echo is not None and echo is not True:
         bid = getattr(echo, 'id', echo)
         song.node(bid)
         return bid, False
     if 'echo' in song.buses:
         return 'echo', False
-    for b in song.buses:
-        if 'echo' in b or 'delay' in b:
-            return b, False
     return song.echo().id, True
 
 
@@ -746,6 +795,15 @@ def _wrap_track(track, family, *, genre, bed, competitors, sections, double, oct
             lg.append(f"space: plate -> {bus.id!r} at {lvl:g} dB" + (f" (created from {pb})" if made else '')
                       + (f"; the patch's send to the band's 'plate' ({dropped:g} dB) moved there" if dropped is not None
                          else ''))
+            # its own plate is the hero's reverb: a quieter preset hall send next to it made three returns (plate,
+            # hall, echo) - a washed, distant lead for no gain. That hall goes unless the song sent it there itself; a
+            # hall at least as loud as the plate is the hero's main room (strings, woodwind, brass) and stays. (The
+            # sung vocal family keeps its sends: agentsound.singer / hero_vocal decide those.)
+            hall_db = track._patch_sends.get('hall')
+            if p.family != 'vocal' and hall_db is not None and hall_db < lvl and 'hall' not in track.sends:
+                track._patch_sends.pop('hall')
+                lg.append(f"space: the preset's hall send ({hall_db:g} dB, under the plate's {lvl:g}) dropped - the "
+                          f"plate is the hero's reverb (track.send('hall', ...) brings it back)")
         if own_echo:
             info.echo = 'fx.echo'
             lg.append("space: its own echo (fx 'echo'); the throws raise fx.echo.mix")
@@ -761,24 +819,29 @@ def _wrap_track(track, family, *, genre, bed, competitors, sections, double, oct
         elif echo is False:
             track._patch_sends.pop('echo', None)
             lg.append("space: no echo (echo=False)")
-    # 3. the bed: duck + carve
+    # 3. the bed: duck + carve, keyed from the hero's tone before its air / echo / ride stages and its fader
     bed_ids = _nodes(bed)
     if bed_ids:
+        tap = _key_tap(track, bool(_depth(ride, prof.lead_ride_db if prof is not None else p.mix_value('ride_db'))))
+        nodes = [song.node(getattr(x, 'id', x)) for x in bed_ids]
         d = _depth(duck, prof.bed_duck_db if prof is not None else p.mix_value('duck'))
         if d:
-            song.sidechain(*bed_ids, key=track, depth=d, threshold=p.mix_value('duck_threshold'),
+            thr = p.mix_value('duck_threshold')
+            song.sidechain(*bed_ids, key=track, depth=d, threshold=thr,
                            attack=p.mix_value('duck_attack'), hold=p.mix_value('duck_hold'),
-                           release=p.mix_value('duck_release'))
+                           release=p.mix_value('duck_release'), tap=tap)
+            info.key_fx += [(n.fx[-1], float(thr)) for n in nodes]
             lg.append(f"duck: {_names(bed_ids)} {d:g} dB under the hero (song.sidechain, attack "
-                      f"{p.mix_value('duck_attack'):g} / release {p.mix_value('duck_release'):g} ms"
+                      f"{p.mix_value('duck_attack'):g} / release {p.mix_value('duck_release'):g} ms, keyed {tap}"
                       + (f"; {prof.name} profile" if prof is not None else '') + ')')
         else:
             lg.append("duck: off" + (" (duck=False)" if duck is False else f" (the {prof.name} profile ducks no bed)"))
         c = _depth(carve, p.mix_value('carve_db'))
         if c:
-            song.carve(*bed_ids, key=track, freq=p.mix_value('carve_freq'), q=p.mix_value('carve_q'), depth=c)
+            song.carve(*bed_ids, key=track, freq=p.mix_value('carve_freq'), q=p.mix_value('carve_q'), depth=c, tap=tap)
+            info.key_fx += [(n.fx[-1], float(n.fx[-1].params['threshold'])) for n in nodes]
             lg.append(f"carve: {_names(bed_ids)} up to -{c:g} dB at {p.mix_value('carve_freq'):g} Hz (Q "
-                      f"{p.mix_value('carve_q'):g}) while the hero plays (song.carve)")
+                      f"{p.mix_value('carve_q'):g}) while the hero plays (song.carve, keyed {tap})")
         else:
             lg.append("carve: off")
     # 4. competitors: static presence dips

@@ -611,7 +611,9 @@ def solo(song, track, vocab: Vocabulary, at=None, arc: str = 'classic', motif=No
                     cls = 'fast' if m.fast else 'spice'
                     if m.fast and stage not in ('burst', 'climax'):
                         continue
-                    if not bud.allows(at_, cls, m.name, span=(start, end)):
+                    # a saved moment (budget.save) is spent by the phrase that contains it; the other phrases of
+                    # the solo keep their fast figures fast_every bars away from it
+                    if not bud.allows(at_, cls, m.name, span=(p0, p0 + pl)):
                         perf.budget['dropped'].append((round(at_, 4), m.name, None))
                         continue
                 chosen = m

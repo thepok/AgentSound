@@ -258,10 +258,11 @@ def build() -> Song:
     choir = s.track('choir', 'gm/choir_aahs', gain_db=-4, fx=[fx.eq({'hp.freq': 180, 'peak1.freq': 400,
                                                                     'peak1.gain': -2.5})],
                     sends={hall: -8, shimmer: -18})
+    # the drive in front of the patch's micro-pitch double (pre=): after it, it ground the doubled voices together
     lead2 = s.track('lead2', 'synthwave/sync_lead', gain_db=-6, pan=-0.3,
-                    fx=[fx.saturator(mode='tube', drive=6), fx.eq({'hp.freq': 250, 'peak2.freq': 900,
-                                                                   'peak2.gain': -3, 'peak3.freq': 1800,
-                                                                   'peak3.gain': -2.5, 'peak3.q': 1.2})],
+                    pre=[fx.saturator(mode='tube', drive=6)],
+                    fx=[fx.eq({'hp.freq': 250, 'peak2.freq': 900, 'peak2.gain': -3, 'peak3.freq': 1800,
+                               'peak3.gain': -2.5, 'peak3.q': 1.2})],
                     sends={hall: -9, echo: -12})
     dbl = s.track('dbl', 'synthwave/supersaw_lead', gain_db=-9,
                   fx=[fx.eq({'hp.freq': 220, 'peak3.freq': 3500, 'peak3.gain': -3})], sends={hall: -10})

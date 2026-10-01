@@ -87,6 +87,29 @@ class Measure(unittest.TestCase):
         self.assertAlmostEqual(ch.rel['bed'], -2.0, delta=0.05)      # -24 + K offset 2
         self.assertFalse(next(b for b in bal if b.name == 'verse').hook)
 
+    def test_a_featured_track_leads_its_section(self):
+        # a bass solo (bass.feature(bass_solo)): the bass is that section's lead, the drums are judged against it and
+        # the bass is not 'low' there; in the other sections the piano leads as before
+        lv = {'piano': {'head': -20, 'bass_solo': -38}, 'bass': {'head': -25, 'bass_solo': -23},
+              'drums': {'head': -34.5, 'bass_solo': -37}}
+        rep = report(lv, profile='jazz', sections=(('head', -15.0), ('bass_solo', -17.0)),
+                     roles={'piano': 'lead', 'drums': 'drums', 'bass': 'bass'})
+        roles = mixer.infer_roles(report=rep)[0]
+        bal = mixer.measure(rep, roles, mixer.get_profile('jazz'), featured={'bass_solo': 'bass'})
+        head, bs = bal
+        self.assertEqual(head.lead, 'piano')
+        self.assertEqual(bs.lead, 'bass')
+        self.assertAlmostEqual(bs.rel['rhythm'], -14.0, delta=0.05)
+        self.assertNotIn('low', bs.rel)
+        s = Song('t', tempo=120)
+        head = s.section('head', bars=8)
+        sec = s.section('bass_solo', bars=8)
+        t = s.track('bass', inst.va())
+        t.feature(sec, db=2)
+        self.assertEqual(mixer.features(s), {'bass_solo': 'bass'})
+        s.track('drums', inst.va()).feature(head, db=1)        # a feature from beat 0: no glide before the start
+        self.assertEqual(mixer.features(s), {'bass_solo': 'bass', 'head': 'drums'})
+
     def test_space_bed_and_unjudged_sections(self):
         rep = report({'lead': {'verse': None, 'chorus': -20}, 'pad': {'verse': -24, 'chorus': -24}},
                      roles={'lead': 'lead', 'pad': 'bed'}, bed={'chorus': -1.2})

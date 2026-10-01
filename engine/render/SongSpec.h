@@ -33,6 +33,16 @@ struct AutomationLane {
     std::string path;    // JSON path for error messages
 };
 
+// ---- taps: where a send, a sidechain key or a follower picks up a node's signal ("tap" in the render JSON,
+// docs/RENDER_FORMAT.md "Taps")
+//   kTapPost (-1)      "post"      after the inserts, the fader (gainDb) and the pan: the default
+//   kTapPreFader (-2)  "prefader"  after the inserts, before the fader and the pan
+//   0..N               "prefx" (= 0) / "pre:<i>": the signal entering insert i of the tapped node (0: the dry
+//                      instrument output / the summed bus input); "pre:<fx count>" is the "prefader" point
+inline constexpr int kTapPost = -1;
+inline constexpr int kTapPreFader = -2;
+std::string tapName(int tap);
+
 // ---- modulators ("parameters are instruments too", see docs/RENDER_FORMAT.md "Modulators")
 
 enum class ModSource { Lfo, Steps, Follow, Envelope, Random };
@@ -61,7 +71,8 @@ struct ModulatorSpec {
     double glide{0.0};               // fraction of a step used to glide into its value
     bool loop{true};
     // follow
-    std::string followNode;          // track or bus id (post-fader output, like a sidechain key)
+    std::string followNode;          // track or bus id (post-fader output by default, like a sidechain key)
+    int followTap{kTapPost};         // where on that node the follower listens ("tap")
     double attackMs{5.0};
     double releaseMs{120.0};
     double gainDb{0.0};
@@ -97,8 +108,15 @@ double modFieldValue(const ModulatorSpec& spec, ModField field);
 struct FxSpec {
     std::string type;
     json params = json::object();
-    std::string sidechain;  // node id or empty
+    std::string sidechain;       // node id or empty
+    int sidechainTap{kTapPost};  // where on the key node the key is tapped ("tap")
     std::string path;
+};
+
+struct SendSpec {
+    std::string bus;
+    float db{};
+    int tap{kTapPost};           // "post" (default) | "prefader" | "prefx" / "pre:<i>"
 };
 
 struct NodeSpec {
@@ -111,7 +129,7 @@ struct NodeSpec {
     float pan{0.0f};
     bool mute{false};
     std::string output{"master"};
-    std::vector<std::pair<std::string, float>> sends;
+    std::vector<SendSpec> sends;
     std::vector<NoteSpec> notes;
     std::vector<AutomationLane> automation;
     std::vector<ModulatorSpec> modulators;
@@ -140,6 +158,9 @@ struct AnalysisSpec {
     std::string profile{"default"};  // a name from analysis/Profiles.h (validated by parseSong)
     std::optional<std::pair<double, double>> loudness;  // integrated LUFS target override (min < max)
     std::vector<SilentNoteHint> silentNotes;
+    // "analysis.audioOnsets": tracks whose notes trigger whole phrases (a singer's takes: one note per sung phrase,
+    // the dynamics inside the audio) - their note dynamics are measured from the audio's own onsets
+    std::vector<std::string> audioOnsets;
 };
 
 struct SongSpec {

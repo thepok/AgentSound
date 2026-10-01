@@ -216,24 +216,48 @@ class _Node:
         self.pan = _num(pan, f"{self.kind} {id!r} pan", -1.0, 1.0)
         self.output = _ref(output)
         self.sends: dict[str, float] = {}
+        self.send_taps: dict[str, str] = {}      # bus id -> tap (only the sends that are not post-fader)
         self._patch_sends: dict[str, float] = {}
         self.mute = bool(mute)
         self._auto: list[tuple[str, list]] = []
         self._mods: list[tuple[str, Mod, tuple, str]] = []   # (target, modulator, (start, end), call site)
         for k, v in (sends or {}).items():
-            self.send(k, v)
+            if isinstance(v, (tuple, list)):
+                if len(v) != 2:
+                    raise ComposeError(f"{self.kind} {id!r}: send to {getattr(k, 'id', k)!r} must be dB or (dB, tap), "
+                                       f"got {v!r}")
+                self.send(k, v[0], tap=v[1])
+            else:
+                self.send(k, v)
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}({self.id!r})"
 
-    def send(self, bus, db: float = -12.0):
-        """Post-fader send to a bus (reverb/delay return) at `db`."""
-        self.sends[_ref(bus)] = _num(db, f"{self.kind} {self.id!r} send level", _MIN_DB, _MAX_DB)
+    def send(self, bus, db: float = -12.0, tap=None):
+        """Send to a bus (reverb / delay return, a parallel bus) at `db`: post-fader by default; tap='prefader' (after
+        the inserts, before the fader and pan: a parallel compression / crush bus keeps its blend when the fader rides),
+        'prefx' (the dry instrument) or 'pre:<fx name>' (before that insert). sends={bus: (-6, 'prefader')} does the
+        same."""
+        b = _ref(bus)
+        self.sends[b] = _num(db, f"{self.kind} {self.id!r} send level", _MIN_DB, _MAX_DB)
+        t = _patches.check_tap(tap, f"{self.kind} {self.id!r} send to {b!r}")
+        if t is None:
+            self.send_taps.pop(b, None)
+        else:
+            self.send_taps[b] = t
         return self
 
     def to(self, output):
         """Route this node's output to a bus (or 'master')."""
         self.output = _ref(output)
+        return self
+
+    def allow_order(self, why: str):
+        """Silence the chain-order warning of this node (a nonlinear stage after a time / modulation effect on
+        purpose, e.g. a tape-saturated echo as a sound of its own): node.allow_order('dub echo into tape')."""
+        if not isinstance(why, str) or not why.strip():
+            raise ComposeError(f"{self.kind} {self.id!r}: allow_order() needs the reason as text")
+        self._order_ok = why
         return self
 
     def add_fx(self, *effects, first: bool = False):
@@ -336,20 +360,21 @@ class _Node:
         if target.startswith('send.') and self.kind == 'master':
             raise ComposeError("the master has no sends")
 
-    def duck(self, key=None, pitches=None, **params):
+    def duck(self, key=None, pitches=None, tap=None, **params):
         """Sidechain pumping: append a 'ducker' keyed by `key` (track/bus). pitches= keys it only from
         those notes of the key track (e.g. 'kick' out of a full drum track) through a muted ghost
         track. key=None gives a tempo-synced ducker (mode='tempo', e.g. rate=1 for quarter notes).
+        tap= where the key is picked up (default post-fader; 'prefader', 'prefx', 'pre:<fx name>': see TAPS).
         params go to the ducker, e.g. depth=10, release=180 (see `python -m agentsound params ducker`)."""
-        self._song._duck(self, key, pitches, params)
+        self._song._duck(self, key, pitches, params, tap)
         return self
 
-    def carve(self, key, freq: float = 2500.0, q: float = 0.7, depth: float = 4.0, **params):
+    def carve(self, key, freq: float = 2500.0, q: float = 0.7, depth: float = 4.0, tap=None, **params):
         """Dynamic EQ keyed by a lead: append a band-mode 'compressor' (sidechain = `key`) that dips this node's
         `freq` band (Q `q`) by up to `depth` dB while the key plays loud in that band, and gives it back in the
         key's gaps - the bed steps aside in the lead's presence band instead of ducking as a whole. params go to the
-        compressor (threshold=-40, ratio=4, attack=10, release=250, knee=6 by default)."""
-        self._song._carve(self, key, freq, q, depth, params)
+        compressor (threshold=-40, ratio=4, attack=10, release=250, knee=6 by default); tap= as duck()."""
+        self._song._carve(self, key, freq, q, depth, params, tap)
         return self
 
 
@@ -358,7 +383,8 @@ class Track(_Node):
 
     kind = 'track'
 
-    def __init__(self, song, id, sound, fx=(), gain_db=0.0, pan=None, output='master', sends=None, mute=False):
+    def __init__(self, song, id, sound, fx=(), gain_db=0.0, pan=None, output='master', sends=None, mute=False,
+                 pre=()):
         if isinstance(sound, str):
             sound = _patches.get(sound)
         patch_fx, patch_gain, patch_pan, patch_sends, self.patch = [], 0.0, 0.0, {}, None
@@ -376,8 +402,11 @@ class Track(_Node):
         gain = _num(gain_db, f"track {id!r} gain_db") + patch_gain
         if isinstance(fx, (FX, dict)):
             fx = [fx]
-        super().__init__(song, id, patch_fx + [FX.coerce(f) for f in (fx or ())], gain,
-                         patch_pan if pan is None else pan, output, sends, mute)
+        if isinstance(pre, (FX, dict)):
+            pre = [pre]
+        # pre= goes in front of the patch's chain (drive / compression before its chorus, echo, reverb), fx= after it
+        super().__init__(song, id, [FX.coerce(f) for f in (pre or ())] + patch_fx + [FX.coerce(f) for f in (fx or ())],
+                         gain, patch_pan if pan is None else pan, output, sends, mute)
         self._patch_sends = patch_sends
         self._notes: list[Note] = []
         self._origin: list[str] = []   # call site that placed each note (for error messages)
@@ -487,9 +516,13 @@ class Track(_Node):
         spans = sorted(self._song._span(x, 'feature') for x in sections)
         if not spans:
             raise ComposeError("feature() needs at least one section")
+        # the mixer reads it: a featured track is the lead of its feature sections (a bass solo is judged vs the bass)
+        self.featured = list(getattr(self, 'featured', [])) + [x.name for x in sections if hasattr(x, 'name')]
         pts: list = [(0, 0.0)] if spans[0][0] - g > 0 else []
         for s0, e0 in spans:
-            pts += [(s0 - g, 0.0), (s0, d, 'smooth'), (e0 - g, d), (e0, 0.0, 'smooth')]
+            # a feature from the song's start: in at once (no glide before beat 0)
+            pts += [(s0, d)] if s0 <= 0 else [(max(0.0, s0 - g), 0.0), (s0, d, 'smooth')]
+            pts += [(e0 - g, d), (e0, 0.0, 'smooth')]
         return self.automate(target, pts)
 
     # --- section plans (agentsound.sections): parts from each section's progression, per-section overrides
@@ -1158,11 +1191,13 @@ class Song:
         return id
 
     def track(self, id: str, sound, *, fx=(), gain_db: float = 0.0, pan: float | None = None,
-              output='master', sends: dict | None = None, mute: bool = False) -> Track:
+              output='master', sends: dict | None = None, mute: bool = False, pre=()) -> Track:
         """Add an instrument track. sound = Patch, patch name, inst.va(...) or {'type', 'params'}.
-        Patch fx come first, then `fx`; gain_db adds to the patch level; pan None keeps the patch pan;
-        sends merge with the patch's (patch sends to buses that don't exist are dropped with a warning)."""
-        t = Track(self, self._new_id(id, 'track'), sound, fx, gain_db, pan, output, sends, mute)
+        `pre` effects come first (before the patch chain: drive / compression in front of its chorus, echo or
+        reverb), then the patch fx, then `fx`; gain_db adds to the patch level; pan None keeps the patch pan;
+        sends merge with the patch's (patch sends to buses that don't exist are dropped with a warning); a send
+        may be (dB, tap): sends={crush: (-6, 'prefader')}."""
+        t = Track(self, self._new_id(id, 'track'), sound, fx, gain_db, pan, output, sends, mute, pre)
         self.tracks[id] = t
         return t
 
@@ -1214,8 +1249,16 @@ class Song:
         ['snare', 'clap'], [38, 40]) from only those notes of it, through the muted ghost key track that
         sidechain()/duck() use: then only the snare opens the gate, so the whole kit may feed the reverb
         (kick and hats ring only inside the snare's burst). Calling it again with just key= keys an existing bus.
+        Without key=, a gated bus fed by one drum kit is keyed from that kit's snare / clap when the song compiles
+        (the same thing); key=False keeps the gate on the bus input.
             kit = s.track('drums', 'synthwave/drums_outrun')                # its patch sends to 'gated'
             s.gated(gain_db=-2, hold=250, key=kit, pitches='snare')"""
+        if key is False:
+            if pitches is not None:
+                raise ComposeError("gated(key=False) keeps the gate on the bus input: no pitches=")
+            bus = self._return_bus(id, 'bus/gated', FX('gatedreverb', {'mix': 1.0}), params, gain_db)
+            bus._gate_free = True
+            return bus
         if pitches is not None and key is None:
             raise ComposeError("gated(pitches=...) needs key=<drum track> whose notes open the gate, "
                                "e.g. s.gated(key=kit, pitches='snare')")
@@ -1245,41 +1288,69 @@ class Song:
             f.sidechain = src
         return bus
 
-    def sidechain(self, *targets, key, pitches=None, **params) -> None:
-        """Duck every target from `key` (classic pump): song.sidechain(pad, bass, key=drums, pitches='kick')."""
+    def sidechain(self, *targets, key, pitches=None, tap=None, **params) -> None:
+        """Duck every target from `key` (classic pump): song.sidechain(pad, bass, key=drums, pitches='kick').
+        tap= where the key is picked up: post-fader (default), 'prefader', 'prefx' (the key's dry instrument) or
+        'pre:<fx name>' (before that insert of the key: e.g. a lead's echo - the bed comes back under the tails)."""
         if not targets:
             raise ComposeError("sidechain() needs at least one target track/bus")
         for t in targets:
-            self.node(_ref(t)).duck(key, pitches, **params)
+            self.node(_ref(t)).duck(key, pitches, tap=tap, **params)
 
-    def carve(self, *targets, key, freq: float = 2500.0, q: float = 0.7, depth: float = 4.0, **params) -> None:
+    def carve(self, *targets, key, freq: float = 2500.0, q: float = 0.7, depth: float = 4.0, tap=None,
+              **params) -> None:
         """Carve room for a lead: every target gets a dynamic EQ keyed by `key` (a band-mode compressor) that dips
         its `freq` band (default 2.5 kHz, Q 0.7: ~1.2-4.5 kHz) by up to `depth` dB while the lead plays and releases
         in the lead's gaps: song.carve(strings, piano, rhodes, key=sax, depth=4). Unlike sidechain() the bed keeps
-        its level and body; only the lead's presence band steps aside."""
+        its level and body; only the lead's presence band steps aside. tap= as sidechain()."""
         if not targets:
             raise ComposeError("carve() needs at least one target track/bus")
         for t in targets:
-            self.node(_ref(t)).carve(key, freq, q, depth, **params)
+            self.node(_ref(t)).carve(key, freq, q, depth, tap=tap, **params)
 
-    def _carve(self, node, key, freq, q, depth, params) -> None:
+    def _carve(self, node, key, freq, q, depth, params, tap=None) -> None:
         kid = _ref(key)
         if kid == node.id:
             raise ComposeError(f"carve(): {node.id!r} cannot be keyed by itself")
         opts = {'threshold': -40.0, 'ratio': 4.0, 'knee': 6.0, 'attack': 10.0, 'release': 250.0, **params,
                 'range': depth, 'band': freq, 'bandq': q}
-        node.fx.append(FX('compressor', opts, sidechain=kid))
+        node.fx.append(FX('compressor', opts, sidechain=kid, tap=tap))
 
-    def _duck(self, node, key, pitches, params) -> None:
+    def _duck(self, node, key, pitches, params, tap=None) -> None:
         if key is None:
+            if tap is not None:
+                raise ComposeError(f"{node.kind} {node.id!r}: duck(tap=...) taps a key; a tempo ducker (key=None) has none")
             node.fx.append(FX('ducker', {'mode': 'tempo', **params}))
             return
         kid = _ref(key)
         if pitches is None:
-            node.fx.append(FX('ducker', params, sidechain=kid))
+            node.fx.append(FX('ducker', params, sidechain=kid, tap=tap))
             return
         ps = tuple(sorted({drum(p) for p in (pitches if isinstance(pitches, (list, tuple, set)) else [pitches])}))
-        node.fx.append(FX('ducker', params, sidechain=self._ghost(kid, ps, 'sidechain pitches=')))
+        node.fx.append(FX('ducker', params, sidechain=self._ghost(kid, ps, 'sidechain pitches='), tap=tap))
+
+    def _resolve_tap(self, tap, key: str, where: str):
+        """The render-JSON tap of a Python tap spec on node `key` (None = post: written as nothing). 'pre:<name>'
+        becomes the index of that insert of the key's chain (by fx name, else the first of that type)."""
+        if tap is None or tap == 'post':
+            return None
+        if tap in ('prefader', 'prefx'):
+            return tap
+        what = tap[4:]
+        node = self.tracks.get(key) or self.buses.get(key)
+        chain = list(node.fx) if node is not None else []       # a ghost key track has no inserts
+        if what.isdigit():
+            i = int(what)
+            if i > len(chain):
+                raise ComposeError(f"{where}: tap {tap!r} - {key!r} has {len(chain)} insert(s) (pre:0 .. pre:{len(chain)})")
+        else:
+            i = next((k for k, f in enumerate(chain) if f.name == what), None)
+            if i is None:
+                i = next((k for k, f in enumerate(chain) if f.type == what), None)
+            if i is None:
+                raise ComposeError(f"{where}: tap {tap!r} - {key!r} has no insert named or of type {what!r} (chain: "
+                                   f"{', '.join(f.name or f.type for f in chain) or 'empty'})")
+        return 'prefx' if i == 0 else f'pre:{i}'
 
     def _ghost(self, kid: str, ps: tuple[int, ...], what: str) -> str:
         """Id of a muted key track playing only pitches `ps` of track `kid` (created on first use)."""
@@ -1362,6 +1433,49 @@ class Song:
             raise ComposeError(f"add_compile_hook() takes a callable fn(song), got {fn!r}")
         self._compile_hooks.append(fn)
 
+    _KIT_RE = re.compile(r'drum|kit|linn|dmx|tr\d{3}|rz1|cr8000|kpr77|dr110|rx21')
+
+    def _auto_gate_keys(self) -> None:
+        """A gated-reverb bus fed only by a drum kit's own patch send (the whole-kit send of e.g.
+        synthwave/drums_outrun) and keyed by nothing gets the kit's snare / clap as its key (the
+        s.gated(key=kit, pitches=['snare', 'clap']) behaviour): kick, hats and toms on the same send no longer open
+        the gate (a click-heavy kick at a -6 dB send did). A send the song set or automates itself, other tracks on
+        the bus or s.gated(key=False) keep the gate on the bus input."""
+        for b in self.buses.values():
+            gates = [f for f in b.fx if f.type == 'gatedreverb' and f.sidechain is None]
+            if not gates or getattr(b, '_gate_free', False):
+                continue
+            feeders = [t for t in self.tracks.values()
+                       if b.id in t.sends or (b.id in t._patch_sends and t._patch_sends[b.id] is not None)]
+            if len(feeders) != 1:
+                continue
+            kit = feeders[0]
+            if not (kit.instrument.type == 'drums' or (kit.patch and self._KIT_RE.search(kit.patch))):
+                continue
+            # only the kit patch's own whole-kit send: a send the song wrote or rides (throws, a gated tom break)
+            # gates whatever it sends, on purpose
+            if b.id in kit.sends or any(t == f'send.{b.id}' for t, _ in kit._auto):
+                continue
+            played = {n.pitch for n in kit._notes}
+            ps = tuple(sorted(played & {38, 39, 40}))      # snare, clap, electric snare / rim
+            if not ps:
+                continue
+            gid = self._ghost(kit.id, ps, 'gated reverb key')
+            for f in gates:
+                f.sidechain = gid
+
+    def _order_warnings(self) -> None:
+        """Chain-order findings (agentsound.chain_order) as warnings: nonlinear after time / modulation effects,
+        anything but a utility after the master limiter, stacked master limiters."""
+        from . import chain_order
+        for n in list(self.tracks.values()) + list(self.buses.values()):
+            if getattr(n, '_order_ok', None):
+                continue
+            for msg in chain_order.findings(n):
+                self.warnings.append(f"chain order: {n.kind} {n.id!r}: {msg}")
+        for msg in chain_order.master_findings(self.master):
+            self.warnings.append(f"chain order: {msg}")
+
     # --- compile
     def compile(self) -> dict:
         """Validate everything and return the render dict (docs/RENDER_FORMAT.md). Raises ComposeError
@@ -1369,6 +1483,8 @@ class Song:
         self.warnings = list(dict.fromkeys(self.advice))   # the players' warnings (drummer), then compile's own
         for fn in self._compile_hooks:
             fn(self)
+        self._auto_gate_keys()
+        self._order_warnings()
         L = self.length
         if L <= 0:
             raise ComposeError("the song is empty: add sections (song.section('intro', bars=8)) and notes")
@@ -1440,6 +1556,11 @@ class Song:
         extra: dict = {}
         if silent:   # report-only (never changes the audio): the engine repeats them as 'silent_notes' warnings
             extra['analysis'] = {'silentNotes': silent}
+        # a singer's vocal track: one trigger note per sung phrase, the dynamics inside the takes - the report hears
+        # its note dynamics from the audio's onsets (analysis.audioOnsets), not from the triggers' one velocity
+        sung = [t.id for t in self.tracks.values() if getattr(t, '_singer', None) and not t.mute and notes[t.id]]
+        if sung:
+            extra.setdefault('analysis', {})['audioOnsets'] = sung
         return {
             'format': 'agentsound.render',
             'version': 1,
@@ -1778,6 +1899,11 @@ class Song:
                 if f.sidechain == node.id:
                     raise ComposeError(f"{where}: fx #{i} ({f.type}) can't use itself as sidechain key")
                 edges.setdefault((f.sidechain, node.id), 'sidechain')
+                t = self._resolve_tap(f.tap, f.sidechain, f"{where}: fx #{i} ({f.type})")
+                if t is not None:
+                    d['tap'] = t
+            elif f.tap is not None:
+                raise ComposeError(f"{where}: fx #{i} ({f.type}) has tap={f.tap!r} but no sidechain key to tap")
             chain.append(d)
         d: dict = {'id': node.id, 'fx': chain, 'gainDb': round(node.gain_db, 4), 'pan': round(node.pan, 4),
                    'mute': node.mute}
@@ -1806,10 +1932,14 @@ class Song:
                 if b == node.id:
                     raise ComposeError(f"{where} can't send to itself")
                 sends[b] = db
-            d['sends'] = {b: round(v, 4) for b, v in sends.items()}
+            levels = {b: round(v, 4) for b, v in sends.items()}
+            taps = {b: self._resolve_tap(node.send_taps.get(b), node.id, f"{where}: send to {b!r}") for b in sends}
+            d['sends'] = {b: ({'db': v, 'tap': taps[b]} if taps[b] else v) for b, v in levels.items()}
             for b in sends:
                 edges.setdefault((node.id, b), 'send')
-        send_levels = d.get('sends', {})
+        else:
+            levels = {}
+        send_levels = levels
         lane_targets = {self._resolve_target(node, t, node.fx, set(send_levels)) for t, _ in node._auto
                         if not t.startswith('mod.')}
         mods, mod_lanes = self._compile_mods(node, node.fx, send_levels, lane_targets, all_ids, track_ids, edges)
@@ -1902,6 +2032,10 @@ class Song:
                 if m.node not in all_ids:
                     raise ComposeError(f"{where}: follow({m.node!r}) - there is no track or bus {m.node!r}")
                 edges.setdefault((m.node, node.id), 'follow')
+                if 'tap' in d['source']:
+                    t = self._resolve_tap(d['source'].pop('tap'), m.node, where)
+                    if t is not None:
+                        d['source']['tap'] = t
             if m.kind == 'envelope' and m.trigger is not None and m.trigger not in track_ids and m.trigger not in self._ghosts:
                 raise ComposeError(f"{where}: envelope(trigger={m.trigger!r}) - there is no track {m.trigger!r} "
                                    f"(triggers are tracks: their notes restart the envelope)")

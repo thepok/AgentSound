@@ -261,6 +261,15 @@ class OneWrapperManyPlayers(unittest.TestCase):
         stage_of = {a: st for a, st, *_ in px.parts}
         self.assertTrue(any(st == 'climax' for st in stage_of.values()))
 
+    def test_saved_moment_inside_one_solo(self):
+        # budget.save(beat) inside the solo: only the phrase that contains it may spend the fast budget, the
+        # phrases before it keep their fast figures fast_every bars away (a saved climax gets the trill)
+        s, sec, tr = song(32)
+        bud = soloist.Budget(spice_every=1.5, fast_every=8, same_every=16).save(96.0)
+        p = soloist.solo(s, tr, toy_vocab(), at=sec, motif=MOTIF, seed=3, budget=bud, place=False)
+        fast = [t for t, name in p.budget['kept'] if name == 'run']
+        self.assertTrue(all(abs(t - 96.0) >= 32 - 1e-6 or 96.0 <= t < 104.0 for t in fast), fast)
+
     def test_sax_solo_places_with_the_default_renderer(self):
         from agentsound import hornist
         s = Song('t', tempo=BPM, key='A minor', seed=4)
@@ -273,6 +282,84 @@ class OneWrapperManyPlayers(unittest.TestCase):
         s.compile()
         with self.assertRaises(ComposeError):
             hornist.vocabulary('bagpipe')
+
+
+class PianoVocabulary(unittest.TestCase):
+    """pianist.vocabulary(): the soloist's arc played by the pianist's hands (agentsound/piano_vocab.py)."""
+
+    def setUp(self):
+        from agentsound import pianist
+        self.pianist = pianist
+        self.s = Song('t', tempo=126, key='F major', seed=4)
+        self.prog = self.s.prog('Fmaj9 Bb9#11 Gm9 C13 | Am7 D7b9 Gm9:0.5 C7b9:0.5 Cm9:0.5 F13:0.5')
+        self.sec = self.s.section('solo', bars=16)
+        self.rh = self.s.track('piano', 'sampled/jazz_grand')
+        self.lh = self.s.track('comp', 'sampled/jazz_grand')
+        self.hook = Clip([(0.5, 0.5, 'C5', 90), (1, 1.5, 'A5', 100), (2.5, 0.5, 'G5', 90), (3, 3, 'E5', 96)],
+                         length=8)
+
+    def test_every_move_plays_harmonized_in_range_and_in_its_slot(self):
+        voc = self.pianist.vocabulary('straight')
+        for m in voc.moves:
+            for stage, reg, dens in (('statement', 0.2, 0.3), ('climax', 1.0, 0.9)):
+                ctx = soloist.Ctx(song=self.s, track=self.rh, vocab=voc, at=8.0, beats=6.0, bpm=126, bpb=4.0,
+                                  key=self.s.key, prog=self.prog, stage=stage, role='lead',
+                                  energy=0.95 if stage == 'climax' else 0.4, density=dens, register=reg,
+                                  vel=(70, 112), motif=self.hook, phrase=1, phrases=8, progress=0.3, last=None,
+                                  next_at=16.0, rng=__import__('random').Random(1), budget=soloist.Budget(),
+                                  memory={}, solo_start=0.0, phrase_start=8.0, phrase_beats=8.0, range=voc.range)
+                part = soloist.Part.of(m.play(ctx))
+                self.assertTrue(len(part.clip), f'{m.name} played nothing')
+                ps = [n.pitch for n in part.clip]
+                self.assertTrue(all(55 <= p <= 90 for p in ps), f'{m.name}: right hand {min(ps)}..{max(ps)}')
+                self.assertTrue(all(-0.1 < n.start < 6.0 + 1e-6 for n in part.clip), f'{m.name} inside its slot')
+                onsets: dict = {}
+                for n in part.clip:
+                    onsets.setdefault(round(n.start, 1), set()).add(n.pitch)
+                if m.name in ('motif', 'block', 'octaves', 'riff'):
+                    self.assertTrue(any(len(v) > 1 for v in onsets.values()), f'{m.name}: harmonized, not a bare line')
+
+    def test_a_piano_solo_with_both_hands_the_pedal_and_the_budget(self):
+        s, sec = self.s, self.sec
+        mem = self.pianist.Memory()
+        bud = soloist.Budget(spice_every=2, fast_every=16, same_every=32).save(48.0)
+        voc = self.pianist.vocabulary('straight', lh_track=self.lh, memory=mem, seed=3)
+        p = soloist.solo(s, self.rh, voc, at=sec, prog=self.prog, motif=self.hook, seed=5, budget=bud)
+        self.assertEqual(p.warnings, [])
+        self.assertEqual([n for *_, n, _ in p.parts][0], 'motif')
+        fast = [(t, n) for t, n in p.budget['kept'] if n in ('trill', 'tremolo', 'octave_run')]
+        self.assertLessEqual(len(fast), 1, f'one fast figure in 16 bars: {fast}')
+        self.assertTrue(all(48.0 <= t < 56.0 for t, _ in fast), f'the saved moment spends it: {fast}')
+        self.assertGreater(len(self.lh._notes), 8, 'the left hand comps under the solo')
+        self.assertTrue(all(n.pitch <= 72 for n in self.lh._notes))
+        self.assertTrue(any(t == 'instrument.pedal' for t, _ in self.rh._auto), 'the harmony pedal')
+        vs = [n.vel for n in p.clip]
+        self.assertGreaterEqual(max(vs) - min(vs), 25, 'dynamics follow the arc')
+        q = soloist.solo(s, self.rh, self.pianist.vocabulary('straight', seed=3), at=sec, prog=self.prog,
+                         motif=self.hook, seed=5, budget=soloist.Budget(spice_every=2, fast_every=16,
+                                                                        same_every=32).save(48.0), place=False)
+        self.assertEqual(list(p.clip), list(q.clip), 'deterministic')
+        s.compile()
+
+    def test_options(self):
+        with self.assertRaises(ComposeError):
+            self.pianist.vocabulary('polka')
+        with self.assertRaises(ComposeError):
+            self.pianist.vocabulary(lh='walking')
+        with self.assertRaises(ComposeError):
+            self.pianist.vocabulary(moves=['motif', 'shred'])
+        v = self.pianist.vocabulary('ballad', weights={'octave_run': 0})
+        self.assertNotIn('octave_run', [m.name for m in v.moves])
+        self.assertEqual(v.budget['fast_every'], 12)
+
+    def test_held_notes_fit_the_harmony(self):
+        # the motif's E held over a D7b9 is an avoid note against the b9: the vocabulary moves it to a chord tone
+        from agentsound.piano_vocab import _fit_harmony
+        prog = self.s.prog('D7b9')
+        ctx = soloist.Ctx(prog=prog, at=0.0, solo_start=0.0, key=self.s.key)
+        c = _fit_harmony(ctx, Clip([(0, 2, 'E5', 90), (2.5, 0.5, 'E5', 80)], length=4))
+        self.assertNotEqual(c.notes[0].pitch % 12, 4, 'the held E moved')
+        self.assertEqual(c.notes[1].pitch % 12, 4, 'a short off-beat passing note stays')
 
 
 if __name__ == '__main__':

@@ -343,11 +343,24 @@ def hook_sections(view: View, names=None) -> set[str]:
     return {s['name'] for s in view.sections if s.get('lufs', -120) >= view.loudest - 1.5}
 
 
-def measure(report, roles: dict, prof: MixProfile, hooks=None) -> list[SectionBalance]:
-    """Every section's balance vs its lead: the loudest lead-role part that plays in at least half its bars."""
+def features(song) -> dict:
+    """{section name: track id} of the song's featured tracks (track.feature(section): a bass solo, a drum break) -
+    the featured track is the lead of that section."""
+    out: dict = {}
+    for tid, tr in (getattr(song, 'tracks', None) or {}).items():
+        for name in getattr(tr, 'featured', ()) or ():
+            out[name] = tid
+    return out
+
+
+def measure(report, roles: dict, prof: MixProfile, hooks=None, featured=None) -> list[SectionBalance]:
+    """Every section's balance vs its lead: the loudest lead-role part that plays in at least half its bars - or the
+    track featured in that section (featured={section: id}, mixer.features(song): track.feature(bass_solo) makes the
+    bass the lead of the bass solo and takes it out of its group there)."""
     view = report if isinstance(report, View) else View(load_report(report))
     hook_names = hook_sections(view, hooks)
     leads = [n for n, r in roles.items() if r == 'lead' and n in view.nodes]
+    featured = featured or {}
     out = []
     for sec in view.sections:
         name = sec['name']
@@ -360,7 +373,9 @@ def measure(report, roles: dict, prof: MixProfile, hooks=None) -> list[SectionBa
         if sec.get('lufs', -120) < view.loudest - 12:
             sb.why = f"quiet ({sec.get('lufs', -120):.1f} LUFS)"
             continue
-        playing = {n: view.active(n, idx) for n in leads}
+        f = featured.get(name)
+        cands = [f] if f in view.nodes else leads
+        playing = {n: view.active(n, idx) for n in cands}
         playing = {n: a for n, a in playing.items() if len(a) >= max(2, 0.5 * len(idx))}
         if not playing:
             sb.why = 'no lead plays in half its bars'
@@ -369,7 +384,7 @@ def measure(report, roles: dict, prof: MixProfile, hooks=None) -> list[SectionBa
         la = playing[lead]
         sb.judged, sb.lead, sb.lead_level = True, lead, view.level(lead, la)
         for g in GROUPS:
-            ids = [n for n, r in roles.items() if r == g and n in view.nodes and view.active(n, idx)]
+            ids = [n for n, r in roles.items() if r == g and n != lead and n in view.nodes and view.active(n, idx)]
             if not ids:
                 continue
             lvl, used = view.group_level(ids, la, idx)
@@ -485,7 +500,7 @@ def propose(report, roles: dict, prof: MixProfile, *, song=None, mix=None, hooks
     """The moves that bring the measured balance to the profile's targets (deterministic, bounded)."""
     rep = load_report(report)
     view = View(rep)
-    bal = balances if balances is not None else measure(view, roles, prof, hooks)
+    bal = balances if balances is not None else measure(view, roles, prof, hooks, features(song))
     mix = normalize(mix or {})
     judged = [b for b in bal if b.judged]
     moves: list[Move] = []
@@ -966,7 +981,7 @@ def check(report, *, profile=None, song=None, roles=None, lead=None, hooks=None,
     prof = get_profile(pname)
     rl, _ = infer_roles(song, rep, band=band, roles=roles, lead=lead)
     view = View(rep)
-    bal = measure(view, rl, prof, hooks)
+    bal = measure(view, rl, prof, hooks, features(song))
     judged = [b for b in bal if b.judged]
     out: list[Finding] = []
     if not any(r == 'lead' for r in rl.values()):

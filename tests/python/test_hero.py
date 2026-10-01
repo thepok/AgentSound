@@ -169,7 +169,7 @@ LEGACY = {
     'layered/hero_guitar_heavy': 'ac1f1426caa05162',      # v2: the tube amp + neck pickup (kestrel-bay TONE.md)
     'hero/synth_lead': '9fd515a86ade6c09',
     'hero/synth_piano': '51b64ff5ea088fe4',
-    'hero/darksynth_lead': 'd746426739d3adf0',
+    'hero/darksynth_lead': '35253f82a2c43490',          # v2: the sync layer without its own doubler (chain order)
 }
 
 
@@ -224,8 +224,13 @@ class WrapperPresets(unittest.TestCase):
                 p = patches.get(f'hero/{n}')                # the unified name of every preset
                 self.assertIsNotNone(p.instrument)
                 self.assertIn('Measured -18.0 LUFS', p.notes)
-                self.assertTrue(p.fx and p.fx[-1].type == 'utility' and p.fx[-1].name == 'air',
-                                f'{n}: the air stage is the last fx')
+                # the air stage is the last fx - or, with the instrument's own echo, the one right before it (an
+                # air lane must not move the echoes of earlier notes)
+                tail = [f for f in p.fx if not (f.type == 'delay' and f.name == 'echo')]
+                self.assertTrue(p.fx and tail[-1].type == 'utility' and tail[-1].name == 'air',
+                                f'{n}: the air stage is the last fx (before its own echo)')
+                if tail is not p.fx and len(tail) < len(p.fx):
+                    self.assertEqual((p.fx[-1].type, p.fx[-1].name, p.fx[-2].name), ('delay', 'echo', 'air'))
         for alias, name in (('violin', 'strings'), ('trumpet', 'brass'), ('flute', 'woodwind'), ('choir', 'voice'),
                             ('synth_lead', 'synth'), ('synth_piano', 'piano_synth'), ('hero/sax', 'sax'),
                             ('darksynth_lead', 'darksynth'), ('hammond', 'organ')):
@@ -237,15 +242,19 @@ class WrapperPresets(unittest.TestCase):
         for name, dig in LEGACY.items():
             with self.subTest(patch=name):
                 self.assertEqual(_digest(patches.get(name)), dig)
-        # the unified names are the same sound + the air stage (0 dB, last): instrument and the other fx identical
+        # the unified names are the same sound + the air stage (0 dB: last, or right before the instrument's own
+        # echo): instrument and the other fx identical, in the same order
         for n, p in heroes.PRESETS.items():
             if not p.patch:
                 continue
             with self.subTest(preset=n):
                 old, new = patches.get(p.patch), patches.get(p.canonical)
                 self.assertFalse(any(f.name == 'air' for f in old.fx))
-                self.assertEqual(new.fx[:-1], old.fx)
-                self.assertEqual(new.fx[-1].params, {'gain': 0.0})
+                air = next(i for i, f in enumerate(new.fx) if f.name == 'air')
+                self.assertEqual(new.fx[:air] + new.fx[air + 1:], old.fx)
+                self.assertTrue(air == len(new.fx) - 1 or new.fx[air + 1:] == [f for f in new.fx[air + 1:]
+                                                                                 if f.name == 'echo'])
+                self.assertEqual(new.fx[air].params, {'gain': 0.0})
                 self.assertEqual(_canon(new.instrument), _canon(old.instrument))
                 self.assertEqual((new.gain_db, new.sends), (old.gain_db, old.sends))
 
@@ -509,8 +518,13 @@ class SongsUnchanged(unittest.TestCase):
                     self.assertEqual(sax.patch, 'hero/sax')
                     old = patches.get('layered/hero_sax')
                     self.assertEqual(_canon(sax.instrument), _canon(old.instrument))
-                    self.assertEqual(sax.fx[:len(old.fx)], old.fx)
-                    self.assertEqual([f.name for f in sax.fx[len(old.fx):]], ['air', 'mic'])
+                    # hornist's 'mic' stage sits in front of the compressor (where a microphone is); without it the
+                    # chain is the old one + the 'air' stage
+                    mic = next(i for i, f in enumerate(sax.fx) if f.name == 'mic')
+                    self.assertEqual(sax.fx[mic + 1].type, 'compressor')
+                    rest = sax.fx[:mic] + sax.fx[mic + 1:]
+                    self.assertEqual(rest[:len(old.fx)], old.fx)
+                    self.assertEqual([f.name for f in rest[len(old.fx):]], ['air'])
                 _compile_or_skip(self, song)
                 self.assertEqual(heroes.log_lines(song), [])          # hero() is not called: nothing added
 

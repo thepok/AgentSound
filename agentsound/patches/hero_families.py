@@ -33,7 +33,8 @@ _SSO_FLUTE = 'samples/sso/Sonatina Symphonic Orchestra/Woodwinds - Notation/Flut
 """The woodwind take: the SSO flute (another player and recording than the VSCO default - sampled/flute is the VSCO
 flute again, a copy would phase), sfz level -2 dB = the library's -18 LUFS."""
 
-LEVELS = {'strings': -1.1, 'brass': -1.8, 'woodwind': -0.7, 'voice': -2.5, 'organ': -0.2, 'generic': -1.6}
+LEVELS = {'strings': -1.1, 'brass': -1.8, 'woodwind': -0.7, 'voice': -2.5, 'organ': 0.2, 'generic': -1.6}
+# (organ -0.2 -> +0.2: with the drive / compressor in front of the Leslie the phrase measured 0.4 dB quieter)
 """gain_db per preset (the audition calibration to -18.0 LUFS)."""
 
 MEASURED: dict = {}
@@ -173,6 +174,7 @@ _define(
            'comp': {'threshold': -21, 'ratio': 2.0, 'knee': 8, 'attack': 20, 'release': 150, 'automakeup': 'on'},
            'drive': {'mode': 'tube', 'drive': 8, 'mix': 0.4, 'tone': 0.3},
            'presence': {'peak3.freq': 2500, 'peak3.gain': 1.5, 'peak3.q': 0.8, 'high.freq': 8000, 'high.gain': 1.5}},
+    post_source=('leslie', 'leslie_am'),    # the hero's compressor + preamp drive before the Leslie, not on it
     sends={'hall': -14.0, 'echo': -26.0},
     space={'echo': -26.0, 'throw': -10.0, 'min_rest': 0.75, 'min_dur': 1.0},
     mix={'duck': 2.0, 'carve_db': 2.5, 'carve_freq': 1500.0, 'carve_q': 0.7, 'ride_db': 1.0, 'dip_db': -2.0,
@@ -180,7 +182,8 @@ _define(
     play={'vel': (80, 112), 'vib': False},
     notes=f'v{VERSION}. The hero organ (a Jon Lord / Booker T / gospel organ solo): the FreePats tonewheel B3 with the '
           "library's Leslie chain through the organ hero chain: high-pass 70 Hz, -2 dB mud at 250 Hz, +1 dB bark at "
-          '800 Hz, a 2:1 compressor, the preamp pushed (tube drive 8 at 40 %), +1.5 dB bite at 2.5 kHz and +1.5 dB '
+          '800 Hz, a 2:1 compressor and the preamp pushed (tube drive 8 at 40 %) in front of the Leslie (they used to '
+          'follow it and squash / grain its swirl), +1.5 dB bite at 2.5 kHz and +1.5 dB '
           'at 8 kHz. No plate: the Leslie is its space; hall -14, echo throws (-26 -> -10 dB). An organ has no '
           'velocity: its dynamics are the expression pedal (automate instrument.expression) and the Leslie speed. '
           'How to play: single-note lines with grace-note crushes and glissandi, held chords with the Leslie '

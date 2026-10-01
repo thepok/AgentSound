@@ -227,14 +227,14 @@ def apply_analysis(render: dict, song_analysis=None, profile: str | None = None,
     settings written ({} = none: the engine uses profile 'default'). The compiler's own "silentNotes" (the
     compile-time silent notes, agentsound.silent_notes) are kept as they are; the song file cannot set them."""
     own = dict(render['analysis']) if isinstance(render.get('analysis'), dict) else render.get('analysis')
-    silent = own.pop('silentNotes', None) if isinstance(own, dict) else None
+    compiler = {k: own.pop(k) for k in ('silentNotes', 'audioOnsets') if k in own} if isinstance(own, dict) else {}
     merged = check_analysis(own, 'render "analysis"') if own is not None else {}
     if song_analysis is not None:
         merged.update(check_analysis(song_analysis, where))
     if profile is not None:
         merged.update(check_analysis({'profile': profile}, '--profile'))
-    if merged or silent:
-        render['analysis'] = {**merged, **({'silentNotes': silent} if silent else {})}
+    if merged or compiler:
+        render['analysis'] = {**merged, **compiler}
     else:
         render.pop('analysis', None)
     return merged
@@ -699,7 +699,7 @@ def _render_and_report(song, render: dict, out_dir: Path, json_name: str, args, 
               f"report's silent_notes warnings below")
     for line in hero_lines(song):
         print(line)
-    a = {k: v for k, v in (render.get('analysis') or {}).items() if k != 'silentNotes'}
+    a = {k: v for k, v in (render.get('analysis') or {}).items() if k not in ('silentNotes', 'audioOnsets')}
     if a:
         print(f"analysis  profile {a.get('profile', 'default')!r}" +
               (f", loudness target {a['loudness'][0]:g}..{a['loudness'][1]:g} LUFS" if 'loudness' in a else ''))

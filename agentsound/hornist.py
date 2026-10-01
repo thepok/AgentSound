@@ -32,9 +32,11 @@ on the live-dynamics ones (sampled/tenor_sax, solo_trumpet, solo_flute, solo_cla
 'dynamics' = +3..8 dB with the timbre of the louder layer. So: on a live-dynamics sampler whose chain does not
 compress, the air goes to 'dynamics' (the real layer crossfade; the home dynamics is lowered to leave headroom and the
 level made good after the chain); everywhere else to the BREATH stage 'fx.air.gain' - agentsound.heroes' convention: a
-utility named 'air' at the end of the chain, after every compressor (every hero/<preset> has one; air_stage() inserts
-it when missing). After it sits the 'mic' stage (mic_stage(): an eq named 'mic', always last): the tone of the air and
-the mic moves (high shelf: axis, peak at 300 Hz: proximity, output: distance). Vibrato: the sampler's own
+utility named 'air' after every compressor (every hero/<preset> has one; air_stage() inserts it when missing). The
+'mic' stage (mic_stage(): an eq named 'mic') sits where a microphone is - before the compressor (the hero's 'comp'
+stage), so leaning in / turning away colours what the compressor, echo and ride work on; last only when the chain does
+not compress or its output carries the air: the tone of the air and the mic moves (high shelf: axis, peak at 300 Hz:
+proximity, output: distance). Vibrato: the sampler's own
 ('instrument.vibrato', every sampler layer of a stack), deepened by the air. Room: the track's reverb sends.
 """
 
@@ -266,32 +268,46 @@ def _fx_named(track, name):
     return next((f for f in track.fx if getattr(f, 'name', None) == name), None)
 
 
-def mic_stage(track):
-    """The track's 'mic' stage: an eq named 'mic' at the end of its chain (appended if missing; flat: peak1 at 300 Hz
-    for the proximity lift, a gentle high shelf from 3.2 kHz for the axis, output for the level). Returns the FX."""
+def mic_stage(track, before_comp: bool = True):
+    """The track's 'mic' stage: an eq named 'mic' (flat: peak1 at 300 Hz for the proximity lift, a gentle high shelf
+    from 3.2 kHz for the axis, output for the level), inserted where a microphone sits - before the chain's
+    compressor (the hero 'comp' stage, else the first un-keyed compressor), so the player leaning in / turning away
+    colours what the compressor, the echo and the ride then work on (it used to be appended after all of them);
+    appended when the chain has no compressor, or with before_comp=False (the mic stage's output then carries the
+    air itself: targets(level='mic'), which must not be squashed). Returns the FX."""
     from .patches import fx
     st = _fx_named(track, 'mic')
     if st is None:
-        track.add_fx(fx.eq({'peak1.freq': 300, 'peak1.q': 0.7, 'high.freq': 3200, 'high.q': 0.6}, name='mic'))
+        new = fx.eq({'peak1.freq': 300, 'peak1.q': 0.7, 'high.freq': 3200, 'high.q': 0.6}, name='mic')
+        at = next((i for i, f in enumerate(track.fx) if getattr(f, 'name', None) == 'comp'), None)
+        if at is None:
+            at = next((i for i, f in enumerate(track.fx) if f.type == 'compressor' and f.sidechain is None), None)
+        if at is None or not before_comp:
+            track.add_fx(new)
+        else:
+            track.fx.insert(at, new)
         st = _fx_named(track, 'mic')
     return st
 
 
 def air_stage(track):
     """The track's breath stage: an fx named 'air' with a gain (agentsound.heroes' convention: a utility named 'air'
-    at the end of the chain, after every compressor and the saturation - every hero/<preset> has one; an eq named
-    'air' works through its output). Inserted when missing (at the end of the chain, before the 'mic' stage). Returns
-    (FX, param), or (None, None) when an fx named 'air' without a gain is in the way (then the mic stage's output
-    carries the air)."""
+    after every compressor and the saturation, before the instrument's own echo - every hero/<preset> has one; an eq
+    named 'air' works through its output). Inserted when missing: after the last level-dependent stage, before an
+    echo / hero ride / a 'mic' stage that follows all of them (else at the end). Returns (FX, param), or (None, None)
+    when an fx named 'air' without a gain is in the way (then the mic stage's output carries the air)."""
     from .patches import FX
     st = _fx_named(track, 'air')
     if st is None:
         new = FX('utility', {'gain': 0.0}, name='air')
-        mic = next((i for i, f in enumerate(track.fx) if getattr(f, 'name', None) == 'mic'), None)
-        if mic is None:
+        dyn = max((i for i, f in enumerate(track.fx) if f.type in ('compressor', 'limiter', 'saturator', 'amp', 'tape')
+                   and getattr(f, 'sidechain', None) is None), default=-1)
+        at = next((i for i, f in enumerate(track.fx) if i > dyn and (getattr(f, 'name', None) in ('mic', 'hero_ride')
+                                                                    or (f.type == 'delay' and f.name == 'echo'))), None)
+        if at is None:
             track.fx.append(new)
         else:
-            track.fx.insert(mic, new)
+            track.fx.insert(at, new)
         st = _fx_named(track, 'air')
     p = _GAIN_PARAM.get(st.type) or next((q for q in ('gain', 'output') if q in (st.params or {})), None)
     return (st, p) if p is not None else (None, None)
@@ -305,7 +321,8 @@ def targets(track, *, room=None, level: str | None = None) -> dict:
     The air: on a live-dynamics sampler with no compressor in its chain 'instrument.dynamics' (the real layer
     crossfade), else the breath stage 'fx.air.gain' (air_stage(): the hero chain's own, else inserted at the end of
     the chain - after the compressor, so a 3 dB push stays 3 dB). level= forces 'air' | 'dynamics' | 'mic' (the mic
-    stage's output). The mic stage (mic_stage()) always sits last, after the air stage."""
+    stage's output). The mic stage (mic_stage()) sits before the compressor (where a microphone is: in front of the
+    chain), last only when its output carries the air (kind 'mic') or the chain does not compress."""
     from .articulation import live_dynamics, vibrato_prefixes
     out = {'mic': 'fx.mic', 'room': [], 'vibrato': vibrato_prefixes(track), 'tone': True, 'comp': 0.0,
            'compressed': any(getattr(f, 'type', None) in ('compressor', 'limiter') and not getattr(f, 'sidechain', None)
@@ -321,7 +338,7 @@ def targets(track, *, room=None, level: str | None = None) -> dict:
         else:
             out.update(level=f'fx.air.{air_p}', kind=kind, home=float((st_air.params or {}).get(air_p, 0.0)),
                        per_db=1.0)
-    st = mic_stage(track)
+    st = mic_stage(track, before_comp=kind != 'mic')
     if kind == 'dynamics':
         if getattr(ins, 'type', None) not in ('sampler', 'stack'):
             raise ComposeError(f"track {track.id!r}: level='dynamics' needs a sampler (or a stack of them)")

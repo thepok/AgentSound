@@ -16,7 +16,8 @@ namespace {
 
 using namespace timefx;
 
-enum Param { kIr, kMix, kGain, kPredelay, kLowCut, kHighCut, kWidth, kStart, kLength, kStretch, kNormalize, kReverse };
+enum Param { kIr, kMix, kGain, kPredelay, kLowCut, kHighCut, kWidth, kStart, kLength, kStretch, kNormalize, kReverse,
+             kCrossfeed };
 
 constexpr float kLowOff = 20.0f;      // lowcut at (or below) this: bypassed
 constexpr float kHighOff = 20000.0f;  // highcut at (or above) this: bypassed
@@ -60,6 +61,13 @@ const std::vector<ParamSpec>& convolverSpecs() {
         choice("reverse", {"off", "on"}, 0,
                "on: plays the IR backwards (after start / length): a swell that ends where the note was - reverse reverb; "
                "set 'length' to the swell time. Not automatable"),
+        num("crossfeed", 0, 1, 0, "",
+            "Feeds each input side into the other before the IR (wet path only; power-kept: a hard-panned or wide source "
+            "keeps its return level, a centred one gains up to +3 dB at 1). A mono / 2-channel IR - one centred source "
+            "recorded, L->L and R->R - leaves a hard-panned part with a one-sided room; 0.4-0.6 gives it a surrounding "
+            "space that still leans to its side (pseudo true stereo: halls for panned orchestra sections, a band room "
+            "for hard-panned guitars), 1 = mono in (every source excites the whole room alike). A 4-channel (true "
+            "stereo) IR already answers both sides: keep 0. 0 = as recorded (bit-exact)"),
     };
     return s;
 }
@@ -205,6 +213,7 @@ public:
         lowOn_.prepare(sr_, 0.0015, lowEngaged() ? 1.0f : 0.0f);
         highOn_.prepare(sr_, 0.0015, highEngaged() ? 1.0f : 0.0f);
         width_.prepare(sr_, 0.0015, get(kWidth));
+        cross_.prepare(sr_, 0.0015, get(kCrossfeed));
         gain_.prepare(sr_, 0.0015, dsp::dbToGain(get(kGain)));
         float dry, wet;
         equalPowerMix(get(kMix), dry, wet);
@@ -224,7 +233,17 @@ public:
 
 private:
     void processChunk(float* L, float* R, int n) noexcept {
-        for (int i = 0; i < n; ++i) pre_.tick(L[i], R[i], preGlide_.next(), dl_[i], dr_[i]);
+        for (int i = 0; i < n; ++i) {
+            float l = L[i], r = R[i];
+            const float c = cross_.next();
+            if (c != 0.0f) {  // crossfeed: each side into the other, power-kept (exact pass-through at 0)
+                const float k = 1.0f / std::sqrt(1.0f + c * c);
+                const float a = (l + c * r) * k, b = (r + c * l) * k;
+                l = a;
+                r = b;
+            }
+            pre_.tick(l, r, preGlide_.next(), dl_[i], dr_[i]);
+        }
         engine_.process(dl_, dr_, wl_, wr_, n);
         forEachCtrlBlock(pos_, n, [&](int off, int m, bool tick) {
             if (tick) controlTick();
@@ -261,6 +280,7 @@ private:
         lowOn_.setTarget(lowEngaged() ? 1.0f : 0.0f);
         highOn_.setTarget(highEngaged() ? 1.0f : 0.0f);
         width_.setTarget(get(kWidth));
+        cross_.setTarget(get(kCrossfeed));
         gain_.setTarget(dsp::dbToGain(get(kGain)));
         float dry, wet;
         equalPowerMix(get(kMix), dry, wet);
@@ -285,7 +305,7 @@ private:
     TptFilter lc_[2]{TptFilter::Mode::High, TptFilter::Mode::High};
     TptFilter hc_[2]{TptFilter::Mode::Low, TptFilter::Mode::Low};
     CtrlSmooth lowCut_, highCut_;
-    Smooth2 lowOn_, highOn_, width_, gain_, dry_, wet_;
+    Smooth2 lowOn_, highOn_, width_, cross_, gain_, dry_, wet_;
     float ctrlK_{0.0f};
     float dl_[kChunk]{}, dr_[kChunk]{}, wl_[kChunk]{}, wr_[kChunk]{};
 };

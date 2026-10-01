@@ -20,13 +20,17 @@ void MixAnalyzer::setRouting(const SongSpec& song) {
             r.output = spec.output;
             // An automated send counts with its loudest automated level: a throw-only send (static -120 dB,
             // automated up on the last note of a phrase) still feeds its return.
-            for (const auto& [bus, db] : spec.sends) {
-                double level = db;
+            for (const SendSpec& send : spec.sends) {
+                const std::string& bus = send.bus;
+                double level = send.db;
                 for (const AutomationLane& lane : spec.automation) {
                     if (lane.target != "send." + bus || lane.points.empty()) continue;
                     level = lane.points.front().value;
                     for (const AutomationPoint& p : lane.points) level = std::max(level, p.value);
                 }
+                // A pre-fader (or pre-insert) send ignores the fader: as a post-fader send relative to the node's
+                // output it is that much hotter (inserts' gain is not known here).
+                if (send.tap != kTapPost) level -= spec.gainDb;
                 r.sends.emplace_back(bus, level);
             }
             for (const FxSpec& fx : spec.fx) r.fx.push_back({fx.type, fx.params});
@@ -53,6 +57,7 @@ void MixAnalyzer::setRouting(const SongSpec& song) {
             }
             for (const SilentNoteHint& h : song.analysis.silentNotes)
                 if (h.track == spec.id) r.knownSilent.push_back({h.kind, h.message, h.pitches, h.count});
+            for (const std::string& t : song.analysis.audioOnsets) r.audioOnsets = r.audioOnsets || t == spec.id;
             for (const ModulatorSpec& mod : spec.modulators) r.automated.push_back(mod.target);
             setNodeRouting(static_cast<int>(i), std::move(r));
             break;

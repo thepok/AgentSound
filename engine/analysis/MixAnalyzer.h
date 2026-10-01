@@ -119,6 +119,7 @@ struct NodeRouting {
         int count{0};
     };
     std::vector<KnownSilent> knownSilent;
+    bool audioOnsets{false};   // analysis.audioOnsets: its notes trigger whole phrases - note dynamics from the audio
 };
 
 struct SongSpec;

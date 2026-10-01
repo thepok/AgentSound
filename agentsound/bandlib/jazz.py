@@ -270,21 +270,28 @@ MASTER_GAIN = {'jazz_trio': 5.5, 'jazz_quartet': 5.0, 'jazz_ballad': 5.5, 'bossa
 """Limiter drive per preset (dB): lands the demo songs at -14.1..-14.9 LUFS integrated (the jazz profile: -16..-13)."""
 
 
-def _master(s, preset: str, gain) -> float:
+def _master(band, preset: str, gain) -> float | None:
+    """The jazz master chain (rock.master_chain's guard: only when the song's master is still empty - a second band
+    or the song's own master keeps its chain, no stacked limiters). Returns the limiter drive, or None when kept."""
+    from .rock import master_chain
     g = MASTER_GAIN[preset] if gain is None else float(gain)
     # a broad low-mid / mid dip: piano, tenor and upright all live at 250 Hz - 2 kHz and pile up there (every demo
     # read +3.5..+5.5 dB lowmid / mid against the jazz profile before it), presence (the demos still read -2..-3 dB
     # at 2.5-6 kHz: dull next to a produced jazz record) and a little air on top
-    s.master.add(fx.eq({'hp.freq': 28, 'peak1.freq': 450, 'peak1.gain': -1.8, 'peak1.q': 0.6,
-                        'peak2.freq': 1300, 'peak2.gain': -1.2, 'peak2.q': 0.7, 'peak3.freq': 3800,
-                        'peak3.gain': 1.5, 'peak3.q': 0.6, 'high.freq': 10000, 'high.gain': 1.2}),
-                 # a little more side above 150 Hz: the tenor and the bass sit in the middle, and with the sax
-                 # centred the quartet read 14 % wide (narrow for the jazz profile's 15..80 %)
-                 fx.width(width=1.15, monobass=150),
-                 fx.compressor(threshold=-22, ratio=1.5, knee=10, attack=30, release=350, detector='rms', keyhp=120),
-                 fx.tape(speed='15', drive=1.5, bump=1.0, wow=0.04, flutter=0.04),
-                 fx.limiter(gain=g, release=220, ceiling=-1.2))
-    return g
+    ok = master_chain(band,
+                      fx.eq({'hp.freq': 28, 'peak1.freq': 450, 'peak1.gain': -1.8, 'peak1.q': 0.6,
+                             'peak2.freq': 1300, 'peak2.gain': -1.2, 'peak2.q': 0.7, 'peak3.freq': 3800,
+                             'peak3.gain': 1.5, 'peak3.q': 0.6, 'high.freq': 10000, 'high.gain': 1.2}),
+                      fx.compressor(threshold=-22, ratio=1.5, knee=10, attack=30, release=350, detector='rms',
+                                    keyhp=120),
+                      fx.tape(speed='15', drive=1.5, bump=1.0, wow=0.04, flutter=0.04),
+                      # a little more side above 150 Hz: the tenor and the bass sit in the middle, and with the sax
+                      # centred the quartet read 14 % wide (narrow for the jazz profile's 15..80 %). After the glue
+                      # and the tape (it used to sit in front of them: the compressor's detector and the tape's
+                      # saturation then worked on the widened sides), right before the limiter.
+                      fx.width(width=1.15, monobass=150),
+                      fx.limiter(gain=g, release=220, ceiling=-1.2))
+    return g if ok else None
 
 
 # ------------------------------------------------------------------------------------------------ chains
@@ -491,7 +498,7 @@ class _Builder:
 
     def finish(self):
         if self.options.get('master', True):
-            self.band.info['master_gain'] = _master(self.s, self.preset, self.options.get('master_gain'))
+            self.band.info['master_gain'] = _master(self.band, self.preset, self.options.get('master_gain'))
         return self.band
 
 

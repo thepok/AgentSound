@@ -82,7 +82,8 @@ class Amp(unittest.TestCase):
         names = [f.name for f in b.drums.fx]
         self.assertIn('punch', names)
         self.assertEqual([f.name for f in s.buses['drum_bus'].fx][:2], ['crush', 'tape'])
-        self.assertIn('room_crush', [f.name for f in s.buses['room'].fx])
+        self.assertIn('room_crush', [f.name for f in s.buses['drum_room'].fx])      # the kit's room only
+        self.assertNotIn('room_crush', [f.name for f in s.buses['room'].fx])    # the band's room stays clean
 
 
 class PalmMute(unittest.TestCase):

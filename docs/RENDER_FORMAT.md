@@ -37,7 +37,8 @@ them into time.
       "pan": 0.0,                               // optional, default 0, -1..1 (balance: unity at centre)
       "mute": false,                            // optional
       "output": "music",                        // optional, bus id or "master" (default)
-      "sends": { "hall": -12.0, "echo": -18.0 },// optional, bus id -> send level dB (post-fader)
+      "sends": { "hall": -12.0, "echo": -18.0,  // optional, bus id -> send level dB (post-fader)
+                 "crush": { "db": -6, "tap": "prefader" } },   // or {db, tap}: see "Taps"
       "notes": [                                // [startBeat, durationBeats, pitch 0..127, velocity 1..127]
         [0.0, 1.5, 76, 110],
         [1.5, 0.5, 74, 96]
@@ -82,7 +83,9 @@ them into time.
     "silentNotes": [                            // optional, written by the compiler: notes it found no sound for
       {"track": "drums", "kind": "no_sound", "pitches": [49], "count": 17, "beats": [32, 96],
        "message": "'drums': 17 notes on crash (49) reach no sample in this kit ..."}
-    ]
+    ],
+    "audioOnsets": ["vocal"]                    // optional, written by the compiler: tracks whose notes trigger whole
+                                                // phrases (a singer's takes) - note dynamics from the audio's onsets
   }
 }
 ```
@@ -95,10 +98,11 @@ them into time.
 - **Signal flow**: track instrument → track fx chain → gain → pan → (sends, post-fader) → output.
   Buses sum their inputs, then fx → gain → pan → sends → output. `master` sums everything routed to it,
   runs its fx chain and gain; output is the mix. Routing must be acyclic (a bus may not feed itself
-  through any path). Buses are processed in dependency order.
+  through any path). Buses are processed in dependency order. A send may tap earlier (see "Taps").
 - **Sidechain**: an fx entry may name `"sidechain": "<track or bus id>"`. The effect receives that
-  node's **post-fader, pre-send** output of the *same block* as key signal. The key node must be computed
-  before the effect's node (the engine orders processing accordingly; a cycle is an error).
+  node's **post-fader, pre-send** output of the *same block* as key signal (or the point its `"tap"` names: see
+  "Taps"). The key node must be computed before the effect's node (the engine orders processing accordingly; a cycle
+  is an error).
   Only effects whose type supports a key accept `sidechain`: `compressor`, `ducker`, `delay` (ducking), `gatedreverb`
   (the gate) and `vocoder`, which **requires** one: its sidechain is the modulator (the voice whose spectrum it
   imposes on this node's signal, the carrier); a `vocoder` without `sidechain` is an error.
@@ -109,6 +113,33 @@ them into time.
   `{"id": "choir", "fx": [{"type": "vocoder", "sidechain": "voice", "params": {...}}], ...}` - only the robot is heard.
 - **Latency**: only the master chain may contain latency (the limiter); the engine removes it from the
   output so the mix is time-aligned.
+
+## Taps
+
+Where a **send**, a **sidechain key** or a **follow** modulator picks up a node's signal. Default `"post"`: after the
+inserts, the fader and the pan (what you hear from the node). Written as `"tap"` next to the node reference:
+
+```jsonc
+"sends": { "hall": -12, "crush": { "db": -4, "tap": "prefader" } },          // a send: a number, or {db, tap}
+"fx": [{ "type": "ducker", "sidechain": "sax", "tap": "pre:5", "params": {} }],  // a sidechain key
+"source": { "type": "follow", "node": "kick", "tap": "prefx" }                 // a follower
+```
+
+| tap | the signal | use |
+|---|---|---|
+| `"post"` (default) | after the inserts, `gainDb` and `pan` | sends to returns that should follow the fader (reverbs, echoes), keys that should follow the mix |
+| `"prefader"` | after the inserts, before `gainDb` / `pan` (and their automation) | parallel compression / crush buses (the blend stays put when the fader rides), keys that must not follow fader rides |
+| `"prefx"` = `"pre:0"` | the dry instrument output (a bus: its summed input), before every insert | a key from what is played, not from its echo / reverb / saturation |
+| `"pre:<i>"` | the signal entering insert `i` (0 .. the tapped node's fx count; `pre:<count>` = `prefader`) | a key tapped after the tone stages but before an echo / ride utility (heroes: the bed ducks under the notes, not under their echo tails) |
+
+- The tapped node is the node itself for a send, the `sidechain` node for a key, the `node` for a follower. `pre:<i>`
+  beyond the tapped chain, an unknown tap name, a `tap` on an effect without `sidechain`, and unknown keys in a send
+  object (`db` required, -120..24) are errors.
+- Mute: a muted node feeds no bus through any tap; its taps still key and feed followers (like its output).
+- Send automation (`send.<bus>`) and modulators work the same whatever the tap. The analysis counts a pre-fader /
+  pre-insert send at `db - gainDb` (its level relative to the node's output).
+- Deterministic and free: a tap point is copied once per block only when something reads it; without `tap` keys the
+  render is bit-identical to before.
 
 ## Tempo map
 
@@ -308,7 +339,10 @@ layer (`fx.convolver(ir=...)`, patches) passes `samples/...` paths as absolute p
 the effect's `tailSeconds` = IR length + predelay, but the render does not lengthen the song's `tailSeconds` for
 it: a long IR (a church, a 5 s hall) needs a song tail that long. The prepared IR ends where it has fallen 80 dB
 under its peak; samples more than 200 dB under the peak become exact zeros; NaN / infinite samples are a config
-error. The other params (mix, gain, predelay, lowcut, highcut, width, start,
+error. A mono / 2-channel IR answers a hard-panned source on its own side only (one centred source was recorded):
+`crossfeed` (0..1, default 0 = as recorded) feeds each input side into the other before the IR, power-kept - 0.4-0.6
+gives panned sections / guitars a surrounding space that still leans to their side. The other params (mix, gain,
+predelay, lowcut, highcut, width, crossfeed, start,
 length, stretch, normalize, reverse) are in `docs/PARAMS.md`.
 
 ## Stack (layered instruments)
@@ -434,7 +468,7 @@ offset mode multiplies the raw output by `depth`):
 |---|---|---|
 | `lfo` | `shape` (required): `sine` `triangle` `saw` `ramp` `square` `random` `smoothrandom`; exactly one of `rateBeats` (cycle length in beats, 1/1024..1024, on the song grid) or `rateHz` (0.001..50, free-running); `phase` 0..1 (default 0); `retrigger` `"none"` (default) or `"note"` (restart on every note-on of this track; tracks only) | bipolar |
 | `steps` | `values` (1..1024 numbers, required), `stepBeats` (required), `glide` 0..1 (default 0), `loop` (default true) | absolute: the values are target values; offset: values in −1..1 |
-| `follow` | `node` (track or bus id, required), `attackMs` (0..10000, default 5), `releaseMs` (default 120), `gainDb` (−48..48, default 0) | unipolar |
+| `follow` | `node` (track or bus id, required), `attackMs` (0..10000, default 5), `releaseMs` (default 120), `gainDb` (−48..48, default 0), `tap` (default `"post"`; see "Taps") | unipolar |
 | `envelope` | `attackBeats` (default 0), `decayBeats` (0.5), `sustain` 0..1 (0), `releaseBeats` (0.25), `trigger`: `"note"` (default; this track's notes) or a track id | unipolar |
 | `random` | `rateBeats` (required), `smooth` 0..1 (default 0) | bipolar |
 
@@ -454,7 +488,7 @@ offset mode multiplies the raw output by `depth`):
 - **steps**: step k holds `values[k mod n]` (or, with `loop: false`, the last value once the list is
   exhausted). With `glide` g the first g of every step moves linearly from the previous step's value
   (the first step of the sequence does not glide).
-- **follow**: peak envelope (one-pole attack / release) of `max(|L|, |R|) × gainDb` of the node's post-fader,
+- **follow**: peak envelope (one-pole attack / release) of `max(|L|, |R|) × gainDb` of the node's post-fader (or its `tap`),
   pre-mute output — the signal a sidechain key gets — of the **current block**, clamped to 0..1 (linear
   amplitude: a node peaking at −6 dBFS gives 0.5). The followed node is processed first: it is a dependency
   edge like a sidechain, so cycles are errors; `master` and the node itself cannot be followed. A muted
@@ -540,9 +574,14 @@ allows 50 % and `film` 45 % (cellos, basses and timpani in the hall are its warm
 - `silentNotes`: the compile-time silent notes (agentsound/silent_notes.py, see "Silent notes" below): `track` (a
   track id), `kind` (`no_sound` | `muted_layers`), `pitches` (non-empty, MIDI 0..127), `count` (>= 1), `beats`
   (optional, the first ones), `message`. The report repeats each as a `silent_notes` warning.
-- **Strict**: `analysis` must be an object with only `profile` / `loudness` / `silentNotes`; an unknown profile name
-  is an error listing the profiles; `loudness` must be two numbers; a `silentNotes` entry with an unknown key, a
-  track id that is no track, another kind or a pitch outside 0..127 is an error.
+- `audioOnsets`: track ids whose notes are phrase triggers, not played notes - the compiler writes it for every
+  vocal track of `agentsound.singer` (one one-shot note per sung phrase at velocity 127; the dynamics are inside the
+  takes). Their note dynamics (`nodes[].dynamics`) are measured from the audio's own onsets (`onsets: "audio"`), so
+  the triggers' single velocity never reads as `flat_dynamics`.
+- **Strict**: `analysis` must be an object with only `profile` / `loudness` / `silentNotes` / `audioOnsets`; an
+  unknown profile name is an error listing the profiles; `loudness` must be two numbers; a `silentNotes` entry with an
+  unknown key, a track id that is no track, another kind or a pitch outside 0..127 is an error; `audioOnsets` must be
+  an array of track ids.
 - Python: `python -m agentsound build songs/<slug> --profile synthwave`, or a module-level
   `ANALYSIS = {'profile': 'synthwave', 'loudness': [-12, -9]}` in song.py (the CLI writes it into the render
   JSON; `--profile` wins over the file).
@@ -641,8 +680,8 @@ else the loudest monophonic line), `other` (arps, keys, plucks), `fx` (a few lon
 its own rendered audio:
 
 - **Onsets**: the notes of the render JSON (`onsets: "notes"`; note starts within 30 ms are one event, a chord or a
-  flam, with its highest velocity and pitch), or - for a track without notes - level rises of 6+ dB within 10 ms in
-  the audio (`onsets: "audio"`). Onsets quieter than -70 dBFS (muted / automated away) are skipped.
+  flam, with its highest velocity and pitch), or - for a track without notes or named in `analysis.audioOnsets` (a
+  singer's phrase triggers) - level rises of 6+ dB within 10 ms in the audio (`onsets: "audio"`). Onsets quieter than -70 dBFS (muted / automated away) are skipped.
 - **Level of a note**: the mean level over the first 30-100 ms of the note (up to the next onset), dBFS (full-scale
   sine = -3).
 - `notes` (events), `spreadDb` = 10-90 percentile spread of the note levels over the song, `levelDb` = [p10, p90],

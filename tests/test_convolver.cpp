@@ -716,6 +716,38 @@ void testParams() {
         check(d < 1e-6, "width 0: the wet signal is mono");
     }
     {
+        // crossfeed: each input side into the other before the IR, power-kept; 0 = exact pass-through
+        const std::string st = irFile("xfeed.wav", {decayingNoise(2400, 2000, 81), decayingNoise(2400, 2000, 82)});
+        Stereo left(24000);  // a hard-left source
+        {
+            dsp::Rng rng(91);
+            for (std::size_t i = 0; i < left.size(); ++i) left.l[i] = 0.5f * rng.bipolar();
+        }
+        auto wet = [&](const json& cfg, const Stereo& in) {
+            auto fx = makeFx(cfg);
+            Stereo y = in;
+            run(*fx, y, kOddBlocks);
+            return y;
+        };
+        const Stereo plain = wet({{"ir", st}}, left), zero = wet({{"ir", st}, {"crossfeed", 0}}, left);
+        check(identical(plain, zero), "crossfeed 0: bit-identical to no crossfeed");
+        const double rPlain = rms(plain.r, 2400, 24000), lPlain = rms(plain.l, 2400, 24000);
+        check(rPlain < 1e-6 * lPlain, "2-channel IR, crossfeed 0: a hard-left source leaves the right side silent");
+        const Stereo half = wet({{"ir", st}, {"crossfeed", 0.5}}, left);
+        const double lHalf = rms(half.l, 2400, 24000), rHalf = rms(half.r, 2400, 24000);
+        const double side = db(rHalf / lHalf), total = db(std::sqrt(lHalf * lHalf + rHalf * rHalf) / lPlain);
+        check(side > -8.0 && side < -4.0, fmt("crossfeed 0.5: the right side answers a hard-left source %.1f dB under the "
+                                             "left (20log 0.5 = -6)", side));
+        check(std::fabs(total) < 0.5, fmt("crossfeed 0.5: power kept for a panned source (%.2f dB)", total));
+        Stereo centre(24000);
+        for (std::size_t i = 0; i < centre.size(); ++i) centre.l[i] = centre.r[i] = left.l[i];
+        const Stereo c0 = wet({{"ir", st}}, centre), c1 = wet({{"ir", st}, {"crossfeed", 1}}, centre);
+        const double gain = db(rms(c1.l, 2400, 24000) / rms(c0.l, 2400, 24000));
+        check(std::fabs(gain - 3.01) < 0.05, fmt("crossfeed 1 on a centred source: +3 dB (%.2f)", gain));
+        auto fx = makeFx({{"ir", st}});
+        check(fx->setParam("crossfeed", 0.4f), "crossfeed is automatable");
+    }
+    {
         auto fx = makeFx({{"ir", unit}});
         check(fx->setParam("mix", 0.5f) && fx->setParam("lowcut", 300.0f) && fx->setParam("predelay", 40.0f),
               "mix / lowcut / predelay are automatable");

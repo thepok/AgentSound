@@ -25,11 +25,13 @@ ride overheads (0.9 / 0.7), toms spread high-left to floor-right (0.8); kick, sn
 
 from . import Patch, fx, inst, register
 
-VERSION = 4
+VERSION = 5  # v5: the whole-kit plate sends lowered (linn -10 -> -16, 808 -12 -> -18): the hats and cymbals washed
 
 _GATED_HOWTO = (
-    "Gated snare: the bus/gated gate opens at -16 dBFS on the bus input, i.e. on this kit's snare/clap/toms at "
-    "a send of -8..-4 dB, not on kick or hats. For the cleanest result (and always with click-heavy kicks) play "
+    "Gated snare: when this kit is the only track sending to the gated bus, the song keys the gate from the kit's "
+    "snare / clap by itself (= s.gated(key=kit, pitches=['snare', 'clap']); s.gated(key=False) keeps the old gate "
+    "on the bus input, which opens at -16 dBFS - a click-heavy kick at a -6 dB send opened it too). With other "
+    "tracks on the bus, or for the snare / toms alone in the reverb, play "
     "the snare/clap/toms on a second track with the same patch and send only that one: "
     "`gate = s.gated(gain_db=0)` (the return sets the effect level: -6 subtle .. +4 huge 80s), `sn = s.track('snare', '{name}', "
     "sends={{gate: -6}})`, and drop the main kit's own gated send with "
@@ -80,7 +82,7 @@ register(Patch(
     fx=[fx.eq({'hp.freq': 30, 'peak1.freq': 350, 'peak1.gain': -1.5, 'lp.freq': 12500}),
         fx.compressor(threshold=-14, ratio=4, attack=10, release=100, knee=6),
         fx.saturator(mode='tape', drive=5, output=3.6)],
-    sends={'plate': -10},
+    sends={'plate': -16},
     notes=(
         "LinnDrum-style 80s pop kit (a-ha, Tears for Fears, Jan Hammer): short thuddy acoustic-sample kick with a "
         "beater click (62 Hz, 0.35 s), woody 3-mode snare, sampled-noise hats, 5-burst claps, acoustic toms; "
@@ -89,8 +91,9 @@ register(Patch(
         "sample peak -0.7 dBFS. Use for retrowave pop / ballads "
         "100-125 BPM; it shines with busy 16th hats, claps on 2/4, tambourine (54) and cowbell (56) accents. "
         "Tweak: kick.tune 55-70, kick.decay 0.25-0.45, snare.tune 180-230, snare.decay 0.25-0.45, hat.level "
-        "-5..0, velocity 0.4-0.8 (it is the most dynamic kit). Sends: plate -10 (default: the 80s plate on the "
-        "whole kit). Its clicky kick opens a gate, so for a gated snare use a separate snare track: "
+        "-5..0, velocity 0.4-0.8 (it is the most dynamic kit). Sends: plate -16 (default: the 80s plate on the "
+        "whole kit; v5: it was -10 - the hats and cymbals washed). A gated bus that this kit alone feeds is keyed "
+        "from its snare / clap when the song compiles; with other tracks on it, use a separate snare track: "
         + _GATED_HOWTO.format(name='synthwave/drums_linn') + _SUB_TIP)))
 
 register(Patch(
@@ -101,7 +104,7 @@ register(Patch(
     fx=[fx.eq({'hp.freq': 25, 'lp.freq': 11000}),
         fx.compressor(threshold=-16, ratio=2.5, attack=20, release=120, knee=8),
         fx.saturator(mode='tube', drive=4), fx.saturator(mode='tape', drive=5, output=2.9)],
-    sends={'plate': -12, 'gated': -8},
+    sends={'plate': -18, 'gated': -8},
     notes=(
         "TR-808 kit for dreamwave / chillsynth (FM-84, Timecop1983, Home): round boomy kick (48 Hz, 0.9 s, pure "
         "sine sweep), snappy 238 Hz snare, the classic clap, clangy metallic hats and cowbell; softened top "
@@ -110,7 +113,8 @@ register(Patch(
         "track.groove('laidback'); layer clap + snare for the backbeat. Tweak: kick.tune to the key root (it is "
         "a pitched boom: A1 55, G1 49, F1 43.7 Hz), kick.decay 0.5-1.5 (shorter at faster tempos; long tails "
         "fight the bass: sidechain it), snare.snappy 0.4-0.8, hat.tone 0.3-0.6, hat.level -6..-2. Sends: plate "
-        "-12 and gated -8 (default), or hall -14 for a dreamier backbeat. " + _GATED_HOWTO.format(
+        "-18 and gated -8 (default; v5: the whole-kit plate was -12 - the hats and cymbals washed), or hall -14 for a "
+        "dreamier backbeat (louder plate on the snare alone: a snare track of its own). " + _GATED_HOWTO.format(
             name='synthwave/drums_808') + _SUB_TIP)))
 
 register(Patch(

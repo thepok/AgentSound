@@ -265,8 +265,9 @@ class Targets(unittest.TestCase):
         plan = hornist.targets(t)
         self.assertEqual(plan['level'], 'fx.air.gain', "the breath stage (heroes' 'air' utility), inserted")
         self.assertTrue(plan['compressed'])
-        self.assertEqual([f.name for f in t.fx], [None, 'air', 'mic'], 'air after the compressor, the mic stage last')
-        self.assertEqual((t.fx[1].type, t.fx[1].params), ('utility', {'gain': 0.0}))
+        self.assertEqual([f.name for f in t.fx], ['mic', None, 'air'],
+                         'the mic stage in front of the compressor (where a microphone is), air after it')
+        self.assertEqual((t.fx[2].type, t.fx[2].params), ('utility', {'gain': 0.0}))
         hornist.targets(t)
         self.assertEqual(sum(1 for f in t.fx if f.name in ('mic', 'air')), 2, 'inserted once')
 
@@ -280,7 +281,7 @@ class Targets(unittest.TestCase):
         s, t = track(inst.va(), [fx.compressor()])
         hornist.mic_stage(t)
         hornist.targets(t)
-        self.assertEqual([f.name for f in t.fx], [None, 'air', 'mic'], 'the air stage goes in before the mic stage')
+        self.assertEqual([f.name for f in t.fx], ['mic', None, 'air'], 'the air stage goes in after the compressor')
 
     def test_live_dynamics_sampler_gets_dynamics_with_headroom(self):
         s, t = track(Instrument('sampler', {'layers': 'dynamics', 'dynrange': 12, 'dynamics': 1.0}))
@@ -326,7 +327,9 @@ class Targets(unittest.TestCase):
             self.assertEqual(plan['level'], level, name)
         s, t = track('hero/sax')
         self.assertEqual(len(hornist.targets(t)['vibrato']), 4, 'every sampler layer of the stack')
-        self.assertEqual([f.name for f in t.fx][-2:], ['air', 'mic'], "the hero's own air stage, then the mic stage")
+        names = [f.name for f in t.fx]
+        self.assertEqual(names[-1], 'air', "the hero's own air stage stays last")
+        self.assertEqual(t.fx[names.index('mic') + 1].type, 'compressor', 'the mic stage in front of the compressor')
 
 
 if __name__ == '__main__':

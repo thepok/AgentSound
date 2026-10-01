@@ -29,7 +29,7 @@ print(b.describe())                                  # roles, buses and how to p
 
 | preset | roles | sounds | demo |
 |---|---|---|---|
-| `rock_band` (options `keys='organ'\|'piano'`, `gain='crunch'\|'high'`, `kit='big_rusty'\|'unruly'\|'red_zeppelin'`) | drums, bass, gtr_l, gtr_r, lead, keys | Karoryfer Big Rusty kit (close + OH mics, 14 layers x 4 RR, velocity-calibrated) with a slow-attack punch compressor into a drum bus with New York parallel compression + tape and the Voxengo drum room (crushed); picked Growlybass into an SVT-style DI + tube amp rig; **gtr_l** FreePats FSBS DI -> the tube amp as a cranked Plexi -> Marshall 4x12 Greenback IR (hard left), **gtr_r** Emily SG DI -> two-stage crunch -> 2x12 V30 (hard right), `gain='high'`: metal 4x12 + a hotter crunch; lead FSBS DI -> driven Marshall, mono legato, dotted-8th echo + 224XL plate; setBfree rock organ with a Leslie-style tremolo (or the Salamander grand) | `songs/_bands/rock_band` (126 BPM E minor; after the rock pass: -9.6 LUFS, LRA 4.5, width 26 %; warns of the intro riff's kick + bass unison and flat dynamics of its narrow-velocity gtr_r / band lead) |
+| `rock_band` (options `keys='organ'\|'piano'`, `gain='crunch'\|'high'`, `kit='big_rusty'\|'unruly'\|'red_zeppelin'`) | drums, bass, gtr_l, gtr_r, lead, keys | Karoryfer Big Rusty kit (close + OH mics, 14 layers x 4 RR, velocity-calibrated) with a slow-attack punch compressor into a drum bus with New York parallel compression + tape and the Voxengo drum room (crushed: `drum_room`; the band in the same room clean: `room`); picked Growlybass into an SVT-style DI + tube amp rig; **gtr_l** FreePats FSBS DI -> the tube amp as a cranked Plexi -> Marshall 4x12 Greenback IR (hard left), **gtr_r** Emily SG DI -> two-stage crunch -> 2x12 V30 (hard right), `gain='high'`: metal 4x12 + a hotter crunch; lead FSBS DI -> driven Marshall, mono legato, dotted-8th echo + 224XL plate; setBfree rock organ with a Leslie-style tremolo (or the Salamander grand) | `songs/_bands/rock_band` (126 BPM E minor; after the rock pass: -9.6 LUFS, LRA 4.5, width 26 %; warns of the intro riff's kick + bass unison and flat dynamics of its narrow-velocity gtr_r / band lead) |
 | `indie_band` (`keys='wurli'\|'organ'`, `kit='big_rusty'\|'unruly'\|...`) | drums, bass, gtr_l, gtr_r, lead, keys | Big Rusty kit (or `kit='unruly'`: the small dry garage kit, thin below 60 Hz) in the 224XL room; Fashionbass; **gtr_l** clean jangle (FSBS single-coil -> clean 1x12, compressor, chorus), **gtr_r** crunch (Emily SG -> 1x12 H30 edge of breakup); Shinyguitar archtop lead (pickup) through a blues amp with a 110 ms slapback; Greg Sullivan Wurlitzer through a small amp with tremolo | `songs/_bands/indie_band` (152 BPM D major: -9.6 LUFS, LRA 3.9, width 30 %, 0 warnings) |
 | `power_ballad` (`kit=...`) | piano, strings, pad, drums, bass, lead | Salamander grand, VPO string section, Juno pad, Big Rusty kit in the big 224XL room + rich plate, fingered Growlybass, a singing FSBS lead (Marshall, quarter-note echo, 224XL hall) | `songs/_bands/power_ballad` (76 BPM A major: -10.0 LUFS, LRA 4.4, 0 warnings) |
 
@@ -69,8 +69,11 @@ What the presets do for you, and what you still decide:
   at every velocity (before: snare layers 2-4 at one level, toms 5-8 dB over the snare). `tom_fill()`, `snare_roll()`,
   `crash()` work as written. The kit's chain: eq -> **`punch`** (a 25 ms-attack 3:1 compressor: the stick passes, the
   ring is held) -> the drum bus (**`crush`**: New York parallel compression 6:1 mixed in at 35 %, **`tape`**
-  saturation, eq) + the room (the Voxengo drum room IR + **`room_crush`**: the room compressed 6:1 at 50 %, the big
-  rock room between the hits).
+  saturation, eq) + the kit's room (bus **`drum_room`**: the Voxengo drum room IR + **`room_crush`**: the room
+  compressed 6:1 at 50 %, the big rock room between the hits). The band (bass, guitars, lead, keys) sends to the same
+  IR clean (bus **`room`**, `crossfeed` 0.5 so the hard-panned guitars get a room on both sides, +2.5 dB to keep the
+  level it had crushed): before, everything shared the crushed return and pumped with the drums. Drum tracks a song
+  adds send to `drum_room`, the rest to `room`.
 - **Levels**: each role's balance sits in its last effect (`fx.trim.gain`), so `gain_db` and `gainDb` automation
   (loud-quiet dynamics: `t.automate('gainDb', per_section({verse: -4, chorus: 0}))`) start from 0 dB. Dry track levels
   on the demos: drums -20.5, bass -22, each rhythm guitar -23.5, lead -19.5, organ -26 LUFS. The rock_band master glues

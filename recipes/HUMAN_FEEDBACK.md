@@ -213,6 +213,27 @@ Add new feedback here (date, song, the user's words, the rule) whenever the user
   after a melisma and at a phrase end - placed at the END of the word's last note, before the breath, never dropped
   or swallowed by the release / de-esser.
 
+- **2026-10-01, jane-street-bossa:** "im Jazz-Song ist die Stimme viel zu aufgeregt, sollte ruhiger sein". Rule: jazz
+  and ballad vocals are calm and intimate - soft voice mode as the base, few and small scoops into notes, slow
+  shallow vibrato only on long notes, no falls/doits, small dynamic swings, smooth legato, relaxed timing.
+  Round 2 (after fewer scoops / less wobble / 64 % soft mode): "immer noch sehr aufgeregt, vielleicht leiser singen
+  lassen und dann nachträglich lauter machen?" - the calm must come from the DELIVERY: let the voice sing softly
+  (softest mode / energy) and restore the level with gain; also consider register (lower key) and a stepwise melody.
+  And: "sie klingt gerusht" - jazz vocals lay BACK (vowels on or slightly behind the beat, breathing space between
+  phrases, not crammed syllables); never push ahead of the band.
+- **2026-10-01, jane-street-bossa / grit tests:** "der Gesang hat immer viel Hall und/oder Reverb, er klingt nicht
+  trocken". The vocal hero chain (plate -12 dB + a constant echo send -20 dB + throws, plus the song's halls) made
+  every sung vocal wet; the user wants it drier - and a wet voice also makes grit/distortion sound mushy. Rule:
+  sung vocals sit dry and close by default (short plate with pre-delay well under the voice, no constant echo -
+  echo only as deliberate throws), drier still for jazz/ballads; judge the wet/dry balance on every sung song.
+- **2026-10-01, _demo_vocal grit A/B (the voice through the guitar amp: light parallel, crunch, megaphone; Hanami and
+  TIGER):** "keine der Stimmverrauhungen gefiel mir". Rule: no amp grit / distortion / megaphone on sung vocals by
+  default; keep the voice clean (the `vocal` hero chain). Rougher rock vocals would have to come from the singing
+  itself (a voice/mode with real rasp), not from distorting a clean take. Caveat (user: "vielleicht lag's am soften
+  Drumherum-Sound"): it was only heard over the soft pop demo band - grit may fit a real rock backing; re-test it
+  there before ruling it out for rock. Re-test over the rock band with the dry vocal chain (TIGER clean vs crunch):
+  "kein großer Unterschied, beides ok". So: grit stays an OPTION (off by default), acceptable on rock vocals,
+  never on soft/pop/jazz backings.
 - **2026-10-01, lyrics (the user's tips before the first sung song):** "LLMs schreiben gern zu sehr on the nose,
   dabei sollte das Thema eher umgarnt als genannt werden. Ein paar catchy Phrasen sind wichtig wie 'I crashed my
   car against the bridge, I don't care'". Rule: show the theme through concrete images and actions, never name the

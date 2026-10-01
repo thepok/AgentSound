@@ -106,7 +106,7 @@ def build() -> Song:
     # a peak catcher at the end of the drum bus: the hardest crash / kick accents (+2 dBFS on the bus) would otherwise
     # drive the master limiter and flatten the whole song; only the top transients above -9 dBFS are touched
     s.node(drum_bus).add_fx(fx.compressor(threshold=-9, ratio=8, attack=0.3, release=60, knee=3, detector='peak'))
-    mallets = s.track('mallets', 'sampled/big_rusty_mallets', gain_db=-4, sends={'room': -8})
+    mallets = s.track('mallets', 'sampled/big_rusty_mallets', gain_db=-4, sends={'drum_room': -8})   # the kit's crushed room
     mallets.to(drum_bus)
     s.hall()
     gated = s.bus('gated', 'bus/gated')

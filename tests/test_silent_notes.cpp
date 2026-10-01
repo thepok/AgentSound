@@ -176,6 +176,12 @@ int main() {
     bad = song();
     bad["analysis"]["silentNotes"][0]["pitches"] = json::array({200});
     check(throwsConfig(bad, "MIDI notes 0..127"), "analysis.silentNotes: bad pitch rejected");
+    bad = song();
+    bad["analysis"]["audioOnsets"] = json::array({"nope"});
+    check(throwsConfig(bad, "'nope' is not a track id"), "analysis.audioOnsets: unknown track rejected");
+    bad = song();
+    bad["analysis"]["audioOnsets"] = "smp";
+    check(throwsConfig(bad, "must be an array of track ids"), "analysis.audioOnsets: not a list rejected");
 
     // the hint never changes the audio
     json plain = song();

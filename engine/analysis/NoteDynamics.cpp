@@ -280,7 +280,8 @@ std::vector<json> assessDynamics(MixImpl& m, std::vector<DynamicsFinding>& findi
         if (n.isBus || !n.env || n.role == Role::Drums || n.role == Role::Fx) continue;
         std::vector<Event> ev;
         const auto& notes = n.routing.notes;
-        if (n.hasRouting && !notes.empty()) {
+        // a track whose notes trigger whole phrases (analysis.audioOnsets: a singer's takes) is heard from its audio
+        if (n.hasRouting && !notes.empty() && !n.routing.audioOnsets) {
             fromNotes[i] = true;
             const bool tones = n.routing.tones.size() == notes.size();
             std::vector<Event> raw;

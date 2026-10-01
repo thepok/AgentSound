@@ -62,12 +62,14 @@ def _raw(name: str) -> Instrument:
 
 class _Role:
     """One role of a preset: its default sound (or `alt` when the sound's packs are missing) and its mix chain:
-    insert fx after the sound's own, fader, pan, sends, kick-sidechain depth, movement (modulators)."""
+    insert fx after the sound's own (pre_fx: in front of the sound's own - drive before its chorus / doubler), fader,
+    pan, sends, kick-sidechain depth, movement (modulators)."""
 
     def __init__(self, sound, *, alt=None, packs=(), gain: float = 0.0, pan=None, fx=(), sends=None,
-                 duck: float | None = None, release: float | None = None, mods=()):
+                 duck: float | None = None, release: float | None = None, mods=(), pre_fx=()):
         self.sound, self.alt, self.packs = sound, alt, tuple(packs)
         self.gain, self.pan, self.fx = float(gain), pan, list(fx)
+        self.pre_fx = list(pre_fx)
         self.sends = dict(sends or {})
         self.duck, self.release = duck, release
         self.mods = list(mods)          # (target, modulator) pairs applied to the track
@@ -120,7 +122,7 @@ def _assemble(song, preset: str, roles: dict, *, returns: dict, master, analysis
             used_packs.update(spec.packs)
         sound = sound() if callable(sound) else sound
         t = song.track(ids.get(role, role), _as_patch(sound, role), fx=[f.copy() for f in spec.fx],
-                       gain_db=spec.gain, pan=spec.pan,
+                       pre=[f.copy() for f in spec.pre_fx], gain_db=spec.gain, pan=spec.pan,
                        sends={band.buses[b]: db for b, db in spec.sends.items() if b in band.buses})
         if role not in sounds:                      # movement written for the default sound's params
             for target, mod in spec.mods:
@@ -435,10 +437,12 @@ def darksynth(song, *, without=(), sounds=None, ids=None, **options):
                      fx=[_tame(hp=100).but(**{'peak2.freq': 1200, 'peak2.gain': -4.5})], sends={'hall': -6}, duck=6),
         'arp': _Role('synthwave/seq_pulse', gain=-3, pan=0.25, fx=[_tame(hp=450, lowmid=-3)],
                      sends={'echo': -12, 'hall': -16}, duck=6),
-        'stab': _Role('synthwave/brass_stab', gain=-2, pan=-0.2, fx=[fx.saturator(mode='tube', drive=8)],
+        # the distortion in front of the patches' chorus / dimension / micro-pitch double (pre_fx): driven after
+        # them it ground the moving copies together into a grainy wobble
+        'stab': _Role('synthwave/brass_stab', gain=-2, pan=-0.2, pre_fx=[fx.saturator(mode='tube', drive=8)],
                       sends={'hall': -10, 'plate': -12}, duck=4),
-        'lead': (_Role('synthwave/sync_lead', fx=[fx.saturator(mode='tube', drive=6),
-                                                  _tame(hp=180).but(**{'peak2.freq': 900, 'peak2.gain': -2.5})],
+        'lead': (_Role('synthwave/sync_lead', pre_fx=[fx.saturator(mode='tube', drive=6)],
+                       fx=[_tame(hp=180).but(**{'peak2.freq': 900, 'peak2.gain': -2.5})],
                        sends={'hall': -9, 'echo': -12})
                  if o['lead'] == 'sync' else
                  _piano('darksynth')),

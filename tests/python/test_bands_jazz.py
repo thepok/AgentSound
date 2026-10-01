@@ -76,7 +76,7 @@ class JazzPresets(unittest.TestCase):
                 self.assertEqual(set(b.info['sounds']), set(b.roles))
                 play_everything(s, b, a)
                 d = s.compile()
-                self.assertEqual([f['type'] for f in d['master']['fx']], ['eq', 'width', 'compressor', 'tape', 'limiter'])
+                self.assertEqual([f['type'] for f in d['master']['fx']], ['eq', 'compressor', 'tape', 'width', 'limiter'])
                 self.assertFalse([w for w in s.warnings if 'dropped' in w or 'no bus' in w])
 
     def test_fallback_without_any_pack(self):
@@ -234,7 +234,7 @@ class ReviewFixes(unittest.TestCase):
         s = Song('t', tempo=132)
         s.section('a', bars=1)
         bands.make('jazz_trio', s)
-        eq, width = s.master.fx[0], s.master.fx[1]
+        eq, width = s.master.fx[0], s.master.fx[3]          # the width after the glue and the tape
         self.assertEqual(width.type, 'width')
         self.assertEqual(width.params['monobass'], 150)
         self.assertGreater(eq.params['peak3.gain'], 0)

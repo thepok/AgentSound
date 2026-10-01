@@ -338,18 +338,37 @@ class Instrument:
         return f"Instrument({self.type!r}, {self.params!r})"
 
 
+TAPS = ('post', 'prefader', 'prefx')
+"""Where a send / sidechain key / follower picks up a node (docs/RENDER_FORMAT.md "Taps"): 'post' (default: after
+the inserts, the fader and the pan), 'prefader' (after the inserts, before the fader / pan), 'prefx' (the dry
+instrument / bus input), or 'pre:<fx name | type | index>' (the signal entering that insert of the tapped node)."""
+
+
+def check_tap(tap, what: str):
+    """A tap spec as given (None / 'post' -> None: the default), validated: 'post', 'prefader', 'prefx' or
+    'pre:<fx name | type | index>' (resolved against the tapped node's chain when the song compiles)."""
+    if tap is None or tap == 'post':
+        return None
+    if isinstance(tap, str) and (tap in TAPS or re.match(r'^pre:([0-9]{1,3}|[a-z][a-z0-9_]*)$', tap)):
+        return tap
+    raise ComposeError(f"{what}: tap must be 'post', 'prefader', 'prefx' or 'pre:<fx name | type | index>' (the "
+                       f"signal entering that insert of the tapped node), got {tap!r}")
+
+
 class FX:
-    """One insert effect: type + params (+ sidechain source, + optional name for automation targets).
-    `sidechain` and `name` are the only reserved keywords; every other keyword is an engine param
+    """One insert effect: type + params (+ sidechain source and where it is tapped, + optional name for automation
+    targets). `sidechain`, `tap` and `name` are the only reserved keywords; every other keyword is an engine param
     (even 'type', e.g. fx.reverb(type='plate')).
 
         fx.chorus(mix=0.35)                     fx('eq', {'low.gain': 2})
         fx.compressor(threshold=-20, sidechain='kick')
+        fx.ducker(sidechain='sax', tap='prefx') -> keyed by the sax's dry instrument (not its echo / fader)
         fx.filter(name='sweep', cutoff=18000)   -> automate 'fx.sweep.cutoff'"""
 
-    __slots__ = ('type', 'params', 'sidechain', 'name')
+    __slots__ = ('type', 'params', 'sidechain', 'name', 'tap')
 
-    def __init__(self, type: str, params: dict | None = None, /, *, sidechain=None, name: str | None = None, **kw):
+    def __init__(self, type: str, params: dict | None = None, /, *, sidechain=None, name: str | None = None,
+                 tap=None, **kw):
         if not isinstance(type, str) or not re.match(r'^[a-z0-9_]+$', type):
             raise ComposeError(f"fx type must be a lowercase name like 'reverb', 'chorus'; got {type!r}")
         self.type = type
@@ -358,20 +377,23 @@ class FX:
         if name is not None and (not isinstance(name, str) or not re.match(r'^[a-z][a-z0-9_]*$', name)):
             raise ComposeError(f"fx name must be a lowercase identifier, got {name!r}")
         self.name = name
+        self.tap = check_tap(tap, f"fx {type!r}")
 
     @classmethod
     def coerce(cls, x) -> 'FX':
         if isinstance(x, FX):
             return x.copy()
         if isinstance(x, dict):
-            extra = set(x) - {'type', 'params', 'sidechain', 'name'}
+            extra = set(x) - {'type', 'params', 'sidechain', 'name', 'tap'}
             if 'type' not in x or extra:
-                raise ComposeError(f"fx dict must be {{'type': ..., 'params': {{...}}, 'sidechain'?: id}}, got keys {sorted(x)}")
-            return FX(x['type'], copy.deepcopy(x.get('params') or {}), sidechain=x.get('sidechain'), name=x.get('name'))
+                raise ComposeError(f"fx dict must be {{'type': ..., 'params': {{...}}, 'sidechain'?: id, 'tap'?: ...}}, "
+                                   f"got keys {sorted(x)}")
+            return FX(x['type'], copy.deepcopy(x.get('params') or {}), sidechain=x.get('sidechain'), name=x.get('name'),
+                      tap=x.get('tap'))
         raise ComposeError(f"not an effect: {x!r}; use fx.reverb(...), fx('delay', mix=0.2) or {{'type': ..., 'params': ...}}")
 
     def copy(self) -> 'FX':
-        return FX(self.type, copy.deepcopy(self.params), sidechain=self.sidechain, name=self.name)
+        return FX(self.type, copy.deepcopy(self.params), sidechain=self.sidechain, name=self.name, tap=self.tap)
 
     def but(self, **params) -> 'FX':
         f = self.copy()
@@ -384,13 +406,15 @@ class FX:
         self.params.update(_fx_paths(_params(params, kw, f"fx {self.type!r}"), f"fx {self.type!r}"))
         return self
 
-    def keyed(self, source) -> 'FX':
-        """Copy with a sidechain key source (track/bus or id)."""
+    def keyed(self, source, tap=None) -> 'FX':
+        """Copy with a sidechain key source (track/bus or id) and where it is tapped (tap=: see TAPS)."""
         f = self.copy()
         f.sidechain = _ref(source)
+        f.tap = check_tap(tap, f"fx {self.type!r}")
         return f
 
     def to_dict(self) -> dict:
+        """The render JSON entry (a 'tap' is resolved against the key's chain when the song compiles)."""
         d = {'type': self.type, 'params': copy.deepcopy(self.params)}
         if 'ir' in d['params']:      # library IRs resolve against the sample folder in effect now (worktrees, tests)
             v = d['params']['ir']
@@ -400,13 +424,14 @@ class FX:
         return d
 
     def __eq__(self, other) -> bool:
-        return isinstance(other, FX) and (self.type, self.params, self.sidechain, self.name) == \
-            (other.type, other.params, other.sidechain, other.name)
+        return isinstance(other, FX) and (self.type, self.params, self.sidechain, self.name, self.tap) == \
+            (other.type, other.params, other.sidechain, other.name, other.tap)
 
     __hash__ = None
 
     def __repr__(self) -> str:
-        extra = (f", sidechain={self.sidechain!r}" if self.sidechain else '') + (f", name={self.name!r}" if self.name else '')
+        extra = ((f", sidechain={self.sidechain!r}" if self.sidechain else '') + (f", tap={self.tap!r}" if self.tap else '')
+                 + (f", name={self.name!r}" if self.name else ''))
         return f"FX({self.type!r}, {self.params!r}{extra})"
 
 

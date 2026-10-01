@@ -473,6 +473,23 @@ def _names(labels: dict) -> tuple:
 
 # --------------------------------------------------------------------------------------------- the hall
 
+HALL_CROSSFEED = 0.5
+"""The orchestra hall's convolver crossfeed (pseudo true stereo): a panned section's hall answers on both sides,
+leaning to its seat."""
+HALL_WIDTH = 0.3
+"""Added to the hall's convolver width with the crossfeed: the Musikverein IR's two channels are much alike (a narrow
+recording), so feeding every section into both made the return mid-heavy (side/mid -0.3 -> -2.8 dB on the symphony
+demo, the report's hall width 151 -> 73 % on ashes-and-chandeliers); +0.3 gives back most of the spread (-1.1 dB) -
+now around the listener instead of mirroring each section's seat. Only on the Musikverein halls: the church IR's channels
+are unalike already (with +0.3 its return went 257 % wide, correlation -0.44: over_wide on the church_organ demo)."""
+HALL_TRIM = -2.0
+"""dB on the hall's convolver gain with the crossfeed and HALL_WIDTH: the correlated part of a seated orchestra reaches
+both IR channels (+1.2..+1.3 dB of hall: symphony demo theme-build -35.7 -> -34.4, unbowed t1 -33.3 -> -32.1 dB RMS),
+the extra width another +0.7 dB; taken back so the return keeps its level."""
+HALL_TRIM_CROSSFEED = -0.4
+"""The church hall's trim (no HALL_WIDTH there): its crossfeed raised the church_organ demo's hall +0.4 dB."""
+
+
 def _hall(song, kind: str, *, fallback: dict, bus_id: str = 'hall'):
     """The one shared return: a convolution space from Voxengo IM Reverbs (modelled real rooms) when installed,
     else the algorithmic hall with `fallback` params. kind: 'chamber' (the Vienna Musikverein IR, x1.1: ~1.6 s),
@@ -489,7 +506,12 @@ def _hall(song, kind: str, *, fallback: dict, bus_id: str = 'hall'):
                                                  gain=-8.0)),
             'church': ('St Nicolaes Church.wav', dict(predelay=15, lowcut=150, highcut=12000, width=1.0, gain=-4.5)),
         }[kind]
-        chain = [fx.convolver(ir=VOX + ir, mix=1.0, **p),
+        # crossfeed: the Voxengo IRs are 2-channel (one centred source); the seated sections are panned (violins I
+        # far left, basses right), so without it each one lit only its own side of the hall
+        musik = ir.startswith('Musik')
+        chain = [fx.convolver(ir=VOX + ir, mix=1.0, crossfeed=HALL_CROSSFEED,
+                              **{**p, 'gain': round(p['gain'] + (HALL_TRIM if musik else HALL_TRIM_CROSSFEED), 3),
+                                 'width': round(min(2.0, p['width'] + (HALL_WIDTH if musik else 0.0)), 3)}),
                  fx.eq({'peak1.freq': 320, 'peak1.gain': -3.0, 'peak1.q': 0.8, 'peak2.freq': 1000, 'peak2.gain': -2.0,
                         'peak2.q': 0.7, 'high.freq': 7000, 'high.gain': 2.5})]
         return song.bus(bus_id, fx=chain), f"convolution: Voxengo IM {ir[:-4]} ({kind})"

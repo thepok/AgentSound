@@ -76,7 +76,12 @@ reverb, sidechain pumping, nostalgic minor-key harmony, cinematic night-drive mo
   `hero/synth_lead` (the fat singing saw lead: two-saw voice + an octave-down square body from G#4 up + a supersaw halo;
   mono, every note re-attacks and glides 40 ms, delayed vibrato, velocity -> level and brightness, tape, Juno chorus,
   micro-pitch double, plate + dotted-8th echo; one line, no octave doubling in the notes) and `hero/darksynth_lead`
-  (hard-sync saw over a driven saw body, tube drive: Kavinsky / Perturbator). All at -18.0 LUFS on the audition. Measured
+  (hard-sync saw over a driven saw body, tube drive: Kavinsky / Perturbator). All at -18.0 LUFS on the audition.
+  Space (chain-order review): the synth leads keep their constant echo next to the hall / plate - the dotted-8th
+  repeats filling the gaps are the genre's sound; a hero with its own plate bus (sax, voice) drops a quieter preset
+  hall send (plate + echo, not three returns); the bed's duck / carve listen to the hero before its echo and ride
+  (`tap='pre:air'`), so the pads come back under the repeats and throws. Drive goes in front of chorus / doubler
+  (`s.track(..., pre=[fx.saturator(...)])`, the darksynth band's `pre_fx`). Measured
   on children-of-neon's hook (scratch copies, drop2 / lift; the old hook `layered/piano_glass_lead` at -17.8 LUFS: lead
   -9.3 / -7.5 dB under the mix RMS, bed vs lead -0.7 / -1.0 dB, note dynamics 3.7 dB): with the hero mix rules (hero
   about as loud as the piano hook, +1 / +1.5 dB in drop2 / lift, -0.5 dB in drop1 where one pad is the bed; choir,
