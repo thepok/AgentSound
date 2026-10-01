@@ -165,7 +165,7 @@ LEGACY = {
     'layered/hero_piano_strings': 'fed7abfc43adc3a3',
     'layered/hero_guitar': '8c1c62bbb46f3c3a',
     'sampled/hero_guitar_clean': '6642d2f797248196',
-    'layered/hero_guitar_heavy': '5992b02dd31ebed8',
+    'layered/hero_guitar_heavy': 'ac1f1426caa05162',      # v2: the tube amp + neck pickup (kestrel-bay TONE.md)
     'hero/synth_lead': '9fd515a86ade6c09',
     'hero/synth_piano': '51b64ff5ea088fe4',
     'hero/darksynth_lead': 'd746426739d3adf0',

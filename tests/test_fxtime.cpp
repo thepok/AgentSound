@@ -177,7 +177,7 @@ Stereo impulse(std::size_t n, std::size_t at = 0, float amp = 1.0f) {
 void testFactory() {
     std::printf("factory & param specs\n");
     const auto types = timeEffectTypes();
-    check(types.size() == 10, "10 time effect types");
+    check(types.size() == 11, "11 time effect types");
     check(createTimeEffect("nope") == nullptr, "unknown type -> nullptr");
     check(createTimeEffect("compressor") == nullptr, "foreign type -> nullptr");
     for (const auto& t : types) {

@@ -59,7 +59,8 @@ class Library(unittest.TestCase):
             p = patches.get(name)
             self.assertIn('Measured -18.0 LUFS', p.notes, name)
             self.assertIn('MIX:', p.notes, name)
-            self.assertTrue(p.notes.startswith(f'v{hero.VERSION}.'), name)
+            v = hero.HEAVY_VERSION if name == 'layered/hero_guitar_heavy' else hero.VERSION
+            self.assertTrue(p.notes.startswith(f'v{v}.'), name)
             self.assertEqual(p.audition, {'notes': 'phrase'})
             self.assertIn('hall', p.sends)
             self.assertTrue(any(f.name == 'echo' and f.type == 'delay' for f in p.fx), name)   # the throw target
@@ -99,6 +100,16 @@ class Library(unittest.TestCase):
                     self.assertNotIn('velfade', x.params)        # a crossfade would break the legato line
                     self.assertEqual(x.instrument.params['mono'], 'legato')
         heavy = patches.get('layered/hero_guitar_heavy').instrument
+        for x in heavy.layers:            # v2: a neck-pickup DI into the engine's tube amp and a cab IR, per zone
+            if x.id.startswith('z'):
+                types = [f.type for f in x.fx]
+                self.assertEqual(types[types.index('amp') + 1], 'convolver', x.id)
+                self.assertNotIn('saturator', types)
+                zone = x.instrument.lazy['programs']['open']['zone']
+                self.assertEqual(zone.get('filKeytrack'), hero.NECK['keytrack'])
+                self.assertNotIn('filterEnv', zone)                  # a fixed pick opening flattens the dynamics
+        gains = [f.params['gain'] for x in heavy.layers if x.id.startswith('z') for f in x.fx if f.type == 'amp']
+        self.assertEqual(gains, sorted(gains))
         dbl = [x for x in heavy.layers if x.id == 'double'][0]
         self.assertNotIn('vello', dbl.params)                     # the double plays every velocity
         self.assertLess(dbl.params['level'], -3)

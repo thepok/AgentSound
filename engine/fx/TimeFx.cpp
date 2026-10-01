@@ -16,11 +16,12 @@ std::unique_ptr<Effect> createTimeEffect(std::string_view type) {
     if (type == "ensemble") return makeEnsemble();
     if (type == "vowel") return makeVowel();
     if (type == "wah") return makeWah();
+    if (type == "amp") return makeAmp();
     return nullptr;
 }
 
 std::vector<std::string> timeEffectTypes() {
-    return {"chorus", "flanger", "phaser", "delay", "reverb", "gatedreverb", "tremolo", "ensemble", "vowel", "wah"};
+    return {"chorus", "flanger", "phaser", "delay", "reverb", "gatedreverb", "tremolo", "ensemble", "vowel", "wah", "amp"};
 }
 
 bool timeEffectAcceptsSidechain(std::string_view type) { return type == "delay" || type == "gatedreverb"; }

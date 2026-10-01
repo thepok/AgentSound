@@ -35,6 +35,23 @@ it. Add new findings here instead of losing them in a report.
 - **Epic Part III solo** is only 0.2 LU louder than anthem2. The energy peak inside Part III is weak.
 - **The ballad piano in the epic has no air** (soft-hammer grand, almost nothing above 7 kHz). A brighter ballad
   variant, or `hammers` tuned per register, would fix it.
+- **Guitar tone, after the v2 heavy hero (songs/kestrel-bay/TONE.md):**
+  - Not yet heard: the tube `amp` + neck-pickup tone was judged by numbers (harmonics, bands, sustain, dynamics,
+    `compare` vs Sweet Child O' Mine) - A/B `songs/kestrel-bay/out/tone_ab/` by ear before more guitar songs.
+  - `layered/hero_guitar`, `sampled/hero_guitar_clean` and the rhythm guitars (`sampled/crunch_guitar`,
+    `dist_guitar`, `rock_guitar`, `metal_guitar` ... - `sampled_guitars._amp`) still use one saturator per amp; move
+    them to the `amp` effect (heavy hero: `hero_guitar._tube_amp`) after an A/B on their own song.
+  - Pick attack vs picking dynamics: a sampler filter envelope that opens the neck filter at every pick (2 octaves,
+    100 ms) made every onset equally bright and took the velocity part of the note dynamics 1.9 -> 0.0 dB, so the hero
+    has none. A velocity-scaled `filterEnv` depth (SFZ `fileg_vel2depth`) would give a bright pick that still follows
+    the picking.
+  - The FSBS DI is a bridge pickup only: the key-tracked low-pass emulates a neck pickup, but G4 and D5 (DI samples
+    whose 2nd harmonic is +2.5 / +2.9 dB over the fundamental) still come out of the amp with h2 near h1. A real neck
+    pickup DI set, or a pickup-position comb per note, would be better.
+  - The `rock` analysis profile's balance curve is darker in the mids than a real guitar-solo record: with the hero
+    1-2 dB over the band, kestrel-bay's solos read `balance_mid_high` +4.0..+4.5 dB / `balance_presence_high` ~+4 dB
+    (limit +4) while against Sweet Child O' Mine's solo the same mix is within +-1.5 dB from 0.8 to 6 kHz.
+    Re-derive the profile from guitar-led records.
 - **Guitar solos (kestrel-bay, fretwork / soloist): verify by ear.** Everything was judged by numbers and images
   (stem pitch tracks: vibrato 5.7 Hz 0..+50 ct up from the note, the dive B5 -> B4 in 1.3 s, the pinch's partial 6
   at 2 kHz; lead note dynamics 5.4 dB). Untested by ear: whether the bend overshoot (4 + 3 x amount ct) and the

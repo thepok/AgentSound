@@ -20,14 +20,17 @@ METADATA = {'title': 'Kestrel Bay', 'artist': 'AgentSound', 'album': 'Fretwork',
 COVER = {'style': 'rock', 'subtitle': 'Fretwork', 'seed': 7}      # seed 7: the subtitle clear of the sun
 
 # The mix engineer's moves (python -m agentsound mix songs/kestrel-bay, two passes): the hero 1.5 dB down and the
-# drums / bed up so the hero sits 2-4 dB over the band instead of 7, the bass and rhythm guitars a little down, the right rhythm guitar and the lead out of each other's
-# presence band, the lead's mids pushed (+1.5 dB at 900 Hz: mid-forward like the Baker Street solo; MIX.md).
+# drums / bed up so the hero sits 2-4 dB over the band instead of 7, the bass and rhythm guitars a little down, the right
+# rhythm guitar and the lead out of each other's presence band. Tone pass (TONE.md, the v2 heavy hero): the old +1.5 dB
+# at 900 Hz on the lead is gone (the new amp is mid-forward itself), the solos ridden up 2 dB.
 MIX = {
     'trim': {'lead': -1.5, 'lead_twin': -1.5, 'drums': 2.0, 'pad': 1.5, 'strings': 1.5, 'bass': -1.5,
              'clean': -1.5, 'gtr_l': -1.5, 'gtr_r': -1.0},
-    'ride': {'strings': {'verse': 3.0}},
+    # the solos: the guitar hero 1-2 dB OVER the whole band (K-weighted, pre-master; it sat 0.7-2 dB under it)
+    'ride': {'strings': {'verse': 3.0}, 'lead': {'solo': 2.0, 'solo2': 2.0, 'outro': 2.0, 'outro2': 2.0},
+             'lead_twin': {'solo': 2.0, 'solo2': 2.0, 'outro': 2.0, 'outro2': 2.0}},
     'eq': {'gtr_r': [{'freq': 3300.0, 'gain': -2.0, 'q': 1.0}],
-           'lead': [{'freq': 3300.0, 'gain': -1.5, 'q': 1.0}, {'freq': 900.0, 'gain': 1.5, 'q': 1.2}]},
+           'lead': [{'freq': 3300.0, 'gain': -1.5, 'q': 1.0}]},
 }
 # The song's loudness arc, ridden into the master chain (dB before the glue and the limiter): the intro and the break
 # breathe, the solos build, the chorus2 / outro climax hits the limiter hardest.
@@ -100,8 +103,12 @@ def build() -> Song:
     clean = s.track('clean', 'sampled/clean_guitar', pan=0.35, gain_db=-5, sends={'echo': -6})
     clean.add_fx(fx.eq({'hp.freq': 170, 'hp.slope': 12}, name='lowcut'))   # the low strings belong to the bass
     b.piano.sends['echo'] = -14                                              # the quiet parts' echoes
+    # ridden up in the hooks and in all four solo sections (the outro pair is the second solo)
     lead = hero(s.track('lead', 'layered/hero_guitar_heavy'), family='guitar_heavy', genre='rock',
-                bed=[b.strings, b.pad], competitors=[b.piano, gtr_l, gtr_r, clean], throws=False)
+                bed=[b.strings, b.pad], competitors=[b.piano, gtr_l, gtr_r, clean], throws=False,
+                sections=[chorus, chorus2, solo, solo2, outro, outro2])
+    # the wall steps aside in the lead's voice (1-2 kHz) while it plays: in front without pushing the mids up
+    s.carve(gtr_l, gtr_r, b.piano, key=lead, freq=1400.0, q=0.8, depth=3.0)
 
     # drums: the whole form from the verse on (the intro is the guitars and a cymbal swell)
     dr = drummer.arrange(order[1:], bpm=t, style='ballad', density=0.55, seed=7, kit=b.drums, ending='hit',
@@ -170,6 +177,9 @@ def build() -> Song:
     # the loudness arc: a utility first in the master chain, ridden per section
     from agentsound.patches import FX
     s.master.fx.insert(0, FX('utility', {'gain': 0.0}, name='arc'))
+    for f in s.master.fx:     # master check after the tone pass (TONE.md): -10.1 LUFS, 0.1 LU under the window
+        if f.type == 'limiter':
+            f.params['gain'] = round(f.params.get('gain', 0.0) + 0.6, 2)
     s.master.automate('fx.arc.gain', per_section({sec: ARC[sec.name] for sec in order}, glide=2.0),
                       [(end.bar(1), 0.0), (end.end + 6, -14.0, 'smooth')])
     # the last chord dies away after the limiter (before it, the limiter would only give the level back)

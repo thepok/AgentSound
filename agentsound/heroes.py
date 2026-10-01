@@ -107,7 +107,7 @@ H3000 idea: +-7-9 ct, 4-8 ms, above 300 Hz)."""
 
 MIX_DEFAULTS = {'duck': 2.5, 'duck_threshold': -34.0, 'duck_attack': 15.0, 'duck_hold': 60.0, 'duck_release': 260.0,
                 'carve_db': 3.0, 'carve_freq': 2500.0, 'carve_q': 0.7, 'ride_db': 1.0, 'dip_db': -2.0,
-                'dip_freq': 2500.0, 'dip_q': 0.9}
+                'dip_freq': 2500.0, 'dip_q': 0.9, 'feature': ''}
 """Generic mix rules, from the four hero validations (bed duck 2.5 dB, attack 15 / release 260 ms; a 2.5 kHz presence
 carve; the hero ridden 1-2 dB up in the hooks; competitors -2 dB in the presence band); presets override."""
 SPACE_DEFAULTS = {'plate_bus': None, 'plate': -14.0, 'echo': -24.0, 'throw': -8.0, 'min_rest': 0.75, 'min_dur': 0.5}
@@ -533,7 +533,7 @@ class HeroInfo:
         self._lanes = []
         self.compile_log = []
         if self.ride_db:
-            names = _hook_names(song, self.sections)
+            names = _hook_names(song, self.sections, self.preset.mix_value('feature'))
             if names:
                 from . import mixer
                 pts = mixer._ride_points(song, 0.0, {n: self.ride_db for n in names}, 1.0)
@@ -579,7 +579,9 @@ class HeroInfo:
                                 f"(articulation.throws)")
 
 
-def _hook_names(song, sections) -> list[str]:
+def _hook_names(song, sections, feature: str = '') -> list[str]:
+    """The sections a hero is ridden up in: `sections` when given, else the hook sections (chorus / drop / hook ...)
+    plus the preset's own feature sections (its mix 'feature': a regex of section names - the guitar heroes: 'solo')."""
     from . import mixer
     if sections is not None:
         out = []
@@ -588,7 +590,8 @@ def _hook_names(song, sections) -> list[str]:
             song[nm]          # a missing section is an error (with the list of sections)
             out.append(nm)
         return out
-    return [s.name for s in song.sections if mixer._HOOK_RE.search(s.name)]
+    feat = re.compile(feature, re.I) if feature else None
+    return [s.name for s in song.sections if mixer._HOOK_RE.search(s.name) or (feat and feat.search(s.name))]
 
 
 def _nodes(nodes) -> list:
@@ -652,7 +655,8 @@ def hero(sound=None, family=None, *, genre=None, bed=(), competitors=(), section
     genre: a mixer profile ('pop', 'rock', 'film', 'synthwave', 'jazz', 'classical' ...): its bed duck, lead ride and
     dip depths win over the preset's. bed: tracks / buses that duck and get carved under the hero; competitors:
     tracks that get a static presence dip; sections: the hook sections the hero is ridden up in (None: the sections
-    named chorus / drop / hook / refrain / lift / climax / finale / peak / head).
+    named chorus / drop / hook / refrain / lift / climax / finale / peak / head, plus the preset's feature sections:
+    the guitar heroes' 'solo...').
     double / octave / air / **stages: as build() (air: the breath stage - 'fx.air.gain' after the compressor, for
     within-note expression; heroes.air(track, points)). Switches (False = off; a number = the depth in dB): chain
     (False keeps the track's sound; the 'air' stage is still added), space, plate (a bus / id / 'bus/<patch>' instead

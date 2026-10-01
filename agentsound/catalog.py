@@ -49,6 +49,10 @@ MODULES = {
     'ducker': "sidechain pump: keyed from a track/bus or a tempo-synced envelope (no key needed)",
     'limiter': "lookahead true-peak-safe limiter (master only adds latency)",
     'saturator': "saturation: tape, tube, hard clip, wavefolder (oversampled)",
+    'amp': "tube guitar amp head: 1-4 cascaded preamp stages (gain), a Tube Screamer boost, bright cap, the Marshall / "
+           "Fender bass-mid-treble tone stack, presence / resonance, a sagging push-pull power amp (master, sag); "
+           "4x oversampled; put a cab IR (convolver, cab/* patches) after it - the singing, odd-harmonic lead / crunch "
+           "of a real amp instead of one waveshaper",
     'bitcrush': "bit reduction + sample-rate reduction (lo-fi, 8-bit)",
     'eq': "7-band EQ: hp, low shelf, 3 peaks, high shelf, lp",
     'filter': "resonant filter lp/bp/hp/ladder with drive (sweeps, automation target)",

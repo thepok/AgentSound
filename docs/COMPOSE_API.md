@@ -180,7 +180,7 @@ inst.drums(kit='synthwave')                         # GM map: 36 kick 38 snare 3
 inst.sf2('Grand Piano')                             # SoundFont preset (GeneralUser GS: full GM/GS set), see Samples
 inst.sampler(dir='samples/909', oneshot='on')       # WAV sampler (folders, zones, loops), see Samples
 fx.reverb(type='plate', mix=0.25)                   # any engine fx type: eq filter compressor ducker saturator
-fx.compressor(threshold=-24, sidechain='kick')      #   limiter width bitcrush utility chorus flanger phaser
+fx.filter(name='sweep', cutoff=18000)               #   delay reverb gatedreverb tremolo vowel ensemble wah amp
 fx.filter(name='sweep', cutoff=18000)               #   delay reverb gatedreverb tremolo vowel ensemble wah
 fx.shimmer(mix=0.3, decay=8)                        #   premium: microshift shimmer tape exciter dimension
 fx.vocoder(bands=20, sidechain='voice')             #   robot voice (needs its modulator), see Vocoder and speech
@@ -332,7 +332,7 @@ send moves there; `plate=` another bus / patch) and the echo send for the throws
 keyed dynamic EQ at the family's frequency); `dips` - competitors get a static presence dip (`mixer.add_eq_dip`, an
 eq named `hero_dip`); `ride` - the hero up in the hook sections (a utility `hero_ride` + an `fx.hero_ride.gain` lane,
 the mixer's ride points; `sections=` or the sections named chorus / drop / hook / refrain / lift / climax / finale /
-peak / head); `throws` - the echo send thrown up on every phrase end the track plays (`articulation.throws`; a guitar
+peak / head, plus the preset's own feature sections: the guitar heroes' `solo...` sections, mix key `feature`); `throws` - the echo send thrown up on every phrase end the track plays (`articulation.throws`; a guitar
 hero throws its own echo's `fx.echo.mix`). Rides and throws are written when the song compiles
 (`Song.add_compile_hook`), so every note placed after `hero()` counts; a lane the song writes itself on the same
 target wins (logged). `genre=` (a mixer profile: pop, rock, film, synthwave, jazz, classical ...) sets the duck
@@ -343,7 +343,7 @@ classical: no ride). The mixer treats a hero track as the lead (`mixer.infer_rol
 |---|---|---|---|---|---|
 | `sax` | Weresax alto + 2 MTG alto takes (-10 / -10.5 dB, +9 / -8 ct, 17 / 26 ms) + muted MTG tenor -12 st | -2.5 dB 650 Hz, -4 dB 1.3 kHz; 3:1 -31 dB 25 ms; tube 9 dB; +2 dB 3 kHz, +3 dB 8 kHz; exciter | hero_plate -14, hall -16, echo -24 -> -5 | 2.5 / 4 @ 2.5 kHz / +2 / -2 | -2.6 |
 | `piano` (`piano_pop`, `piano_strings`) | Salamander key split (hammers 0.5 / 0.15; + VPO strings -14 dB 70 ms) | -3 dB 280 Hz, +2.5 dB 2 kHz, +3 dB 10 kHz; catch 3:1 5 ms; glue rms 2:1 30 ms; tape; width 1.2; Dimension-D | plate -7, hall -16, echo -60 -> -3 | 2.5 / 2 @ 2.5 kHz / +1 / -2 | 2.2 (3.2, 2.6) |
-| `guitar` (`guitar_clean`, `guitar_heavy`) | FSBS Strat DI in 5 velocity zones through Plexi / 4x12 (clean: one sampler + combo; heavy: + amped lead double -7 dB) | hp 150, -3.5 dB 3.8 kHz, lp 6.8 kHz; tape; microshift 7 ct; own dotted-8th echo | hall -12, plate -18; throws on fx.echo.mix | 2.5 / 2.5 @ 2 kHz / +1 / -2 | -1.0 (-6.9, -1.1) |
+| `guitar` (`guitar_clean`, `guitar_heavy`) | FSBS Strat DI in 5 velocity zones through Plexi / 4x12 (clean: one sampler + combo; heavy v2: a neck-pickup DI in 4 zones through the engine's tube `amp` (3 stages, TS push, mid 7, presence 8) + 4x12 IR, + amped lead double -7 dB; its eq only hp 80 / lp 7.5 kHz, tape without drive) | hp 150, -3.5 dB 3.8 kHz, lp 6.8 kHz; tape; microshift 7 ct; own dotted-8th echo | hall -12, plate -18; throws on fx.echo.mix | 2.5 / 2.5 @ 2 kHz / +1 / -2 | -1.0 (-6.9, -3.8) |
 | `synth` (`darksynth`) | two-saw voice + square octave -9 dB (G#4 up) + supersaw halo -10 dB (dark: sync lead + driven saw octave) | -3 dB 420 Hz, -4.5 dB 3.6 kHz, +2.5 dB 9.5 kHz; rms 2:1 25 ms; tape; Juno I; microshift 9 ct (dark: tube 8 dB first) | plate -12, hall -14, echo -11 -> -4 | 2.5 / 2 @ 1.8 kHz / +1 / -2 | 1.9 (4.6) |
 | `piano_synth` | piano_lead + poly saw voice -6 dB (velcurve 1.6) | -1.5 dB 3.3 kHz, +1.5 dB 9.5 kHz; tape; microshift 7 ct | plate -12, hall -14, echo -12 -> -4 | 2.5 / 2 @ 1.8 kHz / +1 / -2 | -1.5 |
 | `strings` (violin) | sampled/solo_violin (VSCO 2); takes: VPO violins -12 dB; octave: SSO cello | -1.5 dB 500 Hz / 1.1 kHz / 3.8 kHz; 1.8:1 -21 dB 25 ms; tape; +1.5 dB 2.8 kHz, +2 dB 9 kHz | hero_plate -16, hall -9, echo -28 -> -12 | 1.5 / 3 @ 2.8 kHz / +1 / -1.5 | -1.1 |

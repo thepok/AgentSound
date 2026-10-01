@@ -60,7 +60,7 @@ from . import sampled_guitars as _sg    # the DI sample sets and the amp voicing
 VERSION = 1
 
 # gain_db of each patch: its audition material at -18.0 LUFS (python -m agentsound audition <patch>)
-LEVELS = {'hero_guitar': -1.0, 'hero_guitar_clean': -6.9, 'hero_guitar_heavy': -1.1}
+LEVELS = {'hero_guitar': -1.0, 'hero_guitar_clean': -6.9, 'hero_guitar_heavy': -3.8}
 
 DI = _sg.FSBS['direct']
 METAL_LEAD = 'samples/sampleradar-heavy-metal-guitar/Guitar B/Lead Multi'
@@ -71,7 +71,19 @@ METAL_LEAD = 'samples/sampleradar-heavy-metal-guitar/Guitar B/Lead Multi'
 # 0.2), residual scatter ~2 dB (round robins, register, the zone steps).
 ZONES = ((1, 64, 19.0, 3.0, -12.8), (65, 79, 21.5, 4.0, -9.6), (80, 94, 23.5, 5.0, -6.4), (95, 109, 25.5, 6.0, -3.2),
          (110, 127, 27.0, 7.0, 0.0))
-HEAVY_ZONES = ((1, 69, 25.0, 3.0, -9.6), (70, 86, 27.5, 4.0, -6.4), (87, 104, 30.0, 5.0, -3.2), (105, 127, 32.0, 6.0, 0.0))
+# The heavy hero (v2): (vello, velhi, the amp's gain knob 0-10, its bright cap dB, output level dB) per zone.
+HEAVY_ZONES = ((1, 69, 5.6, 1.0, -9.6), (70, 86, 6.3, 2.0, -6.4), (87, 104, 7.0, 3.0, -3.2), (105, 127, 7.6, 4.0, 0.0))
+# The heavy hero's lead amp (the engine's 'amp': a 3-stage hot-rodded preamp, a Marshall tone stack, a push-pull power
+# amp with sag) - a Gary Moore / Slash lead channel: a light Tube Screamer push, mids forward, presence up, the master
+# low enough that the preamp sings and the power amp only thickens. Measured on kestrel-bay (songs/kestrel-bay/TONE.md).
+LEAD_AMP = {'stages': 3, 'boost': 6.0, 'tight': 110.0, 'bass': 5.0, 'mid': 7.0, 'treble': 7.0, 'presence': 8.0,
+            'resonance': 6.0, 'master': 4.0, 'sag': 0.3, 'output': 6.02}
+# The 'neck pickup' of the heavy hero: the FSBS DI is a BRIDGE pickup (the 2nd harmonic as loud as the fundamental:
+# into a high-gain amp the octave above wins and the note turns hollow and nasal). A key-tracked 12 dB/oct low-pass
+# at ~1.3x the note (420 Hz at E4, 100 % key tracking) makes the fundamental lead - the singing neck / rolled-back tone
+# knob lead. No filter envelope for the pick: any fixed opening at the attack (2400 or 1200 ct, ~100 ms) made every
+# onset equally bright and erased the picking dynamics (the note-dynamics ear: 1.9 -> 0.0 dB from velocity).
+NECK = {'cutoff': 420.0, 'veltrack': 0.0, 'keytrack': 100.0, 'env': None}
 # The clean hero is one sampler: its picking dynamics are the velocity curve before a lightly driven amp. The pack's
 # (v/127)^2 gave 1.2 dB per 10 velocity steps after the combo; about (v/127)^3.4 (and a 1.4:1 compressor) gives 2.0.
 CLEAN_VELCURVE = ((1, 0.0), (40, 0.02), (64, 0.1), (90, 0.31), (110, 0.61), (127, 1.0))
@@ -80,14 +92,18 @@ CLEAN_VELCURVE = ((1, 0.0), (40, 0.02), (64, 0.1), (90, 0.31), (110, 0.61), (127
 # ------------------------------------------------------------------------------------------------ building blocks
 
 def _di(level: float = _sg.DI_LEVEL['fsbs'], cutoff: float = 1300.0, veltrack: float = 3600.0, mono: str = 'legato',
-        release: float | None = 0.08, velcurve=None):
+        release: float | None = 0.08, velcurve=None, keytrack: float = 50.0, env=None):
     """The FSBS DI Strat (a mono legato player unless mono='off') whose voices get a velocity-tracking low-pass before
     the amp (a soft pick is darker: at velocity 64 the filter sits ~1.5 octaves below a velocity-127 note; +50 ct per
     key above E4). release: the zones' key-up release (the pack's is 0.2 s): a picked note stops the old one - with
     the pack's release a note in another velocity zone rang 0.2 s into the next pick and blurred its attack
-    (velocity response 1.17 -> 1.39 dB per 10 steps with 0.08 s; None keeps the pack's)."""
-    zone = {'filter': 'lpf_2p', 'cutoff': cutoff, 'resonance': 0.0, 'filVeltrack': veltrack, 'filKeytrack': 50.0,
+    (velocity response 1.17 -> 1.39 dB per 10 steps with 0.08 s; None keeps the pack's). keytrack: cents per key of
+    the cutoff (100 = it follows the note); env: a filter envelope (the zone's filterEnv: [depth ct, delay, attack,
+    hold, decay, sustain, release])."""
+    zone = {'filter': 'lpf_2p', 'cutoff': cutoff, 'resonance': 0.0, 'filVeltrack': veltrack, 'filKeytrack': keytrack,
             'filKeycenter': 64}
+    if env is not None:
+        zone['filterEnv'] = list(env)
     if release is not None:
         zone['release'] = release
     if velcurve is not None:
@@ -107,12 +123,22 @@ def _post_comp(attack: float = 20.0, release: float = 120.0):
     return fx.compressor(threshold=-24, ratio=3, attack=attack, release=release, automakeup='on', name='comp')
 
 
-def _zone_layers(zones, amp_kind: str = 'lead', sustainer=None, post=None, di=None) -> list:
+def _tube_amp(gain: float, bright: float, cab: str = 'cab/rock_4x12', mic_lp: float = 6000.0, **knobs) -> list:
+    """The engine's tube amp head (LEAD_AMP + knobs) into a cab IR (the convolver of a cab/* patch) and the mic's
+    roll-off (70 Hz high-pass, a low-pass at mic_lp)."""
+    ir = [f for f in _sg.get(cab).fx if f.type == 'convolver'][0]
+    return [fx.amp(**dict(LEAD_AMP, gain=gain, bright=bright, **knobs), name='amp'), ir.copy(),
+            fx.eq({'hp.freq': 70, 'lp.freq': mic_lp}, name='mic')]
+
+
+def _zone_layers(zones, amp_kind: str = 'lead', sustainer=None, post=None, di=None, tube: bool = False) -> list:
+    """One layer per velocity zone: the DI -> [sustainer] -> the amp (amp_kind: a cab/* saturator chain, or with
+    tube=True the engine's tube amp: _tube_amp) -> a post compressor. di: a factory of the DI source (one per zone)."""
     out = []
     for i, (lo, hi, drive, bright, lvl) in enumerate(zones):
-        chain = ([sustainer.copy()] if sustainer is not None else []) + _sg._amp(amp_kind, drive=drive, bright=bright) \
-            + [(post or _post_comp()).copy()]
-        out.append(layer(di or _di(), f'z{i + 1}', vel=(lo, hi), level=lvl, fx=chain))
+        amp = _tube_amp(drive, bright) if tube else _sg._amp(amp_kind, drive=drive, bright=bright)
+        chain = ([sustainer.copy()] if sustainer is not None else []) + amp + [(post or _post_comp()).copy()]
+        out.append(layer(di() if di else _di(), f'z{i + 1}', vel=(lo, hi), level=lvl, fx=chain))
     return out
 
 
@@ -227,33 +253,42 @@ def _metal_double(level: float):
                             mono='legato', legatotime=40, glideshape='fast', release=0.08, velsens=0.9)
 
 
+HEAVY_VERSION = 2    # v2: the engine's tube amp + the neck-pickup filter (v1: one saturator per zone, songs/kestrel-bay/TONE.md)
+
+
+def _neck_di():
+    return _di(cutoff=NECK['cutoff'], veltrack=NECK['veltrack'], keytrack=NECK['keytrack'], env=NECK['env'])
+
+
 _preset(
     'guitar_heavy', 'layered/hero_guitar_heavy',
-    lambda: _zone_layers(HEAVY_ZONES, 'lead', _sustainer(threshold=-36.0, ratio=5.0)) + [
+    lambda: _zone_layers(HEAVY_ZONES, sustainer=_sustainer(threshold=-36.0, ratio=5.0), di=_neck_di, tube=True) + [
         layer(_metal_double(_sg.LEVELS['metal_lead']), 'double', level=-7.0, pan=0.45,
               fx=[fx.eq({'hp.freq': 140, 'hp.slope': 24, 'peak1.freq': 400, 'peak1.gain': -2.0, 'peak1.q': 0.8,
                          'peak3.freq': 3800, 'peak3.gain': -3.0, 'peak3.q': 1.0, 'lp.freq': 7000}),
                   fx.compressor(threshold=-22, ratio=3, attack=12, release=150, automakeup='on')])],
-    {'tone': {'name': 'tone', 'hp.freq': 150, 'hp.slope': 24, 'peak1.freq': 300, 'peak1.gain': -2.0, 'peak1.q': 0.9,
-              'peak2.freq': 900, 'peak2.gain': 0.5, 'peak2.q': 0.7, 'peak3.freq': 4000, 'peak3.gain': -4.5,
-              'peak3.q': 1.0, 'lp.freq': 6800},
-     'tape': {'speed': '15', 'drive': 4.0, 'bump': 0.5, 'wow': 0.04, 'flutter': 0.04},
+    {'tone': {'name': 'tone', 'hp.freq': 80, 'hp.slope': 12, 'lp.freq': 7500},
+     'tape': {'speed': '15', 'drive': 0.0, 'bump': 0.5, 'wow': 0.04, 'flutter': 0.04},
      'double': {'style': 'smooth', 'detune': 9, 'delay': 8, 'focus': 300, 'mix': 0.3},
      'echo': _echo_stage(time=0.75, offset=33.333, feedback=0.3, mix=0.18)},
     user_gain_db=2.7, aliases=('heavy_guitar',),
     measured={'lufs': -18.0, 'velocity_db_per_10': 1.6},
     sends={'hall': -13, 'plate': -18},
-    notes=f'v{VERSION}. The heavy singing lead (Slash, Gary Moore "Parisienne Walkways" / "Still Got the Blues", 80s '
-          'arena solos, hard-rock ballads): the FSBS Stratocaster DI in 4 velocity zones (1-69 / 70-86 / 87-104 / '
-          '105-127: tube drive 25 / 27.5 / 30 / 32 into the Marshall 4x12 lead channel, bright cap +3..+6 dB, levels '
-          '-9.6 / -6.4 / -3.2 / 0 dB, a sustainer before the amp) + the SampleRadar amped lead multisample as a legato '
-          'double 7 dB down, panned right, velocity-sensitive (different guitar, different amp: no phasing; it '
-          'sustains for 5-10 s where the DI decays - long bends and held peaks keep singing). Then eq (tight 150 Hz '
-          'high-pass, +0.5 dB at 900 Hz, -4.5 dB fizz at 4 kHz, low-pass 6.8 kHz), tape, microshift double, '
-          'dotted-8th / quarter echo. ~1.6 dB per 10 velocity steps. ' + _MIX_NOTES + ' ' + _PLAY_NOTES + ' Range '
-          'G3-D6. Tweak: .layer("double", level=-4) (thicker, more sustain), .layer("double", mute=True). Samples: '
-          'FSBS CC0; SampleRadar royalty-free for music, no redistribution of the samples. Measured -18.0 LUFS '
-          '(audition phrase).')
+    notes=f'v{HEAVY_VERSION}. The heavy singing lead (Slash, Gary Moore "Parisienne Walkways" / "Still Got the Blues", '
+          '80s arena solos, hard-rock ballads): the FSBS Stratocaster DI as a NECK pickup (a key-tracked low-pass at '
+          '~1.3x the note so the fundamental leads - the bridge DI\'s octave would otherwise win in the amp and sound '
+          'hollow -) in 4 velocity zones (1-69 / 70-86 / 87-104 / 105-127) '
+          'through a sustainer and the engine\'s tube amp (fx \'amp\': 3 cascaded preamp stages, gain 5.6 / 6.3 / 7.0 / '
+          '7.6, bright +1..+4 dB, a light Tube Screamer push, Marshall tone stack bass 5 mid 7 treble 7, presence 8, '
+          'master 4, sag 0.3) into a Marshall 4x12 Greenback IR, levels -9.6 / -6.4 / -3.2 / 0 dB; + the SampleRadar '
+          'amped lead multisample as a legato double 7 dB down, panned right (different guitar, different amp: no '
+          'phasing; it sustains 5-10 s). Then a gentle eq (80 Hz high-pass, 7.5 kHz low-pass), tape without drive (the amp is the distortion: tape drive after it put the fizz back above 8 kHz), microshift double, '
+          'dotted-8th / quarter echo. Measured (songs/kestrel-bay/TONE.md): odd harmonics lead (h3 / h5 over h2 / h4 like '
+          'a real amped lead), held notes lose ~4 dB in the first second then hold (-0.5 dB/s), 4-8 kHz at -14 dB of '
+          'the energy like a recorded lead. ' + _MIX_NOTES + ' ' + _PLAY_NOTES + ' Range G3-D6. Tweak: '
+          '.layer("double", level=-4) (thicker, more sustain), .layer("double", mute=True); the amp per zone: '
+          '.but_fx on the zone layers (\'amp\': gain / mid / presence / master). Samples: FSBS CC0; SampleRadar '
+          'royalty-free for music, no redistribution of the samples. Measured -18.0 LUFS (audition phrase).')
 
 
 # ------------------------------------------------------------------------------------------------ performance

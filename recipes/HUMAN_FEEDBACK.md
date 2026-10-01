@@ -192,6 +192,10 @@ Add new feedback here (date, song, the user's words, the rule) whenever the user
   hero; the TONE must be exciting first (saturated, singing sustain, attitude, presence, a real amp-and-cab feel), and
   a lead guitar must be judged against a great rock/guitar-solo recording, not a sax-era mono rip. Never ship a lead
   guitar whose tone has not been A/B'd against a real guitar-solo reference.
+  Fixed by the `amp` effect (cascaded tube preamp, tone stack, power amp with sag) and the neck-pickup-voiced
+  `layered/hero_guitar_heavy` v2 (songs/kestrel-bay/TONE.md: odd harmonics leading, body and bite restored, the lead
+  1-2 dB over the band in solos): "ja genau jetzt its cool". That A/B (old vs new, same 18 s, level-matched) is how
+  a tone change is presented to the user.
 
 ## Clicks and parameter changes
 

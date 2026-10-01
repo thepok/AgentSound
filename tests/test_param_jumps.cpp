@@ -750,6 +750,7 @@ const char* const kPedal = "sustain pedal: a step that holds the next note-offs 
 
 const std::map<std::string, std::string>& slowAllowed() {
     static const std::map<std::string, std::string> m = {
+        {"amp.mid", "the passive tone stack's slow pole (the 1 Mohm bass pot x 22 nF, ~22 ms) carries the old mid setting's low end out - a real pot does the same; the coefficients follow the knob every 4 samples"},
         {"va.osc2.sync", "hard sync switches at the next oscillator cycle (band-limited); a timbre, not a level"},
         {"va.osc.retrig", kNextNote},
         {"va.unison.detune", kPhase},

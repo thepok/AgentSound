@@ -396,6 +396,7 @@ std::unique_ptr<Effect> makeFlanger();
 std::unique_ptr<Effect> makePhaser();
 std::unique_ptr<Effect> makeTremolo();
 std::unique_ptr<Effect> makeWah();
+std::unique_ptr<Effect> makeAmp();
 std::unique_ptr<Effect> makeDelay();
 std::unique_ptr<Effect> makeReverb();
 std::unique_ptr<Effect> makeGatedReverb();

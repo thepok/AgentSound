@@ -21,3 +21,12 @@ ring-out. The quiet sections stay under the glue and the limiter, the big ones h
 Open / accepted: the drums peak +4 dBFS into the drum bus (float, before the master: info); 'drums' and 'bass' share
 60-250 Hz in the first solo (the bass ducks under the kick); the echo return is quiet (clean / piano sends only: the
 hero has its own echo).
+
+**Tone pass (2026-10-01, the v2 heavy hero, TONE.md):** the solos are the guitar hero's feature, so it sits in front
+there: the hero wrapper rides it +1 dB in chorus / chorus2 / solo / solo2 / outro / outro2 (`sections=`), MIX rides
+lead / lead_twin +2 dB more in the four solo sections, `s.carve(gtr_l, gtr_r, piano, key=lead, freq=1400, depth=3)`,
+and the old +1.5 dB at 900 Hz on the lead is gone (the tube amp is mid-forward itself; -1.5 dB at 3.3 kHz stays).
+Solo2, K-weighted, per 2 bars, pre-master: the lead vs the whole band -0.9 / -2.0 / +1.5 / -3.3 dB before ->
++2.1 / +1.4 / +4.3 / -1.0 dB after (median -2.0 -> +1.4 dB). `mix`: "moves: none - the balance is inside the targets"; the solos read
+`balance_mid_high` ~+4 dB against the generic rock curve while the same span is within +-1.5 dB of Slash's solo at
+0.8-6 kHz (TODO).

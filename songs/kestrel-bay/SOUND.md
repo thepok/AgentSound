@@ -2,7 +2,7 @@
 
 | role | sound | range | chain + sends | why | checks |
 |---|---|---|---|---|---|
-| lead | `hero(s.track('lead', 'layered/hero_guitar_heavy'), family='guitar_heavy', genre='rock', bed=[strings, pad], competitors=[piano, gtr_l, gtr_r, clean], throws=False)` -> `hero/guitar_heavy` | G3-D6 (theme to D6) | FSBS Strat DI in 4 velocity zones (sustainer -> Plexi lead channel, bright cap -> Greenback 4x12) + the SampleRadar amped lead double (sustain); tone eq, tape, microshift double, its own dotted-8th / quarter echo, the `air` stage; hall -13, plate -18. fretwork adds per zone: the sampler `harmonic` (pinch / feedback), `bendfollow`, a `wah` ahead of each amp (switched in by moves) | a hero, not a beepy lead: body below 1 kHz, velocity = gain + tone + level (~1.6 dB / 10 velocity), long held peaks keep singing (the double) | note dynamics 5.4 dB (301 notes, vel 56-127); vibrato on a held B5 in the stem: 5.7 Hz, 0..+50 ct (up from the note); the whammy dive B5 -> B4 over 1.3 s; pinch: partial 6 over E4 visible at 2 kHz with the vibrato on it |
+| lead | `hero(s.track('lead', 'layered/hero_guitar_heavy'), family='guitar_heavy', genre='rock', bed=[strings, pad], competitors=[piano, gtr_l, gtr_r, clean], throws=False, sections=[chorus, chorus2, solo, solo2, outro, outro2])` -> `hero/guitar_heavy` (v2, TONE.md) | G3-D6 (theme to D6) | FSBS Strat DI as a neck pickup (key-tracked low-pass ~1.3x the note) in 4 velocity zones (sustainer -> the engine's tube `amp`: 3 stages, gain 5.6-7.6, TS push, mid 7, presence 8, master 4, sag -> Greenback 4x12 IR -> 6 kHz mic roll-off) + the SampleRadar amped lead double (sustain); 80 Hz / 7.5 kHz eq, tape (no drive), microshift double, its own dotted-8th / quarter echo, the `air` stage; hall -13, plate -18. `s.carve(gtr_l, gtr_r, piano, key=lead, freq=1400, depth=3)`; MIX rides it +2 dB in the four solo sections. fretwork adds per zone: the sampler `harmonic` (pinch / feedback), `bendfollow`, a `wah` ahead of each amp (switched in by moves) | a hero, not a beepy lead: body below 1 kHz, velocity = gain + tone + level (~1.6 dB / 10 velocity), long held peaks keep singing (the double) | note dynamics 5.4 dB (301 notes, vel 56-127); vibrato on a held B5 in the stem: 5.7 Hz, 0..+50 ct (up from the note); the whammy dive B5 -> B4 over 1.3 s; pinch: partial 6 over E4 visible at 2 kHz with the vibrato on it |
 | lead_twin | the same hero (twin_track): the held string of the unison bends | E5 | the lead's chain and sends, -1.5 dB, pan +0.12 | a mono lead cannot hold one string while bending another | 2 notes |
 | lead_noise | `fretwork.noise_track`: va noise, 12 dB band-pass following the note, portamento | - | crunch amp + cab (`_amp('lead')`), the lead's sends | pick scrapes / finger squeaks (aux of the moves; inaudible here: the solos chose no scrape - noted) | |
 | gtr_l / gtr_r | `sampled/crunch_guitar` (Emily SG -> 2x12 V30 crunch) hard left, `sampled/dist_guitar` (FSBS dist) hard right | E2-E4 power chords | the patches' amps; -3 dB; gtr_r -2 dB at 3.3 kHz (out of the lead's presence) | the double-tracked wall: width without phasing (two guitars, two amps, two takes) | width >150 Hz 29 % |
@@ -16,9 +16,13 @@ throws (the bridge's held note, the scream, the last note) on `fx.echo.mix` (fre
 automatic throws off - one lane per target).
 
 Hero log (build): source = the guitar_heavy hero's own 5 layers; carve strings / pad -2.5 dB at 2 kHz while it plays;
-dips piano, gtr_l, gtr_r, clean -2 dB at 2 kHz; ride +1 dB in chorus / chorus2; duck off (rock profile).
+dips piano, gtr_l, gtr_r, clean -2 dB at 2 kHz; ride +1 dB in chorus, chorus2, solo, solo2, outro, outro2; duck off (rock profile).
 
 Reference check (`compare --ref "Baker Street" --ref-start 3:29 --ref-end 4:03 --section solo2`, loudness-matched):
 125 Hz - 4 kHz within +-2 dB of the record (the guitar region); -1.9 dB at 0.7-1.1 kHz -> the lead's +1.5 dB at
 900 Hz (MIX); +14.7 dB sub and +10.7 dB above 3.6 kHz are the 1978 mono rip's (codec low-pass, no sub) vs a modern rock
-master - not chased.
+master - not chased. (v1; superseded by the tone pass.)
+
+Tone pass (2026-10-01, after "die Gitarre klingt einfach lahm"): the lead tone rebuilt at the system level - the
+measurements, the cause and the before / after are in TONE.md; the guitar reference is now Guns N' Roses "Sweet Child
+O' Mine" (Slash's solos), A/B clips in `out/tone_ab/`.

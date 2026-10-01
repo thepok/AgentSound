@@ -17,3 +17,7 @@ master-fader fade over the last chord (after the limiter: before it the limiter 
   record's guitar solo).
 
 No post-pass master: `out/mix.mp3` is the delivery.
+
+**Tone pass (2026-10-01):** after the v2 lead tone the song measured -10.1 LUFS (0.1 LU under the window): the master
+limiter +0.6 dB (song.py, after the arc utility). `master --check`: true peak -1.20 dBTP, -9.9 LUFS-I, LRA 5.4 LU,
+correlation 0.68 - all ok.

@@ -137,7 +137,7 @@ file analysis, comparison), `art/` (covers + a public-domain stroke font), `io/`
 | tone / utility | `eq` (7 bands), `filter` (lp / bp / hp / ladder), `utility` (gain, pan, polarity, mono; the hero `air` stage and mixer rides are utilities), `width` (M/S + monobass) |
 | modulation | `chorus` (Juno I / II), `ensemble` (string machine), `dimension` (Dimension-D), `microshift` (pitch doubler), `flanger`, `phaser`, `tremolo`, `vowel` (formant filter), `wah` (pedal / auto-wah) |
 | time / space | `delay` (tempo-synced, ping-pong, ducking), `reverb` (plate hall room chamber cathedral), `gatedreverb` (keyable 80s gate), `shimmer`, `convolver` (impulse-response WAV: halls, rooms, plates, churches, guitar cabinets) |
-| colour | `tape` (cassette .. 30 ips: saturation, head bump, wow / flutter, hiss), `exciter` |
+| colour | `tape` (cassette .. 30 ips: saturation, head bump, wow / flutter, hiss), `exciter`, `amp` (tube guitar amp head: 1-4 cascaded preamp stages, Tube Screamer boost, Marshall / Fender tone stack, presence / resonance, a sagging push-pull power amp; 4x oversampled + ADAA; a cab IR `convolver` after it) |
 | voice | `vocoder` (channel vocoder 8-40 bands or LPC talkbox; the sidechain is the speech modulator, required) |
 
 **Mixer / routing**: tracks -> insert chain -> gain -> pan -> post-fader sends -> output (a bus or the master); buses
