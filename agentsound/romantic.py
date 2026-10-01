@@ -499,7 +499,19 @@ def dynamics(clip: Clip, marks, *, curve: str = 'smooth', at: float = 0.0) -> Cl
         pts.append((_num(m[0], 'mark beat') - at, lv, len(m) == 3 and m[2] == 'step'))
     if not pts:
         return clip
-    pts.sort(key=lambda p: p[0])
+    f = dynamics_factor(pts, curve)
+    return Clip._raw([n._replace(vel=_vel(n.vel * f(n.start))) for n in clip], clip.length)
+
+
+def dynamics_factor(points, curve: str = 'smooth'):
+    """The level function of dynamics(): points = [(beat, factor, step)] -> f(beat). Between two points the factor
+    moves ('smooth' cosine or 'linear' - a hairpin) unless the later point is a step (it changes at once there);
+    before the first / after the last point their factor holds. (The notation's dynamics use it too.)"""
+    if curve not in ('smooth', 'linear'):
+        raise ComposeError(f"dynamics curve must be 'smooth' or 'linear', got {curve!r}")
+    pts = sorted(points, key=lambda p: p[0])
+    if not pts:
+        raise ComposeError("dynamics_factor needs at least one point")
 
     def f(b):
         if b <= pts[0][0]:
@@ -513,7 +525,7 @@ def dynamics(clip: Clip, marks, *, curve: str = 'smooth', at: float = 0.0) -> Cl
                     u = 0.5 - 0.5 * math.cos(math.pi * u)
                 return l0 + (l1 - l0) * u
         return pts[-1][1]
-    return Clip._raw([n._replace(vel=_vel(n.vel * f(n.start))) for n in clip], clip.length)
+    return f
 
 
 # ------------------------------------------------------------------------------------------------ rubato

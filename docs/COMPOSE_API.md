@@ -97,6 +97,8 @@ or `patches.get('synthwave/supersaw_lead').but(cutoff=2500)`.
 | `Song(title, tempo=120, key='C major', seed=1, time_sig='4/4', sample_rate=48000, tail=4.0, meter=None)` | tempo 30..300 (the tempo the song starts with), sample rate 44100/48000/96000, tail = seconds rendered after the end; `meter=(3, 4)` = `time_sig`, the default meter |
 | `s.section(name, bars, meter=None)` -> `Section` | appended after the previous section; names unique; sections are the report markers; `meter=(3, 4)` / `'6/8'` gives it its own meter |
 | `s['verse']`, `s.sections`, `s.length` (beats), `s.bar(n)`, `s.seconds(beat)` | lookup / time helpers (bars across meter changes, seconds through the tempo map) |
+| `s.at(pos, beats=0)` | the absolute beat of a position: a beat, a Section or section name (its start), or `(position, beats)` - `s.at(chorus, 2.5)`. **Every position argument takes these forms**: `track.note('C4', (verse, 3.5))`, `track.play(fill, (chorus, -1))`, `s.fermata((ret, 16))` |
+| `s.breath(before=[chorus1, chorus2], beats=1, keep=[riser, impact])` | a drop: every track (except `keep=`, or only `tracks=`) stops for `beats` before each position - notes starting there removed, notes still sounding ended there (`track.clear(..., cut=True)`) |
 | `s.set_tempo`, `s.tempo_ramp`, `s.ritardando`, `s.accelerando`, `s.fermata`, `s.rubato`, `s.lilt`, `s.tempo_at` | a moving tempo, see Tempo and meter |
 | `s.track(id, sound, *, fx=(), gain_db=0, pan=None, output='master', sends=None, mute=False)` | ids match `[a-z0-9_-]+` |
 | `s.bus(id, fx=(), *, gain_db=0, pan=None, output='master', sends=None)` | group or return bus; `fx` may be a chain patch |
@@ -105,6 +107,7 @@ or `patches.get('synthwave/supersaw_lead').but(cutoff=2500)`.
 | `s.sidechain(*targets, key, pitches=None, **ducker_params)` | pump targets from `key`; `pitches='kick'` keys only from those notes via a muted ghost track `<key>-key` (it shows as a silent node in the report) |
 | `s.carve(*targets, key, freq=2500, q=0.7, depth=4, **compressor_params)` | carve room for a lead: a keyed dynamic EQ on every target (a band-mode `compressor`: `band`, `bandq`, `range`) dips its `freq` band by up to `depth` dB while the key (the lead) plays and gives it back in the lead's gaps - the bed keeps its level and body, only the lead's presence band steps aside (`node.carve(key, ...)` for one node). Hero leads: `s.carve(strings, pad, piano, keys, key=sax, depth=4)` |
 | `s.master.add(fx...)`, `s.master.use('master/...')`, `s.master.gain_db`, `s.master.automate(...)` | master chain |
+| `node.fx['limiter'].set(gain=5.2)`, `track.fx['compressor'].set(attack=25)`, `track.fx['eq'].set({'peak1.gain': -3})`, `node.fx.index_of('ducker')` | a live chain (an `FXChain`) indexed by position, `name=` or type (a type that occurs twice is an error: index it or name it); `FX.set()` changes params in place - instead of `next(i for i, f in enumerate(t.fx) if f.type == ...)` |
 | `s.prog(spec, bars=1)`, `s.motif(spec, dur=0.5)` | progression / motif in the song key and meter |
 | `s.export(stems=True, bit_depth=24)` | render options (CLI `--stems` also works) |
 | `s.compile()` -> dict, `s.save(path)`, `s.describe()`, `s.warnings` | validation: unique ids, routing targets exist, no cycles (outputs, sends and sidechains), notes inside the song, automation targets resolvable and strictly increasing; **silent notes** (`agentsound.silent_notes`): every note of a sampler / kit / sfz / stack / drum-machine track that reaches no sample zone (a kit without that piece, a key outside the multisample's range, a velocity or keyswitch articulation without zones), no drum piece or only muted stack layers is a "silent notes: ..." warning (GM names / note names, bar:beat, the fix) and goes to the render JSON's `analysis.silentNotes` (the report's `silent_notes` warnings, next to what the render measured: docs/RENDER_FORMAT.md "Silent notes") |
@@ -121,9 +124,10 @@ keeps the patch pan; sends merge (patch sends to buses that don't exist are drop
 |---|---|
 | `play(what, at=0, *, times=1, transpose=0, vel=1.0, replace=False)` | place a Clip / Progression (block chords) / Motif / Chord; `replace=True` first removes this track's notes in that span (fills) |
 | `loop(what, *sections, bars=None, until=None, ...)` | repeat to fill each section, or from a position for `bars` / `until` a beat or section; cut at the end |
-| `note(pitch, at, dur=1, vel=100)`, `clear(start, end=None, pitches=None)` | single note / remove notes |
+| `note(pitch, at, dur=1, vel=100)`, `clear(start, end=None, pitches=None, cut=False)` | single note / remove notes starting in the span; `cut=True` also ends the notes still sounding at `start` there (a real stop: held pads and bass notes do not ring into the silence) |
+| `cut(at, pitches=None)` | end every note sounding through `at` right there |
 | `groove(name_or_Groove)`, `humanize(timing_ms=4, vel=6, seed=None)` | applied at compile with the local song tempo (ms stay ms in a ritardando); drum tracks get per-drum offsets |
-| `automate(target, *point_lists)`, `send(bus, db)`, `to(bus)`, `add_fx(*fx, first=False)`, `duck(key=None, pitches=None, **p)` | also on buses (and `automate`/`add_fx` on the master) |
+| `automate(target, *point_lists, at=None)`, `send(bus, db)`, `to(bus)`, `add_fx(*fx, first=False)`, `duck(key=None, pitches=None, **p)` | also on buses (and `automate`/`add_fx` on the master); `at=` (a Section / beat / `(section, beats)`) makes the points' beats relative to it |
 | `modulate(target, *modulators, window=None)` | LFOs, step sequences, trance gates, followers, per-note envelopes, random steps driving a parameter (see Modulation); on tracks, buses and the master |
 | `.notes`, `.clip(start, end)` | inspect / copy a placed part |
 
@@ -857,13 +861,115 @@ violas, cellos; the basses double the cellos an octave down), `WINDS` (fl ob cl 
 bn1 bn2, the Classical wind choir interlocked), `HORNS` (4), `BRASS` (2 tp, 2 hn, tb), `TUTTI` (8 voices, C7 down to the
 basses' E1).
 
+## Notation (`agentsound.notation`)
+
+One compact text format for note data - melodies, bass lines, chords, several voices, drum lines. **Compact only by
+removing redundancy**: start times follow from the durations, durations and octaves are sticky, repeats and named
+phrases are written once. **Every per-note detail stays writable** (`=96` a velocity, `:0.45` a sounding length,
+`@12.5` an exact position, `^staccato` an articulation, `^gl(90)` a glide), settings are defaults a token overrides,
+and Clips, tuples and Motifs keep working everywhere. `notation.format(clip)` writes any clip (or track) back as
+notation that parses to exactly the same notes - every track of every song round-trips (tests/python/test_notation.py).
+
+```python
+lead.play(notes('vel=92 C5/8 Eb5 G5/4. F5/8 D5/4 | Eb5/2 C5/4 r'), verse)       # a Line (a Clip)
+lead.play(notes('5/8 8 r 10 12/4.! 10/8 | 11/4. 10/8 9/2', key=s.key, gate=0.92), chorus)   # scale degrees
+H = phrases(a1='5/8 8 r 10 12/4.! 10/8', a2='11/4. 10/8 9/2', b2='9/4. 10/8 11/2', key=s.key, gate=0.92, vel=104)
+hook.play(H('a1 a2 | a1 b2 | a1+2d a2'), chorus)          # named phrases spliced in, transposed per reference
+double.play(H('a1 a2 | a1 b2 | a1+2d a2', oct=3, vel=96), chorus)
+pad.play(hold('F#2 C#3 A3 E4', 8, 70), verse)            # one held chord (per-note 'C4=60', strum=ms with bpm=)
+print(notation.format(lead))                              # a placed part back as text
+```
+
+| element | syntax | meaning |
+|---|---|---|
+| pitch | `C4 C#4 Db4 Fb4 B#3 Cbb5` | absolute (letters A-G upper case; C4 = 60) |
+| | `C D E` | no octave: relative - the octave nearest the previous letter note (at most a 4th away); the first near C`oct` |
+| | `C5'` `C,` | an octave up / down (repeatable; on degrees too) |
+| | `1 3 5 8 b3 #4 -1 9` | scale degrees of `key=` (Motif's: 1 = the tonic in octave `oct=4`, 8 an octave up, -1 the scale note below the tonic) |
+| | `kick snare hat ...` | drum names (`patterns.DRUMS`) |
+| duration | `C5/8 C5/4. C5/16t C5/2..` | note values: `/N` a 1/N note, `.` dotted, `..` double dotted, `t` triplet |
+| | `C5:1/8 C5:3/8 C5:1.5` | `:` + a note value `a/b` or a number of `unit=` (beats by default; `unit=1/8` eighths; `unit=meter`) |
+| | `C5/8:0.45` `C5:0.5:0.45` | a second `:` = the sounding length only (the note still advances by the first value) |
+| | | durations are **sticky**: a token without one takes the last one written (`dur=` the first; `sticky=0` = Motif's per-token default) |
+| rest | `r r/4 . - r:2` | `.` / `-` too: grid lines like `'dur=1/16 . C#2 C#2 _ . C#2'` |
+| tie / hold | `C5/2~ C5/8`, `C5/2 _/8`, `_` | `~` ties into the next note of that pitch (across bar lines); `_` holds the previous note / chord (after a rest: a longer rest) |
+| chord | `[C4 Eb4 G4]/2` `[C2:4 G3 C4]/4` `[C4 E4 G4]/1:3.9` | together; the chord's duration is the advance, an inner note's own duration its sounding length, a second `:` after the chord the length of all its notes |
+| tuplet | `{C5 D5 E5}/4` `{C5 D5 E5 F5 G5}/2` `3:2{C5/8 D5 E5}` | the group squeezed into the span (triplets, quintuplets, a free run); `p:q` = p notes in the time of q |
+| slur | `(C5 D5 E5 F5)` `(C5 D5 E5)^gl(80)` | legato: each note held into the next (`articulation.legato`, overlap `slur=0.03`); a glide after it glides into every note after the first |
+| grace | `g:D5 E5/4` `g:(B4 C5 Db5) C5` | written grace notes, `grace=0.1` beats each just before the note (taken from the note before), at `gracevel=0.72` x its velocity |
+| velocity | `C5! C5!! C5? C5=96` | accent (x `accent=1.2`), ghost (x `ghost=0.65`), an exact velocity |
+| dynamics | `pp p mp mf f ff ppp fff` | from here on: x `romantic.LEVELS` of the base `vel=` (= mf) |
+| | `<` ... `f`, `>` ... `p` | hairpins from where they stand to the next mark (`curve=smooth` or `linear`); a crescendo ending softer is an error |
+| | `sf sfz fp sfp subito` | sf / sfz: the next note x `sfz=1.3`; fp / sfp: it at f, then p; `subito`: the next mark is a step |
+| marks | `C5^staccato C5^pizz C5^"Short Spiccato" C5^ks(24)` | articulation marks (`articulation.py`: keyswitches on a sampler) - any word not reserved below, a quoted label, a keyswitch key |
+| | `C5^gl C5^gl(90)` | a glide (portamento, ms) into the note |
+| | `C5^peak` | a phrase peak: `line.peaks` (beats; `hornist.arrange(peaks=)`) |
+| ornaments | `C5/2^tr ^tr(upper) ^turn ^turn(on) ^mord ^mord(upper) ^crush ^crush(-2)` | `romantic.trill` / `romantic.turn`, `pianist.mordent` / `pianist.crush` |
+| | `[C4 E4 G4]/1^roll ^roll(60, down) ^strum(30)` | `pianist.roll`, `midifx.strum` |
+| | `{Bb5 Ab5 G5 F5 D5}/2^fig(rit)` | `romantic.fioritura` (shapes `arch even rit accel wave`) |
+| | | they play in real time: `bpm=` (a number, or `s.tempo_at` with `at=` the line's position); keywords pass through: `^tr(start=upper, rate=14)` |
+| gestures | `C5/2^scoop ^scoop(-50) ^fall ^fall(-5) ^doit ^bend(2) ^vib ^vib(30) ^shake` | `agentsound.gesture` pitch moves: `track.play(line, at)` writes them on `instrument.pitchbend` (vibrato: the sampler's own vibrato) at the song's tempo where they land (`notation.realize(track, line.gestures, at)` by hand) |
+| repeats | `C5/16*4` `[C4 E4]/8*3` `\|: C5 D5 E5 F5 :\|` `:\|x3` | an event N times; a passage twice / N times |
+| bars | `\|` | a check: it must fall on a bar boundary of `meter=` (from beat 0; `pickup=` beats come before: they start at `-pickup`); the error names the bar ("bar 2 holds 3 beats, the meter 4/4 wants 4 (1 missing)"); left-out bar lines are fine |
+| position | `@12.5` | to beat 12.5 of the line (exact; format()'s escape hatch for humanized times; sparse licks: `@6.5 C#4/16 D#4 F#4/8.`) |
+| voices | `S: C5/2 D5 \| A: E4/2 F4` | labels: each voice its own time, bar checks and dynamics; `line.voices['S']`; `notes({'S': ..., 'A': ...})` the same |
+| settings | `vel=90 dur=1/8 gate=0.9 gap=0.1 unit=1/8 oct=5 key=F#m meter=3/4 accent=1.1 ghost=0.72 grace=0.1 gracevel=0.72 tr=+12 st=-2 slur=0.03 curve=linear sticky=0 sfz=1.3` | from here on (all are also keyword arguments of `notes()`; `key="F# minor"` quoted, or `key=F#_minor`) |
+| phrases | `$name` (`refs=`) | a named phrase spliced in; in the line given to `H(...)` of `phrases()`: bare names (they win over notation words there - `b2` is the phrase, not the flat 2nd; inside a phrase's own spec only `$name` refers), `name+12` / `name-5` (semitones), `name+2d` (scale steps), `name'` / `name,` (octaves), `name*2` |
+| comment | `% ...` | to the end of the line |
+
+**`notes(spec, *, length=None, pickup=0, bpm=None, at=0, refs=None, transpose=0, steps=0, **settings)`** -> a
+`Line` (a Clip with `.voices`, `.gestures`, `.peaks`, `.meter`, `.bars(a, b)` / `.bar(n)` slices by bar number).
+`length='bar'` rounds up to whole bars (default: where the line ends); `transpose` / `steps` move the whole line
+(semitones / scale steps of `key=`). **`phrases(name=spec, ..., **settings)`**: `H('a1 a2 | a1+2d b2')` composes (the
+phrases are spliced in as if written there: holds and ties run across, bar checks see the whole line, settings
+written inside a phrase carry on), `H['a1']` one phrase, `H.add(b1='...')`, `H.variant('a3_end', 'a3', {8: 'Ab4/2 r/4
+Gb4/8 E4'})` copies a phrase with bars replaced, `H(line, vel=110, oct=3)` overrides settings. **`hold(pitches,
+beats, vel=None, *, at=0, strum=None, bpm=None, length=None)`**: one held chord (it is `automation.hold` with pitches
+first). **`notation.format(clip_or_track, key=None, drums=None, meter=(4, 4), wrap=4, vel=None, gate=None)`**: the
+notes as text (spelled in `key=`, drum names for a drum track, `vel=` / `gate=` guessed from the notes).
+
+The formats songs used before stay valid and are the same family: Motif strings (`'5:1/8 8:1/8 r:1/8 12:1/4.!'`:
+`notes(spec, key=, gate=0.92, sticky=False)` gives `Motif(spec, key).clip()` exactly), `voicing.line` specs
+(`'D4:1 A4:.5 r:1'`), the songs' old `ph()` lines (lengths in 8ths -> `/8 /4 /4.`, `g:D5` graces, `accent=1.1
+ghost=0.72`), grid lines (`dur=1/16 gate=0.9`, `_` holds), and the nocturne's ornament tokens (`^tr`, `^turn`,
+`{...}/X^fig(shape)`).
+
+### Use the library, not hand-wiring
+
+Before writing a helper in a song, use the one that exists (each replaced code found in several songs):
+
+| instead of | use |
+|---|---|
+| `(start, dur, 'Eb5')` tuple tables, local `ph()` / `mel()` / `line()` parsers | `notes(...)`, `phrases(...)` |
+| `Clip([(n.start, n.dur, n.pitch, n.vel) for n in c if n.start >= 16], length=32)` | `c.window(16)`; `c.vel_add(-8)`, `c.octave(-1)`, `c.with_vel(34)`, `c.shift(a).with_length(0)` |
+| `Clip([(16, 7.5, p, 70) for p in ...], length=24)` | `hold('Ab2 Eb3 C4', 7.5, 70, at=16, length=24)` |
+| `next(i for i, f in enumerate(t.fx) if f.type == 'compressor')` | `t.fx['compressor'].set(attack=25)`, `s.master.fx['limiter'].set(gain=5.2)` |
+| `s._at(x)`, `sec.start + 3.5` in helper code | `s.at(sec, 3.5)`, positions `(sec, 3.5)`, `automate(..., at=sec)` |
+| a `cut()` that clears and re-adds the notes ringing into a drop | `s.breath(before=[chorus], beats=1, keep=[riser])`, `track.clear(a, b, cut=True)`, `track.cut(at)` |
+| a 4-bar sine velocity arch (`arc4`, `arc`) | `clip.arch(bars=4, depth=0.3)` |
+| `clip.strum(ms=rng.uniform(8, 22), bpm=...)` (`rolled()`) | `clip.roll((8, 22), seed=rng, bpm=...)` |
+| `third(line, key, -2)` | `line.harmonize('-3rd', key=k, keep=False, vel=1)` (`fit=prog`, `fold=(lo, hi)`) |
+| `chord_at(prog, beat)` | `prog.at(beat)` |
+| `def bpm(at): return s.tempo_at(...)` | `s.tempo_at` (takes beats and Sections) |
+| a hand-made lead chain + ducks + echo throws | `hero(track, family=..., bed=[...])` |
+| hand-written drum loops per section with fills | `drummer.arrange(sections, style=, kit=)` |
+| echo-send points at phrase ends | `articulation.throws(track, clip, at)` |
+| `[(t, -0.7, 'step'), ...]` pitch-bend scoops by hand | `^scoop` in notation, `gesture.scoop`, `jazz.scoop` |
+| arp step lists | `arp(prog, pattern=[0, 2, 1, None], accent=1.2)`, `clip.arpeggiate(pattern='x.xX_')` |
+| pedal on / off points | `pianist.pedal(prog, at)` (`arrangement.pedal(prog, at)`) |
+| an `energy()` gainDb ride per section | `per_section({...})` points or the MIX dict's `'ride'` (agentsound.mixer) |
+
 ## Patterns (all return a Clip)
 
 **Clip** = immutable notes `(start, dur, pitch, vel)` + `length`. `Clip([(0, 1, 'A4', 100), ...], length=4)`,
 `Clip.rest(4)`. Combine: `a + b` (sequence), `a | b` (layer), `a * 4` (repeat). Transforms: `shift transpose octave
-transpose_scale(steps, key) slice(start, end) repeat loop(length) stretch reverse velocity(f) with_vel gate(f)
-legato(overlap=0.02) only(*pitches) without filter map fit(prog, key)`, feel `humanize swing groove crescendo accent`
-and the MIDI effects below. `lead | lead.transpose_scale(-2, key)` doubles a line in diatonic thirds;
+transpose_scale(steps, key) slice(start, end) window(start, end) repeat loop(length) stretch reverse velocity(f)
+with_vel vel_add(dv) gate(f) legato(overlap=0.02) only(*pitches) without filter map fit(prog, key)`, feel `humanize
+swing groove crescendo accent arch(bars=4, depth=0.3) roll(ms=(8, 22), seed=, bpm=)` and the MIDI effects below.
+`window(16)` keeps the notes from beat 16 at their places (`slice` moves them to 0 and cuts); `vel_add(-8)` a softer
+double (clamped 1..127); `arch(4, 0.3)` a 4-bar phrase arch on the velocities (played pads / chords breathe);
+`roll((8, 22), seed=rng, bpm=)` rolls every chord by a seeded 8..22 ms (a pianist's hands never land flat; `seed` may
+be a `random.Random` to draw from). `lead | lead.transpose_scale(-2, key)` doubles a line in diatonic thirds;
 `line.fit(prog, key)` moves strong-beat notes onto chord tones and snaps the rest to the key. `legato()` extends
 every note to the next onset plus a 0.02-beat overlap so mono / `mode='legato'` synths glide (the engine plays
 note-ons before note-offs at the same sample, so `legato(0)` - notes touching - is legato too).
@@ -940,7 +1046,7 @@ beat.chance(0.9, seed=2).vel_pattern([1.15, 0.8, 1, 0.8], grid='1/16')       # s
 | `strum(ms=30, direction='down', vel_decay=0.0, *, beats=None, bpm=120)` | offsets the notes of every chord (`down` = low string first, `up`, `alternate`) by `ms` each (at `bpm`; or `beats=0.03` / `'1/64'`), keeping their ends; `vel_decay` softens later strings |
 | `ratchet(n=2, where=None, gate=0.9, vel_decay=0.0)` | splits notes into `n` repeats inside their length (rolls). `where`: predicate `lambda n: ...`, onset pattern `'...x'` (digits = repeat count: `'..3.4'`) or pitches (`'hat'`, `['snare', 'clap']`); `vel_decay < 0` = crescendo roll |
 | `echo(times=3, delay='1/8.', decay=0.6, transpose=0, gate=None, key=None, wrap=False)` | MIDI delay: repeats `delay` apart, velocity × `decay` each (dropped below 1); `transpose` per repeat in semitones, or in scale steps with `key=`; `gate=None` keeps the length (≤ the delay), else `gate × delay`; `wrap=True` folds repeats past the end to the clip start (seamless loops); a repeat landing on the same pitch at the same time merges (the louder stays) |
-| `harmonize('3rd', key=)`, `(['3rd', '5th'], key=)`, `('-6th', key=)`, `(steps=[2], key=)`, `(semitones=[12])`, `vel=0.8` | parallel voices, diatonic (names / steps follow the key; chromatic notes keep their alteration) or chromatic; names `2nd 3rd 4th 5th 6th 7th octave 9th 10th`, `-` prefix or `' below'` = below |
+| `harmonize('3rd', key=)`, `(['3rd', '5th'], key=)`, `('-6th', key=)`, `(steps=[2], key=)`, `(semitones=[12])`, `vel=0.8`, `keep=True`, `fit=None`, `fold=None` | parallel voices, diatonic (names / steps follow the key; chromatic notes keep their alteration) or chromatic; names `2nd 3rd 4th 5th 6th 7th octave 9th 10th`, `-` prefix or `' below'` = below. `keep=False` returns only the new voices (a harmony part for another track: `gtr2.play(lead.harmonize('-3rd', key=k, keep=False, vel=1))`); `fit=prog` makes them chord-tone aware (a voice note on a strong beat - multiples of `strong=1` - or that long, outside the chord sounding there, moves to the nearest chord tone in its direction); `fold=('C4', 'C5')` octave-folds them into a register |
 | `chordify(shape='triad', key=None, voicing='close', vel=1.0)` | every note becomes the chord rooted on it: `triad 7th 9th 6th` (diatonic, need `key=`), `add9 open` (diatonic with key, else chromatic), `sus2 sus4` (always a true sus chord: perfect fifth; with `key=` the other sus shape is used where the asked one leaves the key - F in A minor gives Fsus2), `power` (1-5-8), a chord quality for parallel chords (`'m7'`, `'maj9'`, `'7sus4'`) or semitones `(0, 3, 7)`. Voicing `close`, `open` (2nd/4th voice up an octave), `spread` (fifth first, wide) |
 | `quantize(grid='1/16', strength=1.0, ends=False, swing=0.0)` | pulls starts (and ends) toward the grid; `strength=0.5` keeps half the feel; `swing` 0 or 0.5..0.8 as in `Clip.swing`. A note just before the clip end may snap onto the end (the next bar's downbeat) |
 | `scale_quantize(key, direction='nearest')` | snaps pitches into the key (`nearest` ties go down, `up`, `down`) |
@@ -1156,7 +1262,8 @@ curve `linear exp smooth step` shaping the segment arriving at the point (`exp` 
 Hz). Calls on one target merge; points on the same beat become an instant jump, to the `step` point (start of
 `hold`/`steps`/`per_section`, `riser` reset) if there is one, else to the point listed later.
 
-Generators (positions may be Sections): `ramp(a, b, v0, v1, curve)`, `exp_ramp`, `smooth_ramp`, `hold(a, b, v)`,
+Generators (positions may be Sections): `ramp(a, b, v0, v1, curve)`, `exp_ramp`, `smooth_ramp`, `hold(a, b, v)` (with
+pitches first it is a held chord instead: `hold('F#2 C#3 A3 E4', 8, 70)` - see Notation),
 `steps({beat: v})`, `per_section({intro: 0.2, chorus: 0.6}, glide=2)`, `swell(a, b, lo, hi)`,
 `riser(drop, length=8, lo=200, hi=12000, reset=None)`, `fade(a, b, -60, 0)` (for `gainDb`),
 `lfo(a, b, lo, hi, period='1/4', shape='sine|tri|saw|saw_down|square', log=False)` (drawn as points; for

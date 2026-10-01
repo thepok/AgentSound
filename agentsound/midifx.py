@@ -449,7 +449,8 @@ def _as_list(x) -> list:
     return list(x) if isinstance(x, (list, tuple)) else [x]
 
 
-def harmonize(clip: Clip, interval=None, *, key=None, steps=None, semitones=None, vel: float = 0.8) -> Clip:
+def harmonize(clip: Clip, interval=None, *, key=None, steps=None, semitones=None, vel: float = 0.8,
+              keep: bool = True, fit=None, strong: float = 1.0, fold=None) -> Clip:
     """Add parallel voices to every note (the original stays):
         harmonize('3rd', key=s.key)            diatonic third above (in A minor: A->C, C->E, E->G, G->B)
         harmonize(['3rd', '5th'], key=s.key)   diatonic triads on every note
@@ -457,12 +458,50 @@ def harmonize(clip: Clip, interval=None, *, key=None, steps=None, semitones=None
         harmonize(steps=[2, 4], key=s.key)     the same with scale steps (2 = a third)
         harmonize(semitones=[12])              chromatic / parallel: +12 octave, [7] fifths, [-5] ...
     Diatonic voices follow the key (chromatic notes keep their alteration). vel = velocity factor of the
-    added voices. A voice that duplicates a note already sounding at that start is skipped."""
+    added voices. A voice that duplicates a note already sounding at that start is skipped.
+    keep=False returns only the added voices (a harmony part for another track: gtr2.play(lead.harmonize('-3rd',
+    key=k, keep=False, vel=0.94))). fit=prog makes the voices chord-tone aware: a voice note on a strong position
+    (a multiple of `strong` beats) or at least `strong` long that is not a tone of the chord sounding there moves
+    to the nearest chord tone in the voice's direction (below the line for a voice below). fold=(lo, hi) octave-folds
+    the voices into a register."""
     given = [x is not None for x in (interval, steps, semitones)]
     if sum(given) != 1:
         raise ComposeError("harmonize needs exactly one of: an interval name ('3rd', ['3rd', '5th']), steps=[2] "
                            "(scale steps, with key=) or semitones=[12]")
     f = _num(vel, 'harmonize vel', 0, 4)
+    if keep and fit is None and fold is None:
+        return _harmonize_add(clip, interval, key, steps, semitones, f, keep=True)
+    voices = _harmonize_add(clip, interval, key, steps, semitones, f, keep=False)
+    if fit is not None:
+        voices = _fit_voices(voices, clip, fit, key, _num(strong, 'harmonize strong', 0.01, 64))
+    if fold is not None:
+        if not isinstance(fold, (tuple, list)) or len(fold) != 2:
+            raise ComposeError(f"harmonize fold must be (low, high), got {fold!r}")
+        voices = globals()['fold'](voices, fold[0], fold[1])
+    return Clip._raw(list(voices) + (list(clip) if keep else []), clip.length)
+
+
+def _fit_voices(voices: Clip, line: Clip, prog, key, strong: float) -> Clip:
+    from .theory import Progression
+    p = prog if isinstance(prog, Progression) else Progression(prog, key=key)
+    tops = {}
+    for x in line:
+        tops[round(x.start, 6)] = max(tops.get(round(x.start, 6), -1), x.pitch)
+    out = []
+    for x in voices:
+        ch = p.at(x.start)
+        pos = x.start / strong
+        if ch is not None and x.pitch % 12 not in ch.pcs and (abs(pos - round(pos)) < 1e-6 or x.dur >= strong - 1e-6):
+            below = x.pitch < tops.get(round(x.start, 6), 128)
+            cands = [x.pitch + d for d in range(1, 7)] if not below else [x.pitch - d for d in range(1, 7)]
+            q = next((c for c in cands if c % 12 in ch.pcs), None)
+            if q is not None:
+                x = x._replace(pitch=_check_pitch(q, f"harmonize fit of pitch {x.pitch}"))
+        out.append(x)
+    return Clip._raw(out, voices.length)
+
+
+def _harmonize_add(clip: Clip, interval, key, steps, semitones, f, keep: bool = True) -> Clip:
     if semitones is not None:
         shifts = [_int(s, 'harmonize semitones') for s in _as_list(semitones)]
         move = lambda p, s: p + s  # noqa: E731
@@ -471,8 +510,8 @@ def harmonize(clip: Clip, interval=None, *, key=None, steps=None, semitones=None
         shifts = ([_interval_steps(i) for i in _as_list(interval)] if interval is not None
                   else [_int(s, 'harmonize steps') for s in _as_list(steps)])
         move = lambda p, s: k.transpose(p, s)  # noqa: E731
-    have = {(round(x.start / _SAME_TOL), x.pitch) for x in clip}
-    out = list(clip)
+    have = {(round(x.start / _SAME_TOL), x.pitch) for x in clip} if keep else set()
+    out = list(clip) if keep else []
     for x in clip:
         for s in shifts:
             if s == 0:

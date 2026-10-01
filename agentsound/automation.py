@@ -63,8 +63,15 @@ def smooth_ramp(start, end, frm: float, to: float) -> list:
     return ramp(start, end, frm, to, 'smooth')
 
 
-def hold(start, end, value: float) -> list:
-    """Jump to `value` at `start` and keep it until `end` (then the next points take over)."""
+def hold(start, end=4.0, value=None, **kw):
+    """Jump to `value` at `start` and keep it until `end` (then the next points take over): automation points.
+    With a string of pitches first it is a held chord instead (notation.hold): hold('F#2 C#3 A3 E4', 8, 70) -> a
+    Clip of the chord held 8 beats at velocity 70 (strum=ms, bpm=, length=, per-note 'C4=60' velocities)."""
+    if isinstance(start, (str, list)):
+        from .notation import hold as _chord_hold
+        return _chord_hold(start, end, value, **kw)
+    if value is None or kw:
+        raise ComposeError("hold(start, end, value): automation points need a value (a chord: hold('C4 E4 G4', 4))")
     s, e = _pos(start), _pos(end)
     if e <= s:
         raise ComposeError(f"hold end {e} must be after start {s}")

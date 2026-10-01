@@ -66,6 +66,39 @@ it. Add new findings here instead of losing them in a report.
 
 ## Medium: tools, engine and library
 
+- **Compact song code, phase 2: genre packages on top of the notation** (phase 1 = `agentsound.notation` + the
+  foundation helpers; migrated with byte-identical render JSON: ashes-and-chandeliers 993 -> 870 lines,
+  perry-street-rain 439 -> 391, midnight-interstate 515 -> 464). The survey found the rest of the length in
+  re-implemented section logic. Each package must stay expressive (defaults overridable, raw Clips keep working) and
+  prove itself the same way (a song migrated with an identical render JSON):
+  - *pop / synthwave*: section plans (one dict per section: which parts play, their energy, the fill into the
+    next) instead of per-section play() blocks; lanes (cutoff / send / gainDb rides per section, today hand-written
+    `energy()` / `pts` lists in midnight-interstate, skyline-heartbeat, children-of-neon, orbital-station,
+    polaroid-summer); transitions (riser + reverse cymbal + impact + downlifter + `s.breath` as one call); a drum plan
+    (grooves per section with fills at the ends - what `drums({...})` tables + `fill()` loops do by hand); the robot
+    voice (speech.words + the vocoder chord + the frozen vowel in one helper).
+  - *orchestra*: a `Score` (parts by role over a progression, doubling rules: `octave` / `third` / `harmony` / the
+    `pads()` divisi of ashes-and-chandeliers), orchestral hits (`stabs()`: strings staccato + brass marcato +
+    timpani on given beats), figures (oom-pah-pah, string ostinatos, harp arpeggios), a Harmony helper (`harmony()`
+    block voicing under a line), `sing()` (the choir's speaking-velocity + expression-lane trick of ashes'
+    `speak()`), a fugue / entries helper (the staggered choir entries of the ascent, lux-perpetua / unbowed fugatos).
+  - *jazz*: a chorus player (head / solo / head-out per chorus: today perry-street-rain's `hands()` / `comp()` /
+    `bass()` closures), a straight-8th and 3/4 bass + brushes (perry's `even_bass` / `even_brushes`,
+    minetta-lane-waltz's `waltz_bass`), endings (tag, ritardando, the rolled last chord with the fermata),
+    `romantic.score` for written classical scores (the nocturne's RH / LH token tables -> notation with ^tr / ^turn /
+    ^fig and a left-hand pattern).
+  - Migrate the other songs' note data to the notation (minetta-lane-waltz, lanterns-on-carmine: their `ph()`;
+    chrome-leviathan: `line` / `mel`; nocturne-etude: its score tokens; the tuple tables elsewhere) - the round trip
+    test already proves every one of their notes is expressible.
+- **Notation follow-ups** (phase 1): a Line's extras (gestures, peaks, voices) survive shift / transpose / octave /
+  velocity / with_length but not the other Clip transforms (they return plain Clips: the gestures of
+  `line.legato()` are gone - re-parse or keep the Line); gesture lanes written by `track.play(line)` merge with other
+  writers of `instrument.pitchbend` on the track (the per-track lane registry above would sum them); ornaments need
+  `bpm=` at parse time (a Line could carry them unexpanded and realize them at play time like the gestures);
+  `format()` writes absolute pitch names only (no degrees / relative octaves) and splits no notes at bar lines (a
+  long note across a bar leaves that bar line out); triplets written in notation count exactly while older code
+  added 1/3 in floats (positions differ by ~1e-16 - the render JSON rounds to 6 decimals, so nothing audible).
+
 - **Guitar lead lanes (fretwork):**
   - Everything on one lead track must go through ONE `fretwork.render` (one automation lane per target; points of two
     writers in the same window would interleave). `guitarist.lead(gestures=False)` automation on a track the soloist /

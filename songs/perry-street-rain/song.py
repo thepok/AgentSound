@@ -61,39 +61,6 @@ TAG = 'Bbm9:0.5 Eb13:0.5 Cm7:0.5 F7alt:0.5 Bbm9:0.5 Eb7sus4:0.5 Dbm6:0.5 Gb13:0.
 END = 'Abmaj9#11:2'
 
 
-# ------------------------------------------------------------------------------------------------ notation
-def ph(spec: str, vel: float = 90) -> Clip:
-    """A written line: tokens PITCH[/len][!|?] separated by spaces, 'r' = rest; len in 8ths (default 1 = an 8th,
-    '/3' = dotted quarter); '!' accent, '?' ghost; 'g:PITCH' = a crushed grace note just before the next note;
-    '|' checks the bar line. Notes are held to the next onset (finger legato)."""
-    t, mark, grace, notes = 0.0, 0.0, None, []
-    for tok in spec.replace('|', ' | ').split():
-        if tok == '|':
-            nb = mark + 4.0
-            if abs(t - nb) > 1e-6:
-                raise ValueError(f"bar ending at beat {nb} holds {t - mark:.3f} beats in {spec[:70]!r}")
-            mark = nb
-            continue
-        if tok.startswith('g:'):
-            grace = tok[2:]
-            continue
-        acc = 1.1 ** tok.count('!') * 0.72 ** tok.count('?')
-        tok = tok.replace('!', '').replace('?', '')
-        p, _, d = tok.partition('/')
-        dur = 0.5 * (float(d) if d else 1.0)
-        if p != 'r':
-            if grace:
-                g = 0.1
-                if notes and notes[-1][0] + notes[-1][1] > t - g:
-                    notes[-1][1] = max(0.08, t - g - notes[-1][0])
-                notes.append([t - g, g, grace, vel * 0.72])
-            notes.append([t, dur, p, vel * acc])
-        grace = None
-        t += dur
-    length = max(4.0, -(-t // 4) * 4)
-    return Clip([(a, d, p, max(1, min(127, int(round(v))))) for a, d, p, v in notes], length=length)
-
-
 def even_bass(prog, seed: int, vel: int = 84, style: str = 'two', pickups: float = 0.5) -> Clip:
     """A straight-8th jazz bass line: the root on 1, the fifth / tenth / octave inside the bar, an 8th-note
     approach (chromatic, or the target's fifth) or an anticipation on the & of 4 into the next chord.
@@ -188,68 +155,53 @@ def even_brushes(band, bars: int, seed: int, vel: float = 1.0, ghosts: float = 0
     return base | Clip([(a, d, p, max(1, min(127, v))) for a, d, p, v in extra], length=4.0 * bars)
 
 
-def rolled(clip: Clip, lo: float = 8, hi: float = 22, rng=None, direction='up') -> Clip:
-    """A pianist's hands never land flat: every chord arpeggiated by a few ms (seeded speed)."""
-    ms = (rng or random).uniform(lo, hi)
-    return clip.strum(ms=ms, direction=direction, bpm=TEMPO)
-
-
 # ------------------------------------------------------------------------------------------------ the head
-HEAD_A1 = ph("""
- r/2 C5 Eb5 G5/3 F5 | Eb5/2 C5/2 r C5 G5 F5 | r/2 Bb4 Db5 F5/3 Eb5 | Db5/2 Ab4/2 r G4 Bb4 E5 |
- Eb5/3 C5 Bb4/4 | r Ab4 C5 F5 Ab5/2 G5 F5 | Eb5/3 D5 C5/2 A4 Gb4 | F4/4 Ab4 Bb4 C5 Eb5""", 68)
-HEAD_A2 = ph("""
- r/2 C5 Eb5 G5/3 F5 | Eb5/2 C5 Bb4 r C5 G5 F5 | r/2 Bb4 Db5 F5/3 Eb5 | Db5/2 Ab4/2 r G4 Bb4 g:D5 E5 |
- Eb5/3 C5 Bb4/4 | r Bb4 Eb5 G5 Gb5/2 Eb5 C5 | Db5/3 C5 Bb4/2 G4 Bb4 | Ab4/4 r C5 Eb5 Gb5""", 78)
-HEAD_B = ph("""
- F5/2 Ab4 C5 Eb5/4 | Eb5 Db5 C5/2 Bb4/2 r Ab4 | r/2 G4 Bb4 D5/4 | Db5 Eb5 Db5/2 A4/2 r C5 |
- C5/2 Db5 F5 Ab5/3 Bb5 | Bb5/3 Ab5 E5/2 Db5 E5 | r/2 D#5 F#5 G#5/2 B5 A#5 | Ab5/3 F5 E5 Db5 Bb4 G4""", 86)
-HEAD_A3 = ph("""
- r/2 C5 Eb5 G5/3 F5 | Eb5/2 C5/2 r C5 G5 F5 | r/2 Bb4 Db5 F5/3 Eb5 | Db5/2 Ab4/2 r G4 Bb4 E5 |
- Eb5/3 C5 Bb4/4 | r Bb4 Eb5 G5 Gb5/2 Eb5 C5 | Db5/3 C5 Bb4/2 G4 Bb4 | Ab4/4 r/2 Gb4 E4""", 80)
-HEAD_A3_OUT = ph("""
- r/2 C5 Eb5 G5/3 F5 | Eb5/2 C5/2 r C5 G5 F5 | r/2 Bb4 Db5 F5/3 Eb5 | Db5/2 Ab4/2 r G4 Bb4 E5 |
- Eb5/3 C5 Bb4/4 | r Bb4 Eb5 G5 Gb5/2 Eb5 C5 | Db5/3 C5 Bb4/2 G4 Bb4 | Ab4/4 r/2 Eb4 Db4""", 72)
+# agentsound notation (docs/COMPOSE_API.md "Notation"): note values are sticky, '|' checks the bars, g:D5 is a grace
+# note; the A sections are named phrases, spliced into lines (hook' = an octave up); length='bar' = whole bars
+TUNE = phrases(
+    hook='r/4 C5/8 Eb5 G5/4. F5/8 | Eb5/4 C5 r/8 C5 G5 F5 | r/4 Bb4/8 Db5 F5/4. Eb5/8 | Db5/4 Ab4 r/8 G4 Bb4 E5 |',
+    hook2='r/4 C5/8 Eb5 G5/4. F5/8 | Eb5/4 C5/8 Bb4 r C5 G5 F5 | r/4 Bb4/8 Db5 F5/4. Eb5/8 | Db5/4 Ab4 r/8 G4 Bb4 g:D5 E5 |',
+    a1_end='Eb5/4. C5/8 Bb4/2 | r/8 Ab4 C5 F5 Ab5/4 G5/8 F5 | Eb5/4. D5/8 C5/4 A4/8 Gb4 | F4/2 Ab4/8 Bb4 C5 Eb5',
+    a2_end='Eb5/4. C5/8 Bb4/2 | r/8 Bb4 Eb5 G5 Gb5/4 Eb5/8 C5 | Db5/4. C5/8 Bb4/4 G4/8 Bb4 |',
+    length='bar')
+HEAD_A1 = TUNE('hook a1_end', vel=68)
+HEAD_A2 = TUNE('hook2 a2_end Ab4/2 r/8 C5 Eb5 Gb5', vel=78)
+HEAD_B = notes("""
+ F5/4 Ab4/8 C5 Eb5/2 | Eb5/8 Db5 C5/4 Bb4 r/8 Ab4 | r/4 G4/8 Bb4 D5/2 | Db5/8 Eb5 Db5/4 A4 r/8 C5 |
+ C5/4 Db5/8 F5 Ab5/4. Bb5/8 | Bb5/4. Ab5/8 E5/4 Db5/8 E5 | r/4 D#5/8 F#5 G#5/4 B5/8 A#5 | Ab5/4. F5/8 E5 Db5 Bb4 G4""", vel=86, length='bar')
+HEAD_A3 = TUNE('hook a2_end Ab4/2 r/4 Gb4/8 E4', vel=80)
+HEAD_A3_OUT = TUNE('hook a2_end Ab4/2 r/4 Eb4/8 Db4', vel=72)
 
 # ------------------------------------------------------------------------------------------------ piano solo
-SOLO_A1 = ph("""
- r/2 C5 Eb5 G5/2 r/2 | r/2 C5 Eb5 G5/2 Ab5 G5 | F5/2 r Db5 F5 Ab5/3 | Ab5/2 F5 Eb5 E5/2 G5 Bb5 |
- C6/3 Bb5 G5/2 Eb5/2 | r F5 Ab5 C6 B5/2 Ab5 F5 | G5 Eb5 D5 C5 A4 C5 Eb5 Gb5 | F5/4 r/3 C5""", 80)
-SOLO_A2 = ph("""
- C5 Eb5 G5 C6/2 Bb5 Ab5 G5 | F5/2 r Eb5 F5 G5 Ab5 C6 | Db6/2 C6 Bb5 Ab5 F5 Db5 C5 | Db5 Eb5 F5 Ab5 G5 E5 Db5 Bb4 |
- C5/2 r C5 Eb5 G5 Bb5/2 | G5/2 Eb5 C5 Eb5 Gb5 A5 C6 | Db6/2 C6 Ab5 G5 C6 Bb5 Db6 | C6/4 r Gb5 F5 Eb5""", 86)
-SOLO_B = ph("""
- Eb5/3 F5/3 Ab5/2 | Ab5/3 Bb5/3 C6/2 | D6/3 C6/3 Bb5/2 | A5/3 Ab5/3 Gb5 F5 |
- F5/3 Ab5/3 C6/2 | Db6/3 Bb5/3 Ab5/2 | G#5/3 B5/3 D#6/2 | Db6/3 Bb5 G5 E5 Db5 Bb4""", 96)
-SOLO_A3 = ph("""
- r/2 C6 Eb6 G6/3 F6 | Eb6/2 C6/2 r C6 G6 F6 | r/2 Bb5 Db6 F6/3 Eb6 | Db6/2 Ab5/2 r G5 Bb5 E6 |
- Eb6/3 C6 Bb5/4 | r Bb5 Eb6 G6 Gb6/2 Eb6 C6 | Db6/3 C6 Bb5/2 G5 Bb5 | Ab5/4 r/2 Gb5 E5""", 100)
+SOLO_A1 = notes("""
+ r/4 C5/8 Eb5 G5/4 r | r C5/8 Eb5 G5/4 Ab5/8 G5 | F5/4 r/8 Db5 F5 Ab5/4. | Ab5/4 F5/8 Eb5 E5/4 G5/8 Bb5 |
+ C6/4. Bb5/8 G5/4 Eb5 | r/8 F5 Ab5 C6 B5/4 Ab5/8 F5 | G5 Eb5 D5 C5 A4 C5 Eb5 Gb5 | F5/2 r/4. C5/8""", vel=80, length='bar')
+SOLO_A2 = notes("""
+ C5 Eb5 G5 C6/4 Bb5/8 Ab5 G5 | F5/4 r/8 Eb5 F5 G5 Ab5 C6 | Db6/4 C6/8 Bb5 Ab5 F5 Db5 C5 | Db5 Eb5 F5 Ab5 G5 E5 Db5 Bb4 |
+ C5/4 r/8 C5 Eb5 G5 Bb5/4 | G5 Eb5/8 C5 Eb5 Gb5 A5 C6 | Db6/4 C6/8 Ab5 G5 C6 Bb5 Db6 | C6/2 r/8 Gb5 F5 Eb5""", vel=86, length='bar')
+SOLO_B = notes("""
+ Eb5/4. F5 Ab5/4 | Ab5/4. Bb5 C6/4 | D6/4. C6 Bb5/4 | A5/4. Ab5 Gb5/8 F5 |
+ F5/4. Ab5 C6/4 | Db6/4. Bb5 Ab5/4 | G#5/4. B5 D#6/4 | Db6/4. Bb5/8 G5 E5 Db5 Bb4""", vel=96, length='bar')
+SOLO_A3 = TUNE("hook' a2_end' Ab5/2 r/4 Gb5/8 E5", vel=100)      # the climax: the last A an octave up
 
 # ------------------------------------------------------------------------------------------------ bass solo
-BASS_SOLO = ph("""
- r/2 C3 Eb3 G3/3 F3 | Eb3/2 C3/2 r Ab2 G2 F2 | r/2 Bb2 Db3 F3/3 Eb3 | Db3/2 Ab2/2 r G2 Bb2 Db3 |
- C3/3 Bb2 G2/2 Eb2/2 | r F2 Ab2 C3 B2/2 Ab2 F2 | Eb2/2 G2 Bb2 A2 C3 Eb3 Gb3 | F3/3 Db3 Bb2/2 Ab2 Bb2 |
- F2/2 r C3 Eb3 F3 G3 Ab3 | C4/2 Ab3 F3 G3/2 Eb3 C3 | Db3/2 r Bb2 Db3 F3 Ab3 C4 | Bb3/2 Ab3 F3 E3 Db3 Bb2 G2 |
- Ab2/3 C3 Eb3 G3 Bb3/2 | C4/2 G3 Eb3 A3/2 F3 Eb3 | Db3/3 C3 Bb2/2 G2 Eb2 | Ab2/4 r/2 Eb2 C2""", 96)
+BASS_SOLO = notes("""
+ r/4 C3/8 Eb3 G3/4. F3/8 | Eb3/4 C3 r/8 Ab2 G2 F2 | r/4 Bb2/8 Db3 F3/4. Eb3/8 | Db3/4 Ab2 r/8 G2 Bb2 Db3 |
+ C3/4. Bb2/8 G2/4 Eb2 | r/8 F2 Ab2 C3 B2/4 Ab2/8 F2 | Eb2/4 G2/8 Bb2 A2 C3 Eb3 Gb3 | F3/4. Db3/8 Bb2/4 Ab2/8 Bb2 |
+ F2/4 r/8 C3 Eb3 F3 G3 Ab3 | C4/4 Ab3/8 F3 G3/4 Eb3/8 C3 | Db3/4 r/8 Bb2 Db3 F3 Ab3 C4 | Bb3/4 Ab3/8 F3 E3 Db3 Bb2 G2 |
+ Ab2/4. C3/8 Eb3 G3 Bb3/4 | C4 G3/8 Eb3 A3/4 F3/8 Eb3 | Db3/4. C3/8 Bb2/4 G2/8 Eb2 | Ab2/2 r/4 Eb2/8 C2""", vel=96, length='bar')
 BASS_SLIDES = [(0, 1.5, -2.0), (4, 0.0, -1.0), (9, 0.0, -2.0), (12, 0.0, -1.0)]   # (bar, beat, from semitones)
 
 # ------------------------------------------------------------------------------------------------ intro / tag / end
-INTRO_LH = Clip([(0, 3.9, 'Db2', 60), (0, 3.9, 'Ab2', 52), (4, 3.9, 'C2', 58), (4, 3.9, 'G2', 50),
-                 (8, 3.9, 'Bb1', 64), (8, 3.9, 'F2', 54), (12, 1.9, 'Eb2', 62), (12, 1.9, 'Bb2', 52),
-                 (14, 1.9, 'Eb2', 58), (14, 1.9, 'Db3', 50)], length=16)
-INTRO_RH = Clip([(0, 3.8, p, v) for p, v in (('F4', 50), ('Ab4', 52), ('C5', 54), ('Eb5', 70))]
-                + [(2.5, 0.5, 'G5', 64), (3.0, 1.0, 'F5', 60)]
-                + [(4, 3.8, p, v) for p, v in (('Eb4', 48), ('G4', 50), ('Bb4', 52))]
-                + [(6.5, 0.5, 'F5', 58), (7.0, 1.0, 'Eb5', 56)]
-                + [(8, 1.4, p, v) for p, v in (('Db4', 52), ('F4', 52), ('Ab4', 54), ('C5', 68))]
-                + [(9.5, 0.5, 'F5', 68), (10.0, 0.5, 'Ab5', 76)]
-                + [(12, 1.9, p, v) for p, v in (('Db4', 50), ('F4', 52), ('Ab4', 54), ('C5', 66))]
-                + [(14, 1.9, p, v) for p, v in (('E4', 48), ('G4', 52), ('Bb4', 60))], length=16)
-TAG_RH = ph("""
- r/2 Bb4 Db5 F5/2 G5 C6 | Bb5/2 G5 Eb5 Db5/2 A4 Gb4 | F4/2 Ab4 Db5 F5/2 Eb5 Db5 | E5/3 Db5 Bb4/2 Ab4 Eb5""", 68)
-END_LH = Clip([(0, 7.9, p, v) for p, v in (('Ab2', 60), ('Eb3', 48), ('G3', 50))], length=8)
-END_RH = Clip([(0, 7.6, p, v) for p, v in (('D5', 72), ('G5', 76), ('Bb5', 78), ('C6', 84), ('Eb6', 100))],
-              length=8)
+# rolled grips in the pedal (released a breath before the next one: gap=), the hook shape on top
+INTRO_LH = notes('gap=0.1 [Db2=60 Ab2=52]/1 [C2=58 G2=50] [Bb1=64 F2=54] [Eb2=62 Bb2=52]/2 [Eb2=58 Db3=50]')
+INTRO_RH = notes({'grips': 'gap=0.2 [F4=50 Ab4=52 C5=54 Eb5=70]/1 [Eb4=48 G4=50 Bb4=52] '
+                           'gap=0 [Db4=52 F4=52 Ab4=54 C5=68]:4:1.4 gap=0.1 [Db4=50 F4=52 Ab4=54 C5=66]/2 [E4=48 G4=52 Bb4=60]',
+                  'top': 'r:2.5 G5/8=64 F5/4=60 r:2.5 F5/8=58 Eb5/4=56 r:1.5 F5/8=68 Ab5=76'}, length=16)
+TAG_RH = notes("""
+ r/4 Bb4/8 Db5 F5/4 G5/8 C6 | Bb5/4 G5/8 Eb5 Db5/4 A4/8 Gb4 | F4/4 Ab4/8 Db5 F5/4 Eb5/8 Db5 | E5/4. Db5/8 Bb4/4 Ab4/8 Eb5""", vel=68, length='bar')
+END_LH = hold('Ab2=60 Eb3=48 G3=50', 7.9, length=8)
+END_RH = hold('D5=72 G5=76 Bb5=78 C6=84 Eb6=100', 7.6, length=8)
 
 
 def build() -> Song:
@@ -278,7 +230,7 @@ def build() -> Song:
              roll=(8, 22), vel=None):
         c = jazz.comp(P[part], style=style, voicing=voicing, density=dens, intensity=inten, seed=seed,
                       register=reg, answer=answer, vel=vel)
-        b.comp.play(rolled(c, *roll, rng=rng), sec.bar(bar))
+        b.comp.play(c.roll(roll, seed=rng, bpm=TEMPO), sec.bar(bar))     # rolled grips (a seeded speed)
 
     def bass(sec, part, bar, seed, vel, style='two', pickups=0.5):
         # a bassist's touch on the line (jazz.bass_touch): 4-bar arcs around `vel`, the root on 1 leading, the
@@ -292,7 +244,7 @@ def build() -> Song:
     # pianist moves on top of the rolled grips: a trill on the Cm9's 9th (D-Eb, the pedal lifted for it), a turn on
     # the high C, an arpeggio sweep down the Eb7b9 into the head
     b.comp.play(INTRO_LH.strum(ms=60, bpm=TEMPO), intro)
-    b.piano.play(rolled(INTRO_RH, 30, 45, rng), intro)
+    b.piano.play(INTRO_RH.roll((30, 45), seed=rng, bpm=TEMPO), intro)
     b.piano.play(pianist.trill('D5', 2.5, TEMPO, chord='Cm9', rate=13.5, vel=66, seed=11), intro.beat(4))
     hands_memory.played(intro.beat(4), 'trill')      # the ornament budget counts it (pianist.Memory)
     hands_memory.save(solo.bar(31))                  # ... and saves its fast figure for the climax (solo A3's end)
@@ -425,7 +377,7 @@ def build() -> Song:
     b.comp.play(END_LH.strum(ms=70, bpm=TEMPO * 0.72), end)
     b.piano.play(END_RH.strum(ms=80, bpm=TEMPO * 0.72).shift(0.25), end)
     for t in (b.piano, b.comp):
-        t.automate('instrument.pedal', [(end.start - 0.05, 0.0, 'step'), (end.start + 0.02, 1.0, 'step')])
+        t.automate('instrument.pedal', [(-0.05, 0.0, 'step'), (0.02, 1.0, 'step')], at=end)
     b.bass.note('Ab1', end, dur=7, vel=92)
     b.drums.play(Clip([(0, 8, kit['crash'], 28), (0, 0.5, kit['kick'], 30), (0, 2, kit['sweep'], 56),
                        (2, 2, kit['sweep'], 44), (4, 3, kit['sweep'], 32)], length=8), end)

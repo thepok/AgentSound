@@ -134,8 +134,39 @@ class Section:
 
 # -------------------------------------------------------------------------------------- nodes
 
+class FXChain(list):
+    """A node's insert chain (a list of FX) that also takes an effect's name or type as index:
+    track.fx['compressor'].set(attack=25), s.master.fx['limiter'].set(gain=5.2), track.fx['ducker'].params['depth'].
+    A type that occurs more than once is ambiguous (give the fx a name= or use its index)."""
+
+    def __getitem__(self, k):
+        if isinstance(k, str):
+            hits = [f for f in self if f.name == k] or [f for f in self if f.type == k]
+            listing = ', '.join(f"{i}:{f.type}" + (f"({f.name})" if f.name else '') for i, f in enumerate(self))
+            if not hits:
+                raise ComposeError(f"no effect named or of type {k!r} in the chain ({listing or 'empty'})")
+            if len(hits) > 1:
+                raise ComposeError(f"{len(hits)} {k!r} effects in the chain ({listing}): use the index, or name one")
+            return hits[0]
+        return super().__getitem__(k)
+
+    def index_of(self, k) -> int:
+        """The index of an effect found by name / type (as fx[k] finds it)."""
+        f = self[k]
+        return next(i for i, x in enumerate(self) if x is f)
+
+
 class _Node:
     kind = 'node'
+
+    @property
+    def fx(self) -> FXChain:
+        """The insert chain (an FXChain: index it by position, name or type)."""
+        return self._fx
+
+    @fx.setter
+    def fx(self, chain) -> None:
+        self._fx = chain if isinstance(chain, FXChain) else FXChain(chain)
 
     def __init__(self, song: 'Song', id: str, fx, gain_db, pan, output, sends, mute):
         self._song = song
@@ -174,11 +205,12 @@ class _Node:
         self.fx = new + self.fx if first else self.fx + new
         return self
 
-    def automate(self, target: str, *points):
+    def automate(self, target: str, *points, at=None):
         """Automate a target with one or more point lists (see automation.py).
         Targets: 'instrument.<param>' (tracks), 'fx.<index|type|name>.<param>', 'gainDb', 'pan',
         'send.<bus>', 'mod.<name|index>.<field>' (a modulator field: depth, min, max, base, rate, ...).
-        e.g. lead.automate('instrument.cutoff', exp_ramp(0, 32, 400, 6000))."""
+        e.g. lead.automate('instrument.cutoff', exp_ramp(0, 32, 400, 6000)). at= (a Section, beat or (section,
+        beats)) makes the points' beats relative to it: piano.automate('send.echo', [(3, -60), (3.2, -16)], at=coda)."""
         self._check_target(target)
         pts: list = []
         for p in points:
@@ -188,6 +220,10 @@ class _Node:
                 pts.extend(p)
         if not pts:
             raise ComposeError(f"automate({target!r}) on {self.kind} {self.id!r} got no points")
+        if at is not None:
+            a = self._song._at(at)
+            pts = [(p[0] + a,) + tuple(p[1:]) if isinstance(p, (tuple, list)) and p and isinstance(p[0], (int, float))
+                   and not isinstance(p[0], bool) else p for p in pts]
         _auto.normalize(pts, f"{self.kind} {self.id!r} automation {target!r}")  # validate early
         self._auto.append((target, pts))
         return self
@@ -298,13 +334,26 @@ class Track(_Node):
         c = self._prep(what, transpose, vel)
         if not isinstance(times, int) or isinstance(times, bool) or times < 1:
             raise ComposeError(f"track {self.id!r}: times must be an int >= 1, got {times!r}")
+        one = c.length
         if times > 1:
             c = c.repeat(times)
         start = self._song._at(at)
         if replace:
             self.clear(start, start + max(c.length, 1e-9))
         self._place(c, start)
+        self._gestures(what, [start + k * one for k in range(times)])
         return self
+
+    def _gestures(self, what, offsets, until=None) -> None:
+        """The pitch gestures a notation Line carries (^scoop, ^fall, ^vib ...), written at each offset (those
+        starting at or after `until` - a loop's end - are left out)."""
+        gest = getattr(what, 'gestures', None)
+        if gest:
+            from .notation import realize
+            for a in offsets:
+                gs = [g for g in gest if until is None or a + g['start'] < until - 1e-9]
+                if gs:
+                    realize(self, gs, a)
 
     def _place(self, c: Clip, start: float) -> None:
         origin = _caller()
@@ -335,6 +384,8 @@ class Track(_Node):
             if end <= start:
                 raise ComposeError(f"track {self.id!r}: loop end {end:g} is not after its start {start:g}")
             self._place(c.loop(end - start), start)
+            self._gestures(what, [start + k * c.length
+                                  for k in range(int(math.ceil((end - start) / c.length - 1e-9)))], until=end)
         return self
 
     def note(self, pitch, at, dur: float = 1.0, vel: int = 100, art=None):
@@ -343,8 +394,10 @@ class Track(_Node):
         c = Clip([(0.0, dur, pitch, vel)], length=dur)
         return self.play(c if art is None else _art.articulate(c, art), at)
 
-    def clear(self, start=0.0, end=None, pitches=None):
-        """Remove notes starting in [start, end) (a Section as start means its whole span)."""
+    def clear(self, start=0.0, end=None, pitches=None, *, cut: bool = False):
+        """Remove notes starting in [start, end) (a Section as start means its whole span). cut=True also ends the
+        notes still SOUNDING at `start` right there (a held pad or a long bass note would ring on into the silence
+        otherwise): a real stop."""
         if isinstance(start, Section) and end is None:
             start, end = start.start, start.end
         a = self._song._at(start)
@@ -353,6 +406,18 @@ class Track(_Node):
         keep = [not (a - 1e-9 <= n.start < b - 1e-9 and (ps is None or n.pitch in ps)) for n in self._notes]
         self._notes = [n for n, k in zip(self._notes, keep) if k]
         self._origin = [o for o, k in zip(self._origin, keep) if k]
+        if cut:
+            self.cut(a, pitches)
+        return self
+
+    def cut(self, at, pitches=None):
+        """End every note sounding through `at` (a beat, Section or (section, beats)) right there - the notes that
+        started before and would ring on (pitches= limits it): bass.cut(drop.start)."""
+        a = self._song._at(at)
+        ps = None if pitches is None else {drum(p) for p in (pitches if isinstance(pitches, (list, tuple, set)) else [pitches])}
+        self._notes = [n._replace(dur=a - n.start) if (n.start < a - 1e-9 and n.start + n.dur > a + 1e-9
+                                                        and (ps is None or n.pitch in ps)) else n
+                       for n in self._notes]
         return self
 
     def _prep(self, what, transpose, vel) -> Clip:
@@ -728,12 +793,44 @@ class Song:
     def length(self, beats: float) -> None:
         self._length = _num(beats, 'song length (beats)', 0)
 
+    def at(self, pos, beats: float = 0.0) -> float:
+        """The absolute beat of a position - a beat, a Section or section name (= its start), or (position, beats) -
+        plus `beats`: s.at(chorus, 2.5) == chorus.start + 2.5. Every position argument of the song API takes the same
+        forms: track.note('C4', (verse, 3.5)), track.play(fill, (chorus, -1)), automate(..., at=coda)."""
+        return self._at(pos) + _num(beats, 'at beats')
+
     def _at(self, x) -> float:
         if isinstance(x, Section):
             return x.start
         if isinstance(x, str):
             return self[x].start
+        if isinstance(x, tuple) and len(x) == 2 and not isinstance(x[0], bool) \
+                and isinstance(x[0], (Section, str, int, float, tuple)):
+            return self._at(x[0]) + _num(x[1], f"position {x!r}: beats after")
         return _num(x, 'position (beats)')
+
+    def breath(self, before, beats: float = 1.0, *, keep=(), tracks=None) -> 'Song':
+        """A drop: everything stops for `beats` beats before each position of `before` (Sections / beats) - notes
+        starting there are removed and notes still sounding are ended (track.clear(cut=True)) - except the tracks in
+        keep= (risers, impacts, a voice); tracks= names the ones to stop instead.
+            s.breath(before=[chorus1, chorus2, final], beats=1, keep=[riser, impact])"""
+        pos = list(before) if isinstance(before, list) else [before]
+        b = _num(beats, 'breath beats', 0)
+        if b <= 0:
+            raise ComposeError("breath() needs beats > 0")
+        if tracks is not None and keep:
+            raise ComposeError("breath(): give keep= or tracks=, not both")
+        ids = [_ref(t) for t in (tracks if tracks is not None else keep)]
+        unknown = [i for i in ids if i not in self.tracks]
+        if unknown:
+            raise ComposeError(f"breath(): no track {unknown[0]!r} (tracks: {', '.join(self.tracks)})")
+        sel = [self.tracks[i] for i in ids] if tracks is not None else \
+            [t for t in self.tracks.values() if t.id not in set(ids)]
+        for p in pos:
+            x = self._at(p)
+            for t in sel:
+                t.clear(x - b, x, cut=True)
+        return self
 
     # --- music helpers bound to the song key / meter
     def prog(self, spec, bars: float = 1, meter=None) -> Progression:

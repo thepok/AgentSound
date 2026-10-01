@@ -22,6 +22,8 @@ from .patches import FX, Instrument, Layer, Patch, fx, inst, layer
 from .patterns import (ARP_MODES, BASS_STYLES, DRUMS, Clip, Motif, Note, arp, as_clip, bassline, beats, chords,
                        crash, dotted, drum, drums, euclid, grid, melody, snare_roll, tom_fill, triplet)
 from .heroes import hero
+from . import notation
+from .notation import Line, Phrases, notes, phrases
 from .song import Bus, Section, Song, Track
 from .theory import (PROGRESSIONS, SCALES, VOICINGS, Chord, ComposeError, Key, Progression, chord, hz, note,
                      note_name, pc, scale, voice, voice_lead)
@@ -71,4 +73,7 @@ __all__ = [
     'mixer',
     # the wind player: breath inside held notes, air-coupled vibrato, mic technique (hornist.arrange(...).place(t, at))
     'hornist',
+    # notation: one compact text format for note data - notes('C5/8 Eb5 G5/4. | ...'), phrases(a1=..)('a1 a2+2d'),
+    # notation.format(clip) back to text (hold('C3 G3 E4', 8) - the chord - is automation.hold with pitches)
+    'notation', 'notes', 'phrases', 'Line', 'Phrases',
 ]

@@ -268,6 +268,14 @@ class Clip:
     def with_length(self, length) -> 'Clip':
         return Clip._raw(self._notes, beats(length))
 
+    def window(self, start: float = 0.0, end: float | None = None) -> 'Clip':
+        """The notes starting in [start, end) at their own positions (unlike slice(): nothing moves or is cut; the
+        length stays): bass.window(16) = the second half of a 32-beat line, still at 16."""
+        a, b = float(start), math.inf if end is None else float(end)
+        if b <= a:
+            raise ComposeError(f"window end {end} must be after start {start}")
+        return Clip._raw([x for x in self._notes if a - _EPS <= x.start < b - _EPS], self.length)
+
     # --- pitch
     def transpose(self, semitones: int) -> 'Clip':
         out = []
@@ -314,6 +322,32 @@ class Clip:
 
     def with_vel(self, vel: int) -> 'Clip':
         return Clip._raw([x._replace(vel=_vel(vel)) for x in self._notes], self.length)
+
+    def vel_add(self, dv: float) -> 'Clip':
+        """Add `dv` to every velocity (clamped to 1..127): line.vel_add(-8) for a softer double."""
+        return Clip._raw([x._replace(vel=_vel(x.vel + dv)) for x in self._notes], self.length)
+
+    def arch(self, bars: float = 4, depth: float = 0.3, *, beats_per_bar: float = 4.0, power: float = 0.8,
+             lo: int = 30, hi: int = 120) -> 'Clip':
+        """A phrase arch on the velocities, every `bars` bars from the clip start: x (1 - depth/2 + depth *
+        sin(pi * x^power)), x = the position in the arch (0..1) - rising to ~60 % of it, relaxing after; clamped to
+        lo..hi. Played chords / pads that breathe in 4-bar phrases: pad.play(prog.block().arch(4, 0.3), verse)."""
+        span = float(bars) * float(beats_per_bar)
+        if span <= 0 or not 0 <= depth <= 2:
+            raise ComposeError(f"arch(bars={bars}, depth={depth}): bars must be > 0 and depth 0..2")
+        return Clip._raw([x._replace(vel=max(lo, min(hi, round(
+            x.vel * (1 - depth / 2 + depth * math.sin(math.pi * ((x.start % span) / span) ** power))))))
+            for x in self._notes], self.length)
+
+    def roll(self, ms=(8.0, 22.0), *, seed=0, bpm: float = 120.0, direction: str = 'up') -> 'Clip':
+        """A pianist's hands never land flat: every chord rolled (strum()) by `ms` milliseconds - a number, or
+        (lo, hi) for a seeded speed between them (seed: an int / str, or a random.Random to draw from)."""
+        if isinstance(ms, (tuple, list)):
+            if len(ms) != 2:
+                raise ComposeError(f"roll ms must be a number or (lo, hi), got {ms!r}")
+            rng = seed if isinstance(seed, random.Random) else random.Random(seed_int(seed))
+            ms = rng.uniform(float(ms[0]), float(ms[1]))
+        return self.strum(ms=ms, direction=direction, bpm=bpm)
 
     def gate(self, factor: float) -> 'Clip':
         """Scale note durations (0.5 = staccato)."""
@@ -400,10 +434,13 @@ class Clip:
         from .midifx import echo
         return echo(self, times, delay, decay, transpose, gate, key, wrap)
 
-    def harmonize(self, interval=None, *, key=None, steps=None, semitones=None, vel: float = 0.8) -> 'Clip':
-        """Parallel voices: harmonize('3rd', key=k) (diatonic), ['3rd', '5th'], '-6th', steps=[2], semitones=[12]."""
+    def harmonize(self, interval=None, *, key=None, steps=None, semitones=None, vel: float = 0.8, keep: bool = True,
+                  fit=None, strong: float = 1.0, fold=None) -> 'Clip':
+        """Parallel voices: harmonize('3rd', key=k) (diatonic), ['3rd', '5th'], '-6th', steps=[2], semitones=[12];
+        keep=False only the voices (a harmony part), fit=prog chord-tone aware, fold=(lo, hi) a register."""
         from .midifx import harmonize
-        return harmonize(self, interval, key=key, steps=steps, semitones=semitones, vel=vel)
+        return harmonize(self, interval, key=key, steps=steps, semitones=semitones, vel=vel, keep=keep, fit=fit,
+                         strong=strong, fold=fold)
 
     def chordify(self, shape='triad', key=None, voicing: str = 'close', vel: float = 1.0) -> 'Clip':
         """Every note becomes a chord rooted on it: triad 7th 9th 6th (diatonic, need key=), sus2 sus4 add9

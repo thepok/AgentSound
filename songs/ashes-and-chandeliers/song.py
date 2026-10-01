@@ -120,28 +120,12 @@ MIX = {
 
 # ============================================================================================ material helpers
 
-def mel(rows, length, shift=0.0, transpose=0):
-    """A Clip from (start, dur, pitch[, vel]) rows (vel default 90)."""
-    out = []
-    for r in rows:
-        v = r[3] if len(r) > 3 else 90
-        out.append((r[0] + shift, r[1], nn(r[2]) + transpose, v))
-    return Clip(out, length=length)
-
-
-def chord_at(prog, beat):
-    for st, ln, c in prog:
-        if st - 1e-6 <= beat < st + ln - 1e-6:
-            return c
-    return list(prog)[-1][2]
-
-
 def harmony(line, prog, voices=3, floor=48, gap=3):
     """Homophonic block harmony under a line (a choir / brass section): each note gets the chord tones below it
     (of the chord sounding at its onset), at least `gap` semitones apart, never under `floor`."""
     out = []
     for n in line:
-        c = chord_at(prog, n.start)
+        c = prog.at(n.start)
         pcs = set(c.pcs)
         out.append((n.start, n.dur, n.pitch, n.vel))
         p, got = n.pitch - gap, 0
@@ -153,17 +137,6 @@ def harmony(line, prog, voices=3, floor=48, gap=3):
                 p -= gap
             else:
                 p -= 1
-    return Clip(out, length=line.length)
-
-
-def third(line, key, steps=-2):
-    """The line moved by diatonic steps (a third below = -2, above = +2); chromatic notes follow their neighbour."""
-    k = Key(key) if isinstance(key, str) else key
-    out = []
-    for n in line:
-        p = k.snap(n.pitch)
-        q = k.transpose(p, steps) + (n.pitch - p)
-        out.append((n.start, n.dur, q, n.vel))
     return Clip(out, length=line.length)
 
 
@@ -218,70 +191,51 @@ def pads(prog, register, voices, vel):
 
 
 # ============================================================================================ the themes
-# The curtain motif: an upbeat G4, a sixth up to a held Eb5, a sigh down - then the answer climbs higher.
-THEME = [
-    (0, 0.5, 'G4'), (0.5, 2.0, 'Eb5'), (2.5, 0.5, 'D5'), (3, 1, 'C5'),
-    (4, 1.5, 'C5'), (5.5, 0.5, 'Bb4'), (6, 1, 'Ab4'), (7, 0.5, 'G4'), (7.5, 0.5, 'Ab4'),
-    (8, 1, 'C5'), (9, 2, 'F5'), (11, 0.5, 'Eb5'), (11.5, 0.5, 'D5'),
-    (12, 2, 'D5'), (14, 1.5, 'B4'),
-    (16, 0.5, 'G4'), (16.5, 1.5, 'Eb5'), (18, 1.5, 'G5'), (19.5, 0.5, 'F5'),
-    (20, 1, 'F5'), (21, 1, 'D5'), (22, 2, 'Eb5'),
-]
-THEME_HALF = [(24, 1.5, 'C5'), (25.5, 0.5, 'D5'), (26, 1, 'Eb5'), (27, 1, 'Ab4'), (28, 3, 'G4')]
-THEME_FULL = [(24, 1.5, 'C5'), (25.5, 0.5, 'Bb4'), (26, 1, 'Ab4'), (27, 1, 'B4'), (28, 3.5, 'C5')]
+# agentsound notation (docs/COMPOSE_API.md "Notation"): note values are sticky, '|' checks the bars, @8 = from beat 8.
+# The curtain motif: an upbeat G4, a sixth up to a held Eb5, a sigh down - then the answer climbs higher. The theme's
+# phrases are named and spliced into lines: TUNE('head climb half'); every line is played at velocity 90 (touch()
+# shapes it).
+TUNE = phrases(
+    vel=90,
+    head='G4/8 Eb5/2 D5/8 C5/4 | C5/4. Bb4/8 Ab4/4 G4/8 Ab4 | C5/4 F5/2 Eb5/8 D5 | D5/2 B4/4. r/8 |',
+    climb='G4/8 Eb5/4. G5/4. F5/8 | F5/4 D5 Eb5/2 |',
+    half='C5/4. D5/8 Eb5/4 Ab4 | G4/2.',                      # the half close on the dominant
+    full='C5/4. Bb4/8 Ab4/4 B4 | C5/2..',                     # the full close on the tonic
+    ret='Eb5/4 D5 C5/2',                                      # the return: straight into the Ab chord
+    intro='r/2 G4/8 Eb5/4. | r/2 D5/4 C5 | r/2 C5/8 F5/4. | D5/2 B4',    # the motif hinted
+    middle='Bb5/4. G5/8 Eb5/4 F5 | F5/4. D5/8 Bb4/2 | C5/4 Eb5 G5 Bb5 | Ab5/2. G5/8 F5 | '
+           'Eb5/4. F5/8 Ab5/4 C6 | Bb5/2 Ab5/4 G5 | G5 Eb5 C5/4. D5/8 | D5/2 B4/4 D5',
+    coda='G4/8 Eb5/2 D5/8 C5/4 | C5/2 Bb4/4 Ab4 | Ab4 C5/2 F4/4 | G4/2 D5 | C5 B4',
+    # Part IV: the theme in C major (finale), the motif climbing to C6 (summit)
+    finale='G4/8 E5/2 D5/8 C5/4 | C5/4. B4/8 A4/4 G4/8 A4 | C5/4 F5/2 E5/8 D5 | D5/2 B4/4. r/8 | '
+           'G4/8 E5/4. G5/4. F5/8 | F5/4 D5 E5/2 | C5/4. D5/8 F5/4 D5 | C5/1',
+    summit='Eb5/8 C6/2 Bb5/8 Ab5/4 | F5/8 D6/2 C6/8 Bb5/4 | C6/2 D6/4 E6 | C6/1',
+    # Part II (E minor): call and response, the masque's waltz tune (3/4)
+    call1='B3/8 G4/4. F#4/4 E4 | D4/2 B3/4.',
+    answer1='@8 G4/8 E5/4. D5/4 C5 | B4/4. C5/8 D#5/2',
+    call2='E3/8 C4/4. B3/4 A3 | G3/2 E3/4.',
+    answer2='@8 C5/8 A5/4. F#5/4 E5 | D#5/4. E5/8 F#5/2',
+    call3m='B3/8 G4/4. F#4/4 E4 | r/1 | C4/8 G4/4. F#4/4 E4',
+    call3f='r/1 | D5/8 B5/4. A5/4 G5 | r/1 | E5/8 C6/4. B5/4 A5',
+    tutti4='G5/2 E5 | A5 F#5 | B5/2. A5/4 | A5/2 D#5/4',
+    masque='meter=3/4 D5/4 B5/4. A5/8 | A5/4 F#5 D5 | G5 A5/8 B5 D6/4 | E6/2 D6/8 B5 | C6/4 A5 E5 | F#5 A5 C6 | '
+           'B5/2 G5/4 | F#5 A5 D#5 | B4/8 G5/4. F#5/4 | E5 G5 C6 | C6/4. A5/8 F#5/4 | D#5/2 B4/4',
+    # Part III: the lead guitar's solo - bars 1-4 the motif, answered; 5-8 climbing, faster; 9-12 the peak and the
+    # fall back to the riff
+    solo='E5/8 C6/4. B5/8 A5/4. | r/8 A5 G5 F5 A5/2 | r/8 D5 G5 A5 B5/4. D6/8 | C6/2. B5/8 A5 | '
+         'C6 A5 F5 A5 C6/4 A5 | B5/8 G5 D5 G5 B5/4. C6/8 | B5/2 G5/8 E5 G5/4 | A5/8 C6 E6 D6:2.5 | '
+         'D6/2. C6/8 A5 | B5/4. G#5/8 E5/2 | E5/8 C6/4. B5/8 A5/4. | B5/4 G#5 E5/2')
 P_THEME = 'Cm Ab Fm G7sus4:0.5 G7:0.5 Cm Bb:0.5 Eb:0.5 Ab:0.5 Fm7:0.5 G'
 P_THEME2 = 'Cm Ab Fm G7sus4:0.5 G7:0.5 Cm Bb:0.5 Eb:0.5 Ab:0.5 G7:0.5 Cm'
-
-INTRO_RH = [(2, 0.5, 'G4'), (2.5, 1.5, 'Eb5'), (6, 1, 'D5'), (7, 1, 'C5'), (10, 0.5, 'C5'), (10.5, 1.5, 'F5'),
-            (12, 2, 'D5'), (14, 2, 'B4')]
 P_INTRO = 'Cm Ab/C Fm/C G7sus4:0.5 G7:0.5'
-
-MIDDLE = [
-    (0, 1.5, 'Bb5'), (1.5, 0.5, 'G5'), (2, 1, 'Eb5'), (3, 1, 'F5'),
-    (4, 1.5, 'F5'), (5.5, 0.5, 'D5'), (6, 2, 'Bb4'),
-    (8, 1, 'C5'), (9, 1, 'Eb5'), (10, 1, 'G5'), (11, 1, 'Bb5'),
-    (12, 3, 'Ab5'), (15, 0.5, 'G5'), (15.5, 0.5, 'F5'),
-    (16, 1.5, 'Eb5'), (17.5, 0.5, 'F5'), (18, 1, 'Ab5'), (19, 1, 'C6'),
-    (20, 2, 'Bb5'), (22, 1, 'Ab5'), (23, 1, 'G5'),
-    (24, 1, 'G5'), (25, 1, 'Eb5'), (26, 1.5, 'C5'), (27.5, 0.5, 'D5'),
-    (28, 2, 'D5'), (30, 1, 'B4'), (31, 1, 'D5'),
-]
 P_MIDDLE = 'Eb Bb/D Cm Ab Fm7 Bb7sus4:0.5 Bb7:0.5 Eb/G:0.5 Ab:0.5 Fm6/Ab:0.5 G7:0.5'
-
-RETURN = [
-    (0, 0.5, 'G4'), (0.5, 2.0, 'Eb5'), (2.5, 0.5, 'D5'), (3, 1, 'C5'),
-    (4, 1.5, 'C5'), (5.5, 0.5, 'Bb4'), (6, 1, 'Ab4'), (7, 0.5, 'G4'), (7.5, 0.5, 'Ab4'),
-    (8, 1, 'C5'), (9, 2, 'F5'), (11, 0.5, 'Eb5'), (11.5, 0.5, 'D5'),
-    (12, 2, 'D5'), (14, 1.5, 'B4'),
-    (16, 1, 'Eb5'), (17, 1, 'D5'), (18, 2, 'C5'),
-]
 P_RETURN = 'Cm Ab Fm G7sus4:0.5 G7:0.5 Ab:2'
-
-CODA = [(0, 0.5, 'G4'), (0.5, 2, 'Eb5'), (2.5, 0.5, 'D5'), (3, 1, 'C5'),
-        (4, 2, 'C5'), (6, 1, 'Bb4'), (7, 1, 'Ab4'),
-        (8, 1, 'Ab4'), (9, 2, 'C5'), (11, 1, 'F4'),
-        (12, 2, 'G4'), (14, 2, 'D5'),
-        (16, 2, 'C5'), (18, 2, 'B4')]
 P_CODA = 'Cm Ab Fm G7sus4:0.5 G7:0.5 Ab:0.5 G7:0.5'
 
 # ---- Part III / IV: the theme in A minor (guitars) and in C major (finale)
 P_ANTHEM = 'Am F Dm E7sus4:0.5 E7:0.5 Am G:0.5 C:0.5 F:0.5 Dm7:0.5 E'
 P_ANTHEM2 = 'Am F Dm E7sus4:0.5 E7:0.5 Am G:0.5 C:0.5 F:0.5 E7:0.5 Am'
-FINALE = [
-    (0, 0.5, 'G4'), (0.5, 2.0, 'E5'), (2.5, 0.5, 'D5'), (3, 1, 'C5'),
-    (4, 1.5, 'C5'), (5.5, 0.5, 'B4'), (6, 1, 'A4'), (7, 0.5, 'G4'), (7.5, 0.5, 'A4'),
-    (8, 1, 'C5'), (9, 2, 'F5'), (11, 0.5, 'E5'), (11.5, 0.5, 'D5'),
-    (12, 2, 'D5'), (14, 1.5, 'B4'),
-    (16, 0.5, 'G4'), (16.5, 1.5, 'E5'), (18, 1.5, 'G5'), (19.5, 0.5, 'F5'),
-    (20, 1, 'F5'), (21, 1, 'D5'), (22, 2, 'E5'),
-    (24, 1.5, 'C5'), (25.5, 0.5, 'D5'), (26, 1, 'F5'), (27, 1, 'D5'),
-    (28, 4, 'C5'),
-]
 P_FINALE = 'C Am F Gsus4:0.5 G:0.5 C Bb:0.5 C:0.5 Ab:0.5 Bb:0.5 C'
-SUMMIT = [(0, 0.5, 'Eb5'), (0.5, 2, 'C6'), (2.5, 0.5, 'Bb5'), (3, 1, 'Ab5'),
-          (4, 0.5, 'F5'), (4.5, 2, 'D6'), (6.5, 0.5, 'C6'), (7, 1, 'Bb5'),
-          (8, 2, 'C6'), (10, 1, 'D6'), (11, 1, 'E6'),
-          (12, 4, 'C6')]
 P_SUMMIT = 'Ab Bb Csus4:0.5 C:0.5 C'
 
 # ---- Part II material (E minor)
@@ -290,57 +244,14 @@ P_CALL1 = 'Em Em/D C B7'
 P_CALL2 = 'Am Am/G F#m7b5 B7'
 P_CALL3 = 'Em G/D C Am/C'
 P_CALL4 = 'C D B7sus4 B7'
-CALL1 = [(0, 0.5, 'B3'), (0.5, 1.5, 'G4'), (2, 1, 'F#4'), (3, 1, 'E4'), (4, 2, 'D4'), (6, 1.5, 'B3')]
-ANSWER1 = [(8, 0.5, 'G4'), (8.5, 1.5, 'E5'), (10, 1, 'D5'), (11, 1, 'C5'), (12, 1.5, 'B4'), (13.5, 0.5, 'C5'),
-           (14, 2, 'D#5')]
-CALL2 = [(0, 0.5, 'E3'), (0.5, 1.5, 'C4'), (2, 1, 'B3'), (3, 1, 'A3'), (4, 2, 'G3'), (6, 1.5, 'E3')]
-ANSWER2 = [(8, 0.5, 'C5'), (8.5, 1.5, 'A5'), (10, 1, 'F#5'), (11, 1, 'E5'), (12, 1.5, 'D#5'), (13.5, 0.5, 'E5'),
-           (14, 2, 'F#5')]
-CALL3M = [(0, 0.5, 'B3'), (0.5, 1.5, 'G4'), (2, 1, 'F#4'), (3, 1, 'E4'),
-          (8, 0.5, 'C4'), (8.5, 1.5, 'G4'), (10, 1, 'F#4'), (11, 1, 'E4')]
-CALL3F = [(4, 0.5, 'D5'), (4.5, 1.5, 'B5'), (6, 1, 'A5'), (7, 1, 'G5'),
-          (12, 0.5, 'E5'), (12.5, 1.5, 'C6'), (14, 1, 'B5'), (15, 1, 'A5')]
-TUTTI4 = [(0, 2, 'G5'), (2, 2, 'E5'), (4, 2, 'A5'), (6, 2, 'F#5'), (8, 3, 'B5'), (11, 1, 'A5'), (12, 2, 'A5'),
-          (14, 1, 'D#5')]
 P_MASQUE = 'G D7/F# G/D Em Am D7 G B7 Em C F#m7b5 B7'
-MASQUE = [(0, 1, 'D5'), (1, 1.5, 'B5'), (2.5, 0.5, 'A5'),
-          (3, 1, 'A5'), (4, 1, 'F#5'), (5, 1, 'D5'),
-          (6, 1, 'G5'), (7, 0.5, 'A5'), (7.5, 0.5, 'B5'), (8, 1, 'D6'),
-          (9, 2, 'E6'), (11, 0.5, 'D6'), (11.5, 0.5, 'B5'),
-          (12, 1, 'C6'), (13, 1, 'A5'), (14, 1, 'E5'),
-          (15, 1, 'F#5'), (16, 1, 'A5'), (17, 1, 'C6'),
-          (18, 2, 'B5'), (20, 1, 'G5'),
-          (21, 1, 'F#5'), (22, 1, 'A5'), (23, 1, 'D#5'),
-          (24, 0.5, 'B4'), (24.5, 1.5, 'G5'), (26, 1, 'F#5'),
-          (27, 1, 'E5'), (28, 1, 'G5'), (29, 1, 'C6'),
-          (30, 1.5, 'C6'), (31.5, 0.5, 'A5'), (32, 1, 'F#5'),
-          (33, 2, 'D#5'), (35, 1, 'B4')]
 P_ASCENT = 'Em/B C/B Am/B B7 C D B7sus4 E'
 
-# ---- Part III: the riff, the solo
-RIFF_ROOTS = [(0, 0.5, 'A2', 'p'), (0.5, 0.5, 'A2', 'p'), (1, 0.5, 'A2', 'p'), (1.5, 0.5, 'C3', ''),
-              (2, 1, 'D3', ''), (3, 0.5, 'E3', ''), (3.5, 0.5, 'D3', ''),
-              (4, 0.5, 'A2', 'p'), (4.5, 0.5, 'A2', 'p'), (5, 0.5, 'A2', 'p'), (5.5, 0.5, 'G2', ''),
-              (6, 0.5, 'G2', ''), (6.5, 1, 'F2', ''), (7.5, 0.5, 'E2', '')]
+# ---- Part III: the riff - palm-muted A chugs under the accented hits (two layers: the brass doubles the hits)
+RIFF_CHUGS = 'A2/8 A2 A2 r/8 r/2 | A2/8 A2 A2 r/8 r/2'
+RIFF_HITS = 'r/4. C3/8 D3/4 E3/8 D3 | r/4. G2/8 G2 F2/4 E2/8'
 P_RIFF = 'Am:0.375 C:0.125 D:0.375 E:0.125 Am:0.375 G:0.25 F:0.375'
 P_SOLO = 'Am F G Am F G Em Am Dm E7 Am E7'
-SOLO = [
-    # bars 1-4: the motif, answered
-    (0, 0.5, 'E5'), (0.5, 1.5, 'C6'), (2, 0.5, 'B5'), (2.5, 1.5, 'A5'),
-    (4.5, 0.5, 'A5'), (5, 0.5, 'G5'), (5.5, 0.5, 'F5'), (6, 2, 'A5'),
-    (8.5, 0.5, 'D5'), (9, 0.5, 'G5'), (9.5, 0.5, 'A5'), (10, 1.5, 'B5'), (11.5, 0.5, 'D6'),
-    (12, 3, 'C6'), (15, 0.5, 'B5'), (15.5, 0.5, 'A5'),
-    # bars 5-8: climbing, faster
-    (16, 0.5, 'C6'), (16.5, 0.5, 'A5'), (17, 0.5, 'F5'), (17.5, 0.5, 'A5'), (18, 1, 'C6'), (19, 1, 'A5'),
-    (20, 0.5, 'B5'), (20.5, 0.5, 'G5'), (21, 0.5, 'D5'), (21.5, 0.5, 'G5'), (22, 1.5, 'B5'), (23.5, 0.5, 'C6'),
-    (24, 2, 'B5'), (26, 0.5, 'G5'), (26.5, 0.5, 'E5'), (27, 1, 'G5'),
-    (28, 0.5, 'A5'), (28.5, 0.5, 'C6'), (29, 0.5, 'E6'), (29.5, 2.5, 'D6'),
-    # bars 9-12: the peak and the fall back to the riff
-    (32, 3, 'D6'), (35, 0.5, 'C6'), (35.5, 0.5, 'A5'),
-    (36, 1.5, 'B5'), (37.5, 0.5, 'G#5'), (38, 2, 'E5'),
-    (40, 0.5, 'E5'), (40.5, 1.5, 'C6'), (42, 0.5, 'B5'), (42.5, 1.5, 'A5'),
-    (44, 1, 'B5'), (45, 1, 'G#5'), (46, 2, 'E5'),
-]
 
 
 def build() -> Song:
@@ -383,9 +294,7 @@ def build() -> Song:
     s.rubato((coda.start, coda.bar(4)), depth=0.05, phrase='arch')
     s.ritardando((coda.bar(4), coda.bar(5)), to=0.72, a_tempo=False)
     s.fermata(coda.bar(5), hold=4)
-
-    def bpm(at):
-        return s.tempo_at(float(getattr(at, 'start', at)))
+    bpm = s.tempo_at                           # the tempo at a beat / section (the tempo map above)
 
     # ------------------------------------------------------------------------------------ the ensemble
     o = bands.film_orchestra(s, ids={'drums': 'taiko'})          # sets the hall + the film master first
@@ -399,15 +308,15 @@ def build() -> Song:
     g1 = s.track('gtr1', 'layered/hero_guitar_heavy', pan=0.0, gain_db=-1.0)
     g2 = s.track('gtr2', 'layered/hero_guitar', pan=-0.65, gain_db=-4.0)        # the orchestra wide (A&R #3)
     g3 = s.track('gtr3', 'layered/hero_guitar', pan=0.65, gain_db=-5.0)
-    P = lambda role, clip, at, **kw: orch.perform(o, role, clip, at, seed=sum(map(ord, role)) + int(s._at(at)), **kw)  # noqa
+    P = lambda role, clip, at, **kw: orch.perform(o, role, clip, at, seed=sum(map(ord, role)) + int(s.at(at)), **kw)  # noqa
     K = orch.PERCUSSION_KEYS
     pmem = pianist.Memory()
     pmem.save(coda.bar(4))                     # the pianist keeps its one big figure for the last cadence
 
-    def piano_part(melody_rows, prog_spec, sec, lo, hi, *, key=None, lh_vel=58, shift=0, style='ballad',
-                   density=0.55, seed=1, climax=False, lh=True, bars=None, lead_in=False, section_end=True):
+    def piano_part(line, prog_spec, sec, lo, hi, *, key=None, lh_vel=58, style='ballad',
+                   density=0.55, seed=1, climax=False, lh=True, lead_in=False, section_end=True):
         prog = s.prog(prog_spec)
-        m = touch(mel(melody_rows, prog.length, transpose=shift), lo, hi)
+        m = touch(TUNE(line, length=prog.length), lo, hi)
         arr = pianist.arrange(m, prog, bpm=bpm(sec), key=key or s.key, style=style, density=density, seed=seed,
                               lh=None, climax=climax, lead_in=lead_in, section_end=section_end,
                               devices={'close': 2, 'octave': 1.5, 'thirds': 1.5, 'sixths': 1.5, 'drop2': 1},
@@ -421,7 +330,7 @@ def build() -> Song:
     # =================================================================================== I  CANDLELIGHT
     # intro: rolled chords in the pedal + the motif hinted, very soft
     pi = s.prog(P_INTRO)
-    ri = pianist.arrange(touch(mel(INTRO_RH, 16), 40, 70), pi, bpm=72, key=s.key, style='ballad', density=0.4,
+    ri = pianist.arrange(touch(TUNE('intro'), 40, 70), pi, bpm=72, key=s.key, style='ballad', density=0.4,
                          seed=3, memory=pmem, at=intro.start)
     piano.play(ri.rh, intro)
     rolled = chords(pi, register=('C2', 'G4'), voices=5, vel=46).strum(ms=55, bpm=64)
@@ -429,25 +338,21 @@ def build() -> Song:
     piano.automate('instrument.pedal', ri.pedal(pi, intro))
 
     # theme: the piano states it; basses and cellos join softly in bar 5
-    _, pt = piano_part(THEME + THEME_HALF, P_THEME, theme, 52, 96, lh_vel=46, seed=11)
-    P('cellos', Clip([(n.start, n.dur, n.pitch, n.vel) for n in pt.bass('root', low='C3', vel=44) if n.start >= 16],
-           length=32), theme, shapes='swell')
-    P('basses', Clip([(n.start, n.dur, n.pitch, n.vel) for n in pt.bass('root', low='C2', vel=42) if n.start >= 16],
-                     length=32), theme, shapes='swell')
+    _, pt = piano_part('head climb half', P_THEME, theme, 52, 96, lh_vel=46, seed=11)
+    P('cellos', pt.bass('root', low='C3', vel=44).window(16), theme, shapes='swell')
+    P('basses', pt.bass('root', low='C2', vel=42).window(16), theme, shapes='swell')
 
     # theme2: the string pad and a cello counter-line; the theme closes on the tonic
-    _, pt2 = piano_part(THEME + THEME_FULL, P_THEME2, theme2, 58, 104, lh_vel=50, seed=12)
+    _, pt2 = piano_part('head climb full', P_THEME2, theme2, 58, 104, lh_vel=50, seed=12)
     P('violins2', pads(pt2, ('G4', 'Eb5'), 2, 42), theme2, shapes='swell')
     P('violas', pads(pt2, ('C4', 'G4'), 2, 44), theme2, shapes='swell')
-    counter = mel([(2, 2, 'G3'), (4, 2, 'Ab3'), (6, 2, 'C4'), (8, 3, 'C4'), (11, 1, 'Bb3'), (12, 2, 'B3'),
-                   (14, 2, 'D4'), (16, 3, 'Eb4'), (19, 1, 'D4'), (20, 2, 'D4'), (22, 2, 'G3'), (24, 2, 'Ab3'),
-                   (26, 2, 'F3'), (28, 4, 'G3')], 32)
+    counter = TUNE('r/2 G3 | Ab3 C4 | C4/2. Bb3/4 | B3/2 D4 | Eb4/2. D4/4 | D4/2 G3 | Ab3 F3 | G3/1')
     P('cellos', touch(counter, 40, 66), theme2)
     P('basses', pt2.bass('root', low='C2', vel=46), theme2, shapes='swell')
 
     # middle: Eb major, the piano higher; violins double it in the second half; horns and the 'oh' choir under
-    _, pm = piano_part(MIDDLE, P_MIDDLE, middle, 60, 106, key='Eb major', lh_vel=52, seed=13, density=0.6)
-    vdub = mel([r for r in MIDDLE if r[0] >= 16], 32, transpose=-12)
+    _, pm = piano_part('middle', P_MIDDLE, middle, 60, 106, key='Eb major', lh_vel=52, seed=13, density=0.6)
+    vdub = TUNE('middle', transpose=-12).window(16)
     P('violins1', touch(vdub, 44, 76), middle)
     P('violins2', pads(pm, ('Bb4', 'G5'), 2, 46), middle, shapes='swell')
     P('violas', pads(pm, ('Eb4', 'Bb4'), 2, 48), middle, shapes='swell')
@@ -459,18 +364,17 @@ def build() -> Song:
                                               (middle.bar(7), 0.35, 'smooth'), (ret.start, 0.3, 'smooth')])
 
     # return: the first phrase fuller, then the unresolved Ab chord swells and hangs (fermata)
-    _, pr = piano_part(RETURN, P_RETURN, ret, 62, 108, lh_vel=54, seed=14)
-    P('violins1', touch(mel([r for r in RETURN if r[0] < 16], 24), 50, 88), ret)
+    _, pr = piano_part('head ret', P_RETURN, ret, 62, 108, lh_vel=54, seed=14)
+    P('violins1', touch(TUNE('head', length=24), 50, 88), ret)
     P('violins2', pads(pr, ('G4', 'Eb5'), 2, 56), ret, shapes='swell')
     P('violas', pads(pr, ('C4', 'G4'), 2, 58), ret, shapes='swell')
     P('cellos', pr.bass('root', low='C3', vel=60), ret, shapes='swell')
     P('basses', pr.bass('root', low='C2', vel=58), ret, shapes='swell')
-    P('horns', Clip([(16, 7.5, p, 70) for p in (nn('Ab2'), nn('Eb3'), nn('C4'))], length=24), ret, shapes='cresc')
-    P('violins1', Clip([(16, 7.5, nn('Ab5'), 60), (16, 7.5, nn('C6'), 56)], length=24), ret,
-      articulations='tremolo', shapes='cresc')
-    piano.play(Clip([(16, 7.5, p, 84) for p in (nn('Ab1'), nn('Ab2'), nn('Eb3'), nn('C4'), nn('Eb4'), nn('Ab4'))],
-                    length=24).strum(ms=60, bpm=60), ret)
-    P('timpani', Clip([(20, 3.8, nn('Eb2'), 70)], length=24), ret, articulations='roll')
+    # the unresolved Ab chord (bar 5): held chords (hold(pitches, beats, vel, at=, length=)) swelling into the fermata
+    P('horns', hold('Ab2 Eb3 C4', 7.5, 70, at=16, length=24), ret, shapes='cresc')
+    P('violins1', hold('Ab5=60 C6=56', 7.5, at=16, length=24), ret, articulations='tremolo', shapes='cresc')
+    piano.play(hold('Ab1 Ab2 Eb3 C4 Eb4 Ab4', 7.5, 84, at=16, length=24).strum(ms=60, bpm=60), ret)
+    P('timpani', hold('Eb2', 3.8, 70, at=20, length=24), ret, articulations='roll')
     orch.ring(o, ret.bar(5), length=3, db=3, roles=['violins1', 'violins2', 'violas', 'cellos', 'horns'])
 
     # =================================================================================== II  THE MASQUERADE
@@ -492,8 +396,7 @@ def build() -> Song:
       stab, articulations='pizzicato')
     P('basses', Clip([(t, 1, c.bass_note(low='E1'), 70 + i * 10) for i, (t, ln, c) in enumerate(ps)], length=16),
       stab, articulations='pizzicato')
-    P('timpani', Clip([(0, 1, nn('E2'), 90), (4, 1, nn('E2'), 96), (8, 1, nn('E2'), 100), (12, 1, nn('B2'), 108),
-                       (14, 1, nn('B2'), 116)], length=16), stab, articulations='hit')
+    P('timpani', notes('E2/4=90 r/2. | E2/4=96 r/2. | E2/4=100 r/2. | B2/4=108 r B2=116 r'), stab, articulations='hit')
 
     # calls: call and response
     # The VPO choirs' SFZ attack is 0.625 s x (1 - velocity / 127): a p answer at velocity 40 needs ~0.4 s to speak,
@@ -519,29 +422,29 @@ def build() -> Song:
                 continue                                 # chords / humanized voices of one onset: the first rules
             lane += [(t - d, lane[-1][1] if lane else e), (t - 0.3 * d, e)]
 
-    def choir_line(track, rows, prog, at, lo, hi, voices=3, floor=43, lead_ms=35):
-        line = touch(mel(rows, prog.length), lo, hi)
+    def choir_line(track, line, prog, at, lo, hi, voices=3, floor=43, lead_ms=35, transpose=0):
+        line = touch(TUNE(line, length=prog.length, transpose=transpose), lo, hi)
         blk = harmony(line, prog, voices=voices, floor=floor)
-        blk = orch.lead(Clip([(n.start + s._at(at), n.dur, n.pitch, n.vel) for n in blk],
-                             length=prog.length + s._at(at)), bpm(at), lead_ms)
-        speak(track, art.humanize_starts(blk, bpm(at), 10, seed=int(s._at(at))))
+        a = s.at(at)
+        blk = orch.lead(blk.shift(a).with_length(prog.length + a), bpm(at), lead_ms)     # in song beats
+        speak(track, art.humanize_starts(blk, bpm(at), 10, seed=int(a)))
         return line
 
-    def call_onsets(rows, at, role, dv, art_='marcato', shift=0):
+    def call_onsets(line, at, role, dv, art_='marcato'):
         """Double the motif's upbeat and the note it leaps to (every phrase of a call) so its rhythm reads: horns
         marcato under the men, pizzicato violins under the women."""
-        rr = [r for r in rows]
+        ns = list(TUNE(line))
         pick = []
-        for i, r in enumerate(rr):
-            if r[1] <= 0.5 and i + 1 < len(rr) and abs(rr[i + 1][0] - (r[0] + r[1])) < 1e-6:
-                pick += [(r[0], 0.45, nn(r[2]) + shift, dv), (rr[i + 1][0], 0.9, nn(rr[i + 1][2]) + shift, dv + 8)]
+        for i, n in enumerate(ns):
+            if n.dur <= 0.5 and i + 1 < len(ns) and abs(ns[i + 1].start - (n.start + n.dur)) < 1e-6:
+                pick += [(n.start, 0.45, n.pitch, dv), (ns[i + 1].start, 0.9, ns[i + 1].pitch, dv + 8)]
         P(role, Clip(pick, length=16), at, articulations=art_)
 
     def stabs(at, hits, prog, vel=112):
         """Orchestra stabs: strings staccato + brass marcato + timpani on the given beats (relative to at)."""
         rows_str, rows_br, rows_lo, rows_t = [], [], [], []
         for h in hits:
-            c = chord_at(prog, h)
+            c = prog.at(h)
             hi = [p for p in c.notes(5)][:3]
             mid = c.notes(4)[:3]
             rows_str += [(h, 0.4, p, vel) for p in hi + mid]
@@ -560,37 +463,37 @@ def build() -> Song:
         P('horns', Clip([(r[0], r[1], r[2] - 12, r[3] - 6) for r in rows_br], length=ln), at,
           articulations='marcato')
         P('timpani', Clip(rows_t, length=ln), at, articulations='hit')
-        piano.play(Clip([(h, 0.3, p, vel - 20) for h in hits for p in chord_at(prog, h).notes(4)[:3]], length=ln),
-                   at)
+        piano.play(Clip([(h, 0.3, p, vel - 20) for h in hits for p in prog.at(h).notes(4)[:3]], length=ln), at)
 
     c1, c2, c3, c4 = (s.prog(p) for p in (P_CALL1, P_CALL2, P_CALL3, P_CALL4))
     b1, b2, b3, b4 = calls.bar(0), calls.bar(4), calls.bar(8), calls.bar(12)
     # the women's p / pp answers a little louder than before (they dipped to -36 / -38 LUFS: dropouts, A&R #5)
-    choir_line(choir_m, CALL1, c1, b1, 84, 110, voices=2)
-    call_onsets(CALL1, b1, 'horns', 92)
-    choir_line(choir_f, ANSWER1, c1, b1, 50, 74)
-    call_onsets(ANSWER1, b1, 'violins1', 52, 'pizzicato')
+    choir_line(choir_m, 'call1', c1, b1, 84, 110, voices=2)
+    call_onsets('call1', b1, 'horns', 92)
+    choir_line(choir_f, 'answer1', c1, b1, 50, 74)
+    call_onsets('answer1', b1, 'violins1', 52, 'pizzicato')
     stabs(b1, [14, 15, 15.5], c1, 108)
-    choir_line(choir_m, CALL2, c2, b2, 96, 124, voices=2)
-    call_onsets(CALL2, b2, 'horns', 100)
-    choir_line(choir_f, ANSWER2, c2, b2, 44, 68)
-    call_onsets(ANSWER2, b2, 'violins1', 46, 'pizzicato')
+    choir_line(choir_m, 'call2', c2, b2, 96, 124, voices=2)
+    call_onsets('call2', b2, 'horns', 100)
+    choir_line(choir_f, 'answer2', c2, b2, 44, 68)
+    call_onsets('answer2', b2, 'violins1', 46, 'pizzicato')
     stabs(b2, [14, 15, 15.5], c2, 116)
-    choir_line(choir_m, CALL3M, c3, b3, 88, 112, voices=2)
-    call_onsets(CALL3M, b3, 'horns', 94)
-    choir_line(choir_f, CALL3F, c3, b3, 70, 100)
-    call_onsets(CALL3F, b3, 'violins1', 70, 'pizzicato')
+    choir_line(choir_m, 'call3m', c3, b3, 88, 112, voices=2)
+    call_onsets('call3m', b3, 'horns', 94)
+    choir_line(choir_f, 'call3f', c3, b3, 70, 100)
+    call_onsets('call3f', b3, 'violins1', 70, 'pizzicato')
     stabs(b3, [3.5, 7.5, 11.5, 15.5], c3, 104)
-    choir_line(choir_f, TUTTI4, c4, b4, 70, 112, voices=4, floor=53)
-    choir_line(choir_m, [(r[0], r[1], nn(r[2]) - 24) for r in TUTTI4], c4, b4, 70, 112, voices=2)
-    P('choir', harmony(touch(mel(TUTTI4, 16, transpose=-12), 60, 108), c4, voices=4, floor=48), b4, shapes='cresc')
+    choir_line(choir_f, 'tutti4', c4, b4, 70, 112, voices=4, floor=53)
+    choir_line(choir_m, 'tutti4', c4, b4, 70, 112, voices=2, transpose=-24)
+    P('choir', harmony(touch(TUNE('tutti4', length=16, transpose=-12), 60, 108), c4, voices=4, floor=48), b4,
+      shapes='cresc')
     stabs(b4, [15], c4, 122)
     P('violins1', pads(c4, ('B5', 'F#6'), 2, 70), b4, articulations='tremolo', shapes='cresc')
     P('violins2', pads(c4, ('D5', 'A5'), 2, 68), b4, articulations='tremolo', shapes='cresc')
     P('violas', pads(c4, ('F#4', 'D5'), 2, 66), b4, articulations='tremolo', shapes='cresc')
     P('cellos', c4.bass('root', low='C3', vel=78), b4, shapes='cresc')
     P('basses', c4.bass('root', low='C2', vel=76), b4, shapes='cresc')
-    P('timpani', Clip([(12, 2.9, nn('B2'), 84)], length=16), b4, articulations='roll')
+    P('timpani', hold('B2', 2.9, 84, at=12, length=16), b4, articulations='roll')
     choir_m.automate('instrument.dynamics', [(b1, 0.72), (b2, 0.9, 'smooth'), (b3, 0.78, 'smooth'),
                                              (b4, 0.6, 'smooth'), (calls.bar(15), 1.0, 'smooth'),
                                              (masque.start, 0.2, 'step')])
@@ -600,10 +503,9 @@ def build() -> Song:
 
     # masque: 3/4 mock-operatic waltz
     pq = s.prog(P_MASQUE, meter=masque.meter)
-    qm = touch(mel(MASQUE, 36), 64, 104)
+    qm = touch(TUNE('masque', length=36), 64, 104)
     P('flutes', qm, masque)
-    P('oboes', Clip([(n.start, n.dur, n.pitch - 12, n.vel - 8) for n in qm if 12 <= n.start < 24 or n.start >= 30],
-                    length=36), masque)
+    P('oboes', (qm.window(12, 24) | qm.window(30)).transpose(-12).vel_add(-8), masque)
     oom, pah, bsn = [], [], []
     for i, (t, ln, c) in enumerate(pq):
         oom.append((t, 0.6, c.bass_note(low='E2'), 78 + (8 if i % 2 == 0 else 0)))
@@ -618,8 +520,7 @@ def build() -> Song:
     P('violas', Clip([r for r in pah if r[2] < 67], length=36), masque, articulations='pizzicato')
     P('violins2', Clip([r for r in pah if r[2] >= 64], length=36), masque, articulations='pizzicato')
     P('bassoons', Clip(bsn, length=36), masque, articulations='staccato')
-    P('clarinets', Clip([(n.start, n.dur, n.pitch - 12, n.vel - 14) for n in qm if n.start >= 24], length=36),
-      masque)
+    P('clarinets', qm.window(24).transpose(-12).vel_add(-14), masque)
     # the choir's short 'ah' on 2 and 3: sung at the speaking velocity (it speaks inside the 8th), a little longer
     speak(choir_f, Clip([(r[0] + masque.start - 0.03, 0.55, r[2], r[3] - 6) for r in pah], length=0))
     # back to the written velocities (the ascent's entries and the finale swell in on purpose)
@@ -645,42 +546,36 @@ def build() -> Song:
             ent.append((t, 4.0, k.transpose(k.snap(p0), stp), 62 + t * 1.5))
     ent_m = Clip([e for e in ent if e[2] < nn('C4')], length=32)
     ent_f = Clip([(e[0], e[1], e[2] + 12, e[3]) for e in ent if e[2] >= nn('B3')], length=32)
-    choir_m.play(orch.lead(Clip([(e[0] + ascent.start, e[1], e[2], round(e[3])) for e in ent_m], length=0),
-                           112, 70), 0)
-    choir_f.play(orch.lead(Clip([(e[0] + ascent.start, e[1], e[2], round(e[3])) for e in ent_f], length=0),
-                           112, 70), 0)
+    choir_m.play(orch.lead(ent_m.shift(ascent.start).with_length(0), 112, 70), 0)
+    choir_f.play(orch.lead(ent_f.shift(ascent.start).with_length(0), 112, 70), 0)
     # the E major fermata peaks and then dies away into the drummer's pickup: the riff must be the arrival, not a
     # step down from the fermata (A&R #2: fermata -10.1 LUFS, riff -13.7)
     choir_m.automate('instrument.dynamics', [(ascent.start, 0.3), (ascent.bar(7), 1.0, 'smooth'),
                                              (ascent.bar(7) + 0.5, 1.0), (ascent.bar(7) + 3.0, 0.3, 'smooth')])
     choir_f.automate('instrument.dynamics', [(ascent.start + 0.01, 0.3), (ascent.bar(7), 0.8, 'smooth'),
                                              (ascent.bar(7) + 0.5, 0.8), (ascent.bar(7) + 3.0, 0.25, 'smooth')])
-    asc_ch = harmony(touch(mel([(16, 4, 'E5'), (20, 4, 'F#5'), (24, 4, 'F#5'), (28, 4, 'G#5')], 32), 70, 118),
-                     pa, voices=4, floor=52)
-    P('choir', Clip([n for n in asc_ch if n.start < 28], length=32), ascent, shapes='cresc')
-    P('choir', Clip([n for n in asc_ch if n.start >= 28], length=32), ascent, shapes='dim')
+    asc_ch = harmony(touch(TUNE('@16 E5/1 F#5 F#5 G#5'), 70, 118), pa, voices=4, floor=52)
+    P('choir', asc_ch.window(0, 28), ascent, shapes='cresc')
+    P('choir', asc_ch.window(28), ascent, shapes='dim')
     P('violins1', pads(pa, ('E5', 'B5'), 2, 80), ascent, articulations='tremolo', shapes='cresc')
     P('violins2', pads(pa, ('G4', 'E5'), 2, 76), ascent, articulations='tremolo', shapes='cresc')
     P('violas', pads(pa, ('D4', 'B4'), 2, 74), ascent, articulations='tremolo', shapes='cresc')
-    P('cellos', Clip([(0, 28, nn('B2'), 80)], length=32), ascent, articulations='tremolo', shapes='cresc')
-    P('basses', Clip([(0, 28, nn('B1'), 78)], length=32), ascent, shapes='cresc')
-    P('horns', Clip([(n.start, n.dur, n.pitch, n.vel) for n in pads(pa, ('B2', 'G#3'), 3, 88) if n.start >= 8], length=32),
-      ascent, shapes='cresc')
-    P('trombones', Clip([(n.start, n.dur, n.pitch, n.vel) for n in pads(pa, ('E2', 'B2'), 2, 92) if n.start >= 16],
-                        length=32), ascent, shapes='cresc')
-    P('timpani', Clip([(16, 11.8, nn('B2'), 96)], length=32), ascent, articulations='roll')
+    P('cellos', hold('B2', 28, 80, length=32), ascent, articulations='tremolo', shapes='cresc')
+    P('basses', hold('B1', 28, 78, length=32), ascent, shapes='cresc')
+    P('horns', pads(pa, ('B2', 'G#3'), 3, 88).window(8), ascent, shapes='cresc')
+    P('trombones', pads(pa, ('E2', 'B2'), 2, 92).window(16), ascent, shapes='cresc')
+    P('timpani', hold('B2', 11.8, 96, at=16, length=32), ascent, articulations='roll')
     o.percussion.note(K['cymbal_roll'], ascent.bar(7) - 6.5, 7, 96)
-    fin = Clip([(28, 4, p, 114) for p in (nn('E2'), nn('B2'), nn('E3'), nn('G#3'), nn('B3'), nn('E4'))], length=32)
+    fin = hold('E2 B2 E3 G#3 B3 E4', 4, 114, at=28, length=32)
     stabs(ascent, [28], pa, 116)
     for role, lo_, hi_ in (('violins1', 'G#5', 'E6'), ('violins2', 'B4', 'G#5'), ('violas', 'E4', 'B4')):
-        P(role, Clip([(28, 3.9, p, 108) for p in range(nn(lo_), nn(hi_) + 1) if p % 12 in (4, 8, 11)], length=32),
+        P(role, hold([p for p in range(nn(lo_), nn(hi_) + 1) if p % 12 in (4, 8, 11)], 3.9, 108, at=28, length=32),
           ascent, articulations='sustain', shapes='dim')
-    P('trumpets', Clip([(28, 3.9, p, 106) for p in (nn('E4'), nn('G#4'), nn('B4'))], length=32), ascent,
-      articulations='sustain', shapes='dim')
-    P('low_brass', Clip([(28, 3.9, nn('E2'), 110)], length=32), ascent, articulations='marcato', shapes='dim')
-    P('tuba', Clip([(28, 3.9, nn('E1'), 106)], length=32), ascent, articulations='sustain', shapes='dim')
-    choir_f.play(Clip([(ascent.bar(7), 3.9, p, 108) for p in (nn('G#4'), nn('B4'), nn('E5'))], length=0), 0)
-    choir_m.play(Clip([(ascent.bar(7), 3.9, p, 108) for p in (nn('E3'), nn('B3'))], length=0), 0)
+    P('trumpets', hold('E4 G#4 B4', 3.9, 106, at=28, length=32), ascent, articulations='sustain', shapes='dim')
+    P('low_brass', hold('E2', 3.9, 110, at=28, length=32), ascent, articulations='marcato', shapes='dim')
+    P('tuba', hold('E1', 3.9, 106, at=28, length=32), ascent, articulations='sustain', shapes='dim')
+    choir_f.play(hold('G#4 B4 E5', 3.9, 108), ascent.bar(7))
+    choir_m.play(hold('E3 B3', 3.9, 108), ascent.bar(7))
     o.percussion.note(K['crash'], ascent.bar(7), 4, 106).note(K['bass_drum'], ascent.bar(7), 2, 106)
     piano.play(fin.strum(ms=20, bpm=138), ascent)
     orch.ring(o, ascent.bar(7), length=2, db=3, roles=['violins1', 'violins2', 'violas', 'choir', 'horns',
@@ -697,15 +592,15 @@ def build() -> Song:
     kit.play(drummer.pickup(138, length=1, kit=kit), riff.start - 1)
 
     # the riff: power chords, palm-muted chugs, both guitars (two takes)
-    rr = Clip([(r[0], r[1], nn(r[2]), 104 if r[3] == '' else 88) for r in RIFF_ROOTS], length=8)
+    rr = notes(RIFF_CHUGS, vel=88) | notes(RIFF_HITS, vel=104)
     rclip = rr.chordify('power')
     rclip = rclip.articulate('palm', where=lambda n: n.dur <= 0.5 and n.pitch % 12 == 9 and n.start % 4 < 1.5)
     for tr, ms, sd in ((b.gtr_l, 9, 1), (b.gtr_r, 12, 2)):
         for sec in (riff, riff2):
             r_ = rclip.strum(ms=ms, bpm=138, direction='down').vel_random(7, seed=sd + int(sec.start))
             tr.loop(r_, sec)
-    bass_riff = Clip([(r[0], r[1] * 0.9, nn(r[2]) - 12 if nn(r[2]) >= nn('A2') else nn(r[2]), 100 if r[3] == '' else 86)
-                      for r in RIFF_ROOTS], length=8)
+    bass_riff = (notes(RIFF_CHUGS, transpose=-12, vel=86, gate=0.9)
+                 | notes('r/4. C2/8 D2/4 E2/8 D2 | r/4. G2/8 G2 F2/4 E2/8', vel=100, gate=0.9))
     b.bass.loop(bass_riff.vel_random(6, seed=4), riff, riff2)
 
     bmem = bassist.Memory()
@@ -715,8 +610,7 @@ def build() -> Song:
 
     def slice_kick(sec):
         a0 = sec.start - dr.start
-        return Clip([(n.start - a0, n.dur, n.pitch, n.vel) for n in dr.clip if a0 <= n.start < a0 + sec.length],
-                    length=sec.length)
+        return dr.clip.window(a0, a0 + sec.length).shift(-a0).with_length(sec.length)
 
     for sec, pr_, part, nxt in ((anthem, pa1, 'verse', 'Am'), (anthem2, pa2, 'chorus', 'Am'),
                                 (solo, psolo, 'solo', 'Am')):
@@ -727,11 +621,11 @@ def build() -> Song:
         ga.play(b.gtr_l, sec)
         ga.take(2).play(b.gtr_r, sec)
     # the break: band hits on F and E7, then a tom run and a timpani roll
-    hits = Clip([(0, 0.4, nn('F2'), 116), (1.5, 0.4, nn('F2'), 110), (4, 3.6, nn('E2'), 120)], length=8)
+    hits = notes('F2:1.5:0.4=116 F2:2.5:0.4=110 E2/1:3.6=120')         # short, short, held
     for tr in (b.gtr_l, b.gtr_r):
         tr.play(hits.chordify('power').strum(ms=10, bpm=138), brk)
-    b.bass.play(Clip([(0, 0.4, nn('F1'), 110), (1.5, 0.4, nn('F1'), 106), (4, 3.6, nn('E1'), 118)], length=8), brk)
-    P('timpani', Clip([(4, 3.9, nn('G2'), 100)], length=8), brk, articulations='roll')
+    b.bass.play(notes('F1:1.5:0.4=110 F1:2.5:0.4=106 E1/1:3.6=118'), brk)
+    P('timpani', hold('G2', 3.9, 100, at=4, length=8), brk, articulations='roll')
 
     # organ: held chords (the Leslie speeds up in anthem2)
     for sec, pr_ in ((anthem, pa1), (anthem2, pa2), (solo, psolo)):
@@ -740,17 +634,19 @@ def build() -> Song:
                                          (solo.end, 6.2), (solo.end + 4, 1.0, 'smooth')])
 
     # the guitar orchestra
-    a1 = touch(mel(THEME + THEME_HALF, 32, transpose=-3), 70, 112)
-    a2 = touch(mel(THEME + [(24, 1.5, 'C5'), (25.5, 0.5, 'Bb4'), (26, 1, 'Ab4'), (27, 1, 'B4'), (28, 3.5, 'C5')],
-                   32, transpose=-3), 76, 120)
+    a1 = touch(TUNE('head climb half', length=32, transpose=-3), 70, 112)      # the theme in A minor
+    a2 = touch(TUNE('head climb full', length=32, transpose=-3), 76, 120)
     vib1 = {'depth': 24, 'rate': 5.6}
     L1 = art.legato(a1, overlap=0.03).glide(90, where=art.leaps(5))
     hero.play(g1, L1, anthem, vib=vib1, throws=True)
-    hero.play(g2, third(a1, 'A minor', -2).velocity(0.94), anthem, vib={'depth': 20, 'rate': 5.3})
+    hero.play(g2, a1.harmonize('-3rd', key='A minor', keep=False, vel=1).velocity(0.94), anthem,
+              vib={'depth': 20, 'rate': 5.3})                      # a diatonic third below (only the new voice)
     L2 = art.legato(a2, overlap=0.03).glide(90, where=art.leaps(5))
     hero.play(g1, L2, anthem2, vib=vib1)
-    hero.play(g2, third(a2, 'A minor', -2).velocity(0.94), anthem2, vib={'depth': 20, 'rate': 5.3})
-    hero.play(g3, third(a2, 'A minor', +2).velocity(0.9), anthem2, vib={'depth': 22, 'rate': 5.8})
+    hero.play(g2, a2.harmonize('-3rd', key='A minor', keep=False, vel=1).velocity(0.94), anthem2,
+              vib={'depth': 20, 'rate': 5.3})
+    hero.play(g3, a2.harmonize('3rd', key='A minor', keep=False, vel=1).velocity(0.9), anthem2,
+              vib={'depth': 22, 'rate': 5.8})
     # the strings join anthem2 with a staccato ostinato
     ost = []
     for t, ln, c in pa2:
@@ -762,33 +658,29 @@ def build() -> Song:
     P('violins1', pads(pa2, ('A4', 'E5'), 2, 74), anthem2, shapes='swell')
 
     # the solo: the lead guitar played by the guitarist (bends, slides, vibrato; flash moves budgeted)
-    sl = touch(mel(SOLO, 48), 72, 122)
+    sl = touch(TUNE('solo', length=48), 72, 122)
     hero.lead(g1, sl, psolo, bpm=138, key='A minor', style='rock', section=solo, memory=gtr.Memory(), seed=9,
               climax=True, throws=True)
-    tail_ = Clip([(n.start, n.dur, n.pitch, n.vel) for n in sl if n.start >= 40], length=48)
-    hero.play(g2, third(tail_, 'A minor', -2).velocity(0.9), solo, vib={'depth': 20, 'rate': 5.3})
-    hero.play(g3, third(tail_, 'A minor', +2).velocity(0.86), solo, vib={'depth': 22, 'rate': 5.8})
+    tail_ = sl.window(40)
+    hero.play(g2, tail_.harmonize('-3rd', key='A minor', keep=False, vel=1).velocity(0.9), solo,
+              vib={'depth': 20, 'rate': 5.3})
+    hero.play(g3, tail_.harmonize('3rd', key='A minor', keep=False, vel=1).velocity(0.86), solo,
+              vib={'depth': 22, 'rate': 5.8})
     # riff and riff2: the orchestra hits the riff accents with the band (A&R #2: the band's entry has to be an
     # arrival) - brass marcato, the low strings, timpani; riff2 adds screaming tremolo violins on top
-    br = Clip([(r[0], r[1] * 0.8, nn(r[2]), 108) for r in RIFF_ROOTS if r[3] == ''], length=8)
-    tim = Clip([(0, 0.8, nn('A2'), 108), (2, 0.8, nn('D2'), 100), (3, 0.8, nn('E2'), 104), (4, 0.8, nn('A2'), 110),
-                (6, 0.8, nn('G2'), 102)], length=8)
+    br = notes(RIFF_HITS, vel=108, gate=0.8)
+    tim = notes('A2/2:0.8=108 D2/4:0.8=100 E2/4:0.8=104 A2/2:0.8=110 G2/2:0.8=102')
     for sec, dv in ((riff, -4), (riff2, 0)):
         P('trombones', br.chordify('power').velocity(1.0 + dv / 108) * 2, sec, articulations='marcato')
-        P('horns', Clip([(n.start, n.dur, n.pitch + 12, n.vel - 8 + dv) for n in br], length=8) * 2, sec,
+        P('horns', br.transpose(12).vel_add(dv - 8) * 2, sec, articulations='marcato')
+        P('low_brass', br.transpose(-12).filter(lambda n: n.pitch >= nn('A#0')).vel_add(dv) * 2, sec,
           articulations='marcato')
-        P('low_brass', Clip([(n.start, n.dur, n.pitch - 12, n.vel + dv) for n in br if n.pitch - 12 >= nn('A#0')],
-                            length=8) * 2, sec, articulations='marcato')
-        P('cellos', Clip([(n.start, n.dur, n.pitch, n.vel + dv) for n in br], length=8) * 2, sec,
-          articulations='marcato')
-        P('basses', Clip([(n.start, n.dur, n.pitch - 12, n.vel + dv) for n in br], length=8) * 2, sec,
-          articulations='marcato')
+        P('cellos', br.vel_add(dv) * 2, sec, articulations='marcato')
+        P('basses', br.transpose(-12).vel_add(dv) * 2, sec, articulations='marcato')
         P('timpani', tim * 2, sec, articulations='hit')
     o.percussion.note(K['crash'], riff.start, 4, 122).note(K['bass_drum'], riff.start, 2, 122)
-    P('violins1', Clip([(0, 15.5, p, 92) for p in (nn('A5'), nn('E6'))], length=16), riff2,
-      articulations='tremolo', shapes='cresc')
-    P('violins2', Clip([(0, 15.5, p, 88) for p in (nn('C5'), nn('A5'))], length=16), riff2,
-      articulations='tremolo', shapes='cresc')
+    P('violins1', hold('A5 E6', 15.5, 92, length=16), riff2, articulations='tremolo', shapes='cresc')
+    P('violins2', hold('C5 A5', 15.5, 88, length=16), riff2, articulations='tremolo', shapes='cresc')
 
     # Part III climbs by layers (A&R #2): anthem2 adds the chorus 'ah' and soft horns, the solo gets the orchestra's
     # sustained bed under it and the chorus for its last four bars
@@ -800,9 +692,9 @@ def build() -> Song:
     P('violins2', pads(psolo, ('E4', 'A4'), 2, 62), solo, shapes='swell')
     P('violas', pads(psolo, ('C4', 'G4'), 2, 62), solo, shapes='swell')
     P('horns', pads(psolo, ('E3', 'C4'), 3, 64), solo, shapes='swell')
-    P('choir', Clip([n for n in pads(psolo, ('A3', 'E5'), 4, 76) if n.start >= 32], length=48), solo, shapes='cresc')
+    P('choir', pads(psolo, ('A3', 'E5'), 4, 76).window(32), solo, shapes='cresc')
     # the solo's peak (its held D6 in bar 9): a timpani roll into it, a crash + bass drum on it
-    P('timpani', Clip([(28, 3.9, nn('A2'), 96)], length=48), solo, articulations='roll')
+    P('timpani', hold('A2', 3.9, 96, at=28, length=48), solo, articulations='roll')
     o.percussion.note(K['crash'], solo.bar(8), 4, 112).note(K['bass_drum'], solo.bar(8), 2, 110)
 
     # =================================================================================== IV  CURTAIN
@@ -812,22 +704,16 @@ def build() -> Song:
     # trumpets + gtr1 + the women's choir at pitch, cellos + horns + the men's choir below - and the large chorus'
     # top voice on it. The harmony is left to two carriers (violas, the rhythm guitars) and the harmony guitars;
     # the low end is basses + bass guitar + timpani (no tuba, organ or piano 8ths).
-    fm = touch(mel(FINALE, 32), 84, 122)
-
-    def octave(clip, k, dv=0, length=32):
-        return Clip([(n.start, n.dur, n.pitch + 12 * k, max(1, min(127, n.vel + dv))) for n in clip], length=length)
-
-    P('violins1', octave(fm, 1), finale)
+    fm = touch(TUNE('finale', length=32), 84, 122)
+    P('violins1', fm.octave(1), finale)
     P('violins2', fm, finale)
-    P('flutes', octave(fm, 1, -10), finale)
-    P('trumpets', octave(fm, 0, -6), finale)
-    P('horns', octave(fm, -1, 2), finale)
-    P('cellos', octave(fm, -1), finale)
+    P('flutes', fm.octave(1).vel_add(-10), finale)
+    P('trumpets', fm.vel_add(-6), finale)
+    P('horns', fm.octave(-1).vel_add(2), finale)
+    P('cellos', fm.octave(-1), finale)
     P('choir', harmony(fm, pf, voices=4, floor=50), finale)
-    speak(choir_f, orch.lead(Clip([(n.start + finale.start, n.dur, n.pitch, n.vel - 6) for n in fm], length=0),
-                             76, 35))
-    speak(choir_m, orch.lead(Clip([(n.start + finale.start, n.dur, n.pitch - 12, n.vel - 4) for n in fm],
-                                  length=0), 76, 35))
+    speak(choir_f, orch.lead(fm.shift(finale.start).vel_add(-6).with_length(0), 76, 35))
+    speak(choir_m, orch.lead(fm.shift(finale.start).octave(-1).vel_add(-4).with_length(0), 76, 35))
     choir_f.automate('instrument.dynamics', [(finale.start - 1, 0.55), (summit.bar(3), 0.75, 'smooth'),
                                              (fall.start, 0.0, 'smooth')])
     choir_m.automate('instrument.dynamics', [(finale.start - 1, 0.6), (summit.bar(3), 0.9, 'smooth'),
@@ -839,11 +725,12 @@ def build() -> Song:
     for t in (0, 16):
         o.percussion.note(K['crash'], finale.start + t, 4, 116).note(K['bass_drum'], finale.start + t, 2, 118)
     # the guitar orchestra: gtr1 on the tune (with violins2 and the trumpets), the harmony guitars around it
-    ff = touch(mel(FINALE, 32), 88, 124)
+    ff = touch(TUNE('finale', length=32), 88, 124)
     hero.play(g1, art.legato(ff, overlap=0.03).glide(90, where=art.leaps(5)), finale, vib=vib1)
-    hero.play(g2, third(ff, 'C major', -2).velocity(0.92), finale, vib={'depth': 20, 'rate': 5.3})
-    hero.play(g3, Clip([(n.start, n.dur, n.pitch - 12, n.vel) for n in third(ff, 'C major', +2)], length=32)
-              .velocity(0.86), finale, vib={'depth': 22, 'rate': 5.8})
+    hero.play(g2, ff.harmonize('-3rd', key='C major', keep=False, vel=1).velocity(0.92), finale,
+              vib={'depth': 20, 'rate': 5.3})
+    hero.play(g3, ff.harmonize('3rd', key='C major', keep=False, vel=1).octave(-1).velocity(0.86), finale,
+              vib={'depth': 22, 'rate': 5.8})                     # a third above, an octave down: a sixth below
     # the band in the finale: big half-time ballad beat, bass, power chords
     df = drummer.arrange([finale, summit], bpm=76, style='ballad', density=0.7, seed=8, kit=kit, ending='hit',
                          plan={'finale': {'role': 'chorus', 'energy': 0.95}, 'summit': {'role': 'chorus', 'energy': 1.0}})
@@ -857,41 +744,35 @@ def build() -> Song:
 
     # summit: the motif climbs to C6, the last tutti chord - the same three octaves, the chord on violas +
     # trombones + the guitars, the low end basses + bass trombone + bass guitar, then everything on the last C
-    sm = touch(mel(SUMMIT, 16), 96, 126)
+    sm = touch(TUNE('summit', length=16), 96, 126)
     P('violins1', sm, summit)
     P('flutes', sm, summit)
-    P('violins2', octave(sm, -1, 0, 16), summit)
-    P('trumpets', octave(sm, -1, -4, 16), summit)
-    P('horns', octave(sm, -1, 0, 16), summit)
-    P('cellos', octave(sm, -2, 0, 16), summit)
-    P('choir', harmony(octave(sm, -1, 0, 16), ps_, voices=4, floor=52), summit, shapes='cresc')
-    speak(choir_f, orch.lead(Clip([(n.start + summit.start, n.dur, n.pitch - 12, n.vel - 6) for n in sm],
-                                  length=0), 76, 35))
-    speak(choir_m, orch.lead(Clip([(n.start + summit.start, n.dur, n.pitch - 24, n.vel - 4) for n in sm],
-                                  length=0), 76, 35))
+    P('violins2', sm.octave(-1), summit)
+    P('trumpets', sm.octave(-1).vel_add(-4), summit)
+    P('horns', sm.octave(-1), summit)
+    P('cellos', sm.octave(-2), summit)
+    P('choir', harmony(sm.octave(-1), ps_, voices=4, floor=52), summit, shapes='cresc')
+    speak(choir_f, orch.lead(sm.shift(summit.start).octave(-1).vel_add(-6).with_length(0), 76, 35))
+    speak(choir_m, orch.lead(sm.shift(summit.start).octave(-2).vel_add(-4).with_length(0), 76, 35))
     P('trombones', pads(ps_, ('C3', 'G3'), 3, 96), summit, shapes='cresc')
     P('violas', pads(ps_, ('G4', 'E5'), 2, 90), summit, shapes='cresc')
     P('basses', ps_.bass('root', low='C2', vel=100), summit)
     P('low_brass', ps_.bass('root', low='C2', vel=100), summit, articulations='sustain')
-    P('tuba', Clip([(12, 3.8, nn('C1'), 104)], length=16), summit)
-    P('timpani', Clip([(0, 1, nn('G#2'), 110), (4, 1, nn('A#2'), 112), (8, 3.8, nn('C3'), 104),
-                       (12, 1, nn('C2'), 124)], length=16), summit, articulations='hit')
+    P('tuba', hold('C1', 3.8, 104, at=12, length=16), summit)
+    P('timpani', notes('G#2/4=110 r/2. | A#2/4=112 r/2. | C3/1:3.8=104 | C2/4=124 r/2.'), summit, articulations='hit')
     o.percussion.note(K['cymbal_roll'], summit.bar(3) - 5, 6, 108)
     o.percussion.note(K['crash'], summit.bar(3), 4, 124).note(K['bass_drum'], summit.bar(3), 2, 124)
-    P('drums', Clip([(12, 2, nn('C1'), 118), (12, 2, nn('G1'), 104)], length=16), summit)      # the taikos
-    hero.play(g1, art.legato(Clip([(n.start, n.dur, n.pitch, n.vel) for n in sm], length=16), overlap=0.03)
-              .glide(90, where=art.leaps(5)), summit, vib=vib1)
-    hero.play(g2, touch(mel([(0, 4, 'Ab4'), (4, 4, 'Bb4'), (8, 2, 'F5'), (10, 2, 'G5'), (12, 3.5, 'G5')], 16),
-                        90, 116), summit, vib={'depth': 20, 'rate': 5.3})
-    hero.play(g3, touch(mel([(0, 4, 'C5'), (4, 4, 'D5'), (8, 2, 'A5'), (10, 2, 'B5'), (12, 3.5, 'E5')], 16),
-                        88, 114), summit, vib={'depth': 22, 'rate': 5.8})
-    for tr in (b.gtr_l, b.gtr_r):
-        tr.play(Clip([(0, 3.8, nn('G#2'), 110), (4, 3.8, nn('A#2'), 112), (8, 3.8, nn('C3'), 114),
-                      (12, 3.6, nn('C3'), 122)], length=16).chordify('power').strum(ms=12, bpm=76), summit)
-    b.bass.play(Clip([(0, 3.8, nn('Ab1'), 108), (4, 3.8, nn('Bb1'), 110), (8, 3.8, nn('C2'), 112),
-                      (12, 3.6, nn('C2'), 120)], length=16), summit)
-    piano.play(Clip([(12, 3.8, p, 104) for p in (nn('C1'), nn('C2'), nn('G2'), nn('E3'), nn('C4'), nn('G4'))],
-                    length=16).strum(ms=40, bpm=60), summit)
+    P('drums', hold('C1=118 G1=104', 2, at=12, length=16), summit)      # the taikos
+    hero.play(g1, art.legato(sm, overlap=0.03).glide(90, where=art.leaps(5)), summit, vib=vib1)
+    hero.play(g2, touch(TUNE('Ab4/1 Bb4 | F5/2 G5 | G5/2..', length=16), 90, 116), summit,
+              vib={'depth': 20, 'rate': 5.3})
+    hero.play(g3, touch(TUNE('C5/1 D5 | A5/2 B5 | E5/2..', length=16), 88, 114), summit,
+              vib={'depth': 22, 'rate': 5.8})
+    for tr in (b.gtr_l, b.gtr_r):         # Ab Bb C, the last C struck again (each released a breath early: gap=)
+        tr.play(notes('gap=0.2 G#2/1=110 A#2=112 C3=114 C3:4:3.6=122').chordify('power').strum(ms=12, bpm=76),
+                summit)
+    b.bass.play(notes('gap=0.2 Ab1/1=108 Bb1=110 C2=112 C2:4:3.6=120'), summit)
+    piano.play(hold('C1 C2 G2 E3 C4 G4', 3.8, 104, at=12, length=16).strum(ms=40, bpm=60), summit)
     orch.ring(o, summit.bar(3), length=2, db=4, roles=['violins1', 'violins2', 'violas', 'cellos', 'choir',
                                                       'horns', 'trumpets', 'trombones'])
     # the choirs' expression lanes (speak()): one lane per track for the whole song, back to 1 after the summit
@@ -902,43 +783,39 @@ def build() -> Song:
     # fall: the tam-tam; the orchestra drops to pianissimo, the hall rings
     o.percussion.note(K['tam_tam'], fall.start, 8, 112)
     # pp, but audible under the tam-tam's ring (it read as a dropout at -34 LUFS: A&R #5)
-    P('violins2', Clip([(0, 7.5, p, 46) for p in (nn('Ab4'), nn('C5'), nn('Eb5'))], length=8), fall, shapes='swell')
-    P('cellos', Clip([(0, 7.5, nn('C3'), 50)], length=8), fall, shapes='swell')
-    choir_oh.play(Clip([(fall.start, 7.5, p, 58) for p in (nn('C4'), nn('Eb4'), nn('G4'))], length=0), 0)
+    P('violins2', hold('Ab4 C5 Eb5', 7.5, 46, length=8), fall, shapes='swell')
+    P('cellos', hold('C3', 7.5, 50, length=8), fall, shapes='swell')
+    choir_oh.play(hold('C4 Eb4 G4', 7.5, 58), fall)
     choir_oh.automate('instrument.dynamics', [(fall.start, 0.45), (fall.end, 0.3, 'smooth'),
                                               (coda.start + 0.5, 0.12, 'smooth'), (coda.bar(4), 0.22, 'smooth'),
                                               (coda.end, 0.08, 'smooth')])
 
     # coda: the piano alone with the motif, soft strings, the rolled C major chord (fermata)
     pc = s.prog(P_CODA)
-    ca = pianist.arrange(touch(mel(CODA, 20), 44, 80), pc, bpm=60, key=s.key, style='ballad', density=0.5, seed=41,
+    ca = pianist.arrange(touch(TUNE('coda', length=20), 44, 80), pc, bpm=60, key=s.key, style='ballad', density=0.5, seed=41,
                          devices={'thirds': 1.5, 'sixths': 1.5, 'close': 1.5, 'single': 1}, memory=pmem,
                          at=coda.start, section_end=False)
     piano.play(ca.rh, coda)
     piano.play(broken(pc, vel=40, seed=41), coda)
     last = coda.bar(5)
-    final = Clip([(0, 3.95, p, v) for p, v in ((nn('C1'), 70), (nn('C2'), 66), (nn('G2'), 58), (nn('E3'), 56),
-                                              (nn('G3'), 52), (nn('D4'), 50), (nn('E4'), 54), (nn('C5'), 64))],
-                 length=8).strum(ms=85, bpm=50)
+    final = hold('C1=70 C2=66 G2=58 E3=56 G3=52 D4=50 E4=54 C5=64', 3.95, length=8).strum(ms=85, bpm=50)
     piano.play(final, last)
     piano.automate('instrument.pedal', ca.pedal(pc, coda, end=last) +
                    [(last - 0.05, 0, 'step'), (last + 0.02, 1, 'step')])
-    P('violins2', Clip([(n.start, n.dur, n.pitch, 34) for n in pads(pc, ('G4', 'Eb5'), 2, 34)], length=20), coda,
-      shapes='swell')
+    P('violins2', pads(pc, ('G4', 'Eb5'), 2, 34).with_vel(34), coda, shapes='swell')
     P('violas', pads(pc, ('C4', 'G4'), 2, 34), coda, shapes='swell')
     P('cellos', pc.bass('root', low='C3', vel=36), coda, shapes='swell')
-    P('violins2', Clip([(20, 3.95, p, 30) for p in (nn('E5'), nn('G5'))], length=24), coda, shapes='dim')
-    P('violas', Clip([(20, 3.95, p, 30) for p in (nn('C4'), nn('G4'))], length=24), coda, shapes='dim')
-    P('cellos', Clip([(20, 3.95, nn('C3'), 32)], length=24), coda, shapes='dim')
+    P('violins2', hold('E5 G5', 3.95, 30, at=20, length=24), coda, shapes='dim')
+    P('violas', hold('C4 G4', 3.95, 30, at=20, length=24), coda, shapes='dim')
+    P('cellos', hold('C3', 3.95, 32, at=20, length=24), coda, shapes='dim')
     orch.ring(o, last, length=3, db=4, roles=['violins2', 'violas', 'cellos'])
 
     # echo throws on the piano's phrase ends in the coda (the band's echo bus answers in the gaps)
     piano.send('echo', -60)
     thr = []
-    for beat_ in (4, 8, 12, 16):
-        a_ = coda.start + beat_ - 1.0
+    for a_ in (3, 7, 11, 15):
         thr += [(a_, -60), (a_ + 0.2, -16, 'smooth'), (a_ + 1.2, -16), (a_ + 1.6, -60, 'smooth')]
-    piano.automate('send.echo', thr)
+    piano.automate('send.echo', thr, at=coda)
 
     # ------------------------------------------------------------------------------------ production moves
     # Brian-May-style repeats: the solo guitar feeds the band's dotted-8th echo (the hero keeps its own echo too)

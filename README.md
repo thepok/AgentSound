@@ -90,6 +90,18 @@ python -m agentsound build songs/my-song --section chorus       # fast iteration
 Engine lookup: `--engine PATH`, else `$AGENTSOUND_ENGINE`, else `build/agentsound.exe`. Sample packs: `$AGENTSOUND_SAMPLES`,
 else `assets/samples/`. ffmpeg encodes the mp3 and decodes references.
 
+**Notes as text** (`notation`, docs/COMPOSE_API.md "Notation"): `notes('vel=92 C5/8 Eb5 G5/4. F5/8 | Eb5/2 C5/4 r')`
+writes a line compactly and fully - sticky note values, relative octaves or scale degrees (`5/8 8 r 10 12/4.!` with
+`key=`), rests, ties and holds across checked bar lines (`meter=`, `pickup=`), chords with per-note lengths, tuplets and
+free figures, slurs, grace notes, accents / exact velocities / dynamics and hairpins, articulation and glide marks,
+ornaments (`^tr`, `^turn`, `^mord`, `^roll`, `^fig`) and pitch gestures (`^scoop`, `^fall`, `^vib`), voices, repeats,
+`@beat` positions. `phrases(a1=..., a2=...)('a1 a2 | a1+2d a2')` composes named phrases (transposed per reference,
+variants by bar); `hold('F#2 C#3 A3 E4', 8, 70)` is one held chord; `notation.format(clip_or_track)` writes any part back
+as text that parses to the same notes (every track of every song round-trips). With it: `s.at(sec, beats)` and
+`(section, beats)` positions everywhere, `automate(..., at=)`, `track.cut` / `clear(cut=True)` / `s.breath(before=[...])`
+for real stops, `track.fx['compressor'].set(...)`, `Clip.window / vel_add / arch / roll`, `harmonize(keep=False,
+fit=prog, fold=)`.
+
 **CLI** (`python -m agentsound <command>`):
 
 | command | does |
@@ -381,7 +393,7 @@ tests/                 C++ tests (test_*.cpp, ctest) and tests/python (unittest)
 Python helper modules (`catalog.HELPER_MODULES`, listed with every public function by `catalog helpers`): `theory`,
 `patterns`, `humanize`, `automation`, `modulation`, `midifx`, `vamod`, `jazz`, `pianist`, `romantic`, `drummer`, `bassist`,
 `guitarist`, `sfz`, `kits`, `organ`, `articulation`, `speech`, `tempo`, `song`, `mixer`, `mastering`, `heroes`,
-`gesture`, `fretwork`, `soloist`, `guitar_vocab`, `horn_vocab`, `budget`, `voicing`.
+`gesture`, `fretwork`, `soloist`, `guitar_vocab`, `horn_vocab`, `budget`, `voicing`, `notation`.
 
 | to add | do |
 |---|---|

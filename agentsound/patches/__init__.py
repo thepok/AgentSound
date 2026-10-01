@@ -378,6 +378,12 @@ class FX:
         f.params.update(_fx_paths(_params(None, params, f"fx {self.type!r}"), f"fx {self.type!r}"))
         return f
 
+    def set(self, params: dict | None = None, /, **kw) -> 'FX':
+        """Change params in place (on a live chain: track.fx['compressor'].set(attack=25), s.master.fx['limiter']
+        .set(gain=5.2), track.fx['eq'].set({'peak1.gain': -3})); returns the effect."""
+        self.params.update(_fx_paths(_params(params, kw, f"fx {self.type!r}"), f"fx {self.type!r}"))
+        return self
+
     def keyed(self, source) -> 'FX':
         """Copy with a sidechain key source (track/bus or id)."""
         f = self.copy()

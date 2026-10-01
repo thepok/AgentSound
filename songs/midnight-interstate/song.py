@@ -65,75 +65,53 @@ def build() -> Song:
     #          E F# G#m B | E F# D#sus4 D# G#m(add9): the only perfect cadence of the song, under the ritardando
 
     # ------------------------------------------------------------------ melodies (scale degrees of F# minor)
-    H = {
-        'a1': '5:1/8 8:1/8 r:1/8 10:1/8 12:1/4.! 10:1/8',         # D    C# F# . A C#~ A   (maj7 held)
-        'a2': '11:1/4. 10:1/8 9:1/2',                             # E    B~ A G#~
-        'a3': '5:1/8 8:1/8 r:1/8 10:1/8 12:1/8 13:1/4! 12:1/8',   # F#m  C# F# . A C# D~ C#  (b6 leaning on 5)
-        'a4': '14:1/2 12:1/4 10:1/4',                             # A    E6~ C# A  (the phrase peak, held)
-        'b2': '9:1/4. 10:1/8 11:1/2',                             # E    G#~ A B~  (the answer turns upward)
-        'b3': 'r:1/8 5:1/8 8:1/8 r:1/8 10:1/8 12:1/8 13:1/4!',    # F#m  the head displaced by an 8th, hangs on D
-        'b4': '12:1/4. 11:1/8 9:1/4 7:1/4',                       # E    C#~ B G# E  (D resolves, falls)
-        'c1': '10:1/8 12:1/8 r:1/8 12:1/8 14:1/8 15:1/4! 14:1/8',  # D    A C# . C# E F#6~ E  (the climax)
-        'c2': '14:1/4. 13:1/8 11:1/2',                            # E    E6~ D B~
-        'c3': '12:1/4 10:1/8 9:1/8 8:1/2',                        # F#m  C# A G# F#~
-        'c4': '_:1/2 5:1/8 8:1/8 r:1/8 10:1/8',                   # F#m  (F# held) C# F# . A: the head echoes
-    }
+    # agentsound notation: degrees of the key, sticky note values, ! accent; named one-bar phrases spliced into lines
+    MEL = dict(key=s.key, gate=0.92)                       # 92 % legato, degree 1 = F#4 (oct=3: an octave lower)
+    H = phrases(**MEL,
+                a1='5/8 8 r 10 12/4.! 10/8',              # D    C# F# . A C#~ A   (maj7 held)
+                a2='11/4. 10/8 9/2',                      # E    B~ A G#~
+                a3='5/8 8 r 10 12 13/4! 12/8',            # F#m  C# F# . A C# D~ C#  (b6 leaning on 5)
+                a4='14/2 12/4 10',                        # A    E6~ C# A  (the phrase peak, held)
+                b2='9/4. 10/8 11/2',                      # E    G#~ A B~  (the answer turns upward)
+                b3='r/8 5 8 r 10 12 13/4!',               # F#m  the head displaced by an 8th, hangs on D
+                b4='12/4. 11/8 9/4 7',                    # E    C#~ B G# E  (D resolves, falls)
+                c1='10/8 12 r 12 14 15/4! 14/8',          # D    A C# . C# E F#6~ E  (the climax)
+                c2='14/4. 13/8 11/2',                     # E    E6~ D B~
+                c3='12/4 10/8 9 8/2',                     # F#m  C# A G# F#~
+                c4='_/2 5/8 8 r 10')                      # F#m  (F# held) C# F# . A: the head echoes
+    HOOK = 'a1 a2 a3 a4 | a1 b2 b3 b4 | a1 a2 a3 a4 | c1 c2 c3 c4'          # 16 bars: A B A C
 
-    def mot(*keys):
-        return s.motif(' '.join(H[k] for k in keys))
+    V = phrases(**MEL,     # verse lines, one bar each (F#m E D E): held downbeats, phrase ends pushed an 8th early
+                a0='r/2 1/8 3 5 3',                       # F#m  . . F# A C# A
+                a1='4/4. 3/8 2/4. 5/8',                   # E    B~ A G#~ C#>
+                a2='_/2 4/8 3 1/4',                       # D    ~C# B A F#
+                a3='2/4. 1/8 -1/2',                       # E    G#~ F# E~
+                a6='3/2. 5/8 6',                          # D    A~ C# D
+                a7='7/4. 5/8 4/2',                        # E    E~ C# B~
+                b0='r/2 1/8 3 5 8',                       # F#m  . . F# A C# F#
+                b1='7/4. 6/8 4/4. 8/8',                   # E    E~ D B~ F#>
+                b2='_/2 7/8 6 5/4',                       # D    ~F# E D C#
+                b3='4/4. 5/8 7/2',                        # E    B~ C# E~
+                b4='r/2 5/8 8 10 8',                      # F#m  . . C# F# A F#
+                b5='9/4. 8/8 7/4. 8/8',                   # E    G#~ F# E~ F#>
+                b6='_/2 10/8 9 8/4',                      # D    ~F# A G# F#
+                b7='9/4. 8/8 7/4 r')                      # E    G#~ F# E .
+    verse_a = V('a0 a1 a2 a3 r/1 r/1 a6 a7', vel=92)                         # (the bells answer in the rests)
+    verse_b = V('b0 b1 b2 b3 b4 b5 b6 b7', vel=96)
+    verse_c = V('a0 a1 a2 a3 b0 b1 b2 b3', vel=96)                           # verse 2: straight to the climb
+    build1_m = notes('r/2 1/8 4 r 6 | 8/2. r/4 | r/2 3/8 6 r 8 | 10/2. r/4 | r/2 4/8 7 r 9 | 11/2. r/4 '
+                     '| 12/2 11/4 9 | #7/2. r/4', vel=98, **MEL)          # the head sequenced Bm, D, E; E# -> F#
+    build2_m = notes('r/2 1/8 4 r 6 | r/2 3/8 6 r 8 | r/2 4/8 7 r 9 | #7/2. r/4', vel=100, **MEL)
+    answer_m = [notes(a, oct=3, vel=90, **MEL) for a in
+                ('r/2 r/8 7 5/4', 'r/2 r/8 9 7 5', 'r/2 r/8 8 7 5', 'r/2 r/8 9 11 12')]
 
-    hook_m = mot('a1', 'a2', 'a3', 'a4') + mot('a1', 'b2', 'b3', 'b4') + mot('a1', 'a2', 'a3', 'a4') \
-        + mot('c1', 'c2', 'c3', 'c4')                                          # 16 bars: A B A C
-
-    V = {   # verse lines, one bar each (F#m E D E): held downbeats, phrase ends pushed an 8th early
-        'a0': 'r:1/2 1:1/8 3:1/8 5:1/8 3:1/8',      # F#m  . . F# A C# A
-        'a1': '4:1/4. 3:1/8 2:1/4. 5:1/8',          # E    B~ A G#~ C#>
-        'a2': '_:1/2 4:1/8 3:1/8 1:1/4',            # D    ~C# B A F#
-        'a3': '2:1/4. 1:1/8 -1:1/2',                # E    G#~ F# E~
-        'rest': 'r:4',                              #      (the bells answer)
-        'a6': '3:1/2. 5:1/8 6:1/8',                 # D    A~ C# D
-        'a7': '7:1/4. 5:1/8 4:1/2',                 # E    E~ C# B~
-        'b0': 'r:1/2 1:1/8 3:1/8 5:1/8 8:1/8',      # F#m  . . F# A C# F#
-        'b1': '7:1/4. 6:1/8 4:1/4. 8:1/8',          # E    E~ D B~ F#>
-        'b2': '_:1/2 7:1/8 6:1/8 5:1/4',            # D    ~F# E D C#
-        'b3': '4:1/4. 5:1/8 7:1/2',                 # E    B~ C# E~
-        'b4': 'r:1/2 5:1/8 8:1/8 10:1/8 8:1/8',     # F#m  . . C# F# A F#
-        'b5': '9:1/4. 8:1/8 7:1/4. 8:1/8',          # E    G#~ F# E~ F#>
-        'b6': '_:1/2 10:1/8 9:1/8 8:1/4',           # D    ~F# A G# F#
-        'b7': '9:1/4. 8:1/8 7:1/4 r:1/4',           # E    G#~ F# E .
-    }
-
-    def vmot(*keys):
-        return s.motif(' '.join(V[k] for k in keys))
-
-    verse_a = vmot('a0', 'a1', 'a2', 'a3', 'rest', 'rest', 'a6', 'a7')
-    verse_b = vmot('b0', 'b1', 'b2', 'b3', 'b4', 'b5', 'b6', 'b7')
-    verse_c = vmot('a0', 'a1', 'a2', 'a3', 'b0', 'b1', 'b2', 'b3')           # verse 2: straight to the climb
-    build1_m = s.motif('r:1/2 1:1/8 4:1/8 r:1/8 6:1/8 | 8:1/2. r:1/4 | r:1/2 3:1/8 6:1/8 r:1/8 8:1/8 '
-                       '| 10:1/2. r:1/4 | r:1/2 4:1/8 7:1/8 r:1/8 9:1/8 | 11:1/2. r:1/4 '
-                       '| 12:1/2 11:1/4 9:1/4 | #7:1/2. r:1/4')      # the head sequenced Bm, D, E; E# -> F#
-    build2_m = s.motif('r:1/2 1:1/8 4:1/8 r:1/8 6:1/8 | r:1/2 3:1/8 6:1/8 r:1/8 8:1/8 '
-                       '| r:1/2 4:1/8 7:1/8 r:1/8 9:1/8 | #7:1/2. r:1/4')
-    answer_m = [s.motif('r:1/2 r:1/8 7:1/8 5:1/4'), s.motif('r:1/2 r:1/8 9:1/8 7:1/8 5:1/8'),
-                s.motif('r:1/2 r:1/8 8:1/8 7:1/8 5:1/8'), s.motif('r:1/2 r:1/8 9:1/8 11:1/8 12:1/8')]
-
-    hook_clip = hook_m.clip(octave=4, vel=104)
-    double_clip = hook_m.clip(octave=3, vel=96)
+    hook_clip = H(HOOK, vel=104)
+    double_clip = H(HOOK, oct=3, vel=96)
     # chorus 2 second voice: mostly diatonic 6ths below the hook, bent onto chord tones
-    H2 = {
-        'a1': '-1:1/8 3:1/8 r:1/8 5:1/8 7:1/4. 5:1/8', 'a2': '7:1/4. 5:1/8 4:1/2',
-        'a3': '-1:1/8 3:1/8 r:1/8 5:1/8 7:1/8 8:1/4 7:1/8', 'a4': '10:1/2 7:1/4 5:1/4',
-        'b2': '4:1/4. 5:1/8 7:1/2', 'b3': 'r:1/8 -1:1/8 3:1/8 r:1/8 5:1/8 7:1/8 8:1/4',
-        'b4': '7:1/4. 6:1/8 4:1/4 2:1/4', 'c1': '5:1/8 7:1/8 r:1/8 7:1/8 8:1/8 10:1/4 8:1/8',
-        'c2': '9:1/4. 8:1/8 7:1/2', 'c3': '7:1/4 5:1/8 4:1/8 3:1/2', 'c4': '_:1/2 -1:1/8 3:1/8 r:1/8 5:1/8',
-    }
-
-    def mot2(*keys):
-        return s.motif(' '.join(H2[k] for k in keys))
-
-    harmony_m = (mot2('a1', 'a2', 'a3', 'a4') + mot2('a1', 'b2', 'b3', 'b4') + mot2('a1', 'a2', 'a3', 'a4')
-                 + mot2('c1', 'c2', 'c3', 'c4'))
-    harmony_clip = harmony_m.clip(octave=4, vel=78)
+    H2 = phrases(**MEL, a1='-1/8 3 r 5 7/4. 5/8', a2='7/4. 5/8 4/2', a3='-1/8 3 r 5 7 8/4 7/8', a4='10/2 7/4 5',
+                 b2='4/4. 5/8 7/2', b3='r/8 -1 3 r 5 7 8/4', b4='7/4. 6/8 4/4 2', c1='5/8 7 r 7 8 10/4 8/8',
+                 c2='9/4. 8/8 7/2', c3='7/4 5/8 4 3/2', c4='_/2 -1/8 3 r 5')
+    harmony_clip = H2(HOOK, vel=78)
 
     # ------------------------------------------------------------------ the band (preset) + the song's own layers
     b = bands.outrun(s, ids={'lead': 'hook'})
@@ -148,7 +126,7 @@ def build() -> Song:
                        'peak2.freq': 200, 'peak2.gain': 1.5, 'peak2.q': 0.8}))
 
     # the drum bus lets the kick through: 20 ms attack instead of the preset's 4 (kick punch was 11 vs 16 dB)
-    kit.fx[1] = kit.fx[1].but(attack=20)
+    kit.fx['compressor'].set(attack=20)
     kit.send(plate, -24)                           # less plate on the hats: they tick instead of hiss
     kit.gain_db = 0.0                              # +1 dB over the preset: the kick leads the low end
 
@@ -292,15 +270,14 @@ def build() -> Song:
     arp.play(P_final.arp('updown', octaves=2, register=AR_UP), final)
     arp.play(P_outro.arp('up', octaves=2, register=AR_UP).slice(0, 24), outro)
 
-    rest_bar = s.motif('r:4')
-    glass.play((mot('a1') + rest_bar + mot('a3') + rest_bar).clip(octave=3, vel=84), intro.bar(4))  # a memory
-    glass.play(mot('a1', 'a2').clip(octave=3, vel=80), verse1.bar(4))       # answers in the verse's gap
+    glass.play(H('a1 r/1 a3 r/1', oct=3, vel=84), intro.bar(4))             # a memory
+    glass.play(H('a1 a2', oct=3, vel=80), verse1.bar(4))                     # answers in the verse's gap
     for i, m in enumerate(answer_m):                                         # verse 2: call & response
-        glass.play(m.clip(octave=3, vel=90), verse2.bar(2 * i + 1))
+        glass.play(m, verse2.bar(2 * i + 1))
     glass.play(P_chorus.arp('up', rate='1/8', register=('F#4', 'F#5'), vel=72), chorus2)
     glass.play(P_bridge.arp('up', rate='1/4', register=('F#4', 'F#5'), vel=64).slice(0, 16), bridge)
     glass.play(hook_clip.transpose(UP).velocity(0.75), final)                          # sounds an octave up
-    glass.note('G#5', outro.bar(7), 4, 72).note('D#6', outro.bar(7, 1), 3, 62).note('A#6', outro.bar(7, 2), 2, 54)
+    glass.play(notes('G#5/4:4=72 D#6/4:3=62 A#6/2=54'), outro.bar(7))      # one bell per beat, ringing together
 
     keys.loop(P_verse.block(voicing='drop2', register=('C#4', 'C#5'), rhythm='x..x..x.', vel=82), verse1.bar(8),
               bars=8)
@@ -313,60 +290,41 @@ def build() -> Song:
     keys.play(P_outro.block(voicing='drop2', register=('D#4', 'D#5'), vel=70).slice(16, 32), outro.bar(4))
 
     # ------------------------------------------------------------------ leads
-    vlead.play(verse_a.clip(octave=4, vel=92), verse1).play(verse_b.clip(octave=4, vel=96), verse1.bar(8))
-    vlead.play(build1_m.clip(octave=4, vel=98), build1)
-    vlead.play(verse_c.clip(octave=4, vel=96), verse2)
-    vlead.play(build2_m.clip(octave=4, vel=100), build2)
+    vlead.play(verse_a, verse1).play(verse_b, verse1.bar(8))
+    vlead.play(build1_m, build1)
+    vlead.play(verse_c, verse2)
+    vlead.play(build2_m, build2)
 
     hook.play(hook_clip, chorus1).play(hook_clip, chorus2).play(hook_clip.transpose(UP), final)
     double.play(double_clip, chorus1).play(double_clip | harmony_clip, chorus2)
     double.play(double_clip.transpose(UP), final)
 
-    # the sax: written at sounding pitch; the tenor's range ends at E5
-    SOLO = [
-        # bars 1-4 (Dmaj7, E): the hook's head displaced to beat 2, its C# held over Dmaj7, answered lower
-        (5.0, .5, 'C#4'), (5.5, .5, 'F#4'), (6.5, .5, 'A4'), (7.0, 2.0, 'C#5', 108), (9.0, .5, 'B4'), (9.5, .5, 'A4'),
-        (10.0, 1.0, 'G#4'), (11.0, .5, 'F#4'), (11.5, .5, 'E4'),
-        (12.5, .5, 'E4'), (13.0, .5, 'F#4'), (13.5, .5, 'G#4'), (14.0, 1.0, 'B4'), (15.0, .5, 'A4'), (15.5, .5, 'G#4'),
-        # bars 5-8 (F#m B D E): the dorian D# over B, a 16th run
-        (16.0, 1.5, 'F#4', 110), (17.5, .5, 'E4'), (18.0, .5, 'F#4'), (18.5, .5, 'A4'), (19.0, 1.0, 'C#5'),
-        (20.0, 1.0, 'D#5', 112), (21.0, .5, 'C#5'), (21.5, .5, 'B4'), (22.0, 1.5, 'F#4'), (23.5, .5, 'G#4'),
-        (24.0, .25, 'A4'), (24.25, .25, 'G#4'), (24.5, .25, 'F#4'), (24.75, .25, 'E4'), (25.0, .5, 'F#4'),
-        (25.5, .5, 'A4'), (26.0, 1.0, 'D5', 112), (27.0, .5, 'C#5'), (27.5, .5, 'A4'),
-        (28.0, 1.5, 'B4'), (29.5, .5, 'G#4'), (30.0, .5, 'E4'), (30.5, .5, 'G#4'), (31.0, 1.0, 'B4'),
-        # bars 9-12 (F#m B E D#sus4 D#): the head sequenced up a step per bar, then D# pulls to G# minor
-        (32.0, .5, 'C#4'), (32.5, .5, 'F#4'), (33.5, .5, 'A4'), (34.0, 2.0, 'C#5', 112),
-        (36.0, .5, 'D#4'), (36.5, .5, 'G#4'), (37.5, .5, 'B4'), (38.0, 2.0, 'D#5', 116),
-        (40.0, .5, 'E4'), (40.5, .5, 'A4'), (41.5, .5, 'C#5'), (42.0, 2.0, 'E5', 122),
-        (44.0, .25, 'D#4'), (44.25, .25, 'G#4'), (44.5, .25, 'A#4'), (44.75, 1.25, 'D#5', 120),
-    ]
+    # the sax: written at sounding pitch; the tenor's range ends at E5 (vel 100 unless =)
+    SOLO = notes("""
+     % bars 1-4 (Dmaj7, E): the hook's head displaced to beat 2, its C# held over Dmaj7, answered lower
+     r/1 r/4 C#4/8 F#4 r A4 C#5/2=108 B4/8 A4 G#4/4 F#4/8 E4 | r E4 F#4 G#4 B4/4 A4/8 G#4 |
+     % bars 5-8 (F#m B D E): the dorian D# over B, a 16th run
+     F#4/4.=110 E4/8 F#4 A4 C#5/4 | D#5=112 C#5/8 B4 F#4/4. G#4/8 |
+     A4/16 G#4 F#4 E4 F#4/8 A4 D5/4=112 C#5/8 A4 | B4/4. G#4/8 E4 G#4 B4/4 |
+     % bars 9-12 (F#m B E D#sus4 D#): the head sequenced up a step per bar, then D# pulls to G# minor
+     C#4/8 F#4 r A4 C#5/2=112 | D#4/8 G#4 r B4 D#5/2=116 | E4/8 A4 r C#5 E5/2=122 | D#4/16 G#4 A#4 D#5:1.25=120""",
+                 length=bridge.length, vel=100)
     # final chorus: short answers in the hook's held notes, echoing the solo (sounding pitches, G# minor)
-    LICKS = [
-        (6.5, .25, 'C#4'), (6.75, .25, 'D#4'), (7.0, .75, 'F#4', 106), (7.75, .25, 'D#4'),               # bar 2 (F#)
-        (12.5, .25, 'D#4'), (12.75, .25, 'E4'), (13.0, .5, 'F#4', 106), (13.5, .5, 'D#4'),               # bar 4 (B)
-        (28.5, .25, 'A#3'), (28.75, .25, 'C#4'), (29.0, 1.0, 'D#4', 106),                               # bar 8 (F#)
-        (44.5, .25, 'D#4'), (44.75, .25, 'F#4'), (45.0, .5, 'G#4', 110), (45.5, .5, 'F#4'),             # bar 12 (B)
-        (58.5, .5, 'D#4'), (59.0, .5, 'F#4'), (59.5, .5, 'G#4'),                                        # bars 15-16
-        (60.0, .25, 'B4'), (60.25, .25, 'A#4'), (60.5, 1.5, 'G#4', 112),
-    ]
+    LICKS = notes("""
+     @6.5 C#4/16 D#4 F#4/8.=106 D#4/16                % bar 2 (F#)
+     @12.5 D#4/16 E4 F#4/8=106 D#4                    % bar 4 (B)
+     @28.5 A#3/16 C#4 D#4/4=106                       % bar 8 (F#)
+     @44.5 D#4/16 F#4 G#4/8=110 F#4                   % bar 12 (B)
+     @58.5 D#4/8 F#4 G#4 B4/16 A#4 G#4/4.=112         % bars 15-16""", length=final.length, vel=100)
     # outro: the hook's head one last time (G# minor), falling home instead of climbing; the last G# rings
-    OUT = [
-        (0.0, .5, 'D#4'), (0.5, .5, 'G#4'), (1.5, .5, 'B4'), (2.0, 1.5, 'D#5', 108), (3.5, .5, 'B4'),
-        (4.0, 1.5, 'C#5'), (5.5, .5, 'B4'), (6.0, 2.0, 'A#4'),
-        (8.0, .5, 'D#4'), (8.5, .5, 'G#4'), (9.5, .5, 'B4'), (10.0, .5, 'D#5'), (10.5, 1.0, 'E5', 112),
-        (11.5, .5, 'D#5'), (12.0, 2.0, 'F#4'), (14.0, 1.0, 'A#4'), (15.0, 1.0, 'B4'),
-        (16.0, 2.0, 'B4', 100), (18.0, .5, 'G#4'), (18.5, .5, 'B4'), (19.0, 1.0, 'D#5', 104),     # E (maj7)
-        (20.0, 2.0, 'C#5', 100), (22.0, 1.0, 'A#4'), (23.0, 1.0, 'F#4'),                          # F#
-        (24.0, 2.0, 'G#4', 96), (26.0, 1.0, 'A#4', 96), (27.0, 1.0, 'G4', 100),                   # D#sus4 D#
-        (28.0, 4.0, 'G#4', 92),                                                                    # G#m: home
-    ]
+    OUT = notes("""
+     D#4/8 G#4 r B4 D#5/4.=108 B4/8 | C#5/4. B4/8 A#4/2 | D#4/8 G#4 r B4 D#5 E5/4=112 D#5/8 | F#4/2 A#4/4 B4 |
+     B4/2 G#4/8 B4 D#5/4=104 | C#5/2 A#4/4 F#4 | G#4/2=96 A#4/4=96 G4 | G#4/1=92""", vel=100)
+    #     E (maj7)                F#                 D#sus4 D#               G#m: home
 
-    def line(notes, length):
-        return Clip([(n[0], n[1], n[2], n[3] if len(n) > 3 else 100) for n in notes], length=length)
-
-    solo = art.perform(sax, line(SOLO, bridge.length), bridge, glide_leaps=5, glide_ms=90, humanize_ms=7, seed=3)
-    art.perform(sax, line(LICKS, final.length), final, glide_leaps=5, glide_ms=80, humanize_ms=6, seed=5)
-    art.perform(sax, line(OUT, outro.length), outro, glide_leaps=5, glide_ms=110, humanize_ms=8, seed=7)
+    solo = art.perform(sax, SOLO, bridge, glide_leaps=5, glide_ms=90, humanize_ms=7, seed=3)
+    art.perform(sax, LICKS, final, glide_leaps=5, glide_ms=80, humanize_ms=6, seed=5)
+    art.perform(sax, OUT, outro, glide_leaps=5, glide_ms=110, humanize_ms=8, seed=7)
     # scoops into the solo's peaks (a player bending up into the note)
     bend = []
     for at in (bridge.start + 7, bridge.start + 20, bridge.start + 34, bridge.start + 38, bridge.start + 42,
@@ -407,16 +365,7 @@ def build() -> Song:
         bass.clear(c.start, c.start + 1)            # the impact's sub boom owns the downbeat
 
     # one-beat drop before every chorus: everything stops, only the riser's tail and the reverbs remain
-    def cut(t, d, gap=1.0):
-        t.clear(d, d + gap)
-        for n in [n for n in t.notes if n.start < d - 1e-9 and n.start + n.dur > d + 1e-9]:
-            t.clear(n.start, n.start + 1e-6, pitches=n.pitch)          # shorten notes ringing into the drop
-            t.note(n.pitch, n.start, d - n.start, n.vel)
-
-    for d in (build1.end - 1, build2.end - 1, bridge.end - 1):
-        for t in (kit, bass, pad, strings, choir, arp, glass, keys, vlead, double, hook, sax):
-            cut(t, d)
-
+    s.breath(before=[chorus1, chorus2, final], beats=1, keep=[rise, rev, boom, fall, voice, robot])
 
     # ------------------------------------------------------------------ movement & mix
     s.sidechain(strings, choir, glass, key=kit, pitches='kick', depth=4, release=250)
