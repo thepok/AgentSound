@@ -78,6 +78,22 @@ class TestPresetsBuild(unittest.TestCase):
                 out = s.compile()
                 self.assertTrue(out['tracks'])
 
+    def test_rock_band_kit_gain_at_the_drum_bus(self):
+        # node_hot: the kit's balance sits at the drum bus's input, the drums track keeps headroom (its fader and
+        # trim at 0); the sends carry the gain the fader no longer gives them
+        from agentsound.bandlib import rock
+        for name, room in (('rock_band', ('drum_room', -5)), ('indie_band', ('room', -6)),
+                           ('power_ballad', ('room', -6))):
+            with self.subTest(name):
+                s, a = _song()
+                b = bands.make(name, s)
+                trim = next(f for f in b.drums.fx if f.name == 'trim')
+                self.assertEqual(trim.params['gain'], 0.0)
+                first = b.buses['drum_bus'].fx[0]
+                self.assertEqual((first.type, first.name, first.params['gain']),
+                                 ('utility', 'input', rock.KIT_GAINS[name]))
+                self.assertEqual(b.drums.sends[room[0]], room[1] + rock.KIT_GAINS[name])
+
     def test_without_ids_and_sounds(self):
         name = 'pop_band'
         s, a = _song()
@@ -240,6 +256,20 @@ class TestAmpAndMaster(unittest.TestCase):
         b = bands.make('funk_band', s, without=('gtr', 'lead', 'horns', 'keys', 'bass', 'drums'))
         self.assertEqual(len(s.master.fx), 1)
         self.assertEqual(b.info['master'], 'kept')
+
+    def test_every_family_shares_the_master_guard(self):
+        # bands.master_chain: synthwave (an fx-chain patch) and the orchestra keep a master the song set first
+        for name, without in (('outrun', ('drums', 'bass', 'pad', 'keys', 'arp')),
+                              ('string_quartet', ())):
+            with self.subTest(name):
+                s, _ = _song()
+                s.master.add(fx.limiter(gain=2.0))
+                b = bands.make(name, s, without=without)
+                self.assertEqual(([f.type for f in s.master.fx], b.info['master']), (['limiter'], 'kept'))
+        s, _ = _song()
+        b = bands.make('outrun', s, without=('drums', 'bass', 'pad', 'keys', 'arp'))
+        self.assertEqual(b.info['master'], 'set')
+        self.assertTrue(s.master.fx)
 
     def test_indie_defaults_to_the_full_kit(self):
         import inspect

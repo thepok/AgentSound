@@ -15,9 +15,12 @@ Moves (MOVES: name -> (roles, energy, density, spice, fast)):
   motif       the motif (the song's hook) in the right hand, harmonized (6ths / 3rds / guide tones), now and then a
               turn / mordent / crush on its long note
   answer      a falling pentatonic answer landing on a chord tone, guide tones under its strong notes
-  riff        a short cell stated twice, the second time answered (call and response in one hand), in 3rds / 6ths
-  sequence    a pentatonic cell sequenced up in 8ths, landing voiced
-  block       the line in block chords (drop 2 / close / locked hands: Garland, Shearing)
+  riff        a short cell (mostly the motif's: soloist.motif_line), then answered: its rhythm again, re-fitted to
+              the chord there, a new ending (call and response in one hand), in 3rds / 6ths
+  sequence    the motif's cell developed (soloist.motif_line; else a target-first line, soloist.target_line) in
+              8ths (16ths when dense), landing voiced
+  block       the line in block chords (drop 2 / close / locked hands: Garland, Shearing) - every note in a
+              'chords' stage (the block-chord chorus), elsewhere only the strong notes now and then
   octaves     the line in octaves with an inner tone (the climax sound)
   blues       a phrase with blues crushes / crushed grace notes / a slip note on its chord tones     (spice)
   run         a scale run up into a held, voiced peak                                                (spice)
@@ -42,11 +45,11 @@ MOVES = {
     'answer': (('answer', 'resolve', 'develop'), 0.5, 0.5, False, False),
     'riff': (('develop', 'answer'), 0.62, 0.6, False, False),
     'sequence': (('develop', 'burst'), 0.72, 0.78, False, False),
-    'block': (('develop', 'climax', 'answer'), 0.75, 0.5, False, False),
+    'block': (('develop', 'climax', 'answer', 'chords'), 0.75, 0.5, False, False),
     'octaves': (('climax', 'develop'), 0.92, 0.5, False, False),
     'blues': (('answer', 'develop', 'climax'), 0.66, 0.55, True, False),
-    'run': (('burst', 'develop'), 0.85, 0.95, True, False),
-    'fourths': (('burst', 'answer', 'develop'), 0.74, 0.85, True, False),
+    'run': (('burst', 'develop'), 0.85, 0.95, True, True),
+    'fourths': (('burst', 'answer', 'develop'), 0.74, 0.85, True, True),
     'octave_run': (('burst', 'climax'), 0.95, 0.95, True, True),
     'tremolo': (('climax',), 0.97, 0.4, True, True),
     'trill': (('climax', 'burst'), 0.9, 0.45, True, True),
@@ -126,17 +129,24 @@ def _fit_harmony(ctx, c: Clip) -> Clip:
     to the nearest one that is - the motif keeps its shape and sounds right over every chord it meets."""
     from .theory import available_tensions
     out = []
-    for n in c:
+    ns = sorted(c)
+    for i, n in enumerate(ns):
         ch = ctx.chord(ctx.at + n.start)
         strong = n.dur >= 0.75 - 1e-6 or abs(n.start - round(n.start)) < 1e-6
-        if ch is None or not strong:
+        nx = ns[i + 1] if i + 1 < len(ns) else None
+        # a short note on the beat stepping to the next one (an appoggiatura, a chromatic passing tone) is the line's
+        passing = n.dur <= 0.5 + 1e-6 and nx is not None and nx.start - n.start <= 0.5 + 1e-6 \
+            and 0 < abs(nx.pitch - n.pitch) <= 2
+        if ch is None or not strong or passing:
             out.append(n)
             continue
         ok = {(ch.root + i) % 12 for i in ch.intervals} | {(ch.root + i) % 12 for i in available_tensions(ch)}
         if n.pitch % 12 in ok:
             out.append(n)
             continue
-        q = next((n.pitch + d for d in (-1, 1, -2, 2) if (n.pitch + d) % 12 in ok), n.pitch)
+        lo, hi = getattr(ctx, 'range', (0, 127))
+        q = next((n.pitch + d for d in (-1, 1, -2, 2) if (n.pitch + d) % 12 in ok and lo <= n.pitch + d <= hi),
+                 next((n.pitch + d for d in (-1, 1, -2, 2) if (n.pitch + d) % 12 in ok), n.pitch))
         out.append(n._replace(pitch=q))
     return Clip._raw(out, c.length)
 
@@ -146,7 +156,9 @@ def _steps_clip(ctx, steps) -> Clip:
     pianist's touch: an arc per phrase, higher notes sing, passing notes lighter)."""
     from .humanize import touch
     if isinstance(steps, Clip):
-        c = steps
+        # a varied motif (soloist.vary: rhythm displacement) can start before its phrase: those notes are not
+        # this phrase's (pianist.arrange's moves need start >= 0)
+        c = steps if all(n.start >= 0 for n in steps) else Clip._raw([n for n in steps if n.start >= 0], steps.length)
     else:
         c = Clip._raw([Note(t, d, int(p), 90) for t, d, p in steps if t < ctx.beats - 1e-6], ctx.beats)
     c = _fit_harmony(ctx, c) if ctx.prog is not None else c
@@ -192,61 +204,113 @@ def _land(ctx, t: float, pitch: int, dur: float, devices=None) -> Part:
     return pt.shifted(t)
 
 
+LINE_ON = 3.0
+"""A move fills its slot (Move beats 0): material that ends more than LINE_ON beats before the slot's end (a motif, a
+riff's call and answer, a resolution's few steps) goes on as a line (_line_on) - blind round 6: a 16-beat slot played
+as a 2-bar cell and a 10-beat held note read as whole silent bars inside the solo's phrases."""
+
+
+def _line_on(ctx, st) -> list:
+    """[(start, dur, pitch)] steps carried on to the slot's end: when the last attack leaves more than LINE_ON beats,
+    its held note is cut to a beat or less and the line continues from an 8th / a beat after it - the motif's cell
+    developed or a target-first line (soloist.answer_line), landing on a chord tone held to the end."""
+    st = sorted((float(t), float(d), int(p)) for t, d, p in st)
+    if not st:
+        return st
+    t, d, p = st[-1]
+    if ctx.beats - t < LINE_ON + 1.0 - 1e-6:
+        return st
+    d = min(d, ctx.rng.choice((0.5, 1.0, 1.0, 1.5)))
+    st[-1] = (t, d, p)
+    t0 = t + d + ctx.rng.choice((0.0, 0.5, 0.5, 1.0))
+    sub = S.Ctx(**dict(ctx.__dict__, at=ctx.at + t0, beats=ctx.beats - t0,
+                       last=Note(ctx.at + t, d, p, 80)))
+    more = S.answer_line(sub, grid_=0.5)
+    return st + [(t0 + a, b, q) for a, b, q in more]
+
+
 # ------------------------------------------------------------------------------------------------ moves
 
 def m_motif(ctx) -> Part:
     c = S.motif_in_register(ctx)
-    return _play(ctx, c, _DEV['motif'], ornaments=_ORN, embellish=0.35, quick=0.12) if len(c) else Part()
+    if not len(c):
+        return Part()
+    return _play(ctx, _line_on(ctx, [(n.start, n.dur, n.pitch) for n in c]), _DEV['motif'], ornaments=_ORN,
+                 embellish=0.35, quick=0.12)
 
 
 def m_answer(ctx) -> Part:
-    st = S.answer_line(ctx, grid_=0.5 if ctx.density < 0.6 else 0.25)
+    st = _line_on(ctx, S.answer_line(ctx, grid_=0.5 if ctx.density < 0.6 else 0.25))
     return _play(ctx, st, _DEV['answer'], ornaments={'crush': 1.0, 'mordent': 1.0}, quick=0.15)
 
 
 def m_riff(ctx) -> Part:
-    pcs = S.pentatonic(ctx)
-    a = S.fold(S.snap(S.center(ctx), pcs), ctx)
-    cell = [a, S.step(a, pcs, 1), S.step(a, pcs, 2)]
-    ans = [cell[0], S.step(a, pcs, -1), S.snap(S.step(a, pcs, -2), S.chord_tones(ctx, ctx.at + 2.5), -1)]
-    g = 0.5
-    st = [(i * g, g, p) for i, p in enumerate(S.fit(cell, ctx))]
-    t = len(cell) * g + 0.5
-    st += [(t + i * g, g, p) for i, p in enumerate(S.fit(ans[:-1], ctx))]
-    t2 = t + 2 * g
-    st.append((t2, max(0.5, ctx.beats - t2 - 0.25), S.fold(ans[-1], ctx)))
-    return _play(ctx, [x for x in st if x[0] < ctx.beats - 0.25], _DEV['riff'], ornaments=_ORN, embellish=0.3)
+    rng = ctx.rng
+    g = rng.choice((0.5, 0.5, 1 / 3))
+    n_ = rng.choice((2, 3, 3, 4))
+    # the cell: mostly the motif's (soloist.MOTIVIC), else a short target-first line
+    cell = (S.motif_line(ctx, length=max(1.5, n_ * 0.5 + 0.5)) if rng.random() < S.MOTIVIC else []) or         S.target_line(ctx, length=n_ * g, grid_=g, contour=rng.choice(('rise', 'arch', 'fall')))
+    t = cell[-1][0] + cell[-1][1] + rng.choice((0.5, 1.0, 1.0, 1.5))
+    st = list(cell)
+    if t < ctx.beats - 1.0:
+        sub = S.Ctx(**dict(ctx.__dict__, at=ctx.at + t, beats=ctx.beats - t))
+        d = rng.choice((-2, -1, 2, 3))
+        ans = S.transform(Clip._raw([Note(s0, d0, p0 + d, 90) for s0, d0, p0 in cell], t), sub, displace=False)
+        ns = sorted(ans)
+        st += [(t + n.start, n.dur, n.pitch) for n in ns[:-1]]
+        st.append((t + ns[-1].start, S.held(ctx.beats - t - ns[-1].start), ns[-1].pitch))
+    return _play(ctx, _line_on(ctx, [x for x in st if x[0] < ctx.beats - 0.25]), _DEV['riff'], ornaments=_ORN,
+                 embellish=0.3)
 
 
 def m_sequence(ctx) -> Part:
     g = 0.5 if ctx.density < 0.75 or S.seconds(ctx, 0.25) < 0.11 else 0.25
-    st = S.sequence_line(ctx, grid_=g, length=ctx.beats - 1.5)
-    end = st[-1][0] + g
-    top = S.fold(S.snap(S.step(st[-1][2], S.pentatonic(ctx), 1), S.chord_tones(ctx, ctx.at + end)), ctx)
-    st.append((end, max(0.75, ctx.beats - end - 0.25), top))
+    L = max(1.0, ctx.beats - ctx.rng.choice((0.75, 1.0, 1.5, 2.0)) - 0.25)
+    # a sequence: mostly the motif's cell sequenced / developed (soloist.MOTIVIC), else a target-first line
+    st = (S.motif_line(ctx, length=L) if ctx.rng.random() < S.MOTIVIC else []) or S.target_line(ctx, grid_=g, length=L)
+    st = [(t, min(d, max(0.25, L - t)), p) for t, d, p in st]
+    end = st[-1][0] + st[-1][1]
+    top = S.fold(S.snap(S.step(st[-1][2], S.scale(ctx), ctx.rng.choice((1, 1, -1))),
+                        S.chord_tones(ctx, ctx.at + end)), ctx, near=st[-1][2])
+    st.append((end, S.held(ctx.beats - end, 0.75), top))
     return _play(ctx, st, _DEV['sequence'])
 
 
 def _varied_line(ctx) -> list:
-    """The current motif in the register, or (no motif) an answer line: material for block chords / octaves."""
+    """Material for block chords / octaves: the climax a line arching up to its top note (target-first, from well
+    below: the peak is reached by a line, not a leap or a run), a burst / block-chord chorus a running 8th-note line
+    (locked hands: Garland, Shearing), else the current motif in the register, or (no motif) an answer line."""
+    if ctx.stage == 'climax' and ctx.beats >= 3.0:
+        n = max(3, int((ctx.beats - ctx.rng.choice((1.0, 1.5))) / 0.5))
+        line = S.target_line(ctx, length=n * 0.5, grid_=0.5, start=S.center(ctx, -0.35), contour='arch')
+        j = max(range(len(line)), key=lambda k: (line[k][2], -k))
+        if j >= 4 and all(line[k][2] < line[k + 1][2] for k in range(j - 4, j)):
+            # a straight climb into the top note is a sweep: the line turns once on its way up
+            a, b = line[j - 2], line[j - 1]
+            line[j - 2], line[j - 1] = (a[0], a[1], b[2]), (b[0], b[1], a[2])
+        return line
+    if ctx.stage in ('burst', 'chords') and ctx.beats >= 3.0:
+        return S.answer_line(ctx, grid_=0.5, n=max(3, int((ctx.beats - ctx.rng.choice((1.0, 1.5, 2.0))) / 0.5)))
     c = S.motif_in_register(ctx)
     if len(c):
-        return [(n.start, n.dur, n.pitch) for n in c]
+        return _line_on(ctx, [(n.start, n.dur, n.pitch) for n in c])
     return S.answer_line(ctx, grid_=0.5)
 
 
 def m_block(ctx) -> Part:
+    # block chords on every note only in a block-chord chorus; elsewhere a few accents (blind round 4: block-chord
+    # peaks on every beat)
     return _play(ctx, _varied_line(ctx), _DEV['block'], ornaments={'restrike': 1.5, 'roll': 0.5}, embellish=0.3,
-                 voices=3, density=1.0)
+                 voices=3, density=1.0 if ctx.stage == 'chords' else 0.3)
 
 
 def m_octaves(ctx) -> Part:
-    return _play(ctx, _varied_line(ctx), _DEV['octaves'], ornaments={'restrike': 1.0}, embellish=0.2, density=1.0,
-                 doubles=0.78)
+    return _play(ctx, _varied_line(ctx), _DEV['octaves'], ornaments={'restrike': 1.0}, embellish=0.2,
+                 density=1.0 if ctx.stage == 'chords' else 0.4, doubles=0.78)
 
 
 def m_blues(ctx) -> Part:
-    st = S.answer_line(ctx, grid_=0.5)
+    st = _line_on(ctx, S.answer_line(ctx, grid_=0.5))
     return _play(ctx, st, _DEV['blues'], ornaments=_BLUES, embellish=0.7, quick=0.9)
 
 
@@ -256,22 +320,26 @@ def _peak(ctx, t: float):
 
 
 def _set_piece(ctx, D: float = 2.0, land: float = 1.5):
-    """Where a figure goes in its slot: (lead-in Part or None, figure start, figure length, landing length). A slot
-    longer than the figure + its landing opens with a line (a sequence in a dense stage, an answer else) and the
-    figure comes at its end - a set piece crowns a phrase, it does not fill it."""
-    D = min(D, max(1.0, ctx.beats * 0.45))
+    """Where a figure goes in its slot: (lead-in Part or None, figure start, figure length, landing length). The
+    figure's length (D x 0.75..1.3) and its landing (land x 0.5..1.6) are drawn; a slot longer than both opens with
+    a line (target-first in a dense stage, an answer else) and the figure comes late in it, its place drawn (on an
+    8th; the line may run straight into it or breathe first) - a set piece crowns a phrase, it does not fill it, and
+    it never sits in the same spot twice."""
+    rng = ctx.rng
+    D = min(max(1.0, round(D * rng.uniform(0.75, 1.3) * 4) / 4), max(1.0, ctx.beats * 0.45))
+    land = land * rng.uniform(0.5, 1.6)
     rest = ctx.beats - D - land - 0.25
     if rest < 2.0:
-        return None, 0.0, D, max(0.75, ctx.beats - D - 0.25)
-    t0 = float(int(rest * 2) / 2.0)                      # on an 8th
-    sub = S.Ctx(**dict(ctx.__dict__, beats=t0 - 0.25))
+        return None, 0.0, D, S.held(ctx.beats - D, 0.75)
+    t0 = max(1.5, float(int(rest * rng.uniform(0.6, 1.0) * 2) / 2.0))     # on an 8th
+    sub = S.Ctx(**dict(ctx.__dict__, beats=t0 - rng.choice((0.0, 0.25, 0.5))))
     if ctx.density >= 0.7:
         g = 0.5 if S.seconds(ctx, 0.25) < 0.11 else 0.25
-        st = S.sequence_line(sub, grid_=g, length=sub.beats)
+        st = S.target_line(sub, grid_=g, length=sub.beats)
         pre = _play(sub, st, _DEV['sequence'])
     else:
         pre = _play(sub, S.answer_line(sub, grid_=0.5), _DEV['answer'])
-    return pre, t0, D, max(0.75, ctx.beats - t0 - D - 0.25)
+    return pre, t0, D, S.held(ctx.beats - t0 - D, 0.75)
 
 
 def _crowned(pre, t0, fig: Part, land: Part) -> Part:
@@ -279,12 +347,33 @@ def _crowned(pre, t0, fig: Part, land: Part) -> Part:
     return pre.merge(out) if pre is not None else out
 
 
+def _last_pitch(part) -> int | None:
+    """The top note of a Part's last attack (where a figure after it has to connect)."""
+    if part is None or not len(part.clip):
+        return None
+    t = max(n.start for n in part.clip)
+    return max(n.pitch for n in part.clip if n.start > t - 0.1)
+
+
 def m_run(ctx) -> Part:
+    """A scale run out of the line before it: up into a held, voiced peak - or, when the line already sits high, down
+    into a chord tone below (its span, 5..14 semitones, drawn)."""
     from . import pianist
     pre, t0, D, hold = _set_piece(ctx)
-    top = _peak(ctx, t0 + D)
-    start = S.fold(top - 12 + ctx.rng.choice((0, 2, -1)), ctx) if top - 12 >= ctx.range[0] else ctx.range[0]
-    run = pianist.run(start, top - 1, D, ctx.bpm, chord=ctx.chord(ctx.at + t0), key=S.key_of(ctx),
+    lo, hi = ctx.range
+    last = _last_pitch(pre)
+    tones = S.chord_tones(ctx, ctx.at + t0 + D)
+    span = ctx.rng.randint(5, 14)
+    if last is not None and last > (lo + hi) / 2 and ctx.rng.random() < 0.6:       # down from where the line is
+        start = last + ctx.rng.choice((-2, -1, 1))
+        top = max(lo, S.snap(start - span, tones, -1))
+        end = top + 1
+    else:
+        top = _peak(ctx, t0 + D)
+        start = last - ctx.rng.choice((1, 2, 3)) if last is not None and lo <= last < top - 4 else \
+            max(lo, top - span)
+        end = top - 1
+    run = pianist.run(start, end, D, ctx.bpm, chord=ctx.chord(ctx.at + t0), key=S.key_of(ctx),
                       vel=(S.vel(ctx, 0.35), S.vel(ctx, 0.8)), seed=ctx.rng.randrange(1 << 30))
     sub = S.Ctx(**dict(ctx.__dict__, at=ctx.at + t0))
     return _crowned(pre, t0, _figure(ctx, run, 'run'), _land(sub, D, top, hold))
@@ -298,8 +387,13 @@ def m_fourths(ctx) -> Part:
     f = pianist.fourths(top, D, ctx.bpm, chord=ctx.chord(ctx.at + t0), key=S.key_of(ctx),
                         grid=0.5 if S.seconds(ctx, 0.25) < 0.11 else 0.25,
                         vel=(S.vel(ctx, 0.85), S.vel(ctx, 0.45)), seed=ctx.rng.randrange(1 << 30))
+    # the cascade stops where it would leave the right hand's range (its landing never leaps back up an octave)
+    floor = ctx.range[0] - 3
+    cut = next((n.start for n in sorted(f) if n.pitch < floor), None)
+    if cut is not None and cut > 0.4:
+        f = Clip._raw([n for n in f if n.start < cut - 1e-6], f.length)
     low = min(n.pitch for n in f) if len(f) else top - 7
-    land = S.fold(S.snap(low + 2, S.chord_tones(ctx, ctx.at + t0 + D), 1), ctx)
+    land = S.fold(S.snap(low + 2, S.chord_tones(ctx, ctx.at + t0 + D), 1), ctx, near=low)
     return _crowned(pre, t0, _figure(ctx, f, 'fourths'), _land(sub, D, land, hold))
 
 
@@ -375,12 +469,24 @@ def m_resolve(ctx) -> Part:
     end_t = ctx.beats
     goal_tones = S.chord_tones(ctx, ctx.at + max(0.0, end_t - 1.0))
     target = S.fold(S.snap(S.center(ctx, -0.05), goal_tones | {k.tonic}), ctx)
+    # the target held a bar at most: a longer slot comes down to it as a falling line first (the climax's descent;
+    # blind round 6: a resolution of a few steps and a note held over two bars read as empty bars)
+    hold = max(1.0, min(ctx.bpb - 1.0, 0.5 * ctx.beats))
+    st, t0 = [], 0.0
+    if ctx.beats - hold > 3.5:
+        st = S.target_line(ctx, length=ctx.beats - hold - 2.0, grid_=0.5, start=start, contour='fall')
+        t0, start = st[-1][0] + st[-1][1], st[-1][2]
     line, q = [], start
     while len(line) < 4 and abs(q - target) > 2:
         q = S.step(q, S.scale(ctx), -1 if q > target else 1)
         line.append(q)
-    st = [(i * 0.5, 0.5, p) for i, p in enumerate(S.fit(line, ctx))]
-    t = len(st) * 0.5
+    st += [(t0 + i * 0.5, 0.5, p) for i, p in enumerate(S.fit(line, ctx))]
+    t = t0 + len(line) * 0.5
+    k_ = 0
+    while ctx.beats - t > hold + 0.25 and k_ < 6:          # (early: the target enclosed - above, below - until its bar)
+        q = S.step(target, S.scale(ctx), 1 if k_ % 2 == 0 else -1)
+        st.append((t, 0.5, q))
+        t, k_ = t + 0.5, k_ + 1
     st.append((t, max(1.0, ctx.beats - t), target))
     return _play(ctx, st, _DEV['resolve'], ornaments={'roll': 2.0, 'restrike': 1.0, 'turn': 0.5}, embellish=0.5)
 
@@ -402,6 +508,38 @@ def _motif_maker(ctx) -> Clip:
 
 # ------------------------------------------------------------------------------------------------ place
 
+def _traded(lh: Clip, perf, cfg, win) -> tuple:
+    """Trading 4s (soloist stage 'swap': perf.trades): in each traded span the left hand's comping gives way to a line
+    of its own - target-first, single notes in its register, landing on a chord tone a beat before the right hand
+    comes back - and the right hand comps under it: a soft rootless voicing early in every bar. (left hand, comp)."""
+    import random as _random
+    from .humanize import touch
+    from .theory import note as _note, rootless
+    lo, hi = _note(cfg['lh_register'][0]), _note(cfg['lh_register'][1]) + 5
+    rng = _random.Random(f"{cfg['seed']}:trades")
+    bpb = win.beats_per_bar
+    ns, comp = list(lh), []
+    for a, b in perf.trades:
+        a0, b0 = a - perf.start, b - perf.start
+        ns = [n._replace(dur=min(n.dur, max(0.1, a0 - 0.05 - n.start))) if n.start < a0 else n
+              for n in ns if not a0 - 0.05 <= n.start < b0 - 0.05]
+        ctx = S.Ctx(prog=win, at=a, solo_start=perf.start, beats=b - a - 1.0, key=cfg.get('_key'), bpm=cfg['_bpm'],
+                    range=(lo, hi), register=0.55, density=0.45, rng=rng, last=None, stage='swap', energy=0.6,
+                    vel=(cfg['lh_vel'] + 12, cfg['lh_vel'] + 32))      # (the traded line as present as the RH's)
+        line = S.answer_line(ctx, grid_=0.5)
+        c = touch(Clip._raw([Note(a0 + t, d, int(q), 80) for t, d, q in line], b0 - a0), *ctx.vel)
+        ns += list(c)
+        for k in range(int(round((b0 - a0) / bpb))):
+            t = a0 + k * bpb + rng.choice((0.5, 1.0, 1.0, 1.5))      # off the bar line: under the line
+            ch = win.at(min(t, win.length - 1e-6))
+            if ch is None:
+                continue
+            v = int(cfg['lh_vel'] - 6 + rng.randint(-3, 3))
+            comp += [Note(t + 0.015 * i, rng.choice((1.0, 1.5)), q, v)
+                     for i, q in enumerate(sorted(rootless(ch, rng.choice('AB'), 4, register=(60, 74))))]
+    return Clip._raw(sorted(ns), lh.length), Clip._raw(sorted(comp), lh.length)
+
+
 def _place_fn(cfg):
     def place(track, perf) -> None:
         """The right hand on the track, the left hand (pianist.left_hand under the whole solo, answering the right
@@ -417,6 +555,9 @@ def _place_fn(cfg):
             lh = pianist.left_hand(win, cfg['_bpm'], style=cfg['lh'], register=cfg['lh_register'],
                                    density=cfg['lh_density'], vel=cfg['lh_vel'], rh=perf.clip, seed=cfg['seed'],
                                    length=L, answers=cfg['lh_answers'])
+            if getattr(perf, 'trades', None):
+                lh, comp = _traded(lh, perf, cfg, win)
+                track.play(comp, perf.start)
             cfg['lh_track'].play(lh, perf.start)
             cfg['_lh'] = lh
         if cfg['pedal']:

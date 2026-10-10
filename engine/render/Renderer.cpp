@@ -160,11 +160,13 @@ struct Node {
     std::unique_ptr<WavWriter> stem;
 };
 
-// Balance-style pan: unity at centre, the opposite side attenuated with a cosine law.
+// Balance-style pan: unity at centre, the opposite side attenuated with a cosine law. Clamped at 0: in float,
+// cos(pi/2) is -4.4e-8, and a hard-panned source left a tiny INVERTED copy on the far side (the analysis then read
+// it as correlation -1, 'over_wide').
 void panToGains(float pan, float& l, float& r) {
     pan = std::clamp(pan, -1.0f, 1.0f);
-    l = pan > 0.0f ? std::cos(pan * static_cast<float>(dsp::kPi) * 0.5f) : 1.0f;
-    r = pan < 0.0f ? std::cos(-pan * static_cast<float>(dsp::kPi) * 0.5f) : 1.0f;
+    l = pan > 0.0f ? std::max(0.0f, std::cos(pan * static_cast<float>(dsp::kPi) * 0.5f)) : 1.0f;
+    r = pan < 0.0f ? std::max(0.0f, std::cos(-pan * static_cast<float>(dsp::kPi) * 0.5f)) : 1.0f;
 }
 
 double evaluate(const AutomationLane& lane, std::size_t& cursor, double beat) {
@@ -965,7 +967,7 @@ RenderResult renderSong(const SongSpec& song, const RenderOptions& options) {
         }
         analyzer.prepare(sr, song.tempo, markers, static_cast<double>(endSample - startSample + tailSamples) / sr);
         analyzer.setTimeGrid(tempo, meter);
-        analyzer.setStartBeat(fromBeat);
+        analyzer.setStartBeat(fromBeat, toBeat < song.lengthBeats ? toBeat : std::numeric_limits<double>::infinity());
         try {  // validated by parseSong; a hand-built SongSpec with bad settings is still a config error
             analyzer.setProfile(song.analysis.profile);
             if (song.analysis.loudness) analyzer.setLoudnessTarget(song.analysis.loudness->first, song.analysis.loudness->second);

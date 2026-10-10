@@ -421,6 +421,48 @@ def credits_text(credits: dict, title: str, artist: str) -> str:
 
 # ------------------------------------------------------------------------------ cover + mp3
 
+def _plain_words(text: str) -> list[str]:
+    """A sung line's lyrics as words to read, one line per phrase: the singer markup (phonemes {..}, *emphasis*,
+    (( intimate )), melisma '-' / hold '_' tokens, hyphenated syllables) taken out."""
+    text = re.sub(r'\{[^}]*\}', '', str(text)).replace('((', ' ').replace('))', ' ').replace('*', '')
+    words = [w.replace('-', '') for w in text.split() if w not in ('-', '_')]
+    lines, cur = [], []
+    for w in words:
+        cur.append(w)
+        if w[-1:] in ',;.!?':
+            lines.append(' '.join(cur))
+            cur = []
+    if cur:
+        lines.append(' '.join(cur))
+    return lines
+
+
+def lyrics_text(song, title: str, artist: str) -> str:
+    """The words of a sung song (agentsound.singer: every sing() part, doubles and harmonies of the same line once),
+    by section in song order - the build writes it as out/lyrics.txt ('' when nothing is sung). HUMAN_FEEDBACK:
+    always send the lyrics as text with a sung song."""
+    sung = {t.id: [vo for vo in t._singer.get('parts', []) if vo.notes and str(vo.lyrics_text).strip()]
+            for t in getattr(song, 'tracks', {}).values() if getattr(t, '_singer', None)}
+    if not any(sung.values()):
+        return ''
+    lead = max(sung, key=lambda tid: sum(len(vo.notes) for vo in sung[tid]))     # the most sung notes
+    parts, seen = [], []
+    for tid in [lead] + [t for t in sung if t != lead]:
+        for vo in sung[tid]:
+            at = round(min(n.start for n in vo.notes), 2)
+            if not any(abs(a - at) < 0.5 and txt == vo.lyrics_text for a, txt in seen):   # a double / harmony
+                seen.append((at, vo.lyrics_text))
+                parts.append((at, tid != lead, vo.lyrics_text))
+    out, last = [title, f"({artist})"], None
+    for at, backing, txt in sorted(parts, key=lambda p: (p[0], p[1])):
+        sec = next((s.name for s in song.sections if s.start - 1e-6 <= at < s.end - 1e-6), None)
+        if sec != last:
+            out += ['', f"[{sec}]" if sec else '[-]']
+            last = sec
+        out += [f"({x.rstrip(',;')})" if backing else x for x in _plain_words(txt)]   # backing lines in ()
+    return '\n'.join(out) + '\n'
+
+
 def make_cover(engine: Path, spec: dict, out_png: Path, song_dir: Path | None = None) -> Path:
     """Renders (or copies, for COVER['file']) the cover; skipped when out/cover.json already has this spec."""
     out_png.parent.mkdir(parents=True, exist_ok=True)

@@ -139,7 +139,7 @@ def _assemble(song, preset: str, roles: dict, *, returns: dict, master, analysis
         for (depth, release), targets in pump.items():
             song.sidechain(*targets, key=kit, pitches='kick', depth=depth, release=release)
     if master is not None:
-        song.master.use(master)
+        bands.master_chain(band, master)
     band.info['fallbacks'] = fallbacks
     band.info['packs'] = sorted(used_packs)
     if fallbacks:

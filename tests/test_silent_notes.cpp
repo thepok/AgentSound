@@ -201,6 +201,20 @@ int main() {
           "without the compiler's hint the render finding stands alone (2 notes on E2)");
     if (!plainW.empty()) std::cout << "       " << plainW[0] << "\n";
 
+    // a preview window (build --section): notes after its end are never played - not judged, though the render's
+    // tail (1 s = 2 beats) still covers the line's notes at beats 6..7.05
+    as::RenderOptions o3 = o2;
+    o3.outDir = (scratch / "window").string();
+    o3.fromBeat = 0.0;
+    o3.toBeat = 6.0;
+    as::renderSong(as::parseSong(plain), o3);
+    const json rep3 = readJson(scratch / "window" / "report.json");
+    const json* line3 = node(rep3, "line");
+    if (line3) std::cout << "       window line: " << (*line3)["silentNotes"].dump() << "\n";
+    check(line3 && (*line3)["silentNotes"]["silent"] == 0 && (*line3)["silentNotes"]["notes"] == 6 &&
+              silentWarnings(rep3, "line").empty(),
+          "a preview window: the notes after its end are not judged (no silent notes after the section)");
+
     std::cout << (failures ? "FAILED\n" : "all passed\n");
     return failures ? 1 : 0;
 }

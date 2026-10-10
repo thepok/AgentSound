@@ -297,6 +297,13 @@ void testBandsAndStereo() {
         const json r2 = analyseMix(sr, sine(sr, 4.0, 4000.0, -12.0));
         check(r2["global"]["bandsPct"]["presence"].get<double>() > 95.0, "4 kHz sine lands in 'presence'");
     }
+    {   // A hard-panned source (the far side a -150 dB inverted residue: float cos(pi/2)) has no image, not anti-phase.
+        Stereo s = sine(sr, 4.0, 1000.0, -12.0);
+        for (auto& v : s.R) v *= -4.4e-8f;
+        const json r = analyseMix(sr, s);
+        const double c = r["global"]["stereoCorrelation"];
+        check(std::abs(c) < 0.01 && !hasWarning(r, "phase"), fmt("hard-panned mono -> correlation %.2f (not -1)", c));
+    }
     {   // Anti-phase bass: low end not mono, phase problem.
         Stereo s = sine(sr, 6.0, 70.0, -12.0);
         for (auto& v : s.R) v = -v;
@@ -581,7 +588,7 @@ void testProfiles() {
     namespace an = as::analysis;
     const double sr = 48000.0;
     {   // Registry: every profile, default first and identical to the old reference.
-        check(an::analysisProfileNames() == "default, synthwave, dreamwave, darksynth, jazz, classical, piano, pop, rock, film",
+        check(an::analysisProfileNames() == "default, synthwave, dreamwave, darksynth, jazz, classical, piano, pop, edm, rock, film",
               "profiles: " + an::analysisProfileNames());
         check(an::findAnalysisProfile("outrun") == nullptr && an::findAnalysisProfile("synthwave") != nullptr,
               "findAnalysisProfile: unknown names give nullptr");
@@ -641,7 +648,7 @@ void testProfiles() {
             if (w["code"] == "balance_sub_high") named = w["message"].get<std::string>().find("'synthwave' reference") != std::string::npos;
         check(named, "balance warnings name the profile they compare against");
         check(ref["profiles"] == json::array({"default", "synthwave", "dreamwave", "darksynth", "jazz", "classical", "piano", "pop",
-                                              "rock", "film"}),
+                                              "edm", "rock", "film"}),
               "report.reference.profiles lists the profile names as an array");
         // Per-section balance follows the profile too (sections[].bandsVsRefDb).
         as::MixAnalyzer a;
@@ -671,6 +678,15 @@ void testProfiles() {
                   o["reference"]["lufsTargetFrom"] == "override" && o["reference"]["profileLufsTarget"] == json::array({-10.0, -7.0}) &&
                   o2["reference"]["lufsTarget"] == o["reference"]["lufsTarget"],
               "setLoudnessTarget overrides the profile window before or after setProfile");
+        // one rounding rule with `agentsound master --check`: a reading within 0.05 LU of the window (inside at the
+        // printed 0.1 LU) is inside
+        const double L = def["global"]["lufsIntegrated"].get<double>();
+        auto low = [&](double lo) {
+            as::MixAnalyzer x;
+            return hasWarning(analyse(x, sr, mix, {}, {}, {}, 120.0, {}, [&](as::MixAnalyzer& y) {
+                y.setLoudnessTarget(lo, lo + 3.0); }), "loudness_low");
+        };
+        check(!low(L + 0.03) && low(L + 0.1), "loudness_low only beyond 0.05 LU (-10.03 vs -10 reads inside, as master --check)");
     }
     {   // Peak-to-loudness ratio: a -20 dBFS tone with one louder cycle (PLR ~5.5 dB) is squashed
         // for default (>= 6 expected) but a normal loud master for darksynth (>= 5).
@@ -1576,6 +1592,9 @@ void testGenreProfiles() {
         check(jz->lufsMin == -16 && jz->lufsMax == -13 && cl->lufsMin == -23 && cl->lufsMax == -16 && po->lufsMin == -11 && po->lufsMax == -8 &&
                   ro->lufsMin == -10 && ro->lufsMax == -7 && fi->lufsMin == -16 && fi->lufsMax == -10,
               "loudness targets: jazz -16..-13, classical -23..-16, pop -11..-8, rock -10..-7, film -16..-10");
+        const auto e = prof("edm")->bandShares();
+        check(e[0] > p[0] && e[0] < sw[0] && e[2] < d[2] && prof("edm")->lufsMin == -10 && prof("edm")->lufsMax == -6,
+              fmt("edm: sub share %.1f %% between pop and synthwave, cleaner low mids than default, -10..-6 LUFS", 100 * e[0]));
         check(cl->plrMinDb >= 12 && cl->lraMaxLu >= 20 && jz->plrMinDb >= 9 && jz->lraMinLu >= 5 && jz->lraMaxLu <= 14 && ro->plrMinDb <= 5 &&
                   po->lraMaxLu <= 12 && cl->wetMaxLu > jz->wetMaxLu && cl->returnLowMaxPct > 30.0 && !cl->bedBelowLeadMaxDb &&
                   !cl->bandLowDb[0] && !jz->bandLowDb[0],
@@ -1618,6 +1637,14 @@ void testGenreProfiles() {
     pop.rt60 = 1.8;
     pop.lufs = -9.8;
     pop.ceilingDb = -2.0;
+    GenreScene edm;  // a club track: breakdown, build, two drops, limited hard
+    edm.profile = "edm";
+    edm.sectionDb = {-6.0, -3.0, 0.0, 0.0};
+    edm.widthPct = 60.0;
+    edm.hallLu = -13.0;
+    edm.rt60 = 1.6;
+    edm.lufs = -7.5;
+    edm.ceilingDb = -1.6;
     GenreScene rock;
     rock.profile = "rock";
     rock.sectionDb = {-5.0, -1.0, 0.0, -3.0};  // verse, chorus, solo, bridge
@@ -1638,7 +1665,7 @@ void testGenreProfiles() {
 
     struct RefCase { GenreScene sc; std::vector<const char*> underDefault; };
     const RefCase refs[] = {{jazz, {"loudness_low"}}, {classical, {"loudness_low", "lra_high"}}, {piano, {"loudness_low"}}, {pop, {}},
-                            {rock, {"loudness_high"}}, {film, {"loudness_low"}}};
+                            {edm, {"loudness_high"}}, {rock, {"loudness_high"}}, {film, {"loudness_low"}}};
     for (const auto& [sc, underDefault] : refs) {
         const json r = genreReport(sc);
         const std::string warns = profileWarnings(r);
@@ -1712,6 +1739,13 @@ void testGenreProfiles() {
         s = pop;
         s.widthPct = 10.0;
         wrong.push_back({s, {"narrow_mix"}, "pop 10 % wide"});
+        s = edm;
+        s.tweakDb = {-14.0, 0, 0, 0, 0, 0, 0};
+        wrong.push_back({s, {"balance_sub_low"}, "edm without its sub"});
+        s = edm;
+        s.lufs = -11.0;
+        s.ceilingDb = -3.0;
+        wrong.push_back({s, {"loudness_low"}, "edm mastered at -11 LUFS (not a club master)"});
         s = rock;
         s.shape = "synthwave";
         wrong.push_back({s, {"balance_sub_high"}, "rock with a synthwave sub"});

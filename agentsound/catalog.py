@@ -58,7 +58,8 @@ MODULES = {
     'filter': "resonant filter lp/bp/hp/ladder with drive (sweeps, automation target)",
     'utility': "gain, pan, polarity flip per channel, mono sum",
     'deesser': "de-esser for sung vocals: split-band (only above freq) or wide sibilance reduction, threshold / ratio / "
-               "range, listen mode (the vocal hero's 'deess' stage)",
+               "range, listen mode (the vocal hero's 'deess' stage; split mode at 2-3 kHz = a dynamic presence cut "
+               "on a bright piano: solo_piano)",
     'width': "stereo width (mid/side) with mono-below-frequency (monobass) and balance",
     # modulation / time
     'chorus': "Juno-style chorus (modes I, II, I+II) or custom multi-voice chorus",
@@ -153,7 +154,8 @@ HELPER_MODULES = ('theory', 'voicing', 'notation', 'patterns', 'humanize', 'auto
                   'drummer', 'hornist', 'gesture', 'fretwork', 'soloist', 'guitar_vocab', 'guitar_riff', 'horn_vocab', 'budget',
                   'bassist', 'guitarist', 'sfz', 'kits', 'organ', 'articulation', 'speech', 'tempo', 'song', 'sections', 'mixer',
                   'mastering', 'heroes', 'bands', 'compare', 'delivery', 'library', 'silent_notes', 'figures',
-                  'bandlib.scoring', 'singer', 'lyrics', 'voicebank')
+                  'bandlib.scoring', 'singer', 'lyrics', 'voicebank', 'endless.composer', 'endless.genres',
+                  'endless.perform', 'endless.run')
 
 
 def helpers() -> dict[str, list[tuple[str, str]]]:
@@ -419,6 +421,10 @@ def overview(sections: list[str], markdown: bool = False, reindex: bool = False)
                        + (f": {p.description}" if p.description else '') + (f" (tuned: {p.tuned})" if p.tuned else ''))
         out.append(f"{'' if markdown else '  '}how to play each: print(b.describe()) / b.notes; list: python -m "
                    f"agentsound bands [genre]")
+        from .endless import GENRES
+        out.append(f"{'' if markdown else '  '}endless genres (no LLM: a rule-based tune composer + these players): "
+                   + ', '.join(code(g) for g in GENRES) + " - python -m agentsound endless GENRE [--count N] [--mood M]"
+                   " [--swing] [--play]; agentsound.endless.compose(genre, seed) / .song(tune)")
 
     if 'dx7' in sections:
         voices = dx7_voices()

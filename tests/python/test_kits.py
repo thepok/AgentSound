@@ -258,6 +258,21 @@ class OneShots(Tmp):
             self.assertEqual((z['loop'], z['pitchKeytrack'], z['lo']), ('oneshot', 0, z['hi']))
         self.assertEqual(info['names']['kick'], 36)
 
+    def test_choke_keys(self):
+        # every kit with cymbals gets a silent choke key that grabs them (group / offBy); extras keep 88+ - the
+        # choke moves to the next free key; the drummer finds it, the silent-notes ear knows it is meant silent
+        from agentsound import drummer, silent_notes
+        from agentsound.patches import inst
+        zones, info = kits.build(str(self.make_kit()))
+        silent = [z for z in zones if z['file'] == '*silence']
+        self.assertEqual([z['group'] for z in silent], [kits.CHOKE_KEYS['crash_choke'][2]])     # no ride / china
+        key = silent[0]['lo']
+        self.assertNotIn(key, info['keys'])                                  # not on an extra file's key
+        self.assertTrue(all(z['offBy'] == silent[0]['group'] for z in self.zones_on(zones, 49)))
+        ins = inst.sampler(zones=zones)
+        self.assertEqual(drummer.Kit.of(ins).key('crash_choke', fallback=False), key)
+        self.assertIsNone(silent_notes._Sampler(ins.params).why_silent(key, 90))
+
     def test_numbered_modes(self):
         k = self.make_kit()
         zones, _ = kits.build(str(k), numbered='variants')
@@ -364,7 +379,7 @@ class OneShots(Tmp):
     def test_extras_gains_spread(self):
         k = self.make_kit()
         zones, info = kits.build(str(k), extras=False, gains={'hats': -6, 'kick': 2}, spread=0.0)
-        self.assertFalse(any(z['lo'] >= 88 for z in zones))
+        self.assertFalse(any(z['lo'] >= 88 for z in zones if z['file'] != '*silence'))   # (the choke key: 88)
         self.assertIn('mystery.wav', info['unused'])
         self.assertTrue(all(z['gain'] == -6.0 for z in zones if z['lo'] in (42, 46)))
         self.assertTrue(all(z['gain'] == 2.0 for z in zones if z['lo'] == 36))

@@ -286,6 +286,12 @@ class Kit:
                     else 'mf_natural' if 'mf-natural' in blob or 'mf-drumset' in blob else 'gm')
             same = {k: frozenset(v) for k, v in files.items()}
             kit = cls._named(name, avail=set(files), same=same)
+            from .kits import CHOKE_KEYS             # inst.kit's silent choke keys (any kit layout)
+            for piece, (_, _, group) in CHOKE_KEYS.items():
+                key = next((z['lo'] for z in zones if isinstance(z, dict) and z.get('file') == '*silence'
+                            and z.get('group') == group and z.get('lo') == z.get('hi')), None)
+                if piece not in kit.pieces and key is not None:
+                    kit.pieces[piece] = key
             ho = kit.pieces.get('hat_open')
             kit.live_hat = ho is not None and any(
                 isinstance(z, dict) and z.get('lo', 0) <= ho <= z.get('hi', 127)
@@ -535,6 +541,12 @@ STYLES: dict[str, dict] = {
                      fills={'toms': 3.0, 'snare': 2.0, 'pickup': 1.0},
                      feel={'R': 0.0, 'L': 0.0, 'RF': 0.0, 'LF': 0.0}, timing_ms=0.8, rimshot=2.0, side=(),
                      crashes={'crash': 1.0}, swing=0.5, clap=True),
+    'house': dict(kicks=(('x...x...x...x...',), ('x...x...x...x...',)), four=True, end_roll='cymbal',
+                  snare=(4, 12), hat='hat_barks', ghosts={}, opens={}, machine=True,
+                  time={'intro': 'hat8', 'verse': 'hat8', 'pre': 'hat16', 'break': 'hat8', 'bridge': 'hat8'},
+                  fills={'snare': 3.0, 'roll': 1.5, 'pickup': 1.5},
+                  feel={'R': 0.0, 'L': 0.0, 'RF': 0.0, 'LF': 0.0}, timing_ms=0.6, rimshot=2.0, side=(),
+                  crashes={'crash': 1.0}, swing=0.5, clap=True),
     'bossa': dict(special='bossa', builds=False, kicks=(('x.....x.x.....x.',), ('x.....x.x.....x.',)), snare=(),
                   hat='hat8',
                   ghosts={}, opens={}, time={'chorus': 'ride', 'solo': 'ride'},
@@ -546,6 +558,14 @@ STYLES: dict[str, dict] = {
                  fills={'triplets': 2.0, 'eighths': 1.5, 'slap': 1.0, 'toms': 0.5},
                  feel={'R': -2.0, 'L': 2.0, 'RF': 0.0, 'LF': 0.0}, timing_ms=7.0, rimshot=2.0, side=(),
                  crashes={'crash': 1.0}, swing=0.5, soft=0.6),
+    # the lo-fi / boom-bap loop: a lazy kick (the & of 2, the & of 3), the snare well behind the beat, soft 8th hats,
+    # few ghosts, small pickups instead of fills, no cymbals crashing in (endless lofi-piano)
+    'lofi': dict(kicks=(('x.........x.....', 'x......x..x.....', 'x.........x..x..'),
+                        ('x......x..x.....', 'x..x......x..x..', 'x.....x...x.....', 'x......x..x...x.')),
+                 snare=(4, 12), hat='hat8', ghosts={15: 0.25, 7: 0.15, 11: 0.1}, opens={14: 0.25},
+                 time={}, builds=False, fills={'pickup': 3.0, 'snare': 0.5},
+                 feel={'R': 6.0, 'L': 16.0, 'RF': 3.0, 'LF': 0.0}, timing_ms=5.0, rimshot=2.0, side=(),
+                 crashes={'crash': 1.0}, swing=0.5, soft=0.8),
     'train': dict(special='train', kicks=(('x.......x.......',), ('x.......x.x.....', 'x.....x.x.......')),
                   snare=(4, 12), hat='snare16', ghosts={}, opens={}, time={},
                   fills={'snare': 2.0, 'pickup': 2.0, 'toms': 1.0},
@@ -567,9 +587,14 @@ roll (end_roll: 'toms' rumble, or a 'cymbal' swell).
   ballad     side stick verses, snare choruses on the ride, a laid-back backbeat, big slow tom fills
   motown     snare on every beat (2 and 4 accented), hat 8ths
   synthpop   the 80s / outrun machine: tight (no drift), 16th hats with machine accents, a clap layer, tom runs
+  house      the club machine (house / techno / big room / melodic house; recipes/edm.md): four on the floor in every
+             section, closed 8ths in intros / grooves / breakdowns, the open hat on every & in the drops (hat_barks),
+             16ths in builds, a clap layer, snare rolls and pickups (no tom runs), machine-tight
   bossa      cross-stick 2-bar clave, kick 1 &2 3 &4, hat 8ths, hat foot 2 and 4 (straight)
   jazz       straight-8th ride (or brushes on a brush kit: patterns.brushes), hat foot 2 and 4, a feathered kick,
              soft comping snare, brush / triplet fills (drums stay behind the piano: soft)
+  lofi       the lo-fi / boom-bap loop: a lazy syncopated kick, the snare laid back (+16 ms), soft hat 8ths, few
+             ghosts, pickups instead of fills, no builds (swing= follows the tune: lazy 8ths or straight)
   train      the train beat: snare 16ths with both hands, accents on 2 and 4, kick 1 and 3"""
 
 FILL_KINDS = ('pickup', 'snare', 'toms', 'triplets', 'flams', 'linear', 'roll', 'build', 'eighths', 'slap')
@@ -1507,7 +1532,7 @@ def arrange(form, *, bpm=None, style: str = 'rock', density: float = 0.5, seed=0
     -> 32nds on the snare), the chorus bigger (ride or 16ths, busier kick, rimshots, a crash every 8 bars), the
     bridge a variation (a floor-tom groove, half-time, the ride bell), a break a STOP (the band hit, silence, time on
     the hat), the end a big hit and a roll into the final cut-off (ending='hit' | 'roll' | 'groove' | 'choke': the
-    hit grabbed a beat later on a kit with choke keys). A section's groove is a main cell with a variation in its 4th
+    hit grabbed a beat later on a kit with choke keys, else the hit rings). A section's groove is a main cell with a variation in its 4th
     bar, repeated sections reuse it.
     FILLS lead into every section (into a chorus the longest: a bar at density >= 0.45), and with a chance (density)
     into a new 4- or 8-bar phrase - a BUDGET keeps them spice: at least fill_every bars between phrase fills, the
@@ -1896,11 +1921,14 @@ def arrange(form, *, bpm=None, style: str = 'rock', density: float = 0.5, seed=0
         quiet_end = STYLES[last['style']].get('special') in ('jazz', 'bossa')
         e_end = 0.25 if quiet_end else last['e']              # a jazz ending: a soft cymbal and a feathered kick
         hs = _big_hit(t, ctx, e_end) if not quiet_end or end_mode in ('hit', 'choke') else []
+        end_log = end_mode
         if end_mode == 'choke':
-            # the hit, grabbed: the hands choke the cymbals a beat later (the kit's choke keys; without them the
-            # cymbals ring and the warning names the missing piece)
-            for h in [h for h in hs if h.piece in _CHOKES]:
-                hs.append(_h(t + 1.0, _CHOKES[h.piece], 90.0, h.limb, 'hit'))
+            # the hit, grabbed: the hands choke the cymbals a beat later on the kit's choke keys (as the solo moves
+            # do); a kit without them plays the hit and lets it ring (logged, no silent strokes)
+            grab = [h for h in hs if h.piece in _CHOKES and ctx.kit.has(_CHOKES[h.piece])]
+            hs += [_h(t + 1.0, _CHOKES[h.piece], 90.0, h.limb, 'hit') for h in grab]
+            if not grab:
+                end_log = 'hit (choke: the kit has no choke keys - the cymbals ring)'
         if end_mode == 'roll' and last['end'] - t >= 3.0:
             r0, r1 = t + 1.0, last['end'] - 1.0
             st_ = STYLES[last['style']]
@@ -1912,7 +1940,7 @@ def arrange(form, *, bpm=None, style: str = 'rock', density: float = 0.5, seed=0
         for h in hs:
             h.bar = (len(secs) - 1, int((h.t - last['a']) // last['bpb']))
         hits += hs
-        moves.append((t, last['end'], 'ending', end_mode))
+        moves.append((t, last['end'], 'ending', end_log))
 
     # ---- swing (on the grid, so the limb rules judge the swung strokes), make it playable, touch, feel
     if sw != 0.5:
@@ -4041,7 +4069,8 @@ def vocabulary(kit=None, *, hands=None, moves=None, feet: str | None = None, opt
             track.automate('instrument.dynamics', [(t, v, 'step') for t, v in lane])
 
     return soloist.Vocabulary(out, motif=motif, vary=vary, name=f'drummer ({K.name})', place=place,
-                              vel=(20, 127), phrase_bars=2, touch=False, budget=budget, range=(35, 59), rest=0.4)
+                              vel=(20, 127), phrase_bars=2, touch=False, budget=budget, range=(35, 59), rest=0.4,
+                              lines=False)
 
 
 MOVES = {

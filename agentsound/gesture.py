@@ -18,8 +18,9 @@ no zipper, no clicks. Lanes are abstract; a player's render() maps them to a tra
 The generic moves live here and are shared: pitch - bend (rise, overshoot, settle, release), vibrato (centred on
 the 'vib' lane, or a waveform on the 'bend' lane that only goes UP from the note - a guitarist pushing the string - or
 DOWN from a bent note), scoop, fall, doit, shake, growl; air - push, pulse, swell, messa_di_voce, fp_cresc, bloom,
-taper, breath_release, accents; mic - lean_in, turn_away, off_axis, bell_swing, fade_away. agentsound.hornist (wind
-players) and agentsound.fretwork (the lead guitarist's hands) are built on them.
+taper, breath_release, accents; mic - lean_in, turn_away, off_axis, bell_swing, fade_away, pull_back (a
+singer's slow pull away from the mic on a long held note: agentsound.singer's mic_pull). agentsound.hornist (wind
+players), agentsound.fretwork (the lead guitarist's hands) and agentsound.singer are built on them.
 """
 
 from __future__ import annotations
@@ -515,6 +516,25 @@ def lean_in(start, dur, bpm, *, db: float = 2.0, prox: float = 2.5, bright: floa
     return Gesture('lean_in', 'mic', s, e, sh, dict(db=db, prox=prox, bright=bright, room=room))
 
 
+def lean(start, dur, bpm, *, air: float = 0.0, prox: float = 0.0, shelf: float = 0.0, room: float = 0.0,
+         ms: float = 60.0, name: str = 'lean') -> Gesture:
+    """A plateau over a span (start, dur in beats) on the level AFTER the chain (`air` dB: what the compressor must
+    not undo) and the mic stage's tone (`prox` dB of proximity ~300 Hz, `shelf` dB above ~3.2 kHz) and the reverb
+    sends (`room` dB), easing in and out over ~ms: a singer leaning into a key word (air +1.5, shelf +1.5) or singing
+    a line close and soft (air -2, prox +2.5, room -3). Unlike lean_in() the level is on 'air' (after the
+    compressor), not on the mic stage's output before it."""
+    b = _bpm(bpm)
+    s, d = _pos(start), _num(dur, f'{name} dur', 0.02)
+    e, w = s + d, _b(_num(ms, f'{name} ms', 10, 1000) / 1000.0, b)
+    sh = []
+    for lane, v in (('air', air), ('prox', prox), ('shelf', shelf), ('room', room)):
+        v = _num(v, f'{name} {lane}', -24, 24)
+        if v:
+            # eases in BEFORE the span and out after it: the plateau covers the whole span
+            sh.append(_Shape(lane, [(s - w, 0.0), (s, v), (e, v), (e + w, 0.0)]))
+    return Gesture(name, 'mic', s - w, e + w, sh, dict(air=air, prox=prox, shelf=shelf, room=room))
+
+
 def turn_away(start, dur, bpm, *, shelf: float = -4.0, db: float = -1.0, room: float = 2.5, ms: float = 400.0) -> Gesture:
     """The bell turns off-axis for the span: darker (a gentle shelf `shelf` dB above ~3.2 kHz), a little quieter
     (db), relatively more room (the reverb sends +room dB)."""
@@ -562,6 +582,62 @@ def fade_away(start, dur, bpm, *, shelf: float = -5.0, db: float = -4.0, room: f
     if room:
         sh.append(_Shape('room', _tail([(t0, 0.0), (e, room)], e, b, back)))
     return Gesture('fade_away', 'mic', t0, e, sh, dict(shelf=shelf, db=db, room=room))
+
+
+def pull_back(start, dur, bpm, *, db: float = -4.5, prox: float = -2.0, room: float = 1.5, shelf: float = 0.0,
+              curve: float = 1.7, coda=None, coda_keep: float = 0.25, coda_ms: float = 25.0, back=None) -> Gesture:
+    """The mic technique on a long held note: from `start` (after the onset has bloomed) to the end of the held vowel
+    (start + dur, beats) the singer / player slowly pulls back from the mic - the level eases down to `db` (shaped,
+    not linear: u ** curve - hardly at first, then more), the proximity bass drops `prox` dB (~300 Hz) and the room
+    share rises `room` dB (the reverb sends); shelf: dB above ~3.2 kHz (off axis). coda=(a, b) beats: the word-final
+    consonant - the singer leans back in for it: the level / proximity return to coda_keep x their pull over coda_ms at
+    a (so the consonant keeps its audible level) and hold to b. Afterwards every lane is back at rest by `back` (the
+    next onset), else 0.6 s after the note / coda (the tail; the room stays up into it)."""
+    b = _bpm(bpm)
+    s, d = _pos(start), _num(dur, 'pull_back dur', 0.05)
+    db = _num(db, 'pull_back db', -24, 0)
+    cv = _num(curve, 'pull_back curve', 0.5, 4)
+    keep = _num(coda_keep, 'pull_back coda_keep', 0, 1)
+    e = s + d
+    end = e
+    ca = cb = None
+    if coda is not None:
+        ca, cb = max(e, float(coda[0])), float(coda[1])
+        if cb <= ca + _EPS:
+            ca = cb = None
+        else:
+            end = cb
+    bk = _back(end, b, back)
+    w = _b(_num(coda_ms, 'pull_back coda_ms', 5, 200) / 1000.0, b)
+    rest = _b(0.12, b)
+
+    def env(t, lean_in=True):
+        """0..1 of the pull at beat t."""
+        if t <= s:
+            return 0.0
+        if t <= e:
+            return ((t - s) / d) ** cv
+        if ca is not None and lean_in:
+            if t <= cb:
+                ww = min(w, 0.5 * (cb - ca))
+                return 1.0 + (keep - 1.0) * _ease((t - ca) / ww) if t < ca + ww else keep
+            v0 = keep
+        else:
+            v0 = 1.0
+        hold = max(end, bk - rest)
+        if t <= hold:
+            return v0
+        return v0 * (1.0 - _ease((t - hold) / max(_EPS, bk - hold)))
+
+    sh = [_Shape('mic', fn=lambda t: db * env(t), t0=s, t1=bk)]
+    if prox:
+        sh.append(_Shape('prox', fn=lambda t: prox * env(t), t0=s, t1=bk))
+    if shelf:
+        sh.append(_Shape('shelf', fn=lambda t: shelf * env(t), t0=s, t1=bk))
+    if room:
+        sh.append(_Shape('room', fn=lambda t: room * env(t, lean_in=False), t0=s, t1=bk))
+    return Gesture('pull_back', 'mic', s, e, sh, dict(db=db, prox=prox, room=room, curve=cv,
+                                                      coda=None if ca is None else (round(ca, 4), round(cb, 4))))
 
 
 def accents(notes, bpm, *, db_per_vel: float = 0.12, ms: float = 40.0, limit: float = 4.0, back=None) -> Gesture:

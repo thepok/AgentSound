@@ -13,7 +13,7 @@ Moves (MOVES: name -> (roles, energy, density, spice, fast)):
   long_tone  a pickup into a long held chord tone: swell, vibrato deepening with the air, the bell leaning in
   scoop_call a phrase whose notes are scooped into (the vocal sax / trumpet entry)
   fall_off   an answer that falls off its last note
-  sequence   a pentatonic cell sequenced up (8ths / 16ths within the breath)
+  sequence   a target-first line (chord tones on the beats, steps / approaches between) within the breath
   run        a scale run up to a held peak                                             (fast)
   shake      a held peak with a lip / sax shake (sax, trumpet)                        (fast)
   growl      a held peak growled (sax, trombone)                                       (fast)
@@ -131,9 +131,10 @@ def m_fall_off(ctx) -> Part:
 
 def m_sequence(ctx) -> Part:
     g = S.grid(ctx, 9.0, (0.25, 1 / 3, 0.5)) if ctx.density > 0.6 else 0.5
-    st = S.sequence_line(ctx, grid_=g, length=ctx.beats - 1.5)
-    end = st[-1][0] + g
-    top = S.fold(S.snap(S.step(st[-1][2], S.pentatonic(ctx), 1), S.chord_tones(ctx, ctx.at + end)), ctx)
+    st = S.target_line(ctx, grid_=g, length=max(1.0, ctx.beats - ctx.rng.uniform(1.0, 2.5)))
+    end = st[-1][0] + st[-1][1]
+    top = S.fold(S.snap(S.step(st[-1][2], S.pentatonic(ctx), 1), S.chord_tones(ctx, ctx.at + end)), ctx,
+                 near=st[-1][2])
     st.append((end, max(0.75, ctx.beats - end - 0.25), top))
     return _perform(ctx, st, peaks=[end])
 

@@ -16,7 +16,7 @@ from agentsound import Clip, Song, bands, jazz, library  # noqa: E402
 from agentsound.bandlib import jazz as jb  # noqa: E402
 from agentsound.theory import ComposeError  # noqa: E402
 
-PRESETS = ('jazz_trio', 'jazz_quartet', 'jazz_ballad', 'bossa')
+PRESETS = ('jazz_trio', 'jazz_quartet', 'jazz_ballad', 'bossa', 'soul_ballad')
 
 
 @contextmanager
@@ -54,10 +54,95 @@ def play_everything(s, b, sec):
             t.play(Clip([(0.5, 1, 'A4', 80), (2, 2, 'C5', 80)], length=4), sec)
 
 
+class SoloPiano(unittest.TestCase):
+    """solo_piano: one grand voiced smooth (the endless jazz-piano sound)."""
+
+    def build(self):
+        s = Song('t', tempo=72, key='Db major')
+        a = s.section('a', bars=1)
+        b = bands.make('solo_piano', s)
+        play_everything(s, b, a)
+        return s, b, s.compile()
+
+    def test_builds_smooth(self):
+        s, b, d = self.build()
+        self.assertEqual(set(b.roles), {'piano', 'comp'})
+        self.assertEqual(b.analysis, {'profile': 'piano'})
+        self.assertEqual([f['type'] for f in d['master']['fx']], ['eq', 'compressor', 'tape', 'limiter'])
+        m = {f['type']: f['params'] for f in d['master']['fx']}
+        self.assertEqual(m['limiter']['gain'], jb.MASTER_GAIN['solo_piano'])
+        self.assertNotIn('peak3.gain', m['eq'])                        # no presence lift on the master
+        self.assertEqual((m['tape']['wow'], m['tape']['flutter']), (0.0, 0.0))
+        tracks = {t['id']: t for t in d['tracks']}
+        if 'Salamander' in b.info['sounds']['piano']:
+            fxs = [f['type'] for f in tracks['piano']['fx']]
+            self.assertEqual(fxs[:2], ['deesser', 'eq'])               # the dynamic presence cut, then the tone
+            deess = tracks['piano']['fx'][0]['params']
+            self.assertEqual((deess['mode'], deess['freq']), ('split', SOLO['tame']['freq']))
+            self.assertEqual(tracks['comp']['fx'][1]['params']['hp.freq'], SOLO['comp_eq']['hp.freq'])
+        self.assertEqual(bands.make('solo_piano', Song('u', tempo=90), master_gain=4.5).info['master_gain'], 4.5)
+
+    def test_fallback(self):
+        with samples():
+            s, b, _ = self.build()
+            self.assertTrue(all('GeneralUser' in v for v in b.info['sounds'].values()), b.info['sounds'])
+
+
+SOLO = jb.SOLO_PIANO
+
+
+class LofiPiano(unittest.TestCase):
+    """lofi_piano: the felt piano dull and warm, a dusty kit ducking it, a vinyl bed, the cassette master."""
+
+    def build(self, **kw):
+        s = Song('t', tempo=80, key='F major')
+        a = s.section('a', bars=4)
+        b = bands.make('lofi_piano', s, **kw)
+        for role in ('piano', 'comp'):
+            if role in b.roles:
+                b[role].play(Clip([(0, 2, 'A4' if role == 'piano' else 'F2', 70), (2, 2, 'C5' if role == 'piano'
+                                                                                   else 'C3', 60)], length=4), a)
+        if 'drums' in b.roles:
+            from agentsound import drummer
+            drummer.arrange([a], bpm=80, style='lofi', kit=b.drums, seed=1).play(b.drums)
+        jb.lofi_crackle(b, a.start, a.end, seed=1)
+        return s, b, s.compile()
+
+    def test_builds_the_cassette(self):
+        s, b, d = self.build()
+        self.assertTrue({'piano', 'comp', 'drums'} <= set(b.roles))
+        self.assertEqual(b.analysis, {'profile': 'piano'})
+        self.assertEqual([f['type'] for f in d['master']['fx']], ['eq', 'compressor', 'tape', 'limiter'])
+        m = {f['type']: f['params'] for f in d['master']['fx']}
+        self.assertEqual(m['tape']['speed'], 'cassette')
+        self.assertGreater(m['tape']['wow'], 0.0)
+        self.assertGreater(m['tape']['hiss'], 0.0)
+        self.assertEqual(m['limiter']['gain'], jb.MASTER_GAIN['lofi_piano'])
+        tracks = {t['id']: t for t in d['tracks']}
+        eq = next(f['params'] for f in tracks['piano']['fx'] if f['type'] == 'eq')
+        self.assertEqual(eq['lp.freq'], jb.LOFI['eq']['lp.freq'])          # the top rolled off
+        self.assertLess(eq['peak2.gain'], 0.0)                                # no presence lift: a dip
+        ducks = [f for f in tracks['piano']['fx'] + tracks['comp']['fx']
+                 if f['type'] == 'ducker' and f.get('sidechain', '').startswith('drums')]
+        self.assertEqual(len(ducks), 2)                                       # the kick ducks both hands
+        if jb.installed(jb.CRACKLE['pack']):
+            self.assertIn('vinyl', b.roles)
+            self.assertTrue(tracks['vinyl']['notes'])
+            self.assertTrue(any('SampleRadar' in c for c in b.info['credits']))
+
+    def test_without_drums_and_fallback(self):
+        s, b, d = self.build(without=('drums', 'vinyl'))
+        self.assertEqual(set(b.roles), {'piano', 'comp'})
+        with samples():
+            s, b, _ = self.build()
+            self.assertNotIn('vinyl', b.roles)                                # no pack: the tape's hiss alone
+            self.assertTrue(all('GeneralUser' in v for v in b.info['sounds'].values()), b.info['sounds'])
+
+
 class JazzPresets(unittest.TestCase):
     def test_registered(self):
-        self.assertEqual(set(PRESETS), set(bands.list('jazz')))
-        for name in PRESETS:
+        self.assertEqual(set(PRESETS) | {'solo_piano', 'lofi_piano'}, set(bands.list('jazz')))
+        for name in PRESETS + ('solo_piano', 'lofi_piano'):
             p = bands.get(name)
             self.assertEqual(p.requires, ())          # every role falls back to GeneralUser GS
             self.assertTrue(p.description and p.tuned)
@@ -168,6 +253,28 @@ class JazzPresets(unittest.TestCase):
         with self.assertRaisesRegex(ComposeError, 'unknown roles'):
             bands.make('bossa', Song('u', tempo=120), without=('comp',))
 
+    def test_vocal_lead(self):
+        # lead='vocal': the comping faders up, the limiter drive down, the sung tracks 3 dB lower once (at compile)
+        with samples():
+            s0, s = Song('a', tempo=62), Song('b', tempo=62)
+            for x in (s0, s):
+                x.section('a', bars=1)
+            b0 = bands.make('jazz_ballad', s0, without=('sax',))
+            b = bands.make('jazz_ballad', s, without=('sax',), lead='vocal')
+        self.assertEqual(b.comp.gain_db - b0.comp.gain_db, jb.VOCAL_LEAD['jazz_ballad']['faders']['comp'])
+        self.assertEqual(b.info['master_gain'], jb.VOCAL_LEAD['jazz_ballad']['master_gain'])
+        self.assertEqual(b.info['lead']['vocal_db'], jb.VOCAL_LEAD_DB)
+        vox = s.track('vocal', 'gm/grand_piano', gain_db=1.0)
+        vox._singer = {'parts': []}                 # what singer.sing() marks its tracks with
+        vox.note(60, 0)
+        b.comp.note(48, 0)
+        s.compile()
+        s.compile()                                 # idempotent
+        self.assertEqual(vox.gain_db, 1.0)                                  # the fader stays (hero key thresholds)
+        self.assertEqual([f.params['gain'] for f in vox.fx if f.name == 'lead_seat'], [jb.VOCAL_LEAD_DB])
+        with self.assertRaisesRegex(ComposeError, 'lead must be'):
+            bands.make('jazz_quartet', Song('u', tempo=120), lead='vocal')
+
     def test_sounds_override_keeps_the_chain(self):
         s = Song('t', tempo=120)
         s.section('a', bars=1)
@@ -180,6 +287,24 @@ class JazzPresets(unittest.TestCase):
         self.assertEqual(b.piano.instrument.params['pan'], jb._PLACE['piano'])
         with self.assertRaisesRegex(ComposeError, 'sounds'):
             bands.make('jazz_trio', Song('u', tempo=120), sounds={'piano': 42})
+
+    def test_soul_ballad_and_the_bossa_without_guitar(self):
+        # soul_ballad: the Rhodes with its own chain (not the grand's), nearly centred, ballad faders (inside the
+        # jazz windows with no song trims); the bossa without its guitar puts the piano nearer the centre
+        s = Song('t', tempo=72, key='Eb major')
+        s.section('a', bars=1)
+        b = bands.make('soul_ballad', s)
+        pan = b.piano.instrument.params.get('pan', b.piano.pan)
+        self.assertLessEqual(abs(pan), 0.1)
+        self.assertFalse([f for f in b.piano.fx if f.type in ('compressor', 'tape')       # not the grand's chain
+                          and 'band' not in f.params])                                  # (SOUL_DIP: a keyed dip)
+        self.assertEqual([f.sidechain for f in b.piano.fx if 'band' in f.params], ['bass'])
+        self.assertEqual((b.bass.gain_db, b.drums.gain_db - jb.DRUM_TRIM), (0.0, 6.0))
+        self.assertEqual(jb.MASTER_GAIN['soul_ballad'], 5.0)
+        s2 = Song('b', tempo=120)
+        s2.section('a', bars=1)
+        bo = bands.make('bossa', s2, without=('guitar',))
+        self.assertEqual(bo.piano.instrument.params.get('pan', bo.piano.pan), -0.25)
 
     def test_feel(self):
         s = Song('t', tempo=150)

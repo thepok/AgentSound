@@ -4,7 +4,8 @@ Late night in a small Manhattan club: a grand piano, an upright bass and a drumm
 standards-style tunes for a room of fifty people. Warm, intimate, swinging, never loud. References: Bill Evans
 Trio at the Village Vanguard (1961), Red Garland, Wynton Kelly, Tommy Flanagan, Ahmad Jamal, Hank Jones;
 modern: Brad Mehldau, Bill Charlap. For pianist-level detail (voice leading, enclosures, articulation, pedal)
-read `recipes/jazz-piano.md` too.
+read `recipes/jazz-piano.md` too. For writing the tune and a written-out solo (motif, guide tones, period plan, solo lines
+with enclosures, the anti-patterns of the blind test) read `recipes/jazz-composition.md`.
 
 The music is a *performance*: three players listening to each other. Everything below serves that illusion.
 
@@ -182,7 +183,7 @@ the analysis profile (`agentsound/bandlib/jazz.py`; demos with every number belo
 ```python
 from agentsound import bands, jazz
 from agentsound.bandlib import jazz as jazzband      # brushes(), pedal(), bossa_groove()
-b = bands.make('jazz_quartet', s)                    # or 'jazz_trio', 'jazz_ballad' (bass='arco'), 'bossa'
+b = bands.make('jazz_quartet', s)                    # or 'jazz_trio', 'jazz_ballad' (bass='arco'), 'bossa', 'soul_ballad'
 ANALYSIS = {'profile': 'jazz'}                       # = b.analysis
 b.comp.play(jazz.comp(prog, answer=head, register=('A2', 'G4'), seed=1), a1)
 b.bass.play(jazz.walking_bass(prog, key=s.key, seed=2), a1)
@@ -198,6 +199,7 @@ b.bass.automate('gainDb', [(0, 0), (bass_solo.start, 1.5, 'smooth'), (head_out.s
 | `jazz_trio` | piano, comp, bass, drums | Salamander Grand SFZ (release samples), Meatbass pizz, Swirly brush kit | salon IR (0.8 s), master -14.5 LUFS |
 | `jazz_quartet` | + sax | + MTG tenor (legato player, live dynamics, own vibrato); comping ducks 1.5 dB under it | salon + 224XL plate |
 | `jazz_ballad` | piano, comp, bass, drums, sax | pedalled Salamander, Swirly stirs per beat, `bass='pizz'` or `'arco'` (Meatbass arco, legato) | 224XL chamber + rich plate |
+| `solo_piano` | piano, comp (one grand, two hands) | Salamander voiced smooth (hammers 1.0, a split de-esser at 2.5 kHz on the loudest notes, air shelf); the endless jazz-piano sound | salon IR + plate, gentle master ('piano' profile) |
 | `bossa` | guitar, piano, bass, drums, rim, shaker, sax | FreePats nylon guitar, Blonde Bop cross-stick, FreePats egg shaker, airy tenor; straight 8ths | salon + 224XL plate |
 
 - **Placement (audience view)**: piano left (its own pan -0.5, comping -0.3: a track pan only attenuates one side

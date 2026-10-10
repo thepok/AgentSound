@@ -1,0 +1,8 @@
+Veranda Light  (jazz-piano, mood tender, seed 7312)
+Eb major, 118 BPM, 4/4, bossa (straight 8ths), form ABAC (4 x 8 bars)
+A1   | Ebmaj9 | Ab7#11 | Gm9 | Gbo7 | Fm9 | Bb13 | Gm7(0.5) C7b9(0.5) | Fm9(0.5) Bb7sus4(0.5) |
+B    | Cm9 | Cm7/Bb | Am7b5 | D7b9 | Gm9 | C13 | Fm9 | Bb7b9 |
+A2   | Ebmaj9 | Ab7#11 | Gm9 | Gbo7 | Fm9 | Bb13 | Bbm9 | Eb7b9 |
+C    | Abmaj9 | Abm9(0.5) Db13(0.5) | Gm9 | Gb7#11 | Fm9 | E7#11 | Ebmaj9 | Fm9(0.5) Bb7sus4(0.5) |
+
+192 s of music, -18.9 LUFS

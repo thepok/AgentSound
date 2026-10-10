@@ -30,7 +30,7 @@ seed = the same bits).
 ```bash
 # put your compiler on PATH first if it is not, e.g. export PATH=/c/mingw64/bin:$PATH
 cmake --preset release && cmake --build --preset release && ctest --preset release
-python -m unittest discover -s tests/python
+python tests/run.py
 ```
 
 **Make a song**
@@ -86,7 +86,7 @@ song.py ──compile──> render JSON ──engine──> mix.wav / mix.mp3 +
 
 ```bash
 cmake --preset release && cmake --build --preset release && ctest --preset release   # engine + C++ tests
-python -m unittest discover -s tests/python                      # Python tests
+python tests/run.py [-j N] [word ...]                           # Python tests in parallel (one process per module)
 
 python -m agentsound catalog                  # everything usable, one page (engine, patches, bands, DX7, SF2, packs ...)
 python -m agentsound find brush               # search it all (all words must match)
@@ -131,7 +131,8 @@ default with per-section overrides (`{chorus: 86, '*': 80}`): `pad.chords(...)`,
 as song-wide rules spaced by the players' fill budget); section lanes `track.levels({...})` / `node.lane(target,
 {...} | marks, glide=, default=, drops=, hold=, end=)`; `track.rise(chorus, 16)` and
 `s.transitions(riser=, reverse=, impact=, down=).into(chorus, ..., breath=1)`; the robot voice in one call
-(`speech.voice(s, words)` + `vox.robot(carrier, say=..., chords=...)`); `art.perform(preset='sax')`,
+(`speech.voice(s, words)` + `vox.robot(carrier, say=..., chords=...)`), a talk box (`speech.talkbox(guitar,
+singer.mouth(s, line, words))`); `art.perform(preset='sax')`,
 `art.throws(spans=)`, `pianist.Player` / `top_leads` / `arrange(doubles=)`, `bassist.Player`, `s.beat_at(seconds,
 before=)`, `s.breath(cut=False)`.
 
@@ -211,18 +212,19 @@ silently ignored; deterministic - the same render JSON + seed gives bit-identica
 
 Patches are named sounds (`s.track('lead', 'synthwave/supersaw_lead')`, `patches.get(name).but(...)`), each levelled
 to -18 LUFS on its audition phrase and carrying its sends. `python -m agentsound patches [prefix] [-v]`,
-`audition <patch>`. 320 patches:
+`audition <patch>`. 333 patches:
 
 | prefix | count | what |
 |---|---|---|
-| `sampled/` | 182 | real instruments from sample packs (lazy: a missing pack errors only when rendered) - drums & percussion 56 (acoustic kits, brushes, ~16 classic drum machines, percussion, timpani), pianos & keys 19, guitars 20, basses 12, strings 18, brass 13, woodwinds & saxes 15, organs 8, choir 4, tuned percussion 5, vintage samplers / synths 12 (Fairlight, Mellotron, Solina, poly) |
+| `sampled/` | 183 | real instruments from sample packs (lazy: a missing pack errors only when rendered) - drums & percussion 56 (acoustic kits, brushes, ~16 classic drum machines, percussion, timpani), pianos & keys 19, guitars 20, basses 12, strings 18, brass 13, woodwinds & saxes 15, organs 8, choir 4, tuned percussion 5, vintage samplers / synths 12 (Fairlight, Mellotron, Solina, poly) |
 | `synthwave/` | 46 | va / dx7 / drums synth sounds: pads, leads, basses, arps, drums, FX, vocoder choir / lead, talkbox |
 | `layered/` | 18 | `stack` patches (piano + glass lead, e-piano -> grand split, octave strings, sub bass ...) |
 | `hero/` | 19 | the hero presets (below) + three legacy names |
-| `bus/` | 35 | return / group chains: hall, plate, echo, gated, shimmer, tape echo, `hero_plate`, 22 convolution spaces `bus/ir_*` |
-| `gm/` | 11 | calibrated GeneralUser GS presets |
+| `bus/` | 38 | return / group chains: hall, plate, echo, gated, shimmer, tape echo, `hero_plate`, 22 convolution spaces `bus/ir_*` |
+| `gm/` | 12 | calibrated GeneralUser GS presets |
 | `cab/` | 5 | guitar amp / cabinet chains for DI guitars: the engine's tube `amp` (clean blues crunch rock metal voicings) + the cabinet IR |
-| `master/` | 4 | master chains (synthwave, dreamwave, darksynth, audition) |
+| `edm/` | 7 | EDM sounds (recipes/edm.md): the club bass (clean sine sub + driven mid), reese, supersaw chords, future-bass chords (formant, wobble), the pluck, the supersaw lead WITH an octave-down body (never a thin beep), the vocal-chop chain |
+| `master/` | 5 | master chains (synthwave, dreamwave, darksynth, edm: the loud club master, audition) |
 
 **Other sources**: `inst.dx7('NAME')` (256 ROM voices, `dx7 [search]`), `inst.sf2('Preset')` (GeneralUser GS 2.0.3,
 287 presets; `sf2 [search]`), `inst.sfz(path, articulation=, cc=, mics=, hammers=, velcurve=)` / `inst.sfz_multi`
@@ -263,25 +265,30 @@ playability checks, and a log (`.moves`, `.budget`, `.summary()`).
 
 | player | entry points | plays |
 |---|---|---|
-| `pianist` | `pianist.arrange(melody, prog, bpm=, style=)` (`.place(piano, comp)`), `Memory`, moves (trill, tremolo, turn, crush, gliss, runs ...), `crushes`, `pianist.vocabulary(style, lh_track=)` (the solo vocabulary) | voicing devices under the melody, ornaments (fast ones budgeted per `fast_every`), fills, left-hand styles in any meter, pedal; a piano SOLO through `soloist.solo` (every phrase harmonized, runs / 4ths / blues crushes as spice, the trill or tremolo saved for the climax, the left hand comping under it) |
+| `pianist` | `pianist.arrange(melody, prog, bpm=, style=)` (`.place(piano, comp)`), `Memory`, moves (trill, tremolo, turn, crush, gliss, runs ...), `crushes`, `pianist.vocabulary(style, lh_track=)` (the solo vocabulary) | voicing devices under the melody, ornaments and fills (the fast ones - trills, tremolos, runs, sweeps - budgeted per `fast_every`, never in loud bars), left-hand styles in any meter (the shell hand: shells, bass + rootless chord, rootless voicings, comping pushes), pedal; a piano SOLO through `soloist.solo` (every phrase harmonized, runs / 4ths / blues crushes as spice, the trill or tremolo saved for the climax, the left hand comping under it) |
 | `romantic` | `score` (+ `Score.perform` / `rubato` / `touch`), `fioritura`, `trill`, `turn`, `grace`, `accompany`, `lean_on_long`, `cantabile`, `dynamics`, `melody_rubato`, `pedal_changes`, `figure_stats` | the classical / romantic pianist for written scores (Chopin, the nocturne etude): fioriture as shaped gestures in real time, trills with a start and a Nachschlag, the 12/8 bass-chord-chord left hand, the singing line (long notes lean, the next note plays into the decay), hairpins, melody-only rubato over a steady left hand, pedal per harmony with flutter in chromatic runs |
 | `drummer` | `drummer.arrange(song, style=, kit=)`, `Memory`, `Kit.of(...)`, moves (tom_run, build, stop ...); solo: `perform(steps)`, `vocabulary()` (for `soloist.solo`), `rudiment`, `pattern`, `Hands`, `DrumMotif`, `SOLO_MOVES`, `feet`, `choke`, `hat_lane` | a whole form: grooves per style and section role, budgeted fills, crashes, builds, stops, endings (a hit grabbed by a choke); four limbs with speed limits; kick locked to the bass. A drum SOLO: a stroke language (stickings, accents, ghosts, flams, drags, buzz, kit voices), the hands' physics (a weaker hand, stick heights, rebounds, up-strokes, reach, sticking-aware speed limits), the PAS rudiments orchestrated around the kit, feet ostinatos and double bass, the live hi-hat openness lane, cymbal chokes, per-hand samples, and solo moves (motif and its development, tom melodies, call and response, 3 over 4, fives, quintuplets, half / double time, linear, hand-hand-foot triplets, speed bursts, press rolls, the gated tom break, silences, the big finish) played in order by `perform()` or by `soloist.solo()` |
 | `bassist` | `bassist.arrange(prog, bpm=, style=, kick=)`, `Memory`, `touch`, moves (slide, approach, octave_pop ...) | styles rock pop country funk motown disco ballad reggae tumbao synth walking; kick lock / interlock; fingering and tempo limits |
 | `guitarist` | `guitarist.arrange(...)` (rhythm), `guitarist.lead(...)` (`gestures=True`: fretwork bends / vibrato), `guitarist.vocabulary(style)` (the solo vocabulary), `Fretboard`, `shapes`, `Memory` | real chord shapes, strum / pick patterns per style and section, palm mutes / dead notes, double-tracked takes; lead bends, vibrato, slides, hammer-ons |
 | `guitar_riff` | `guitarist.riff(spec, bpm=, section=)`, `pedal`, `hits`, `build_up`, `double(part, (gtr_l, gtr_r), at)`, `cell` | the rock riff player: riffs written as steps ('E> - . E . . G> -'), played by the section's energy (verse palm-muted single notes, pre-chorus chugged power chords, chorus open power chords + octave), stops in unison with the drums, the pre-chorus chug build; the double-tracked wall: two real takes (drifting timing, tuning drift, other round robins, two guitars / amps) |
 | `fretwork` | `fretwork.bend`, `prebend`, `ghost_bend`, `unison_bend`, `oblique_bend`, `vibrato` (`VIBRATOS`), `hammer_on`, `trill`, `legato_run`, `slide`, `slide_in` / `slide_out`, `picked_run`, `tremolo_pick`, `sweep`, `rake`, `pinch`, `palm_mute`, `whammy_dive` / `whammy_scoop` / `whammy_vibrato`, `feedback`, `wah` / `wah_talk`, `pick_scrape`, `squeak`; `render(track, parts, at)` | the lead guitarist's hands inside and between notes (a guitar hero's micro-performance, like the hornist's breath): bends that rise fast, overshoot and settle, pre-bends, unison bends (the held string on a twin track / the sampler's per-note `bendfollow`), finger vibrato that only goes UP (down from a bent pitch), legato without the pick, alternate picking with accents, sweeps, pinch harmonics and controlled feedback (the sampler's `harmonic`), palm mutes, whammy, wah, pick scrapes |
-| `soloist` | `soloist.solo(song, track, vocab, at=, arc=, motif=, budget=, prog=)`, `Move`, `Vocabulary`, `Ctx`, `Part`, `Budget`, `ARCS`, `develop` / `vary`, material lines (`answer_line`, `sequence_line`, `run_line`, ...) | the instrument-agnostic SOLO: a dramatic arc (statement -> call / response -> varied repetition -> speed burst -> climax -> resolution) over any player's vocabulary (`guitarist.vocabulary`, `hornist.vocabulary`, `pianist.vocabulary`), motivic development of the song's hook, planned space, one ornament budget, dynamics never flat (`songs/_demo_soloist`: the same arc on the sax and the guitar) |
+| `soloist` | `soloist.solo(song, track, vocab, at=, arc=, motif=, budget=, prog=)`, `Move`, `Vocabulary`, `Ctx`, `Part`, `Budget`, `ARCS`, `develop` / `vary` / `transform`, material lines (`target_line`, `answer_line`, `run_line`, ...) | the instrument-agnostic SOLO: a dramatic arc (statement -> call / response -> varied repetition -> speed burst -> climax -> resolution; `jazz`: one peak two thirds in) over any player's vocabulary (`guitarist.vocabulary`, `hornist.vocabulary`, `pianist.vocabulary`), motivic development of the song's hook (quoted literally at most twice; a 3-5 note cell of it developed call by call - sequenced, inverted, displaced, truncated, augmented: `motif_line`), free phrasing across the bar lines, target-first lines, the chord's own scale (chromatic notes only as approaches into the beat), no octave wraps / verbatim bar repeats, one ornament budget, dynamics never flat (`songs/_demo_soloist`: the same arc on the sax and the guitar) |
 | `hornist` | `hornist.arrange(melody, bpm, family=, style=, section=)`, `hornist.vocabulary(family, style=)` (the solo vocabulary), `Memory`, `.place(track, at)`, moves (push, pulse, swell, bloom, taper, vibrato, scoop, fall, shake, lean_in, turn_away, bell_swing ...) | the wind player (sax, trumpet, trombone, flute, clarinet, bowed strings): breath INSIDE held notes (air pushes / swells on the post-compressor `air` stage or live `dynamics`), air-coupled vibrato, budgeted pitch spice, mic technique (bell toward / away from the mic via a `mic` EQ + reverb sends) |
 | `jazz` | `jazz.band`, `chorus`, `comp`, `walking_bass` (straight / 3/4 too), `brushes`, `brush_colour`, `ride_pattern`, `bombs`, `last_stir`, `slides`, `horn_line`, `solo_line`, `paraphrase`, `block_chords`, `Feel` | the jazz vocabulary: rootless / shell / quartal voicings, comping cells, walking lines, brush kits, horn phrasing (scoops, falls, swells, vibrato) |
 | `articulation` | `perform`, `legato`, `expression`, `vibrato`, `throws`, `auto_articulate` | sampled solo instruments played: live dynamics, legato, portamento, keyswitches, echo throws |
-| `singer` | `singer.sing(song_or_track, line, lyrics, at=, voice=, style='pop'\|'rock'\|'jazz'\|'ballad', seed=, moves=, pitch='hybrid')`, `double`, `harmony`, `Memory`, `check`, `diction`, `voice`; `lyrics` (`align`, `check`, `g2p`, `syllabify`), `voicebank` (`voices`, `get`, `check_prompt`) | a SUNG lead vocal with lyrics from the score, rendered by a licensed DiffSinger voicebank (Hanami, TIGER) in WSL and played back as takes: consonants before the beat, vowels held, word-final consonants sung and audible (at the end of the word's last note, minimum lengths, a final stop released, never under the phrase-end release), glides, scoops, late growing vibrato, falls (budgeted), audible breaths, voice colour (soft / power modes) following the dynamics, timing feel; the calm `jazz` / `ballad` styles (sung soft - the soft mode alone, the level by make-up gain -, laid back behind the beat, few small scoops, a slow late narrow vibrato, no falls); doubles and harmonies are sung again (not copied / shifted); the robotic baseline `moves=False` for A/B; the vocal checks (intelligibility 2.5-6 kHz, buried, harsh, diction: word-final consonants too short / buried). Consent rule: no cloning of real singers (`songs/_demo_vocal`) |
+| `singer` | `singer.sing(song_or_track, line, lyrics, at=, voice=, style='pop'\|'rock'\|'jazz'\|'ballad', seed=, moves=, pitch='hybrid', mic_pull=, back_phrase=, ornament=, messa_di_voce=, emphasis=)`, `double`, `harmony`, `prism`, `mouth`, `chops`, `tune_curve`, `Memory`, `check`, `diction`, `voice`; `lyrics` (`align`, `check`, `g2p`, `syllabify`), `voicebank` (`voices`, `get`, `check_prompt`) | a SUNG lead vocal with lyrics from the score, rendered by a licensed DiffSinger voicebank (Hanami, TIGER) in WSL and played back as takes: consonants before the beat, vowels held, word-final consonants sung and audible (at the end of the word's last note, minimum lengths, a final stop released, never under the phrase-end release), glides, scoops, late growing vibrato, falls (budgeted), audible breaths, voice colour (soft / power modes) following the dynamics, timing feel; the calm `jazz` / `ballad` styles (sung soft - the soft mode alone, the level by make-up gain -, laid back behind the beat, few small scoops, a slow late narrow vibrato, no falls; the mic technique on long held words - she slowly pulls back from the mic, the note fades a few dB with less proximity bass and a touch more room, leaning back in for the consonant: `mic_pull`, on for jazz / ballad, written after the vocal compressor); the expression - back-phrasing (a phrase laid back against the band, caught up by its landing note; never early in the calm styles), ornaments on a melody's repeats (grace notes, a turn, a small run on an open vowel, a blue note - budgeted, the syllables stay), messa di voce on held peaks (voice mode + the level after the compressor), and the lyrics' markup `*word*` (emphasis) / `(( line ))` (intimate, near-whispered); doubles and harmonies are sung again (not copied / shifted); processed-voice effects: pitch correction on the sung curve (`sing(tune='hard'|'soft', retune_ms=, key=, scale=)`: the Cher / T-Pain step with flips on every note change, or a soft 40 ms correction), the harmoniser / Prismizer `prism(vox, harmony, preset='choir-of-one'|'prismizer')` (the line RE-SUNG by 3-6 takes on the chord tones around it, voice-led, level-matched, own timing / formant / pan, optionally hard-tuned), the talk box's `mouth` (the words mouthed on one low pitch for `speech.talkbox`: the vocoder in LPC mode after a guitar's amp; its level follows the line's velocities) - `songs/_demo_vocal_fx` (A/B set: `make_ab.py`); VOCAL CHOPS `chops(vox, line, at=, slices=, unit='syllable'|'word'|'phrase')` (slices of the part's own rendered takes on a sampler track, retriggered in the rhythm of a line and pitched to its notes - the EDM / future-bass chop; `songs/one-more-round`); the robotic baseline `moves=False` for A/B; the vocal checks (intelligibility 2.5-6 kHz, buried, harsh, diction: word-final consonants too short / buried, the wetness in LU vs the dry voice). Consent rule: no cloning of real singers (`songs/_demo_vocal`) |
 
 Shared feel (`humanize`): `touch(clip, lo, hi)` writes phrase-shaped melody velocities, `bass_touch` the same for bass
-lines, grooves, swing, `jazz_groove` / lay-back per part. Shared performance layers: `gesture` (the moves INSIDE a note
+lines, grooves, swing, `jazz_groove` / lay-back per part, and the player's BODY (`track.humanize(body='calm' |
+'lyrical' | 'swing' | 'waltz', lead=)`, on the jazz presets' piano hands by default, the endless piano feels' own): one gesture per phrase moves timing and
+dynamics together instead of random jitter - the phrase arc (faster and louder into its peak), a ritardando into phrase
+and section ends on the decelerating-motion curve, a leap's landing late, a breath before a phrase, the weight in the
+bar; the left hand moves with the right (`body_stats(song)` measures the coupling). Shared performance layers: `gesture` (the moves INSIDE a note
 as additive shapes on abstract lanes - pitch bend, vibrato, air, mic, harmonic, wah, palm mute, echo -, sampled
 click-free; the hornist and fretwork are built on it) and `budget` (one ornament budget for every player: the
 pianist's, guitarist's, hornist's and soloist's tricks; `guitar_vocab` and `horn_vocab` hold the solo vocabularies). Rules from the user's feedback: flat velocities read as
-robotic (the report's `flat_dynamics`), ornaments and fills are spice, not habit.
+robotic (the report's `flat_dynamics`), ornaments and fills are spice, not habit, and a player breathes - silence
+between phrases, phrases at different levels (an endless line of notes reads as monotone).
 
 Voicing (`voicing`): `voicing.chorale(table, voices=voicing.STRINGS, key='C minor')` / `voicing.voice(steps, ...)`
 voices chords into real parts around the lines written by hand - any voice set (`SATB`, `STRINGS`, `WINDS`, `WINDS8`
@@ -314,19 +321,138 @@ sends, sidechains, master chain, analysis profile - tuned against a reference or
 | genre | presets |
 |---|---|
 | synthwave | `outrun`, `retrowave`, `dreamwave`, `darksynth`, `scifi` |
-| jazz | `jazz_trio`, `jazz_quartet`, `jazz_ballad`, `bossa` |
+| jazz | `jazz_trio`, `jazz_quartet`, `jazz_ballad`, `bossa`, `soul_ballad` (Rhodes, two-feel upright, stirs), `solo_piano` (one grand voiced warm and smooth: the endless jazz-piano sound), `lofi_piano` (the felt Osiris piano dull and warm, a dusty kit ducking it, a vinyl surface-noise bed - `lofi_crackle()` -, a wobbly hissing cassette master: the endless lofi-piano sound); `lead='vocal'` seats a sung lead inside the band (faders, drive, the voice -3 dB) |
 | pop | `pop_band`, `funk_band` |
+| edm | `house`, `techno`, `big_room`, `future_bass`, `melodic_house` (909 / 808 / main-room kits + sine sub, the kick pumping bass / chords / pad, `edm/*` sounds, `master/edm`; grooves per section kind in `band.info['grooves']`) |
 | rock | `rock_band`, `indie_band`, `power_ballad` |
 | orchestra | `string_quartet`, `chamber_orchestra`, `symphony_orchestra`, `film_orchestra`, `church_organ` |
 
-**Recipes** (read before composing): [synthwave](recipes/synthwave.md), [jazz trio](recipes/jazz-trio.md),
-[pop](recipes/pop.md), [rock](recipes/rock.md), [classical](recipes/classical.md) - sound palette, progressions,
+**Recipes** (read before composing): [synthwave](recipes/synthwave.md), [jazz trio](recipes/jazz-trio.md), [jazz composition](recipes/jazz-composition.md) (writing heads and solos),
+[pop](recipes/pop.md), [rock](recipes/rock.md), [classical](recipes/classical.md), [EDM](recipes/edm.md) - sound palette, progressions,
 arrangement, mix targets, hero sounds; plus [HUMAN_FEEDBACK](recipes/HUMAN_FEEDBACK.md).
 
 **Analysis profiles** (`ANALYSIS = {'profile': ..., 'loudness': [lo, hi]}` in song.py or `build --profile`): `default`,
-`synthwave`, `dreamwave`, `darksynth`, `jazz`, `classical`, `piano` (solo piano: classical thresholds, a piano spectrum), `pop`, `rock`, `film` - each a reference spectrum,
+`synthwave`, `dreamwave`, `darksynth`, `jazz`, `classical`, `piano` (solo piano: classical thresholds, a piano spectrum), `pop`, `edm` (club: kick + sub, loud -10..-6 LUFS), `rock`, `film` - each a reference spectrum,
 loudness window, LRA / PLR limits, space targets and note-dynamics threshold ([RENDER_FORMAT.md "Analysis
 profiles"](docs/RENDER_FORMAT.md)).
+
+### Endless generators (`agentsound/endless`, `python -m agentsound endless GENRE`)
+
+Music on demand WITHOUT an LLM: a seeded, rule-based tune composer writes an original lead sheet (form AABA /
+ABAC / 12-bar blues, key, tempo, feel, jazz changes from ii-V-I / turnaround / backdoor / tritone / bridge blocks, a
+singable motif-based melody checked against the chords) and the library's players perform it (`pianist.arrange`
+heads, a `soloist.solo` chorus with `pianist.vocabulary`, the head out paraphrased, `s.ending`), then a quality gate
+reads the report (0 clicks, no flat lead, 0 silent notes, loudness in range; a failed seed is rerolled).
+Genres are DATA (`endless.genres`: forms, moods -> feels / keys / tempo / chord colours, the band preset, the
+arrangement plan): `jazz-piano` (solo piano on the `solo_piano` preset, the default) and `jazz-trio` (+ bass and brushes). Swing is an option
+(off by default: `--swing` or `--swing 0.58`); the feel suits the form (a blues swings or is a straight-8th shuffle
+with a stride left hand, a bossa wants a song form).
+It plans top-down before any note (`genres.ARCS`, one mechanism on every level: an arc curve + targets): a stream
+of tunes follows a **set arc** (a medium opener, contrast in feel / tempo / key, a ballad after an up-tempo tune, the
+highlight past the middle, a quiet closer; printed at the start of every set), every tune a **tension arc** per form
+(AABA: calm A1, A2 alike with another cadence, the bridge climbing, THE climax - the tune's single highest note - drawn
+in the form's last section (the last A restates its first phrase and climbs to it) or at the bridge) that sets each
+phrase's register, line density, chord colour and the pianist's touch; every A spans an octave or more; the
+phrases are gestures, then notes fill them - each 4-bar phrase with its own register and landing goal, the part's
+peak 60-75 % through it, the chord changes met by guide tones, a strong-beat tension resolved by step in most
+phrases, a rhythm cell at most twice per 8 bars (the hook's rhythm developed in its later phrases: displaced,
+truncated, augmented), phrase endings drawn (downbeat, anticipation, pickup, a breath for the left hand; the bridge's
+line runs into its turnaround). Identity: one hook and a theme
+RESTATED note for note in every A (only the cadence bars are new; a blues chorus is AAB, its second chorus varies
+where it is drawn - its answer, its second statement, or calmer - over its own second ending), a bridge in its own
+register with long notes against the moving lines,
+an intro of its own (a weighted vamp from `genres.INTROS` - bVImaj7#11-V7b9, IV-iv-ii-V, iii-VI-ii-V, a pedal, the
+riff alone an octave low ... - with a drawn line over it: a fragment of the hook augmented, sequenced or answered,
+never the head's bars copied) and a tag that develops the hook's head with a twist (an approach
+drawn: the tritone sub, the backdoor, the minor plagal, a deceptive cadence, a cold stop - into a 6/9 / mMaj9 end
+chord, its roll / spread / plink / cadenza / fade and its grip drawn too).
+`composer.shape(tune[, song])` measures it (climax place, hook recurrences, register / touch following the arc, the
+solo's build); the runner rerolls a tune that breaks it. The solo plays the tune's chart (three quarters of the tunes
+one cadence of a head-out part played another way - tritone, backdoor, pedal, minor plagal, a ii-V -, in the last solo
+chorus and the head out alike, the melody singing the substitute's colour) in a SHAPE drawn per tune (a rise, a slow
+build, an answer-and-develop arch, less is more, a block-chord chorus - each climbing to its climax in the last
+stretch and resolving -, rarely trading 4s with the left hand; double time only in ~30 % of the tunes, before the
+climax), built from a cell of the hook developed call by call in lines of every length (a fragment to an 8-bar line,
+breaths of a beat or two), ending on a tone of the head out's first chord, every lick at most once per piece and
+rarely in the next tune of a set; the whole piece's dynamic plan is drawn per tune (`plan['dynamics']`: the peak - the
+piece's highest note, `perform.CLIMAX` - in the solo's last 8-16 bars, 60-75 % in, a 3rd-6th over the head's top,
+v110+; a 2-bar block-chord shout at the head out's top note in ~13 %), the head out at the head's level, the tag
+coming down only in its last bars, the final chord a few LU under the piece with nothing after it. The head sits
+high (around A5) with its hook a 1-bar cell sequenced along the root motion in half the tunes. `composer.tells(song, tune)` measures the blind test's tells (`songs/_blind/ROUNDS.md`:
+silent solo bars, octave wraps, verbatim repeats, the solo's density / velocity against the head, repeated fill
+shapes, harmonized fast notes, literal hook quotes; round 2: the intro / tag copied, isolated reharms, the head's
+5-note shape recurrence, the solo's duration entropy, a loudness range, where the peak sits, silent left-hand bars;
+round 3: on / off-beat velocity and zig-zag in lines, repeated notes, chord clashes per rule, empty solo bars, the
+solo / head-out loudness, fast figures per chorus, the left hand's rootless voicings and anticipations, the vamp /
+line / reharm slot drawn; round 4: phrase goals and pitch circling, rhythm cells per 8 bars, strong-beat tensions,
+the bridge's register / rhythm, phrase endings, the solo's line shapes, chord tones on the beat, double time, licks
+recurring in a solo and across tunes, chart variants, tag approaches, final chords, feel / form; round 5: chord-
+arpeggio bars and motif-derived phrases in the solo, onset-pattern reuse, guide tones at the head's chord changes,
+chromatic notes by resolution, the solo's loudness from its second chorus, intro / tag bars copied from the head,
+the bridge's line into its turnaround, where the head's peak sits, the A's range, the solo's last note; round 6: the
+solo's density over the head, silent solo bars per chorus and at cadences, phrase lengths / line shape, the form's
+level and ending, the climax ladder, the head's register / touch / climb, colour tones on the reharm, the left hand's
+bare roots and rests, the frame's held notes).
+The playing BREATHES (user on the r6 tunes: "sounds like an endless monotone line of notes") - in balance (blind
+round 6): the head breathes at its phrase ends; the solo plays heavy-tailed lines (`soloist.PHRASES`) with a breath
+of a beat or two after each (`soloist.BREATH`; a bar at most once a chorus, the last note rings into it, no pickup
+filling it), a calmer phrase after a long one (`soloist.CONTRAST`: register and touch), the head's phrases at
+their own levels (`perform.phrase_levels` -> `humanize.touch(levels=)`), melody notes voiced at their arrivals rather
+than under every note, fills / ornaments rare; `composer.breath(song)` measures it (attacks per bar and their spread,
+the time without a new right-hand / any onset for a beat+, rests of half a bar / a bar, phrase lengths, held notes,
+left-hand attacks, ornament notes, phrase-to-phrase register / velocity / density contrast;
+recipes/jazz-composition.md "Breathing").
+
+**Endless PIANO in general** (`python -m agentsound endless piano --style jazz | new-age | classical | lofi | mix`): the same
+composer and plan drive every style - a genre owns its chord VOCABULARY (`Genre.harmony`: blocks with inversions
+`V@3` = Eb/G, colours, intro vamps, end chords, tag approaches), its melody (cells, step sizes, phrase plans -
+singable periods with a breath at every phrase end, phrase-end kinds), its titles and its ARRANGEMENT:
+`new-age-piano` (letters-to-the-morning: pop progressions with tender add9 / maj7 / borrowed-iv colour, the form
+`verse` = theme / theme / chorus hook / build in the relative minor, played as intro (left hand alone, then the hook's
+head) - A - A' - the hook - an interlude of echoes - the theme with 3rds / 6ths - the build - ONE climax (the hook in
+chords, its top note lifted over everything before, a fermata) - the theme soft - a coda, 62-92 BPM) and
+`classical-piano` (a nocturne or a salon waltz: ternary a a' b b' a'' with Neapolitan / diminished / borrowed-iv colour,
+the b' the climax with a cadenza flourish into the return; the waltz plays its strains twice, ~3 minutes; chords spelled
+by the key - Cb in Gb, the Neapolitan of Eb Fb/Ab) are played by the ROMANTIC pianist (`perform.build_piano`:
+`romantic.Score` from the composed notes - touch per phrase, lean on long notes, cantabile, melody rubato -, the inner
+notes of its chords softer, a broken-chord LEFT HAND from `pianist.FIGURES` per section (flowing 8ths over a 10th,
+rocking, walking 10ths, the nocturne arpeggio, eight 3/4 figures from the oom-pah-pah to an arpeggio over the bar;
+held still where the melody breathes), written dynamics per section, phrase rubato, ritardandi, an inhale before the
+peak, and the feel's BODY on both hands - new-age lyrical / calm, the nocturne lyrical, the waltz a light sway). The jazz specs moved the same
+way (user: "the jazz should be more like that too"): stepwise heads with a rest at every phrase end, a left-hand
+figure per section (`lh_plan`: shells -> tenths -> rootless -> walking 10ths / stride, broken chords in a ballad's
+intro / tag) and
+written section dynamics (`plan['dyn']`, the ballads deepest: loudness range 7.6 -> 11.4 LU over 4 tunes). `--style mix` plays a
+set that alternates the styles (`composer.mix_plan`); the gate also checks the BREATH before rendering
+(`band['breath']`: the share of time without a new right-hand onset, the density's variation) and tune.json carries
+`composer.piano_tells` (hook statements, phrase rests, left-hand figure variety, climax place). Output:
+`songs/_endless_piano/out/<style>/NNN-<title>/`.
+`lofi-piano` is the same machinery as data: jazzy 7th / 9th loops (ii-V-I, IVmaj7-iii7-vi7, borrowed iv / bVI-bVII,
+never a plain triad), 8-bar A / B parts that come back as loops, a sparse hum of a melody (the `lofi` cells: two to
+four notes, then space), a lazy swing (the 'lazy' feel's own `groove` 0.57 when `--swing` is not given) or straight
+8ths at 68-90 BPM, the left hand's 7th chords held or pushed onto the & of 2 (`pianist.FIGURES` `lofi_*`), on the
+`lofi_piano` band; per MOOD the drums (`moods[m]['drums']`: study / late-night / sunday with the drummer's `lofi`
+boom-bap loop - in after the intro, out in the bridge and the coda (plan section `drums: False`) -, rain the piano
+alone with a little rubato); a mood with drums plays only `steady` feels (no phrase rubato / lilt / inhale: the kit
+keeps the grid).
+
+```bash
+python -m agentsound endless piano --style new-age --count 3          # new-age solo piano (letters-to-the-morning)
+python -m agentsound endless piano --style classical                  # a nocturne / a salon waltz
+python -m agentsound endless piano --style lofi --mood study          # lo-fi: study | late-night | sunday (drums), rain
+python -m agentsound endless piano --count 6                          # --style mix: a set alternating the styles
+python -m agentsound endless jazz-piano --count 4                     # a set of 4 along the set arc
+python -m agentsound endless jazz-piano --count 3 --mood late-night   # late-night | bright | blue | tender
+python -m agentsound endless jazz-piano --play                        # endless: plays back-to-back, renders ahead
+python -m agentsound endless jazz-piano --hours 1 --join              # an hour + one long mp3 with gaps
+python -m agentsound endless --list                                   # genres, moods, feels, forms
+```
+
+Each tune lands in `songs/_endless_<genre>/out/NNN-<title>/` (mix.mp3 tagged with a cover, tune.json with key /
+tempo / form / changes / melody / seed / the plan and its measured shape / timing, tune.txt the lead sheet); `songs/_endless_jazz_piano/song.py`
+rebuilds any seed with the full image set. In code: `endless.compose(endless.genre('jazz-piano'), seed)` ->
+`Tune`, `endless.song(tune)` -> `Song`. Modules: `endless.genres`, `endless.composer`, `endless.perform`,
+`endless.run`; docs/COMPOSE_API.md "Endless generators".
 
 ## 6. The ears: report, images, zoom, compare
 
@@ -340,7 +466,7 @@ profiles"](docs/RENDER_FORMAT.md)).
 - **Note dynamics** (`nodes[].dynamics`): per-phrase spread of each melodic track's note levels vs its velocities;
   `flat_dynamics` = robotic lead.
 - **Silent notes** (`silent_notes` warnings, `nodes[].silentNotes`): before rendering, `agentsound.silent_notes`
-  lists every note that reaches no sample zone (kit without cymbals, a key outside a multisample's range, a velocity
+  lists every note that reaches no sample zone (kit without cymbals, a key outside a multisample's or SoundFont preset's range, a velocity
   or keyswitch articulation without zones), no drum-machine piece or only muted stack layers - with GM names / note
   names, bar:beat times and a fix (the same pack's kits that have the piece); after rendering, every track's notes
   that made no audible sound in their own span (40 dB under the track's median note, or a note that adds nothing
@@ -361,7 +487,8 @@ distribution, punch, tails, prioritised fixes naming the tracks. References stay
 
 - **Mixer** (`agentsound.mixer`, `python -m agentsound mix`): roles (lead, bed, rhythm, low, other), genre targets
   vs the lead per profile, `plan()` / `check()` (findings with MIX snippets) / `auto()` (render -> measure -> adjust,
-  bounded and logged). The result is a module-level `MIX = {'trim', 'ride', 'duck', 'eq', 'ramp'}` in song.py.
+  bounded and logged). The result is a module-level `MIX = {'trim', 'ride', 'duck', 'eq', 'lead', 'arc', 'ramp'}` in song.py
+  (`lead`: who carries the tune per section).
 - **Mastering** (`agentsound.mastering`, `python -m agentsound master`): `match()` a reference or the profile (tonal
   eq within a profile guard, loudness, width, limiter), platforms `auto` / `streaming` / `loud` / `dynamic`,
   `--render` post-pass with do-no-harm back-off, `check()` delivery targets (true peak, loudness, LRA, mono, tone),
@@ -430,8 +557,9 @@ note dynamics, decay, brightness) - every gap becomes a library fix or a written
   re-running all songs; roles never touch other songs.
 - **Delivery**: `build` writes `out/mix.mp3` tagged (title, artist, album, genre, year, BPM, key, credits, embedded
   cover), `out/cover.png` (engine cover styles synthwave outrun dreamwave darksynth jazz classical rock pop, or your
-  own picture) and `out/credits.txt`. Set `METADATA = {...}` / `COVER = {...}` in song.py. Hand over absolute paths of
-  mp3 / wav / cover with a short description and the credits that matter.
+  own picture), `out/credits.txt` and, for a sung song, `out/lyrics.txt` (the words by section). Set `METADATA = {...}`
+  / `COVER = {...}` in song.py. Hand over absolute paths of mp3 / wav / cover (+ the lyrics) with a short description
+  and the credits that matter.
 
 Also user-facing: `delivery` (mp3 tags, cover, credits.txt, the CC-BY / BY-SA / BY-NC attribution check) and `library`
 (the sample-pack manager behind `python -m agentsound samples`: manifest, fetch, SOURCE.json / INDEX.json).

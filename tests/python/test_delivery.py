@@ -76,6 +76,25 @@ class Settings(unittest.TestCase):
         self.assertEqual(delivery.tags('T', 90, Key('C'), {'genre': 'Lo-fi'}, 'jazz')['genre'], 'Lo-fi')
 
 
+class Lyrics(unittest.TestCase):
+    def test_lyrics_text_by_section(self):
+        # out/lyrics.txt: the sung words by section, singer markup out, doubles once, backing lines in parentheses
+        from types import SimpleNamespace as NS
+
+        def part(at, text, n=4):
+            return NS(notes=[NS(start=at + k) for k in range(n)], lyrics_text=text)
+        lead = NS(id='vocal', _singer={'parts': [part(0, "Turn the *clock* to the wall, let the cof-fee go - cold."),
+                                                 part(16, "((No-where)) to be{b iy}, _ no-where to go.", 8)]})
+        dbl = NS(id='vocal_dbl', _singer={'parts': [part(16, "((No-where)) to be{b iy}, _ no-where to go.", 8)]})
+        gang = NS(id='gang', _singer={'parts': [part(18, "whoa, hey!", 2)]})
+        song = NS(tracks={'vocal': lead, 'vocal_dbl': dbl, 'gang': gang},
+                  sections=[NS(name='verse', start=0, end=16), NS(name='chorus', start=16, end=32)])
+        self.assertEqual(delivery.lyrics_text(song, 'Song', 'Artist'),
+                         'Song\n(Artist)\n\n[verse]\nTurn the clock to the wall,\nlet the coffee go cold.\n\n'
+                         '[chorus]\nNowhere to be,\nnowhere to go.\n(whoa)\n(hey!)\n')
+        self.assertEqual(delivery.lyrics_text(NS(tracks={}, sections=[]), 'x', 'y'), '')
+
+
 class Credits(unittest.TestCase):
     def setUp(self):
         self.dir = pathlib.Path(tempfile.mkdtemp(prefix='agentsound_credits_'))

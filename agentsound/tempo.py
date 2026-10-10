@@ -450,6 +450,16 @@ class TempoPlan:
     def empty(self) -> bool:
         return not (self.events or self.rubatos or self.fermatas or self.lilts)
 
+    def shapes(self, a: float, b: float) -> bool:
+        """Whether a ramp (ritardando / accelerando / tempo_ramp), a rubato or a fermata shapes the time in beats
+        a..b (a player's body leaves the tempo to them there; a lilt is a pulse, not a phrase gesture)."""
+        for e in self.events:
+            if e[0] == 'ramp' and e[1] < b + 1e-9 and e[2] > a - 1e-9:
+                return True
+        if any(s < b + 1e-9 and t > a - 1e-9 for s, t, *_ in self.rubatos):
+            return True
+        return any(a - 1e-9 <= beat <= b + 1.0 for beat, *_ in self.fermatas)
+
     # --- building
     def add_set(self, beat: float, bpm: float) -> None:
         self._check_free(beat, beat, f"set_tempo at beat {beat:g}")

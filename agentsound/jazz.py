@@ -120,6 +120,12 @@ class Feel:
     def __repr__(self) -> str:
         return f"Feel({self.bpm:g} BPM, swing {self.ratio:.3f})"
 
+    @property
+    def body(self) -> str:
+        """The players' body for this feel (humanize.BODIES; the band presets' piano hands): 'swing' when the 8ths
+        swing (time is steady), else 'calm' at a ballad tempo (<= 70 BPM) and 'lyrical' above."""
+        return 'swing' if self.ratio > 0.5 + 1e-9 else ('calm' if self.bpm <= 70 + 1e-9 else 'lyrical')
+
     def late_ms(self, part: str) -> float:
         """Milliseconds this part sits behind the beat (negative = ahead)."""
         return float(self.layback[part]) if part in self.layback else layback_ms(part, self.bpm)
@@ -557,6 +563,7 @@ def paraphrase(melody, seed=0, anticipate: float = 0.3, delay: float = 0.15, emb
     ns = sorted(c, key=lambda n: (n.start, n.pitch))
     out = [list(n) for n in ns]           # [start, dur, pitch, vel]
     added: list[Note] = []
+    peak = max((n.pitch for n in ns), default=0)          # an enclosure never goes over the melody's top note
 
     def prev_end(i):
         return out[i - 1][0] + out[i - 1][1] if i > 0 else -math.inf
@@ -582,8 +589,8 @@ def paraphrase(melody, seed=0, anticipate: float = 0.3, delay: float = 0.15, emb
             if room >= need - _EPS or (i > 0 and out[i - 1][1] >= need + 0.5 and out[i - 1][0] < start - need - 0.25):
                 if room < need - _EPS:
                     out[i - 1][1] = max(0.25, start - need - out[i - 1][0])
-                if enclose:
-                    above = k.transpose(pitch, 1) if k is not None else pitch + 2
+                above = k.transpose(pitch, 1) if k is not None else pitch + 2
+                if enclose and above <= peak:
                     added.append(Note(start - 2.0 / 3.0, 1.0 / 3.0, above, _vel(v * vel)))
                     added.append(Note(start - 1.0 / 3.0, 1.0 / 3.0, pitch - 1, _vel(v * vel * 0.95)))
                 elif start >= 0.5:

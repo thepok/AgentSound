@@ -6,7 +6,7 @@
 // peak-to-loudness ratio, loudness range) and the space targets. Selected by the render JSON key "analysis":
 // {"profile": "synthwave"} (docs/RENDER_FORMAT.md); "default" is the generic pop/synthwave master reference
 // the report always used. Genres: synthwave, dreamwave, darksynth, jazz, classical, piano (solo piano), pop,
-// rock, film (how each was derived: Profiles.cpp).
+// edm, rock, film (how each was derived: Profiles.cpp).
 //
 // The reference spectrum of every profile is the default curve (referencePsdDb in MixImpl.h) plus a
 // per-profile offset curve in dB, given as (Hz, dB) breakpoints interpolated linearly over log2(f)
@@ -64,7 +64,7 @@ const std::vector<AnalysisProfile>& analysisProfiles();
 // nullptr for an unknown name.
 const AnalysisProfile* findAnalysisProfile(const std::string& name);
 const AnalysisProfile& defaultAnalysisProfile();
-// "default, synthwave, dreamwave, darksynth, jazz, classical, piano, pop, rock, film" (for error messages).
+// "default, synthwave, dreamwave, darksynth, jazz, classical, piano, pop, edm, rock, film" (for error messages).
 std::string analysisProfileNames();
 
 }  // namespace as::analysis

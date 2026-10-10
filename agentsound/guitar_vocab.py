@@ -12,7 +12,8 @@ Moves (MOVES: name -> (roles, energy, density, spice, fast); a style re-weights 
   prebend     a silent pre-bend released onto a chord tone, then a step down
   ghost       a ghost bend (soft pick, the release heard) - Gilmour's sigh
   slides      notes reached by slides (in, between) with a hammer-on, a vibrato at the end
-  sequence    a 3- / 4-note pentatonic cell sequenced up, picked with accents, into a held note
+  sequence    a target-first line (chord tones on the beats, scale steps / approaches between), picked with
+              accents on the beats, into a held note
   legato      a hammer / pull flurry (only the string changes picked) up to a held note
   chug        palm-muted low chugs, then a slide up into a high held note
   wah         an answer through a talking wah
@@ -225,11 +226,10 @@ def m_slides(ctx) -> Part:
 def m_sequence(ctx) -> Part:
     pcs = _penta(ctx)
     g = _grid(ctx, 10.0, (0.25, 1 / 3, 0.5)) if ctx.density > 0.6 else 0.5
-    steps = S.sequence_line(ctx, grid_=g)
-    cell = 4 if g == 0.25 else 3
-    t = steps[-1][0] + g
+    steps = S.target_line(ctx, grid_=g, length=max(1.0, ctx.beats - ctx.rng.uniform(0.75, 2.0)))
+    t = steps[-1][0] + steps[-1][1]
     notes = _picked(ctx, steps, vel_lo=0.55, vel_hi=0.9)
-    acc = [n._replace(vel=_vel(n.vel * (1.1 if i % cell == 0 else 0.95))) for i, n in enumerate(notes)]
+    acc = [n._replace(vel=_vel(n.vel * (1.1 if abs((ctx.at + n.start) % 1.0) < 1e-6 else 0.95))) for n in notes]
     head = Part(Clip._raw(acc, t), [fw.accents(acc, _bpm(ctx))], [(0, t, 'picking', 'sequence')])
     top = _clamp(_step(steps[-1][2], pcs, 1), ctx)
     if ctx.beats - t >= 1.0:

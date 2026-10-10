@@ -13,14 +13,19 @@
     MIX = {'trim': {'keys_lead': 1.5, 'pad': -2.0},           # dB, song-wide, per track / bus
            'ride': {'keys_lead': {'drop2': 1.0}},             # dB per section (on top of the trim)
            'duck': [{'targets': ['pad', 'choir'], 'key': 'keys_lead', 'depth': 2.5}],   # sidechains
-           'eq': {'piano': [{'freq': 1400, 'gain': -2.0, 'q': 1.0}]}}                   # presence dips
+           'eq': {'piano': [{'freq': 1400, 'gain': -2.0, 'q': 1.0}]},                  # presence dips
+           'lead': {'finale': 'violins1', 'requiem': ['choir_s', 'choir_a']},          # who leads where (list: group)
+           'arc': {'intro': 2.0, 'storm': -1.5}}       # the conductor's arc: dB per section on the master input
     # the CLI applies a module-level MIX at build time (and prints it); or explicitly: s.mix(MIX) in build()
 
 What MIX does to the song (agentsound.mixer.apply): trims and rides go to one `utility` insert named `mixer`
 at the end of each node's chain (post-insert, pre-fader: the sends follow it; never in conflict with the
 song's own gainDb lanes), a ride is an automation lane `fx.mixer.gain` that moves `ramp` beats (default 1)
 before each section start, ducks are ordinary `song.sidechain()` duckers, eq dips one `eq` insert named
-`mixer_eq` (up to three bells). The render JSON shows all of it.
+`mixer_eq` (up to three bells). The render JSON shows all of it. `lead` changes no sound: it names the part that
+carries the tune in a section (a list = a group lead, summed: a choir split into voices). `arc` is the
+conductor's arc as a logged mixer move: `song.arc(rides)` (a utility 'mix_arc' first on the master, gliding into each
+section) - soft passages up, early fortissimos under the climax.
 
 Levels (how the mixer measures "3 dB under the lead"): per bar from the report (`nodes[].barsRmsDb`) plus each
 node's K-weighting offset (its `lufs - rmsDb`), so the numbers read like the LUFS balances of the recipes and
@@ -30,6 +35,9 @@ band presets; compared per section on the bars where both parts play. The bed us
 Roles: lead (the part in front), bed (pads / strings / choir), rhythm (drums, percussion), low (bass), other
 (keys, arps, comping, counter-lines), fx (risers, impacts: not balanced). Explicit arguments win over a band's
 roles, which win over the report's analysis roles (`nodes[].role`), which win over the track ids.
+The lead of a section: MIX 'lead' {section: id(s)} > a `track.feature(section)` > the loudest lead-role part playing
+in half its bars > the report's melodic lead parts (`nodes[].dynamics.kind` 'lead') playing there. A group that is
+out of its window in only some sections gets rides there, not a song-wide trim.
 """
 
 from __future__ import annotations
@@ -47,7 +55,7 @@ from .theory import ComposeError
 
 ROLES = ('lead', 'bed', 'rhythm', 'low', 'other', 'fx')
 GROUPS = ('rhythm', 'low', 'bed')          # balanced as groups against the lead (both bounds)
-MIX_KEYS = ('profile', 'trim', 'ride', 'duck', 'eq', 'ramp', 'log')
+MIX_KEYS = ('profile', 'trim', 'ride', 'duck', 'eq', 'lead', 'arc', 'ramp', 'log')
 DUCK_KEYS = ('targets', 'key', 'pitches', 'depth', 'threshold', 'attack', 'hold', 'release', 'curve')
 EQ_KEYS = ('freq', 'gain', 'q')
 FX_NAME, EQ_NAME = 'mixer', 'mixer_eq'
@@ -67,7 +75,21 @@ _WORDS = {
              'theme'),
     'fx': ('riser', 'impact', 'fx', 'sweep', 'downlifter', 'uplifter', 'noise', 'wind', 'rain', 'whoosh', 'crash_fx'),
 }
+_PINNED = {'other': ('gtr', 'guitar', 'guitars'), 'lead': ('vocoder', 'talkbox', 'talk', 'mouth')}
+"""Instrument words (in the track id or its patch name; a 'vocoder' insert counts as one) that pin a role over the
+report's register guess: a palm-muted E2 riff stays a guitar, a vocoder / talk-box voice stays a voice (the
+the-drummer-speaks gtr_r and a vocoder 'robot' were trimmed as basses). A bed word (pad, choir ...) wins."""
 _HOOK_RE = re.compile(r'chorus|drop|hook|refrain|lift|climax|finale|peak|head', re.I)
+
+
+def pinned_role(node_id: str, track=None) -> str | None:
+    """The role the instrument itself names (_PINNED: guitar -> other, vocoder / talk box -> lead), else None."""
+    words = [w for w in re.split(r'[_\-\s/+.]+', f"{node_id} {getattr(track, 'patch', '') or ''}".lower()) if w]
+    if any(f.type == 'vocoder' for f in getattr(track, 'fx', ()) or ()):
+        words.append('vocoder')
+    if any(w in _WORDS['bed'] for w in words):
+        return None
+    return next((r for r, ws in _PINNED.items() if any(w in ws for w in words)), None)
 
 
 def role_from_id(node_id: str) -> str:
@@ -147,6 +169,13 @@ PROFILES: dict[str, MixProfile] = {
                       glue=('a drum bus compressor 4:1, 2-4 dB with 20-30 % parallel blend',
                             'the master glue 2:1, slow attack, 1-2 dB above -12 dB only'),
                       notes='lead -19, drums -19.5, bass -20, keys / pad / pluck -26..-27.5 LUFS (pop_band demo)'),
+    'edm': MixProfile('edm', rhythm=(-3.0, 0.5), low=(-3.5, 0.0), bed=(-9.0, -3.0), other_max=-3.0,
+                      lead_ride_db=1.5, bed_ride_db=-1.0, bed_duck_db=2.0, kick_bass_duck_db=8.0, dip_db=-2.0,
+                      glue=('a drum bus compressor 4:1 with 30-50 % parallel blend; the kick pumps bass / chords / pad '
+                            '(sidechain 6-12 dB)',
+                            'the master: glue 2:1 above -10 dB, a soft clipper, the limiter to -10..-6 LUFS (drops -9..-6)'),
+                      notes='club mix (recipes/edm.md): the kick and the sub bass as loud as the hook, the chords / pad '
+                            'pumped well under it; lead -18, drums -18, bass -19, chords -23..-25 LUFS (edm presets)'),
     'ballad': MixProfile('ballad', rhythm=(-9.0, -4.0), low=(-6.0, -2.0), bed=(-10.0, -4.0), other_max=-4.0,
                          lead_ride_db=1.0, bed_ride_db=-1.0, bed_duck_db=1.5, kick_bass_duck_db=3.0, dip_db=-1.5,
                          glue=('the master glue 1.5:1, slow attack, 1 dB at most: keep the swells',),
@@ -268,6 +297,11 @@ def infer_roles(song=None, report=None, *, band=None, roles=None, lead=None, bed
             out[nid], why[nid] = _ANALYSIS_ROLE[rr], f"report role {rr}"
         else:
             out[nid], why[nid] = role_from_id(nid), 'track id'
+    tracks = getattr(song, 'tracks', None) or {}
+    for nid in ids:                                     # the instrument's own words over the register guess
+        p = pinned_role(nid, tracks.get(nid)) if role_from_id(nid) == 'other' else None   # ('lead' id: stays)
+        if p is not None and out[nid] != p:
+            out[nid], why[nid] = p, f"instrument words ({p})"
     for nid, tr in (getattr(song, 'tracks', None) or {}).items():   # a hero (agentsound.heroes.hero) leads
         if getattr(tr, 'hero', None) is not None and nid in out:
             out[nid], why[nid] = 'lead', 'hero()'
@@ -358,13 +392,23 @@ def features(song) -> dict:
     return out
 
 
+def section_leads(song=None, mix=None) -> dict:
+    """{section: [ids]}: who leads where - the song's features, overridden by the MIX 'lead' key."""
+    out = {k: [v] for k, v in features(song).items()}
+    out.update(normalize(mix if mix is not None else getattr(song, 'applied_mix', None) or {})['lead'])
+    return out
+
+
 def measure(report, roles: dict, prof: MixProfile, hooks=None, featured=None) -> list[SectionBalance]:
-    """Every section's balance vs its lead: the loudest lead-role part that plays in at least half its bars - or the
-    track featured in that section (featured={section: id}, mixer.features(song): track.feature(bass_solo) makes the
-    bass the lead of the bass solo and takes it out of its group there)."""
+    """Every section's balance vs its lead: the part(s) named for that section (featured={section: id or [ids]},
+    mixer.section_leads: a track.feature(bass_solo) or MIX 'lead'; a list is a group lead, its parts summed and taken
+    out of their groups there), else the loudest lead-role part that plays in at least half its bars, else the
+    loudest of the report's melodic lead parts (dynamics kind 'lead') playing there."""
     view = report if isinstance(report, View) else View(load_report(report))
     hook_names = hook_sections(view, hooks)
     leads = [n for n, r in roles.items() if r == 'lead' and n in view.nodes]
+    melodic = [n for n, nd in view.nodes.items() if (nd.get('dynamics') or {}).get('kind') == 'lead'
+               and roles.get(n) not in ('fx', 'rhythm', 'low') and n not in leads]
     featured = featured or {}
     out = []
     for sec in view.sections:
@@ -378,24 +422,30 @@ def measure(report, roles: dict, prof: MixProfile, hooks=None, featured=None) ->
         if sec.get('lufs', -120) < view.loudest - 12:
             sb.why = f"quiet ({sec.get('lufs', -120):.1f} LUFS)"
             continue
-        f = featured.get(name)
-        cands = [f] if f in view.nodes else leads
-        playing = {n: view.active(n, idx) for n in cands}
-        playing = {n: a for n, a in playing.items() if len(a) >= max(2, 0.5 * len(idx))}
+        group = [n for n in _ids(featured.get(name)) if n in view.nodes]
+
+        def playing_of(cands):
+            p = {n: view.active(n, idx) for n in cands}
+            return {n: a for n, a in p.items() if len(a) >= max(2, 0.5 * len(idx))}
+        playing = playing_of(group) if group else (playing_of(leads) or playing_of(melodic))
         if not playing:
             sb.why = 'no lead plays in half its bars'
             continue
         lead = max(playing, key=lambda n: view.level(n, playing[n]))
         la = playing[lead]
-        sb.judged, sb.lead, sb.lead_level = True, lead, view.level(lead, la)
+        group = [n for n in group if n in playing] or [lead]
+
+        def lead_level(bars):
+            return view.group_level(group, bars, idx)[0] if len(group) > 1 else view.level(lead, bars)
+        sb.judged, sb.lead, sb.lead_level = True, lead, lead_level(la)
         for g in GROUPS:
-            ids = [n for n, r in roles.items() if r == g and n != lead and n in view.nodes and view.active(n, idx)]
+            ids = [n for n, r in roles.items() if r == g and n not in group and n in view.nodes and view.active(n, idx)]
             if not ids:
                 continue
             lvl, used = view.group_level(ids, la, idx)
             if lvl is None or len(used) < max(2, 0.25 * len(la)):
                 continue
-            sb.rel[g] = round(lvl - view.level(lead, used), 2)
+            sb.rel[g] = round(lvl - lead_level(used), 2)
             sb.members[g] = ids
         sp = view.space.get(name) or {}
         if 'bed' in sb.rel and sp.get('bedVsLeadDb') is not None and sp.get('lead') == lead:
@@ -403,12 +453,12 @@ def measure(report, roles: dict, prof: MixProfile, hooks=None, featured=None) ->
         elif 'bed' in sb.rel:
             sb.bed_from = 'bars'
         for n, r in roles.items():   # every other part (and a second lead) on its own
-            if n == lead or n not in view.nodes or r not in ('other', 'lead'):
+            if n in group or n not in view.nodes or r not in ('other', 'lead'):
                 continue
             act = set(view.active(n, idx))
             used = [i for i in la if i in act]
             if len(used) >= max(2, 0.25 * len(la)):
-                sb.rel[n] = round(view.level(n, used) - view.level(lead, used), 2)
+                sb.rel[n] = round(view.level(n, used) - lead_level(used), 2)
     return out
 
 
@@ -505,8 +555,8 @@ def propose(report, roles: dict, prof: MixProfile, *, song=None, mix=None, hooks
     """The moves that bring the measured balance to the profile's targets (deterministic, bounded)."""
     rep = load_report(report)
     view = View(rep)
-    bal = balances if balances is not None else measure(view, roles, prof, hooks, features(song))
     mix = normalize(mix or {})
+    bal = balances if balances is not None else measure(view, roles, prof, hooks, section_leads(song, mix))
     judged = [b for b in bal if b.judged]
     moves: list[Move] = []
     if not judged:
@@ -529,7 +579,8 @@ def propose(report, roles: dict, prof: MixProfile, *, song=None, mix=None, hooks
     shift: dict[str, float] = {}          # section -> how far the lead moves there (trim + ride)
     for lead in leads:
         mine = [b for b in use if b.lead == lead] or [b for b in judged if b.lead == lead]
-        t0 = statistics.median(corr[b.name] for b in mine)
+        # a part that leads only some sections (a feature, a melodic part where the lead rests) rides there, no trim
+        t0 = statistics.median(corr[b.name] for b in mine) if roles.get(lead) == 'lead' else 0.0
         peak = view.nodes.get(lead, {}).get('peakDb', -120.0)
         trim = min(t0, max(0.0, -0.5 - peak)) if t0 > 0 else t0
         trim = _clamp(trim, -max_step, max_step)
@@ -586,6 +637,9 @@ def propose(report, roles: dict, prof: MixProfile, *, song=None, mix=None, hooks
                     'release': 260.0}))
                 duck_off = -0.6 * prof.bed_duck_db   # about what the duck takes off on the bars the lead plays
                 x, _ = _best_shift(items(duck_off))
+        outside = [b for (fa, fz), _, _, b in items(duck_off) if not fa - 1e-9 <= 0.0 <= fz + 1e-9]
+        if outside and 2 * len(outside) <= len(sec):
+            x = 0.0          # only some sections are out: ride those, leave the rest where it is
         trim = _clamp(x, -max_step, max_step)
         if abs(trim) >= 0.5:
             for m in members:
@@ -593,9 +647,7 @@ def propose(report, roles: dict, prof: MixProfile, *, song=None, mix=None, hooks
                                                             f"in the hooks)"))
         else:
             trim = 0.0
-        if g != 'bed':
-            continue
-        for (fa, fz), (ia, iz), _, b in items(duck_off):
+        for (fa, fz), (ia, iz), _, b in items(duck_off):   # the sections the trim leaves outside: rides
             if fa - 1e-9 <= trim <= fz + 1e-9:
                 continue
             ride = _clamp(_clamp(trim, ia, iz) - trim, -4.0, 4.0)
@@ -603,7 +655,7 @@ def propose(report, roles: dict, prof: MixProfile, *, song=None, mix=None, hooks
                 continue
             for m in b.members.get(g, []):
                 if abs(mix['ride'].get(m, {}).get(b.name, 0.0) + ride) <= MAX_RIDE:
-                    moves.append(Move('ride', m, _r1(ride), b.name, why=f"bed {b.rel[g]:+.1f} dB vs the lead in {b.name}"))
+                    moves.append(Move('ride', m, _r1(ride), b.name, why=f"{g} {b.rel[g]:+.1f} dB vs the lead in {b.name}"))
     # 3) other parts louder than the lead allows
     others = sorted({k for b in judged for k in b.rel if k not in GROUPS})
     for n in others:
@@ -705,6 +757,12 @@ def normalize(mix: dict | None) -> dict:
                           'gain': _db(b['gain'], f"MIX eq {nid!r} gain", -24, 24),
                           'q': _db(b.get('q', 1.0), f"MIX eq {nid!r} q", 0.1, 20)})
         out['eq'][nid] = clean
+    out['arc'] = {str(s): _db(v, f"MIX arc {s!r}", -24, 24) for s, v in (mix.get('arc') or {}).items()}
+    out['lead'] = {}
+    for sec, ids in (mix.get('lead') or {}).items():
+        if not _ids(ids):
+            raise ComposeError(f"MIX lead {sec!r}: name the track(s) that carry the tune there")
+        out['lead'][str(sec)] = _ids(ids)
     if 'log' in mix:
         out['log'] = [str(x) for x in mix['log']]
     return out
@@ -755,6 +813,13 @@ def apply(song, mix: dict | None):
             raise ComposeError(f"MIX {what}: no track or bus {nid!r}" + (f" - did you mean {' / '.join(close)}?"
                                                                        if close else '')) from None
 
+    for sec, ids in m['lead'].items():
+        if sec not in names:
+            raise ComposeError(f"MIX lead: no section {sec!r} (sections: {', '.join(names)})")
+        for nid in ids:
+            node(nid, 'lead')
+    if m['arc']:
+        song.arc(m['arc'], glide=m['ramp'], name='mix_arc')
     for nid, bells in m['eq'].items():
         add_eq_dip(node(nid, 'eq'), bells, EQ_NAME)
     for d in m['duck']:
@@ -826,13 +891,13 @@ def to_code(mix: dict, log=(), name: str = 'MIX') -> str:
     m.pop('log', None)
     if m.get('ramp') == 1.0:
         m.pop('ramp')
-    for k in ('trim', 'ride', 'duck', 'eq'):
+    for k in ('trim', 'ride', 'duck', 'eq', 'lead', 'arc'):
         if not m[k]:
             m.pop(k)
     lines = [f"# {x}" for x in log]
     lines.append(f"{name} = {{")
     for k, v in m.items():
-        if k in ('duck', 'ride', 'eq') and len(v) > 1:
+        if k in ('duck', 'ride', 'eq', 'lead', 'arc') and len(v) > 1:
             op, cl = ('[', ']') if k == 'duck' else ('{', '}')
             lines.append(f"    {k!r}: {op}")
             lines += [f"        {x!r}," for x in v] if k == 'duck' else [f"        {n!r}: {x!r}," for n, x in v.items()]
@@ -856,6 +921,7 @@ class MixPlan:
     moves: list = field(default_factory=list)
     glue: tuple = ()
     base: dict = field(default_factory=dict)
+    voice: dict = field(default_factory=dict)
 
     def mix(self) -> dict:
         """The plan's moves on top of the MIX it started from."""
@@ -882,6 +948,9 @@ class MixPlan:
             lines.append('  moves: none - the balance is inside the targets' if self.balances else '  moves: -')
         for g in self.glue:
             lines.append(f"  glue: {g}")
+        if self.voice:
+            lines.append("  voice vs the whole band (dB RMS, the sections it sings): "
+                         + ', '.join(f"{k} {v:+.1f}" for k, v in self.voice.items()))
         return '\n'.join(lines)
 
     def __str__(self) -> str:
@@ -907,7 +976,7 @@ def plan(song=None, report=None, *, profile=None, lead=None, bed=None, rhythm=No
         view = View(rep)
         hk = hook_sections(view, hooks)
         moves, bal = propose(rep, rl, prof, song=song, mix=base, hooks=hook_sections(view, hooks), max_step=max_step)
-        return MixPlan(prof, rl, why, hk, bal, moves, prof.glue, base)
+        return MixPlan(prof, rl, why, hk, bal, moves, prof.glue, base, voice_vs_band(rep, song))
     if song is None:
         raise ComposeError("mixer.plan needs a song or a report")
     names = [s.name for s in song.sections]
@@ -941,6 +1010,71 @@ def plan(song=None, report=None, *, profile=None, lead=None, bed=None, rhythm=No
                 for s in verses:
                     moves.append(Move('ride', b, prof.bed_ride_db, s, why='the bed down in the verses'))
     return MixPlan(prof, rl, why, hk, [], moves, prof.glue, base)
+
+
+def voice_vs_band(report, song=None) -> dict:
+    """{section: dB} the sung tracks (song tracks made by agentsound.singer; without a song the nodes named vocal* /
+    vox*) sit over (+) or under (-) every other track together, RMS per section - the number behind "the voice is too
+    loud against the rest". Only the sections where the voice sings (within 10 dB of its loudest); {} without a
+    voice."""
+    rep = load_report(report)
+    nodes = [n for n in rep.get('nodes', []) if not n.get('bus')]
+    if song is not None:
+        sung = {t.id for t in song.tracks.values() if getattr(t, '_singer', None)}
+    else:
+        sung = {n['id'] for n in nodes if re.match(r'^(vocal|vox)', n['id'])}
+    if not sung:
+        return {}
+
+    def total(group, sec):
+        p = sum(10 ** (x['rmsDb'] / 10) for n in group for x in n.get('sections', [])
+                if x.get('section') == sec and x.get('rmsDb', -120.0) > -100)
+        return 10 * math.log10(p) if p > 0 else None
+    voice = [n for n in nodes if n['id'] in sung]
+    band = [n for n in nodes if n['id'] not in sung]
+    lv = {s['name']: total(voice, s['name']) for s in rep.get('sections', [])}
+    top = max((v for v in lv.values() if v is not None), default=None)
+    out = {}
+    for name, v in lv.items():
+        b = total(band, name)
+        if v is not None and b is not None and v >= top - 10.0:
+            out[name] = round(v - b, 1)
+    return out
+
+
+ARC_MAX_DB = 3.0
+"""The largest section move arc_proposal() suggests (dB)."""
+
+
+def arc_proposal(report, song=None, base=None) -> dict:
+    """A conductor's arc (MIX 'arc': dB per section on the master input) that brings the loudness range toward the
+    profile's LRA window, or {} (inside it, a song that has an arc already, no window): too flat - the non-hook
+    sections within 2 LU of the loudest step down (or, without hook names, every section but the loudest); too wide -
+    the sections more than 8 LU under the loudest come up. At most ARC_MAX_DB, a proposal (mixer.check / auto log
+    it; nothing is applied)."""
+    rep = load_report(report)
+    lra = (rep.get('global') or {}).get('loudnessRange')
+    win = (rep.get('reference') or {}).get('lraRangeLu')
+    if lra is None or not win or (base or {}).get('arc'):
+        return {}
+    if song is not None and any(getattr(f, 'name', None) == 'mix_arc' for f in song.master.fx):
+        return {}
+    secs = {s['name']: s['lufs'] for s in rep.get('sections', []) if isinstance(s.get('lufs'), (int, float))
+            and s['lufs'] > -60}
+    if len(secs) < 2:
+        return {}
+    top = max(secs.values())
+    if lra < win[0]:
+        d = -min(ARC_MAX_DB, round(win[0] - lra, 1))
+        hooks = {n for n in secs if _HOOK_RE.search(n)}
+        pick = [n for n, v in secs.items() if n not in hooks and v >= top - 2.0] if hooks else \
+            [n for n, v in secs.items() if v < top]
+    elif lra > win[1]:
+        d = min(ARC_MAX_DB, round(lra - win[1], 1))
+        pick = [n for n, v in secs.items() if v < top - 8.0]
+    else:
+        return {}
+    return {n: d for n in pick}
 
 
 # ------------------------------------------------------------------------------------------------ check
@@ -986,7 +1120,7 @@ def check(report, *, profile=None, song=None, roles=None, lead=None, hooks=None,
     prof = get_profile(pname)
     rl, _ = infer_roles(song, rep, band=band, roles=roles, lead=lead)
     view = View(rep)
-    bal = measure(view, rl, prof, hooks, features(song))
+    bal = measure(view, rl, prof, hooks, section_leads(song))
     judged = [b for b in bal if b.judged]
     out: list[Finding] = []
     if not any(r == 'lead' for r in rl.values()):
@@ -1014,9 +1148,14 @@ def check(report, *, profile=None, song=None, roles=None, lead=None, hooks=None,
             code = f"{names[g]}_{'too_loud' if sign > 0 else 'too_quiet'}"
             if prof.name == 'jazz' and g == 'rhythm' and sign > 0:
                 code = 'drums_too_loud_for_jazz'
+            some = 2 * len(lst) <= len([b for b in judged if g in b.rel])   # only some sections out: ride them
+            snippet = ({'ride': {m: {b.name: _r1(-_err(v, _bounds(prof, g, b.hook))) for b, v in lst
+                                     if m in b.members.get(g, [])} for m in members}} if some else
+                       {'trim': {m: _r1(-sign * worst) for m in members}})
             out.append(Finding(code, 'warn' if worst >= 1.5 or g == 'bed' else 'info',
                                f"{names[g]} {word} vs the lead in {where} (want {lo:+g}..{hi:+g} dB in the hooks)",
-                               fix, {'trim': {m: _r1(-sign * worst) for m in members}}, members, [b.name for b, _ in lst]))
+                               fix + ('; only these sections are out: ride them' if some else ''), snippet, members,
+                               [b.name for b, _ in lst]))
     # the lead not in front: every bounded group too loud at once (or a part above the lead)
     buried = [b for b in judged if len([g for g in GROUPS if g in b.rel]) >= 2 and
               all(_err(b.rel[g], _bounds(prof, g, b.hook)) > 0 for g in GROUPS if g in b.rel)]
@@ -1112,6 +1251,13 @@ def check(report, *, profile=None, song=None, roles=None, lead=None, hooks=None,
                            f"{tgt[0]:g}..{tgt[1]:g} (the mastering stage: limiter drive)", 'master.gain / limiter gain; '
                            'the mix balance does not depend on it'))
     order = {'warn': 0, 'info': 1}
+    arc = arc_proposal(rep, song, getattr(song, 'applied_mix', None) if song is not None else None)
+    if arc:
+        lra, win = rep['global']['loudnessRange'], rep['reference']['lraRangeLu']
+        out.append(Finding('arc', 'info', f"loudness range {lra:.1f} LU, the {pname} window {win[0]:g}..{win[1]:g}: "
+                           f"{'too flat' if lra < win[0] else 'too wide'} for an arc",
+                           "a conductor's arc on the master input (MIX 'arc', logged; song.arc by hand)",
+                           mix={'arc': arc}, sections=list(arc)))
     return sorted(out, key=lambda f: (order.get(f.severity, 2), f.code != 'lead_not_in_front'))
 
 
@@ -1259,6 +1405,10 @@ def auto(song, report=None, *, profile=None, iterations: int = 2, start=None, ou
                            + '; '.join(str(m) for m in pl.moves[:6]))
             else:
                 log.append(f"after pass {i}: inside the targets")
+            arc = arc_proposal(rep, s0, mix)
+            if arc:
+                log.append(f"arc proposed (not applied: the loudness range {rep['global']['loudnessRange']:.1f} LU is "
+                           f"outside the profile's window): MIX 'arc': {arc}")
             break
         if not pl.moves:
             log.append(f"pass {i + 1}: inside the targets - nothing to move")

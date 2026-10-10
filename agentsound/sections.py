@@ -377,6 +377,8 @@ def lane_points(song, spec, *, base: float = 0.0, glide: float = 0.0, curve: str
                 elif m[0] == 0 and glide > 0:
                     if cur is None:
                         pts.append((at, val))
+                    elif pts[-1][0] + JUMP >= at:      # the previous section's move ends right here: no room
+                        pts.append((at, val, 'step'))
                     else:
                         pts += [(max(at - glide, pts[-1][0] + JUMP), cur), (at, val, curve)]
                 elif hold:

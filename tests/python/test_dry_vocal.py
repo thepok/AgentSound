@@ -120,7 +120,7 @@ class CalmStyles(_Env):
             self.assertFalse(set(singer.STYLE_EXTRAS) & set(singer.STYLES[st]), st)
         for st in ('jazz', 'ballad'):
             S = singer.STYLES[st]
-            self.assertTrue(set(singer.STYLE_EXTRAS) - {'makeup_db'} <= set(S), st)
+            self.assertTrue(set(singer.STYLE_EXTRAS) - {'makeup_db', 'slow'} <= set(S), st)   # slow: the ballad's
             self.assertTrue(S['sing_soft'])
             self.assertGreaterEqual(S['late_ms'] - S['jitter_ms'], 20.0)     # behind the beat, never ahead
             self.assertGreater(S['late_first_ms'], 0.0)

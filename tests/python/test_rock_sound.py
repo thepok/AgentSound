@@ -81,7 +81,7 @@ class Amp(unittest.TestCase):
         self.assertNotIn('saturator', types)
         names = [f.name for f in b.drums.fx]
         self.assertIn('punch', names)
-        self.assertEqual([f.name for f in s.buses['drum_bus'].fx][:2], ['crush', 'tape'])
+        self.assertEqual([f.name for f in s.buses['drum_bus'].fx][:3], ['input', 'crush', 'tape'])   # KIT_GAIN first
         self.assertIn('room_crush', [f.name for f in s.buses['drum_room'].fx])      # the kit's room only
         self.assertNotIn('room_crush', [f.name for f in s.buses['room'].fx])    # the band's room stays clean
 

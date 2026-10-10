@@ -190,8 +190,8 @@ def apply_module_mix(song) -> str | None:
 # ------------------------------------------------------------------------- analysis profile
 
 # The engine's analysis profiles (engine/analysis/Profiles.cpp); the engine validates them strictly too.
-ANALYSIS_PROFILES = ('default', 'synthwave', 'dreamwave', 'darksynth', 'jazz', 'classical', 'piano', 'pop', 'rock',
-                     'film')
+ANALYSIS_PROFILES = ('default', 'synthwave', 'dreamwave', 'darksynth', 'jazz', 'classical', 'piano', 'pop', 'edm',
+                     'rock', 'film')
 _ANALYSIS_KEYS = ('profile', 'loudness')
 
 
@@ -244,7 +244,8 @@ def hero_lines(song) -> list[str]:
     """What the hero wrapper did in the song (agentsound.heroes: sound, space, duck, carve, dips, rides, throws),
     and what the singer sang (agentsound.singer: voice, style, moves)."""
     from . import heroes, singer
-    return [f"hero      {x}" for x in heroes.log_lines(song)] + [f"singer    {x}" for x in singer.log_lines(song)]
+    return ([f"hero      {x}" for x in heroes.log_lines(song)] + [f"singer    {x}" for x in singer.log_lines(song)]
+            + [f"singer    {x}" for x in singer.expression_lines(song)])
 
 
 def compile_song(song, song_py: Path | None = None) -> dict:
@@ -642,6 +643,10 @@ def deliver_render(song, render: dict, engine: Path, out_dir: Path, rdir: Path, 
     if credits['attributions']:
         lines.append(f"  attributions required when publishing (CC-BY / BY-SA / BY-NC: {len(credits['attributions'])}, "
                      f"see credits.txt): " + '; '.join(credits['attributions']))
+    words = delivery.lyrics_text(song, title, artist)
+    if words:                                   # a sung song: the words go with it (HUMAN_FEEDBACK)
+        (rdir / 'lyrics.txt').write_text(words, encoding='utf-8')
+        lines.append(f"lyrics    {rdir / 'lyrics.txt'}")
 
     profile = (render.get('analysis') or {}).get('profile')
     cover_png = None
@@ -1674,7 +1679,7 @@ def build_parser() -> argparse.ArgumentParser:
                                        'sample packs, recipes, analysis profiles, python helpers')
     g.add_argument('sections', nargs='*', help='only these: engine patches bands dx7 soundfonts samples recipes profiles '
                                                'helpers')
-    g.add_argument('--markdown', action='store_true', help='markdown (docs/CATALOG.md is generated with this)')
+    g.add_argument('--markdown', action='store_true', help='markdown output (for pasting into docs)')
     g.add_argument('--reindex', action='store_true', help='rebuild the INDEX.json of every installed sample pack')
     g.set_defaults(func=cmd_catalog)
 
@@ -1728,6 +1733,8 @@ def build_parser() -> argparse.ArgumentParser:
     from .makingof import add_parser as _mo_parser
     _mo_parser(sub)
     sub.choices['makingof'].set_defaults(func=cmd_makingof)
+    from .endless.run import add_parser as _endless_parser     # endless genres: python -m agentsound endless
+    _endless_parser(sub)
     return ap
 
 

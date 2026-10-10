@@ -1,0 +1,8 @@
+Folded Letter Bossa  (jazz-piano, mood tender, seed 7302)
+F major, 116 BPM, 4/4, bossa (straight 8ths), form ABAC (4 x 8 bars)
+A1   | Fmaj9 | % | G13 | % | Gm9 | C13 | Am7(0.5) D7b9(0.5) | Gm9(0.5) C9(0.5) |
+B    | Cm9 | F13 | Bbmaj9 | Bbm6 | Am9 | D7b9 | Gm9 | C7sus4(0.5) C7b9(0.5) |
+A2   | Fmaj9 | % | G13 | % | Gm9 | Gb7#11 | Fmaj9(0.5) D7b9(0.5) | Gm9(0.5) C7b9(0.5) |
+C    | Bbmaj9 | Eb7#11 | Am9 | Abdim7 | Gm9 | C7sus4(0.5) C7b9(0.5) | F69 | % |
+
+196 s of music, -16.4 LUFS

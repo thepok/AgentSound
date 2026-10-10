@@ -16,7 +16,8 @@ soft/medium/hard, ghost/accent) and round robins from rr1/take1 markers; numbere
 'Kick-08') are measured (pitch, decay, loudness): the same drum hit at different strengths becomes velocity layers
 (ordered by loudness) with round robins inside a layer, different sounds ('TR 808 Kick 01/02/03') become variants
 on the role's other keys (kick 36 then 35, snare 38 then 40, crash 49 then 57, ride 51 then 59) and spare keys.
-Hats choke each other; every zone is a one-shot with pitchKeytrack 0. Files no rule recognizes land on spare keys
+Hats choke each other, silent choke keys grab the cymbals (CHOKE_KEYS: 88 crash, 89 ride, 90 china); every zone is
+a one-shot with pitchKeytrack 0. Files no rule recognizes land on spare keys
 (88 and up) and are listed; loops / beats / fills are skipped and listed: nothing is dropped silently.
 
 map= overrides / extends the mapping: {'snare': 'Snare03', 40: ['Gated*'], 'clap': None, 'perc': 'Scratch'}: keys by
@@ -1571,6 +1572,7 @@ def build(source, map: dict | None = None, *, numbered: str = 'auto', fill: bool
     if mics and kind != 'drumgizmo':
         raise ComposeError("kit: mics= is for DrumGizmo kits (multichannel files); SFZ multi-mic kits: inst.sfz(..., mics=)")
     zones = _zones(keys, humanize, float(spread), gains)
+    zones += _choke_zones(zones, set(keys))
     if not zones:
         raise ComposeError(f"kit: nothing playable in {where}"
                            + (f" ({len(skipped)} files skipped: loops / beats / fills, e.g. {skipped[0][0]})"
@@ -1608,6 +1610,30 @@ def build(source, map: dict | None = None, *, numbered: str = 'auto', fill: bool
     info['notes'] = notes
     info['zones'] = len(zones)
     return zones, info
+
+
+CHOKE_KEYS = {'crash_choke': (88, (49, 57, 55), 9001), 'ride_choke': (89, (51, 59, 53), 9002),
+              'china_choke': (90, (52,), 9003)}
+"""Choke keys every inst.kit gets: piece -> (key, the cymbal keys it grabs, its group). A silent zone in the group
+turns the cymbals off (their offBy: they fall in 50 ms) - drummer.arrange(ending='choke'), the solo moves' chokes;
+the drummer finds them by the group. The key: 88 / 89 / 90 (the big_rusty_kit layout), else the next free key from 91
+(extra files take 88+ first)."""
+
+
+def _choke_zones(zones: list[dict], taken) -> list[dict]:
+    """The silent choke zones for the cymbals a kit has (CHOKE_KEYS); sets their offBy."""
+    out, taken = [], set(taken)
+    for key, cymbals, group in CHOKE_KEYS.values():
+        cyms = [z for z in zones if z.get('lo') == z.get('hi') and z.get('lo') in cymbals]
+        free = [k for k in [key] + list(range(91, 128)) if k not in taken]
+        if not cyms or not free:
+            continue
+        taken.add(free[0])
+        for z in cyms:
+            z.setdefault('offBy', group)
+        out.append({'file': '*silence', 'lo': free[0], 'hi': free[0], 'group': group, 'loop': 'oneshot',
+                    'pitchKeytrack': 0})
+    return out
 
 
 _FAMILIES = ('hats', 'cymbals', 'toms')

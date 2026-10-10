@@ -799,6 +799,8 @@ void testEveryPreset() {
     check(bad == 0 && worst < 2.0f, fmt("all 287 presets finite (loudest peak %.2f: %s)", worst, worstName.c_str()));
 }
 
+constexpr double kSpeedRatioLimit = 8.0;  // ~5.3x measured unloaded (32x realtime): the old 20x limit's headroom
+
 void testSpeed() {
     std::printf("speed\n");
     // 16-voice piano passage: 4 overlapping 4-note chords per bar (notes ring 1.5 bars), 30 s of audio
@@ -815,17 +817,36 @@ void testSpeed() {
             }
         }
     }
-    // Best of 3 wall-clock runs: other processes (parallel builds, agents) must not fail a speed limit that the
-    // code itself meets.
-    double wall = 1e9;
+    // Relative to a fixed reference workload timed in the same runs (16 one-pole-filtered sine voices for 30 s):
+    // a machine under load (parallel builds, agents) slows both, so the ratio holds where an absolute "20x
+    // realtime" failed at 18x. Calibrated: the piano takes ~5.3x the reference's time.
+    auto reference = [] {
+        float ph[16] = {}, y[16] = {}, acc = 0.0f;
+        for (long i = 0; i < 30L * 48000; ++i) {
+            for (int v = 0; v < 16; ++v) {
+                ph[v] += 0.01f + 0.001f * static_cast<float>(v);
+                if (ph[v] > 6.2831853f) ph[v] -= 6.2831853f;
+                y[v] += 0.1f * (std::sin(ph[v]) - y[v]);
+                acc += y[v];
+            }
+        }
+        return acc;
+    };
+    double wall = 1e9, refWall = 1e9;
+    volatile float sink = 0.0f;
     bool ok = true;
-    for (int run = 0; run < 3 && 30.0 / wall < 20.0; ++run) {
-        const auto t0 = std::chrono::steady_clock::now();
+    for (int run = 0; run < 3; ++run) {      // best of 3 of each, interleaved
+        auto t0 = std::chrono::steady_clock::now();
+        sink = sink + reference();
+        refWall = std::min(refWall, std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count());
+        t0 = std::chrono::steady_clock::now();
         const Audio a = render(*p, ev, sec(30.0));
         wall = std::min(wall, std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count());
         ok = ok && finite(a);
     }
-    check(ok && 30.0 / wall >= 20.0, fmt("16-voice piano: %.0fx realtime (limit 20x, best of 3)", 30.0 / wall));
+    const double ratio = wall / refWall;
+    check(ok && ratio <= kSpeedRatioLimit, fmt("16-voice piano: %.2fx the reference workload's time (limit %.1fx; "
+                                               "%.0fx realtime, best of 3)", ratio, kSpeedRatioLimit, 30.0 / wall));
 }
 
 }  // namespace

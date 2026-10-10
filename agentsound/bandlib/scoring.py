@@ -515,8 +515,8 @@ def unison(score, t: float, d: float, pc, off: float = 0.0, **kw) -> 'Score':
 # ---------------------------------------------------------------------------------------------- the choir
 
 class Choir:
-    """A sampled choir made to speak on time. Choir samples answer slowly at low velocity (the VPO choirs' attack is
-    ~0.6 s x (1 - vel / 127): a p answer needs 0.4 s), so the notes SING at a speaking velocity and the written
+    """A sampled choir made to speak on time. Choir samples answer slowly at low velocity (the VPO files' attack is
+    0.625 s x (1 - vel / 127), the library patches' 0.25 s: sampled.CHOIR_SPEAK), so the notes SING at a speaking velocity and the written
     dynamics move to a lane - every note keeps its written level and its arc, only the onset changes:
       lane='expression' (the epic's): velocity `speak` for every note, the written level as speak-relative gain
         (vel / speak, at least `floor`) on 'instrument.expression', moved over the `ramp_ms` before each onset;

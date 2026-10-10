@@ -85,6 +85,16 @@ class TestKit(unittest.TestCase):
         final = [n.pitch for n in p.clip if abs(n.start - end) < 0.05]
         self.assertEqual(final.count(49), 1, final)
 
+    def test_choke_ending_needs_choke_keys(self):
+        # ending='choke' grabs the hit on a kit with choke keys; a kit without them lets it ring (no silent strokes)
+        form = [('verse', 4), ('end', 2)]
+        p = drummer.arrange(form, bpm=120, seed=2, ending='choke', kit='big_rusty_kit')
+        self.assertTrue(any(h.piece.endswith('_choke') for h in p.hits))
+        p = drummer.arrange(form, bpm=120, seed=2, ending='choke', kit='gm')
+        self.assertFalse(any(h.piece.endswith('_choke') for h in p.hits))
+        self.assertTrue(any(k == 'ending' and 'cymbals ring' in str(n) for _, _, k, n in p.moves))
+        self.assertFalse(drummer.missing_pieces(p.hits, drummer.Kit.of('gm')))
+
     def test_engine_drum_machine(self):
         k = drummer.Kit.of(inst.drums())
         self.assertTrue(k.has('ride'))

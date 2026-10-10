@@ -8,7 +8,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2]))
 from agentsound import jazz, pianist  # noqa: E402
 from agentsound.humanize import touch  # noqa: E402
 from agentsound.patterns import Clip  # noqa: E402
-from agentsound.theory import ComposeError, Key, Progression, note  # noqa: E402
+from agentsound.theory import ComposeError, Key, Progression, chord, note  # noqa: E402
 
 BPM = 96
 KEY = Key('Ab major')
@@ -316,10 +316,11 @@ class TestArrange(unittest.TestCase):
         return {k: v for k, v in out.items()}, (lambda t: round(4 * (t % bar)) / 4 % bar)
 
     def test_left_hand_answers_in_the_meter(self):
-        # 4/4: on 3 or the & of 2 - the held voicing stays under it (unchanged since before the meters)
+        # 4/4: on 3 or the & of 2 (now and then the & first, a comping stab on the & of 2 / 4) - the held voicing
+        # stays under it
         prog4 = Progression('Dm9 G13 Cmaj9 A7b9', key=Key('C major'))
         groups, pos = self.strikes(pianist.left_hand(prog4, BPM, answers=1.0, seed=1), 4.0)
-        self.assertEqual(sorted({pos(t) for t in groups} - {0.0, 3.5}), [2.0])
+        self.assertTrue({2.0} <= {pos(t) for t in groups} - {0.0, 3.5} <= {1.5, 2.0})
         c4 = pianist.left_hand(prog4, BPM, answers=1.0, seed=1)
         self.assertTrue(all(n.dur > 3.0 for n in c4 if pos(n.start) in (0.0, 3.5) and n.start < 15))
         # 3/4 (the progression's 3 beats per bar): oom-pah-pah - a light answer on 2, the & of 2 or 3, the held
@@ -360,6 +361,29 @@ class TestArrange(unittest.TestCase):
             pianist.left_hand(prog3, BPM, answers=2)
         with self.assertRaisesRegex(ComposeError, 'beats per bar'):
             pianist.arrange(Clip([(0, 3, 'A4', 80)], length=24), prog3, bpm=BPM, meter='5/4')
+
+    def test_waltz_left_hand_keeps_the_pulse(self):
+        # 3/4: a chord of two bars is struck again on the second downbeat (the bass on 1 of every bar), the answers on
+        # 2 / 3 - never a bar without the left hand (blind test round 2: the LH rested every second bar)
+        prog = Progression('Fmaj9:2 Bbmaj7#11:2 Am7 D7b9 Gm9:2', key=Key('F major'), beats_per_bar=3)
+        for seed in range(6):
+            c = pianist.left_hand(prog, BPM, style='shell', seed=seed)
+            for bar in range(8):
+                self.assertTrue(any(-0.6 < n.start - 3 * bar < 0.2 for n in c), (seed, bar))   # (or pushed)
+            self.assertTrue(all(n.start + n.dur <= 3.0 + 0.01 for n in c if n.start < 0.2))   # lifted for bar 2
+        # 4/4 keeps one strike per chord (unchanged)
+        c4 = pianist.left_hand(Progression('Dm9:2 G13:2', key=Key('C major')), BPM, answers=0.0, seed=1)
+        self.assertFalse([n for n in c4 if abs(n.start - 4.0) < 0.2])
+
+    def test_no_clashing_bass_push(self):
+        # the right hand's anticipation pushes the left hand an 8th early - not when the new bass rubs a half step
+        # against the chord still sounding (C under G7's B), but into Dm7 -> G7 it may
+        self.assertTrue(pianist._bass_clash(chord('G7'), chord('Cmaj7')))
+        self.assertFalse(pianist._bass_clash(chord('Dm7'), chord('G7')))
+        c = pianist.left_hand(Progression('G7 Cmaj7', key=Key('C major')), BPM, anticipate=[4.0], seed=1, answers=0)
+        self.assertFalse([n for n in c if 3.4 < n.start < 3.9])
+        c = pianist.left_hand(Progression('Dm7 G7', key=Key('C major')), BPM, anticipate=[4.0], seed=1, answers=0)
+        self.assertTrue([n for n in c if 3.4 < n.start < 3.9])
 
     def test_stride_in_the_meter(self):
         # 3/4: bass on 1, the chord on 2 and 3 (oom-pah-pah), the fifth in the second bar of a long chord
@@ -422,6 +446,15 @@ class TestArrange(unittest.TestCase):
         self.assertEqual(state(12.05), 0.0)                # changes with the harmony
         self.assertEqual(state(12.5), 1.0)
         self.assertEqual(state(16.1), 0.0)
+
+    def test_written_line_is_played_as_written(self):
+        # written=True: the melody's onsets stay where they are written, nothing fills the rests
+        for seed in range(4):
+            a = self.arr(seed=seed, written=True, embellish=0.0)
+            self.assertFalse(a.fills, seed)
+            self.assertFalse([k for _, _, k in a.ornaments if k in pianist.SPICE], seed)
+            written = sorted({round(n.start, 3) for n in HEAD})
+            self.assertEqual(sorted({round(n.start, 3) for n in a.melody}), written)
 
     def test_errors(self):
         with self.assertRaises(ComposeError):
@@ -570,7 +603,7 @@ class TestOrnamentBudget(unittest.TestCase):
         r = sorted(pianist.run('C5', 'C6', 1.0, BPM, key=KEY, vel=(80, 80), wobble_ms=0), key=lambda n: n.start)
         self.assertLess(r[len(r) // 2].vel, r[0].vel - 5)            # one gesture: lighter in the middle
         m = sorted(pianist.mordent('C5', 1.0, BPM, key=KEY, vel=90), key=lambda n: n.start)
-        self.assertGreaterEqual(m[0].vel - m[1].vel, 25)
+        self.assertTrue(10 <= m[0].vel - m[1].vel <= 25, [n.vel for n in m])   # a grace figure: light, not a ghost
 
 
 if __name__ == '__main__':

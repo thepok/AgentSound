@@ -41,7 +41,8 @@ from .patches import FX, Instrument, _ref, inst
 from .patterns import Clip
 from .theory import ComposeError, note
 
-__all__ = ['SpeechError', 'Words', 'speak', 'voices', 'find_voice', 'words', 'phrase', 'vocode', 'wav_seconds',
+__all__ = ['SpeechError', 'Words', 'speak', 'voices', 'find_voice', 'words', 'phrase', 'vocode', 'talkbox', 'TALKBOX',
+           'wav_seconds',
            'LEVEL_DBFS']
 
 LEVEL_DBFS = -18.0        # active speech level of every rendered file (the vocoder is calibrated to it)
@@ -538,5 +539,59 @@ def vocode(carrier, voice, *, mute: bool = True, **params):
         if not hasattr(voice, 'mute'):
             raise SpeechError(f"vocode(mute=True) needs the voice track object (not its id {vid!r}) to mute it; "
                               f"or create it with mute=True and pass mute=False here")
+        voice.mute = True
+    return carrier
+
+
+# ---------------------------------------------------------------------------------------------- talk box
+
+TALKBOX = dict(mode='lpc', order=16, attack=2.0, release=22.0, emphasis=5.0, flatten=0.9, unvoiced=0.12, output=6.0,
+               sibilance=0.45, gate=-50.0, mix=1.0)
+"""speech.talkbox(): the vocoder as a talk box (Frampton, Roger Troutman / Zapp, Bon Jovi): LPC mode - a running model
+of the mouth's resonances filters the instrument -, order 16 (fewer, broader-band formants than the LPC default 24: the
+mouth cavity, not the whole vocal tract), the instrument's own spectrum flattened almost fully (any guitar tone
+speaks), little synthetic unvoiced noise (a talk box has none: the consonants are the player's mouth noises the mic
+picks up = 'sibilance', the voice's own highs on unvoiced sounds), a fast attack and a short release (the mouth snaps
+open), a gate under breaths."""
+
+
+def talkbox(carrier, mouth, *, cab: bool = False, mute: bool = True, **params):
+    """A TALK BOX: the instrument on `carrier` (a guitar track with an amp in its chain, or a synth) is played through
+    the player's mouth - the vocoder in LPC mode (TALKBOX; params override it: order=, shift=, sibilance= ...) keyed
+    by `mouth`: a singer.mouth() / singer.sing() Vocal (the voicebank mouths the words) or any track (a speech.voice
+    track). Where it goes: right after the carrier's last 'amp' (the amp head drives the talk box's horn driver; the
+    speaker cabinet that followed the amp is taken out - cab=True keeps it), else first in the chain (a synth into the
+    tube). An existing vocoder is re-keyed and set to TALKBOX + params. The mouth track is muted (mute=False keeps it
+    audible). The instrument plays the notes (one per syllable, slides between them), the mouth the words: vowels open
+    and close the sound like a wah (lyrics with moving vowels - 'ow-wah', 'yeah-eh' - make the classic vowel sweeps).
+    Returns the carrier.
+        m = singer.mouth(s, RIFF, 'talk to me ba-by', at=verse, voice='tiger')
+        gtr = s.track('talkbox', 'sampled/lead_guitar'); gtr.play(RIFF, verse)
+        speech.talkbox(gtr, m)"""
+    if not hasattr(carrier, 'fx') or not hasattr(carrier, 'id'):
+        raise SpeechError(f"talkbox(): the carrier must be a track or bus, got {carrier!r}")
+    voice = getattr(mouth, 'track', None) if hasattr(mouth, 'bank') else mouth
+    if voice is None:
+        raise SpeechError(f"talkbox(): the mouth must be a singer Vocal or a track, got {mouth!r}")
+    vid = _ref(voice)
+    if vid == carrier.id:
+        raise SpeechError(f"talkbox(): {carrier.id!r} can't be its own mouth")
+    P = {**TALKBOX, **params}
+    hits = [i for i, f in enumerate(carrier.fx) if f.type == 'vocoder']
+    if hits:
+        for i in hits:
+            carrier.fx[i] = carrier.fx[i].but(**P).keyed(vid)
+    else:
+        amps = [i for i, f in enumerate(carrier.fx) if f.type == 'amp']
+        if amps:
+            pos = amps[-1] + 1
+            if not cab and pos < len(carrier.fx) and carrier.fx[pos].type == 'convolver':
+                del carrier.fx[pos]                      # the cabinet: the talk box's horn replaces the speaker
+        else:
+            pos = 0
+        carrier.fx.insert(pos, FX('vocoder', P, sidechain=vid))
+    if mute:
+        if not hasattr(voice, 'mute'):
+            raise SpeechError(f"talkbox(mute=True) needs the mouth's track object (not its id {vid!r})")
         voice.mute = True
     return carrier

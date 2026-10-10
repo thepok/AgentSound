@@ -55,12 +55,12 @@ def song(bars=16):
 
 class Interface(unittest.TestCase):
     def test_rest_scale(self):
-        def played(rest):
+        def played(rest):                                 # (over a few seeds: one solo's dice may hide it)
             v = toy_vocab()
             v.rest = rest
             s, sec, tr = song()
-            p = soloist.solo(s, tr, v, at=sec, motif=MOTIF, seed=3, place=False)
-            return sum(n.dur for n in p.clip)
+            return sum(n.dur for sd in range(1, 6)
+                       for n in soloist.solo(s, tr, v, at=sec, motif=MOTIF, seed=sd, place=False).clip)
         self.assertGreater(played(0.4), played(1.0))          # a drummer leaves less space than a horn
         with self.assertRaises(ComposeError):
             soloist.Vocabulary(toy_vocab().moves, rest=1.5)
@@ -77,6 +77,11 @@ class Interface(unittest.TestCase):
         m = soloist.Move('x', 0, 0.5, 0.5, False, lambda c: None)
         with self.assertRaises(ComposeError):
             soloist.Vocabulary([m, m])
+
+    def test_held_lengths_sit_on_the_8th_grid(self):
+        # a landing note's length: the room minus a quarter's release, floored to an 8th (no 1.25 / 1.75 leftovers)
+        self.assertEqual([soloist.held(r) for r in (0.6, 1.0, 2.0, 2.25, 3.9)], [0.5, 0.5, 1.5, 2.0, 3.5])
+        self.assertEqual(soloist.held(1.0, 0.75), 0.75)
 
     def test_part_shift_and_merge(self):
         a = soloist.Part(Clip([(0, 1, 60, 90)], length=1), log=[(0, 1, 'x', 'a')], steps={'bendfollow': [(0.0, 1.0)]})
@@ -122,12 +127,26 @@ class Arc(unittest.TestCase):
         by_stage = p.summary()
         self.assertIn(by_stage['burst'][0], ('run', 'scale'))
         self.assertIn(by_stage['climax'][0], ('scream', 'long'))
-        # space: every phrase leaves its end silent (the stage's rest share)
-        for i in range(8):
-            a, b = 8 * i, 8 * (i + 1)
-            ends = [n.start + n.dur for n in p.clip if a <= n.start < b]
-            if ends:
-                self.assertLess(max(ends), b - 0.5, f'phrase {i} breathes')
+        # free phrasing: phrases that start anywhere in the bar and cross the bar lines, a breath of half a bar .. two
+        # bars after each (soloist.BREATH: endless r6, "an endless monotone line") - never more than two bars silent
+        ns = sorted(p.clip)
+        starts, rests, end = [ns[0].start], [], ns[0].start + ns[0].dur
+        for n in ns[1:]:
+            if n.start - end >= 0.5 - 1e-6:
+                starts.append(n.start)
+                rests.append(n.start - end)
+            end = max(end, n.start + n.dur)
+        self.assertGreaterEqual(len(starts), 5)
+        self.assertTrue(all(r <= 8.0 + 1e-6 for r in rests), rests)
+        # (blind round 6: a breath of a beat or two between lines - half a bar to two bars after every phrase overshot)
+        self.assertGreaterEqual(sum(r >= 1.0 - 1e-6 for r in rests), len(rests) // 2, f'real breaths: {rests}')
+        self.assertGreaterEqual(len({round(t % 4, 2) for t in starts}), 3, f'varied start beats: {starts}')
+        silent = [not any(bar * 4 <= n.start < bar * 4 + 4 or n.start < bar * 4 < n.start + n.dur for n in ns)
+                  for bar in range(16)]
+        self.assertNotIn([True] * 3, [silent[k:k + 3] for k in range(14)], f'three silent bars in a row: {silent}')
+        # the motif is quoted literally at most twice (the statement, the closing callback)
+        self.assertLessEqual(sum(1 for name, c in calls if name == 'motif'
+                                 and [n.pitch for n in c.motif] == [n.pitch for n in MOTIF]), 2)
         # register and dynamics follow the arc
         ctx_of = {c.stage: c for _, c in calls}
         self.assertLess(ctx_of['statement'].register, ctx_of['climax'].register)
@@ -146,14 +165,17 @@ class Arc(unittest.TestCase):
         self.assertTrue(all(abs(t - u) >= 6 - 1e-6 for t, _ in p2.budget['kept'] for u, _ in p.budget['kept']))
         tight = soloist.solo(s, tr, toy_vocab(), at=sec, motif=MOTIF, seed=3, place=False,
                              budget={'spice_every': 64, 'fast_every': 64, 'same_every': 64})
-        self.assertTrue(tight.budget['dropped'] or len(tight.budget['kept']) <= 1)
+        kept = {}
+        for _, name in tight.budget['kept']:
+            kept[name in ('run',)] = kept.get(name in ('run',), 0) + 1
+        self.assertTrue(tight.budget['dropped'] or all(v <= 1 for v in kept.values()), 'one per class')
         for _, name, sub in tight.budget['dropped']:
             self.assertIsNotNone(sub, f'{name}: replaced by a plain move')
 
     def test_flat_phrases_get_dynamics_and_determinism(self):
         s, sec, tr = song(16)
         p = soloist.solo(s, tr, toy_vocab(flat=True), at=sec, motif=MOTIF, seed=1, place=False)
-        vs = [n.vel for n in p.clip if 8 <= n.start < 16]
+        vs = [n.vel for _, st, _, _, pt in p.parts if st == 'answer' for n in pt.clip]   # the answering phrase
         self.assertGreaterEqual(max(vs) - min(vs), 10, 'a flat phrase is shaped (humanize.touch)')
         q = soloist.solo(s, tr, toy_vocab(flat=True), at=sec, motif=MOTIF, seed=1, place=False)
         self.assertEqual(list(p.clip), list(q.clip))
@@ -268,7 +290,8 @@ class OneWrapperManyPlayers(unittest.TestCase):
         bud = soloist.Budget(spice_every=1.5, fast_every=8, same_every=16).save(96.0)
         p = soloist.solo(s, tr, toy_vocab(), at=sec, motif=MOTIF, seed=3, budget=bud, place=False)
         fast = [t for t, name in p.budget['kept'] if name == 'run']
-        self.assertTrue(all(abs(t - 96.0) >= 32 - 1e-6 or 96.0 <= t < 104.0 for t in fast), fast)
+        # (the free phrasing: the phrase that holds the saved beat starts up to 11 beats - its longest - before it)
+        self.assertTrue(all(abs(t - 96.0) >= 32 - 1e-6 or 85.0 <= t < 104.0 for t in fast), fast)
 
     def test_sax_solo_places_with_the_default_renderer(self):
         from agentsound import hornist
@@ -329,7 +352,7 @@ class PianoVocabulary(unittest.TestCase):
         self.assertEqual([n for *_, n, _ in p.parts][0], 'motif')
         fast = [(t, n) for t, n in p.budget['kept'] if n in ('trill', 'tremolo', 'octave_run')]
         self.assertLessEqual(len(fast), 1, f'one fast figure in 16 bars: {fast}')
-        self.assertTrue(all(48.0 <= t < 56.0 for t, _ in fast), f'the saved moment spends it: {fast}')
+        self.assertTrue(all(40.0 <= t < 56.0 for t, _ in fast), f'the saved moment spends it: {fast}')
         self.assertGreater(len(self.lh._notes), 8, 'the left hand comps under the solo')
         self.assertTrue(all(n.pitch <= 72 for n in self.lh._notes))
         self.assertTrue(any(t == 'instrument.pedal' for t, _ in self.rh._auto), 'the harmony pedal')
@@ -360,6 +383,61 @@ class PianoVocabulary(unittest.TestCase):
         c = _fit_harmony(ctx, Clip([(0, 2, 'E5', 90), (2.5, 0.5, 'E5', 80)], length=4))
         self.assertNotEqual(c.notes[0].pitch % 12, 4, 'the held E moved')
         self.assertEqual(c.notes[1].pitch % 12, 4, 'a short off-beat passing note stays')
+        # a short note on the beat stepping into the next one (an appoggiatura) is the line's, not the harmony's
+        c = _fit_harmony(ctx, Clip([(1, 0.5, 'G5', 90), (1.5, 0.5, 'F#5', 80)], length=4))
+        self.assertEqual(c.notes[0].pitch % 12, 7)
+
+    def test_trading_fours_gives_the_left_hand_its_bars(self):
+        s, sec = self.s, self.sec
+        voc = self.pianist.vocabulary('straight', lh_track=self.lh, seed=3)
+        p = soloist.solo(s, self.rh, voc, at=sec, prog=self.prog, motif=self.hook, seed=5, arc='trade4')
+        self.assertEqual(p.trades, [(16.0, 32.0), (48.0, 64.0)])
+        for a, b in p.trades:
+            line = sorted(n for n in self.lh._notes if a <= n.start < b - 1.0)
+            onsets = sorted({round(n.start, 2) for n in line})
+            self.assertGreater(len(onsets), 6, 'the left hand plays a line in its four bars')
+            rh = [n for n in self.rh._notes if a <= n.start < b]
+            for k in range(4):                                   # the right hand comps under it, every bar
+                self.assertTrue(any(a + 4 * k <= n.start < a + 4 * k + 4 for n in rh))
+
+
+class LineRules(unittest.TestCase):
+    """The shared line material (blind round 4): a turn-back every few notes, now and then a non-chord tone on the
+    beat, pickups drawn from a table, solo shapes as tuples of stages."""
+
+    def ctx(self, seed):
+        s = Song('t', tempo=120, key='C major', seed=1)
+        prog = s.prog('Dm7 G7 | Cmaj7 A7 | Dm7 G7 | Cmaj7')
+        return soloist.Ctx(song=s, at=0.0, beats=16.0, bpm=120, bpb=4.0, key=s.key, prog=prog, stage='develop',
+                           role='lead', energy=0.6, density=0.5, register=0.5, vel=(60, 100), motif=None, phrase=0,
+                           phrases=4, progress=0.3, last=None, next_at=None,
+                           rng=__import__('random').Random(seed), budget=soloist.Budget(), memory={},
+                           solo_start=0.0, phrase_start=0.0, phrase_beats=16.0, range=(57, 84))
+
+    def test_target_lines_turn_back_and_lean(self):
+        longest, on, ct = 0, 0, 0
+        for seed in range(30):
+            c = self.ctx(seed)
+            line = soloist.target_line(c, length=15.0, grid_=0.5, contour='rise')
+            ps = [p for _, _, p in line]
+            run = 1
+            for a, b, x in zip(ps, ps[1:], ps[2:]):
+                run = run + 1 if (b - a) * (x - b) > 0 else 1
+                longest = max(longest, run + 1)
+            for t, _, p in line:
+                if abs(t - round(t)) < 1e-6:
+                    on += 1
+                    ct += p % 12 in soloist.chord_tones(c, t)
+        self.assertLessEqual(longest, 11, 'a rising line turns back after a directed run (soloist.RUNS)')
+        self.assertTrue(0.72 <= ct / on <= 0.95, ct / on)
+
+    def test_an_arc_as_a_tuple(self):
+        s, sec, tr = song(16)
+        arc = (('statement', 0.3, True), ('burst', 0.2, True), ('develop', 0.5, False))
+        p = soloist.solo(s, tr, toy_vocab(), at=sec, motif=MOTIF, seed=1, arc=arc, place=False)
+        self.assertEqual([st for st, *_ in p.stages], ['statement', 'burst', 'develop'])
+        with self.assertRaises(ComposeError):
+            soloist.solo(s, tr, toy_vocab(), at=sec, arc=(('nowhere', 1.0, True),), place=False)
 
 
 if __name__ == '__main__':

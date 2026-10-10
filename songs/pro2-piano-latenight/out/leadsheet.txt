@@ -1,0 +1,8 @@
+Cellar Hours  (jazz-piano, mood late-night, seed 7311)
+F minor, 108 BPM, 4/4, straight (swing 0.58), form AABA (4 x 8 bars)
+A1   | Fm9 | Bb13 | Ebm9(0.5) Ab13(0.5) | Dbmaj7#11 | Gm7b5 | C7alt | Fm9 | Db7#11(0.5) C7b9(0.5) |
+A2   | Fm9 | Bb13 | Ebm9(0.5) Ab13(0.5) | Dbmaj7#11 | Gm7b5 | C7alt | Fm9 | Cm7b5(0.5) F7#9(0.5) |
+B    | Bbm9 | Eb13 | Abmaj9 | Dbmaj9 | Dm7b5 | G7alt | Gm7b5 | C7alt |
+A3   | Fm9 | Bb13 | Ebm9(0.5) Ab13(0.5) | Dbmaj7#11 | Gm7b5 | C7alt | Dbmaj7#11 | Gm7b5(0.5) Gb7#11(0.5) |
+
+210 s of music, -17.4 LUFS

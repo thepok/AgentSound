@@ -51,6 +51,8 @@ Options (on top of bands.make's without= / sounds= / ids=):
   strict  True: a missing preferred pack raises (naming `python -m agentsound samples fetch <id>`) instead of
           falling back
   feel    a jazz.Feel (default: swing by the tempo; bossa plays straight)
+  lead    'vocal' (jazz_ballad, jazz_trio, bossa, soul_ballad): a sung lead - the comping faders up, the limiter
+          drive down, the sung tracks 3 dB lower (VOCAL_LEAD, VOCAL_LEAD_DB; band.info['lead'])
   duck    (quartet, bossa) False: no 1.5 dB sidechain of the comping / guitar under the sax
   bass    (ballad) 'pizz' (default) or 'arco'
 """
@@ -67,7 +69,8 @@ from ..patterns import Clip, Note, _as_prog, seed_int
 from ..theory import ComposeError
 
 __all__ = ['SOUNDS', 'SPACES', 'PLATES', 'MASTER_GAIN', 'DRUM_TRIM', 'GM_KIT', 'SHAKER_KEYS', 'installed', 'brushes',
-           'pedal', 'bossa_groove', 'jazz_trio', 'jazz_quartet', 'jazz_ballad', 'bossa']
+           'pedal', 'bossa_groove', 'REGISTER', 'VOCAL_LEAD', 'VOCAL_LEAD_DB', 'SOLO_PIANO', 'solo_piano', 'jazz_trio',
+           'jazz_quartet', 'jazz_ballad', 'bossa', 'LOFI', 'CRACKLE', 'lofi_piano', 'lofi_crackle']
 
 
 # ------------------------------------------------------------------------------------------------ sounds
@@ -163,6 +166,43 @@ SOUNDS: dict[str, list[_Opt]] = {
              0.0, 'AVL Drumkits Blonde Bop - Glen MacArthur, CC-BY-SA 3.0', keys={'rim': 37}),
         _Opt(None, lambda: inst.sf2(bank=128, program=0, level=0.0),
              'GeneralUser GS standard kit side stick (fallback)', -4.0, keys={'rim': GM_KIT['rim']}),
+    ],
+    'grand': [      # solo_piano: the Salamander with the hammers fully softened (SOLO_PIANO['hammers'])
+        _Opt('salamander-grand',
+             lambda: inst.sfz('samples/salamander-grand/SalamanderGrandPianoV3Retuned.sfz', lazy=True, level=1.7,
+                              hammers=SOLO_PIANO['hammers'], width=0.6, polyphony=160),
+             'Salamander Grand Piano V3 (SFZ: Yamaha C5, 16 velocity layers, release samples; voiced for solo '
+             'piano: hammers fully softened)', 0.0, _CC_BY_SALAMANDER, piano='salamander'),
+        _Opt(None, lambda: inst.sf2('Grand Piano', width=2.0, level=7.4), 'GeneralUser GS Grand Piano (fallback)',
+             -8.0, piano='generaluser'),
+    ],
+    'rhodes': [
+        _Opt('jrhodes3d', lambda: _patch('sampled/rhodes_vibrato'),
+             'jRhodes3d stereo-vibrato Rhodes (1977 Mark I, 5 velocity layers, the suitcase swirl in the samples)', 0.0,
+             'jRhodes3d - Jeff Learman, CC-BY-NC 4.0'),
+        _Opt(None, lambda: inst.sf2('Tine Electric Piano', width=1.2, level=2.0),
+             'GeneralUser GS Tine Electric Piano (fallback)', 0.0),
+    ],
+    'felt': [       # lofi_piano: the hushed una-corda grand (Osiris), else the softened Salamander
+        _Opt('osiris-piano',
+             lambda: inst.sfz('samples/osiris-piano/Programs/02-warm.sfz', lazy=True, level=-2.6, cc={73: 0},
+                              width=0.7, polyphony=160, velcurve=LOFI['velcurve']),
+             'Osiris Piano (Karoryfer: a Yamaha C2 played quietly with the soft pedal down, the warm mapping - '
+             'the felt-like close piano)', 0.0, 'Osiris Piano - Karoryfer Samples, CC0', piano='osiris'),
+        _Opt('salamander-grand',
+             lambda: inst.sfz('samples/salamander-grand/SalamanderGrandPianoV3Retuned.sfz', lazy=True, level=1.7,
+                              hammers=1.0, width=0.6, polyphony=160),
+             'Salamander Grand Piano V3 (hammers fully softened)', -2.0, _CC_BY_SALAMANDER, piano='salamander'),
+        _Opt(None, lambda: inst.sf2('Grand Piano', width=2.0, level=7.4), 'GeneralUser GS Grand Piano (fallback)',
+             -10.0, piano='generaluser'),
+    ],
+    'lofi_kit': [   # lofi_piano: a small dry 70s kit (Gogodze), else the Virtuosity club kit, else GeneralUser
+        _Opt('karoryfer-gogodze-phu-vol-ii', lambda: _patch('sampled/gogodze_kit'),
+             'Karoryfer Gogodze Phu Vol II (a small dry 70s kit: kick, snare, hats)', 0.0,
+             'Gogodze Phu Vol II - Karoryfer Samples, CC0'),
+        _Opt('virtuosity-drums', lambda: _patch('sampled/virtuosity_kit'),
+             'Virtuosity Drums (club kit, sticks)', 0.0, 'Virtuosity Drums - sfzinstruments, CC0'),
+        _Opt(None, lambda: inst.sf2(bank=128, program=0, level=0.0), 'GeneralUser GS standard kit (fallback)', -2.0),
     ],
     'shaker': [
         _Opt('freepats-world-percussion',
@@ -266,15 +306,22 @@ def _algo_plate():
                       width=1.2)]
 
 
-MASTER_GAIN = {'jazz_trio': 5.5, 'jazz_quartet': 5.0, 'jazz_ballad': 5.5, 'bossa': 6.0}
-"""Limiter drive per preset (dB): lands the demo songs at -14.1..-14.9 LUFS integrated (the jazz profile: -16..-13)."""
+MASTER_GAIN = {'jazz_trio': 5.5, 'jazz_quartet': 5.0, 'jazz_ballad': 5.5, 'bossa': 6.0, 'soul_ballad': 5.0,
+               'solo_piano': 5.0, 'lofi_piano': 6.0}
+"""Limiter drive per preset (dB): lands the demo songs at -14.1..-14.9 LUFS integrated (the jazz profile: -16..-13);
+soul_ballad's from its demo (-15.9 LUFS at 4.5: a slow ballad with long notes reads quiet into the limiter)."""
 
 
 def _master(band, preset: str, gain) -> float | None:
-    """The jazz master chain (rock.master_chain's guard: only when the song's master is still empty - a second band
+    """The jazz master chain (bands.master_chain's guard: only when the song's master is still empty - a second band
     or the song's own master keeps its chain, no stacked limiters). Returns the limiter drive, or None when kept."""
-    from .rock import master_chain
+    from ..bands import master_chain
     g = MASTER_GAIN[preset] if gain is None else float(gain)
+    if preset in ('solo_piano', 'lofi_piano'):   # SOLO_PIANO['master']: no presence lift, no wow / flutter, a slow
+        m = (SOLO_PIANO if preset == 'solo_piano' else LOFI)['master']      # limiter; LOFI: the cassette
+        ok = master_chain(band, fx.eq(dict(m['eq'])), fx.compressor(**m['glue']), fx.tape(**m['tape']),
+                          fx.limiter(gain=g, **m['limiter']))
+        return g if ok else None
     # a broad low-mid / mid dip: piano, tenor and upright all live at 250 Hz - 2 kHz and pile up there (every demo
     # read +3.5..+5.5 dB lowmid / mid against the jazz profile before it), presence (the demos still read -2..-3 dB
     # at 2.5-6 kHz: dull next to a produced jazz record) and a little air on top
@@ -303,6 +350,141 @@ SOFT_PIANO = {
 """The Salamander chain's softening (see _piano_chain): the attack rounder (peaks over -15 dBFS - the loudest hits
 of the instrument's own level, before the fader - squeezed 1.8:1 for ~80 ms, +1 dB makeup: the level the preset's
 fader was measured with; the right hand only) and the tape's level-dependent HF compression."""
+
+
+SOLO_PIANO = {
+    'hammers': 1.0,
+    'eq': {'hp.freq': 40, 'low.freq': 160, 'low.gain': -2.0, 'peak1.freq': 310, 'peak1.gain': -4.0, 'peak1.q': 0.7,
+           'peak2.freq': 3300, 'peak2.gain': -2.5, 'peak2.q': 0.8, 'high.freq': 6500, 'high.gain': 5.0},
+    'comp_eq': {'hp.freq': 60},
+    'tame': dict(freq=2500, threshold=-32, ratio=4.0, range=8.0, attack=2.0, release=120, mode='split'),
+    'master': {
+        'eq': {'hp.freq': 28, 'peak1.freq': 400, 'peak1.gain': -1.0, 'peak1.q': 0.6, 'high.freq': 10000,
+               'high.gain': 1.0},
+        'glue': dict(threshold=-24, ratio=1.3, knee=10, attack=40, release=400, detector='rms', keyhp=120),
+        'tape': dict(speed='15', drive=1.0, bump=0.5, wow=0.0, flutter=0.0),
+        'limiter': dict(release=400, ceiling=-1.2),
+    },
+}
+
+
+LOFI = {
+    # the piano (the Osiris una-corda grand): its two velocity layers evened into one smooth response (measured: C4 / G4
+    # fell 4 dB from velocity 60 to 68 - the soft layer's top is louder than the loud layer's bottom - which flattened a
+    # line's dynamics: sfz.even_velcurve, the soft layer 6.3 dB under the loud one, power 1.5)
+    'velcurve': [[1, 0.001443], [9, 0.038964], [17, 0.10115], [25, 0.180387], [33, 0.273568], [41, 0.378853],
+                 [49, 0.494981], [57, 0.621022], [63, 0.721614], [64, 0.357737], [72, 0.426868], [80, 0.499953],
+                 [88, 0.576791], [96, 0.657206], [104, 0.741045], [112, 0.828174], [120, 0.918473], [127, 1.0]],
+    # warm and a little dull - the low mids thinned, a soft presence dip, the top rolled off (a shelf from 6 kHz and a
+    # 12 dB/oct low-pass at 9 kHz: the 'dusty' piano), a little tape saturation; no leveller (the touch is the level)
+    'eq': {'hp.freq': 45, 'low.freq': 160, 'low.gain': -1.5, 'peak1.freq': 320, 'peak1.gain': -3.0, 'peak1.q': 0.7,
+           'peak2.freq': 3000, 'peak2.gain': -1.5, 'peak2.q': 0.8, 'peak3.freq': 1200, 'peak3.gain': 1.5,
+           'peak3.q': 0.8, 'high.freq': 6000, 'high.gain': -2.0,
+           'lp.freq': 9000, 'lp.slope': 12},
+    'comp_eq': {'hp.freq': 70, 'low.gain': -3.0},
+    'saturate': dict(mode='tape', drive=4.0, tone=-1.0, mix=0.5),
+    # the dusty kit: the kick's boom thinned (the left hand owns the bass band: the first demo read the sub +15 dB over
+    # the 'piano' balance and kick / left hand masking), the boxy mids down, the top gone (low-pass 4.5 kHz: the hats
+    # were the mix's only 6-12 kHz), saturated and squashed a little
+    'drum_eq': {'hp.freq': 60, 'hp.slope': 24, 'low.freq': 150, 'low.gain': -7.0, 'peak1.freq': 400,
+                'peak1.gain': -3.0, 'peak1.q': 0.8, 'peak3.freq': 3200, 'peak3.gain': -2.0, 'peak3.q': 0.8,
+                'lp.freq': 4500, 'lp.slope': 24},
+    'drum_saturate': dict(mode='tape', drive=8.0, tone=-2.0, mix=0.7),
+    'drum_comp': dict(threshold=-20, ratio=3.0, knee=6, attack=8, release=120, detector='peak', automakeup='on'),
+    # the kick ducks the piano a little (the lo-fi pump, gentle), the left hand's bass a little more (kick and left
+    # hand share 60-250 Hz)
+    'duck': {'piano': dict(depth=2.0, attack=4, hold=30, release=180),
+             'comp': dict(depth=4.0, attack=4, hold=40, release=200)},
+    # the vinyl bed: the crackle band-limited (300 Hz - 4.5 kHz: no rumble, no sharp clicks), far under the music
+    'vinyl_eq': {'hp.freq': 300, 'hp.slope': 24, 'lp.freq': 4500, 'lp.slope': 24},
+    'master': {
+        'eq': {'hp.freq': 40, 'hp.slope': 24, 'peak1.freq': 380, 'peak1.gain': -1.0, 'peak1.q': 0.6,
+               'peak3.freq': 3200, 'peak3.gain': -1.0, 'peak3.q': 0.8, 'high.freq': 9000, 'high.gain': -2.0},
+        'glue': dict(threshold=-22, ratio=1.5, knee=10, attack=30, release=300, detector='rms', keyhp=100),
+        # the cassette (no head bump: the sub read +15 dB with it): the top at ~10.5 kHz, a gentle wow / flutter
+        # (the whole beat wobbles like a tape), a quiet hiss bed
+        'tape': dict(speed='cassette', drive=3.0, bias=0.1, bump=0.0, wow=0.16, flutter=0.1, hiss=0.3),
+        'limiter': dict(release=300, ceiling=-1.2),
+    },
+}
+"""lofi_piano's sound (the endless lofi-piano genre): the felt piano's chain (both hands), the dusty kit's, the vinyl
+bed's band and the cassette master."""
+
+CRACKLE = {'pack': 'sampleradar-noise-hiss-crackle', 'dir': 'samples/sampleradar-noise-hiss-crackle/Vinyl_Noise',
+           # file: (seconds, dB that levels its 300 Hz - 4.5 kHz band to -42 dBFS RMS)
+           'files': {'Crackle_Loop_01.wav': (4.2, 0.4), 'Crackle_Loop_02.wav': (5.5, -3.4),
+                     'Crackle_Loop_05.wav': (4.1, -5.6), 'Crackle_Loop_08.wav': (6.8, 5.2),
+                     'Crackle_Loop_13.wav': (5.5, 3.1), 'Low_Passed_Crackle_02.wav': (5.0, 1.8),
+                     'Crackle_02.wav': (5.5, 7.5), 'Crackle_32.wav': (6.1, 6.6), 'Crackle_45.wav': (5.4, 3.9)}}
+"""The vinyl bed's recordings (SampleRadar noise / hiss / crackle, Vinyl_Noise): the ones whose crackle band (300 Hz -
+4.5 kHz, what the bed keeps of them: their total RMS is mostly sub-60 Hz rumble) is STEADY - every 400 ms window
+within ~6 dB of the median; most crackles there and in the vinyl-style pack are sparse pops (one active bar in 20,
+crest 35-45 dB) that never read as a bed - each levelled to one band RMS: lofi_crackle() strings them end to end,
+drawn, cross-faded. Royalty-free, no redistribution of the samples (the credits say so); without the pack the bed is
+the cassette's hiss alone."""
+
+
+def _lofi_chain(opt, comp: bool = False) -> list:
+    eq = dict(LOFI['eq'], **(LOFI['comp_eq'] if comp else {}))
+    return [fx.eq(eq), fx.saturator(**LOFI['saturate'])]
+
+
+def _lofi_drum_chain() -> list:
+    return [fx.eq(dict(LOFI['drum_eq'])), fx.saturator(**LOFI['drum_saturate']), fx.compressor(**LOFI['drum_comp'])]
+
+
+def _crackle_instrument():
+    return inst.sampler(zones=[{'file': f"{CRACKLE['dir']}/{f}", 'root': 60 + i, 'lo': 60 + i, 'hi': 60 + i,
+                                'gain': db} for i, (f, (_, db)) in enumerate(CRACKLE['files'].items())],
+                        lazy=True, attack=0.3, release=0.5)
+
+
+def lofi_crackle(band, start: float, end: float, *, tail: float = 0.0, seed=0, vel: int = 100) -> None:
+    """The vinyl bed on band['vinyl'] from beat `start` to `end` (the last recording may ring `tail` beats on, into
+    the song's tail): the crackle recordings drawn (never the same twice running), each held for its own length less
+    a second in SECONDS on the song's tempo map (rubato, ritardandi and fermatas keep every note inside its
+    recording), overlapping by 0.6 s (the sampler's 0.3 s attack / 0.5 s release: a crossfade, no seam). Nothing
+    without a 'vinyl' role."""
+    if 'vinyl' not in band.roles:
+        return
+    s = band.song
+    rng = random.Random(seed_int(seed) + 9091)
+    files = list(CRACKLE['files'])
+    out, t, last = [], float(start), None
+
+    tm = s.tempo_map()                          # (built once: the song's tempo plan is final here)
+
+    def beat_after(b0, sec):                    # the beat `sec` seconds after beat b0
+        return tm.beat_at(tm.seconds_at(b0) + sec)
+    while t < end - 0.25:
+        k = rng.choice([i for i in range(len(files)) if i != last])
+        last = k
+        dur_s = CRACKLE['files'][files[k]][0] - 1.0
+        z = min(end + tail, beat_after(t, dur_s))
+        out.append(Note(t - start, max(0.25, z - t), 60 + k, vel))
+        t = max(t + 0.25, beat_after(t, dur_s - 0.6))
+    band['vinyl'].play(Clip._raw(out, end + tail - start), start)
+
+
+def _solo_chain(opt, comp: bool = False) -> list:
+    """solo_piano's grand: the Salamander chain's eq without its presence lift (a dip at 3.3 kHz instead), a
+    'tame' de-esser in split mode at 2.5 kHz (a dynamic presence cut: only the loud, bright notes lose up to 8 dB
+    above 2.5 kHz - the soft ones keep their clarity), the soft attack compressor and tape. The left hand keeps its
+    lows (no bass player: hp 60 Hz)."""
+    if opt is not None and opt.hints.get('piano') == 'generaluser':
+        return _piano_chain(opt, comp)
+    eq = dict(SOLO_PIANO['eq'], **(SOLO_PIANO['comp_eq'] if comp else {}))
+    return [fx.deesser(**SOLO_PIANO['tame']), fx.eq(eq), *([] if comp else [fx.compressor(**SOFT_PIANO['attack'])]),
+            fx.tape(**{**SOFT_PIANO['tape'], **({'bump': 0.0} if comp else {})})]
+
+
+def _rhodes_chain(opt) -> list:
+    """The Rhodes (soul_ballad): its own voicing, not the grand's (the Salamander chain cut it 5 dB at 310 Hz and
+    rounded its attack): the left hand out of the upright's 60-250 Hz (-4.5 dB at 150 Hz: masking in the sparse
+    sections) and out of the tenor's 450 Hz - songs/nowhere-to-be's mix moves; -4.5 dB at 320 Hz since the comping
+    sits from Bb3 (REGISTER: the low mids read +4.9 dB over the jazz balance at -3)."""
+    return [fx.eq({'hp.freq': 90, 'peak1.freq': 150, 'peak1.gain': -4.5, 'peak1.q': 0.7, 'peak2.freq': 320,
+                   'peak2.gain': -4.5, 'peak2.q': 0.9, 'peak3.freq': 480, 'peak3.gain': -1.5, 'peak3.q': 1.0})]
 
 
 def _piano_chain(opt, comp: bool = False) -> list:
@@ -396,7 +578,33 @@ _PLACE = {   # audience view: piano stage left (lid open to the room), drums sta
 treble sits right of centre in the recording), comping -0.25, bass centre, brushes +0.4, sax centre (at +0.2 with the
 drums on the right the quartet leaned 1-1.8 dB right in every section)."""
 
-_COMMON = ('without', 'sounds', 'ids', 'space', 'plate', 'master', 'master_gain', 'strict', 'feel')
+_COMMON = ('without', 'sounds', 'ids', 'space', 'plate', 'master', 'master_gain', 'strict', 'feel', 'lead')
+
+VOCAL_LEAD = {
+    'jazz_ballad': {'faders': {'comp': 4.0, 'piano': -2.5}, 'master_gain': 3.0},
+    'jazz_trio': {'faders': {'comp': 4.0, 'piano': -2.5}, 'master_gain': 3.0},
+    'bossa': {'faders': {'piano': -2.5, 'bass': -2.5, 'drums': -1.0, 'rim': -1.0}, 'master_gain': 3.0},
+    'soul_ballad': {'faders': {'piano': -2.5, 'bass': -2.5, 'drums': -1.0, 'rim': -1.0}, 'master_gain': 2.0},
+}
+"""lead='vocal' (a sung lead instead of the piano's right hand / the tenor): dB on the band's faders and the limiter
+drive, and VOCAL_LEAD_DB on every sung track. Measured: jazz_ballad on songs/when-the-year-turns-gold (the comping
+13-16 dB under a voice: +4, the right hand's answers -2.5; a voice + strings ballad landed at -12.3 LUFS on 5.5 dB
+of drive: 3), bossa on songs/nowhere-to-be (the band 1-2.5 dB further under her, drive 6 -> 3). jazz_trio follows
+the ballad, soul_ballad the bossa song (a Rhodes, an upright and a cross-stick under a voice; drive 5 -> 2):
+estimates."""
+
+REGISTER = {'jazz_trio': {'comp': ('A2', 'G4')}, 'jazz_quartet': {'comp': ('A2', 'G4')},
+            'jazz_ballad': {'comp': ('A2', 'G4')}, 'bossa': {'guitar': ('E3', 'E5')},
+            'soul_ballad': {'piano': ('Bb3', 'C5')}}
+"""The comping register per preset (band.info['register'][role], for jazz.comp(register=)): where the chords sit
+against the bass. soul_ballad's Rhodes (both hands on one track) from Bb3: from D3 (and F3, G3) its chords shared the
+upright's 60-250 Hz on the held final chord (masking warn, 36 % of the band, with SOUL_DIP on); from Bb3 it is gone
+(the end's low mids +1 dB, an info overlap with the tenor at 250-800 Hz)."""
+
+VOCAL_LEAD_DB = -3.0
+"""dB on the sung tracks under a jazz preset with lead='vocal' (recipes/HUMAN_FEEDBACK.md 2026-10-09: "sänger 15%
+leiser" - after nowhere-to-be the second voice that ended at a -3 dB trim: in vocal jazz the voice sits INSIDE the
+band). Applied at compile (the singer makes its tracks after the band), once per track, logged in band.info."""
 
 
 class _Builder:
@@ -427,6 +635,13 @@ class _Builder:
 
     def wants(self, role: str) -> bool:
         return role not in self.without
+
+    def hands(self, feel, role: str) -> dict:
+        """The pianist's body (humanize body=, the feel's profile): the right hand ('piano') leads, the left hand
+        ('comp') moves with it - one body, two hands."""
+        if role == 'comp' and self.wants('piano'):
+            return {'body': feel.body, 'lead': self.ids.get('piano', 'piano')}
+        return {'body': feel.body}
 
     def sends(self, room=None, plate=None) -> dict | None:
         out = {self.room.id: room} if room is not None else {}
@@ -462,7 +677,9 @@ class _Builder:
                          gain_db=gain_db + (opt.trim if opt is not None else 0.0), pan=track_pan, sends=sends)
         if groove is not None:
             t.groove(groove)
-        if humanize is not None:
+        if isinstance(humanize, dict):
+            t.humanize(**humanize)
+        elif humanize is not None:
             t.humanize(*humanize)
         self.band.add(role, t)
         self.band.info['sounds'][role] = desc
@@ -497,9 +714,33 @@ class _Builder:
                              release=350)
 
     def finish(self):
+        self.band.info['register'] = {r: rg for r, rg in REGISTER.get(self.preset, {}).items() if r in self.band.roles}
+        lead = self.options.get('lead')
+        vl = VOCAL_LEAD.get(self.preset) if lead == 'vocal' else None
+        if lead not in (None, 'vocal') or (lead == 'vocal' and vl is None):
+            raise ComposeError(f"band {self.preset!r}: lead must be None or 'vocal' (presets with a vocal lead: "
+                               f"{', '.join(VOCAL_LEAD)}), got {lead!r}")
+        if vl is not None:
+            for role, db in vl['faders'].items():
+                if role in self.band.roles:
+                    self.band.roles[role].gain_db += db
+            self.band.info['lead'] = {'kind': 'vocal', 'faders': dict(vl['faders']), 'vocal_db': VOCAL_LEAD_DB}
+            self.s.add_compile_hook(_seat_voice)
         if self.options.get('master', True):
-            self.band.info['master_gain'] = _master(self.band, self.preset, self.options.get('master_gain'))
+            gain = self.options.get('master_gain')
+            if gain is None and vl is not None:
+                gain = vl['master_gain']
+            self.band.info['master_gain'] = _master(self.band, self.preset, gain)
         return self.band
+
+
+def _seat_voice(song) -> None:
+    """lead='vocal': every sung track VOCAL_LEAD_DB lower - a last utility 'lead_seat' (a compile hook: the singer's
+    tracks come after the band), not the fader: the hero's bed duck / carve thresholds follow the vocal's fader
+    (HeroInfo.key_fx) and must keep ducking the band under the same voice."""
+    for t in song.tracks.values():
+        if getattr(t, '_singer', None) and not any(f.name == 'lead_seat' for f in t.fx):
+            t.add_fx(fx.utility(gain=VOCAL_LEAD_DB, name='lead_seat'))
 
 
 DRUM_TRIM = -3.0
@@ -517,10 +758,10 @@ def _rhythm_section(bb: _Builder, feel, *, piano_sends=(-11.5, -24), comp_send=-
     bb.band.info['feel'] = feel
     if bb.wants('piano'):
         bb.track('piano', _piano_chain, gain_db=piano_gain, pan=_PLACE['piano'], sends=bb.sends(*piano_sends),
-                 groove=feel.groove('piano'), humanize=(4, 5))
+                 groove=feel.groove('piano'), humanize=bb.hands(feel, 'piano'))
     if bb.wants('comp'):
         bb.track('comp', lambda o: _piano_chain(o, comp=True), gain_db=comp_gain, pan=_PLACE['comp'],
-                 sends=bb.sends(comp_send), groove=feel.groove('comp'), humanize=(4, 5))
+                 sends=bb.sends(comp_send), groove=feel.groove('comp'), humanize=bb.hands(feel, 'comp'))
     if bb.wants('bass'):
         bb.track('bass', lambda o: _bass_chain(o, arco=bass_role == 'arco', sub=bass_sub), sound_role=bass_role,
                  gain_db=bass_gain, pan=_PLACE['bass'], sends=bb.sends(bass_send), groove=feel.groove('bass'),
@@ -562,6 +803,79 @@ def jazz_trio(song, *, without=(), sounds=None, ids=None, **options):
     bb = _Builder(song, 'jazz_trio', dict(options, without=without, sounds=sounds, ids=ids), (), _TRIO_NOTES,
                   'salon', 'algorithmic')
     _rhythm_section(bb, _swing_feel(song, options))
+    return bb.finish()
+
+
+_SOLO_NOTES = """\
+Play it (any tempo; one grand, two hands on two tracks):
+  piano  right hand: the melody harmonized / the solo (pianist.arrange via jazz.chorus, soloist.solo), C4-C6,
+         velocity 50-110 (the loud layers bloom: hammers fully softened, the 2.5 kHz+ band of the loudest notes
+         turned down by up to 8 dB)
+  comp   left hand: shells / tenths / the bass line (no bass player: it keeps its lows down to 60 Hz)
+Balance: right hand ~-20 LUFS, the left hand 6-8 dB under it. Stage: the grand nearly centred (piano -0.4, comp
+-0.1: the Salamander's treble sits right of centre by itself). Returns: room (the salon IR, sends -3 / -4), plate
+(right hand -13). Master: a gentle glue, tape without wow, a slow limiter (MASTER_GAIN 5.0; songs pass
+master_gain=). Judged by the 'piano' profile."""
+
+
+def solo_piano(song, *, without=(), sounds=None, ids=None, **options):
+    """Solo jazz / ballad grand: the Salamander voiced warm and smooth (hammers fully softened, a dynamic presence
+    cut on the loudest notes), both hands, the salon room with a plate, a gentle master."""
+    bb = _Builder(song, 'solo_piano', dict(options, without=without, sounds=sounds, ids=ids), (), _SOLO_NOTES,
+                  'salon', 'algorithmic')
+    bb.band.analysis['profile'] = 'piano'
+    feel = _swing_feel(song, options)
+    bb.band.info['feel'] = feel
+    if bb.wants('piano'):
+        bb.track('piano', _solo_chain, sound_role='grand', gain_db=4.5, pan=-0.35, sends=bb.sends(-9, -14),
+                 groove=feel.groove('piano'), humanize=bb.hands(feel, 'piano'))
+    if bb.wants('comp'):
+        bb.track('comp', lambda o: _solo_chain(o, comp=True), sound_role='grand', gain_db=4.5, pan=-0.1,
+                 sends=bb.sends(-10), groove=feel.groove('comp'), humanize=bb.hands(feel, 'comp'))
+    return bb.finish()
+
+
+_LOFI_NOTES = """\
+Play it (70-90 BPM, lazy swing or straight 8ths; one felt piano, two hands on two tracks, an optional dusty kit):
+  piano  right hand: a sparse melody, C4-A5, velocity 40-95 (the Osiris piano's range is small by nature: shape the
+         phrases, never hammer it)
+  comp   left hand: 7th / 9th chords voiced root - 10th - 5th - 7th (pianist.FIGURES 'lofi_*'), held or pushed
+  drums  drummer.arrange(form, style='lofi', kit=b.drums, swing=<the tune's ratio>) - boom-bap, soft (the kit ducks
+         the piano 2 dB: LOFI['duck']); leave it out (without=('drums',)) for a piano-only piece
+  vinyl  lofi_crackle(band, start, end): the crackle bed, far under the music
+Balance (measured, dry tracks): right hand ~-26 LUFS, the left hand 3-4 dB under it, the kit ~6 dB under the right
+hand, the vinyl ~20 dB under it. Returns: room (the salon IR, sends -6.5 / -7.5). Master: a cassette (tape speed
+'cassette': the top at ~10.5 kHz, no head bump, wow 0.16, flutter 0.1, hiss 0.3), a gentle glue, a slow limiter (the
+genre drives it 8 dB). Judged by the 'piano' profile."""
+
+
+def lofi_piano(song, *, without=(), sounds=None, ids=None, **options):
+    """Lo-fi piano: the felt piano (Osiris, una corda) dull and warm through tape saturation, a dusty 70s kit (ducking
+    the piano gently), a vinyl crackle bed, the salon room, all on a wobbly cassette."""
+    bb = _Builder(song, 'lofi_piano', dict(options, without=without, sounds=sounds, ids=ids), (), _LOFI_NOTES,
+                  'salon', None)
+    bb.band.analysis['profile'] = 'piano'
+    feel = _swing_feel(song, options)
+    bb.band.info['feel'] = feel
+    if bb.wants('piano'):
+        bb.track('piano', _lofi_chain, sound_role='felt', gain_db=1.0, pan=-0.15, sends=bb.sends(-6.5),
+                 groove=feel.groove('piano'), humanize=bb.hands(feel, 'piano'))
+    if bb.wants('comp'):
+        bb.track('comp', lambda o: _lofi_chain(o, comp=True), sound_role='felt', gain_db=-1.0, pan=-0.05,
+                 sends=bb.sends(-7.5), groove=feel.groove('comp'), humanize=bb.hands(feel, 'comp'))
+    if bb.wants('drums'):
+        t, _ = bb.track('drums', lambda o: _lofi_drum_chain(), sound_role='lofi_kit', gain_db=-8.5, pan=0.1,
+                        sends=bb.sends(-16))
+        for role in ('piano', 'comp'):
+            if role in bb.band.roles:
+                song.sidechain(bb.band[role], key=t, pitches='kick', **LOFI['duck'][role])
+    if bb.wants('vinyl') and installed(CRACKLE['pack']):
+        t = song.track(bb.ids.get('vinyl', 'vinyl'), _crackle_instrument(), fx=[fx.eq(dict(LOFI['vinyl_eq']))],
+                       gain_db=-5.0, pan=0.0)
+        bb.band.add('vinyl', t)
+        bb.band.info['sounds']['vinyl'] = 'SampleRadar vinyl surface-noise loops (drawn, levelled, cross-faded)'
+        credit = 'SampleRadar noise, hiss and crackle (MusicRadar): royalty-free, no redistribution of the samples'
+        bb.band.info['credits'].append(credit)
     return bb.finish()
 
 
@@ -652,9 +966,9 @@ def bossa(song, *, without=(), sounds=None, ids=None, **options):
                                              'peak3.freq': 3000, 'peak3.gain': 1.0, 'peak3.q': 0.8}),
                                       fx.microshift(style='smooth', detune=2, delay=13, focus=250, mix=0.28)],
                  gain_db=-0.5, pan=-0.45, sends=bb.sends(-12), groove=feel.groove('comp'), humanize=(3, 5))
-    if bb.wants('piano'):
-        bb.track('piano', _piano_chain, gain_db=10.0, pan=_PLACE['piano'], sends=bb.sends(-13, -18),
-                 groove=feel.groove('piano'), humanize=(4, 5))
+    if bb.wants('piano'):      # opposite the guitar; without it nearer the centre (the trio leaned 1.8 dB left)
+        bb.track('piano', _piano_chain, gain_db=10.0, pan=_PLACE['piano'] if bb.wants('guitar') else -0.25,
+                 sends=bb.sends(-13, -18), groove=feel.groove('piano'), humanize=bb.hands(feel, 'piano'))
     if bb.wants('bass'):
         # -9 (was -6 before the peak-catcher chain): the bossa's root-fifth pulse plays at velocity 85-117, where
         # the uncompressed bass is ~3 dB louder than the old compressor let it be
@@ -677,6 +991,64 @@ def bossa(song, *, without=(), sounds=None, ids=None, **options):
         bb.band.info['shaker_keys'] = dict(opt.hints['keys']) if opt is not None else dict(SHAKER_KEYS['gm'])
     bb.sax(gain=2.8, room=-12, plate=-15)
     bb.duck_under_sax('guitar')
+    return bb.finish()
+
+
+_SOUL_NOTES = """\
+Play it (60-84 BPM, straight 8ths; a sung lead or the tenor in front):
+  piano   the Rhodes, both hands on one track: jazz.comp(prog, style='ballad', voicing='rootless',
+          register=band.info['register']['piano'] (Bb3-C5), intensity=0.3).strum(ms=25, bpm=) around the voice (answers in her rests),
+          pianist.pedal with the harmony; velocities 50-90 (the bell; 100+ barks)
+  bass    two-feel: long roots and fifths, prog.bass(pattern='R_f_', rate='1/2', vel=70-84), an approach note into
+          the next chord now and then
+  drums   jazzband.brushes(band, bars, style='ballad') - stirs on every beat, soft taps on 2 and 4
+  rim     the cross-stick on 4 (verses) / 2 and 4 (choruses), velocity 70-80
+  sax     soft tenor answers in the voice's gaps, the solo: hornist.arrange(..., family='sax', style='ballad');
+          hero(b.sax, family='sax', genre='jazz') for a featured tenor (one natural take)
+Balance (songs/_bands/soul_ballad, inside the jazz mix windows with no trims): the tenor -18 LUFS, the Rhodes ~7 dB
+under (comping at velocity ~70), the upright 4-6 dB under, the stirs 13-16 dB under, the cross-stick (velocity 60-75)
+~16 dB under; a sung lead sits a little lower (the mixer's vocal windows). Stage: the Rhodes nearly centred
+(its stereo vibrato swirls both ways; a balance pan throws it to one side), bass and sax centre, drums +0.35,
+cross-stick +0.25. Returns: room (the salon IR, all), plate (sax -15, Rhodes -18)."""
+
+
+SOUL_DIP = {'freq': 160.0, 'q': 0.8, 'depth': 4.0, 'attack': 15.0, 'release': 200.0}
+"""soul_ballad's keyed dip on the Rhodes (song.carve keyed by the upright): 160 Hz, Q 0.8 (~100-250 Hz), up to 4 dB
+while a bass note sounds - the two share 60-250 Hz in a sparse ballad (the demo: masking gone in intro / A, 42 -> 36 %
+of the band; the held final chord: REGISTER)."""
+
+
+def soul_ballad(song, *, without=(), sounds=None, ids=None, **options):
+    """Smooth / soul-jazz ballad band: a warm Rhodes (both hands), the upright in a two-feel, brush stirs + a soft
+    cross-stick, a soft tenor - faders set for long notes at a slow tempo (the bossa's are for its accented
+    root-fifth bass and brush 8ths: songs/nowhere-to-be, a 72 BPM ballad on them, needed bass +12, drums +9,
+    cross-stick +11 dB and a Rhodes thrown left by the grand's pan and chain)."""
+    bb = _Builder(song, 'soul_ballad', dict(options, without=without, sounds=sounds, ids=ids), ('duck',),
+                  _SOUL_NOTES, 'salon', 'ir')
+    feel = options.get('feel') or _jz.Feel(song.tempo, ratio=0.5, beats_per_bar=song.beats_per_bar,
+                                           layback={'piano': 8, 'comp': 4, 'sax': 18})
+    bb.band.info['feel'] = feel
+    if bb.wants('piano'):
+        bb.track('piano', _rhodes_chain, sound_role='rhodes', gain_db=-1.0, pan=-0.05, sends=bb.sends(-13, -18),
+                 groove=feel.groove('piano'), humanize=bb.hands(feel, 'piano'))
+    if bb.wants('bass'):
+        bb.track('bass', _bass_chain, gain_db=0.0, pan=0.05, sends=bb.sends(-18), groove=feel.groove('bass'),
+                 humanize=(3, 4))
+    if bb.wants('drums'):
+        _, opt = bb.track('drums', lambda o: _drum_chain(), gain_db=6.0 + DRUM_TRIM, pan=0.35, sends=bb.sends(-11),
+                          groove=feel.groove('drums'), humanize=(2, 4))
+        bb.drums(opt)
+    if bb.wants('rim'):
+        _, opt = bb.track('rim', lambda o: [fx.eq({'hp.freq': 150, 'peak1.freq': 500, 'peak1.gain': -2.0,
+                                                   'peak1.q': 1.0, 'high.freq': 8000, 'high.gain': -1.5})],
+                          gain_db=7.0 + DRUM_TRIM, pan=0.25, sends=bb.sends(-10), groove=feel.groove('drums'),
+                          humanize=(2, 5))
+        bb.band.info['rim_keys'] = dict(opt.hints['keys']) if opt is not None else {'rim': GM_KIT['rim']}
+    if 'piano' in bb.band and 'bass' in bb.band:
+        # the Rhodes' left hand steps out of the upright's band while the bass plays (a keyed dip, SOUL_DIP): the
+        # static 150 Hz cut alone left a masking warning on the demo
+        song.carve(bb.band['piano'], key=bb.band['bass'], **SOUL_DIP)
+    bb.sax(gain=2.8, room=-12, plate=-15)
     return bb.finish()
 
 
@@ -785,6 +1157,14 @@ bands.register('jazz_trio', jazz_trio, genre='jazz', roles=('piano', 'comp', 'ba
                description='NYC club piano trio: Salamander grand (right hand + comping), Meatbass upright, Swirly '
                            'brushes, one wooden room (salon IR)',
                tuned="jazz profile, -14.7 LUFS, 0 warnings; songs/_bands/jazz_trio (medium swing 144 BPM)")
+bands.register('solo_piano', solo_piano, genre='jazz', roles=('piano', 'comp'),
+               description='solo jazz / ballad grand: Salamander voiced smooth (hammers fully softened, a dynamic '
+                           'presence cut on the loudest notes), both hands, salon room + plate, gentle master',
+               tuned="piano profile; songs/_bands/solo_piano, the endless jazz-piano genre")
+bands.register('lofi_piano', lofi_piano, genre='jazz', roles=('piano', 'comp', 'drums', 'vinyl'),
+               description='lo-fi piano: the felt Osiris piano dull and warm, a dusty 70s kit ducking it gently, a '
+                           'vinyl crackle bed, all on a wobbly cassette (wow, flutter, hiss)',
+               tuned="piano profile; the endless lofi-piano genre (songs/_endless_piano/out/lofi)")
 bands.register('jazz_quartet', jazz_quartet, genre='jazz', roles=('piano', 'comp', 'bass', 'drums', 'sax'),
                description='the trio + a played MTG tenor (legato, live dynamics, delayed vibrato, scoops / falls), '
                            'salon room + 224XL plate, comping ducks under the sax',
@@ -793,6 +1173,10 @@ bands.register('jazz_ballad', jazz_ballad, genre='jazz', roles=('piano', 'comp',
                description="late-night ballad: pedalled grand, brush stirs, bass='pizz' | 'arco' (Meatbass), "
                            'tenor in a rich plate, 224XL chamber',
                tuned="jazz profile, -14.9 LUFS, 0 warnings; songs/_bands/jazz_ballad (66 BPM, rubato, ritardando)")
+bands.register('soul_ballad', soul_ballad, genre='jazz', roles=('piano', 'bass', 'drums', 'rim', 'sax'),
+               description='smooth / soul-jazz ballad: a warm stereo-vibrato Rhodes, the upright in a two-feel, brush '
+                           'stirs + a soft cross-stick, soft tenor (straight 8ths, 60-84 BPM)',
+               tuned="jazz profile, -15.9 LUFS, inside the mix windows; songs/_bands/soul_ballad (72 BPM)")
 bands.register('bossa', bossa, genre='jazz', roles=('guitar', 'piano', 'bass', 'drums', 'rim', 'shaker', 'sax'),
                description='bossa nova: nylon guitar comping, piano, upright, brushes + cross-stick + egg shaker, '
                            'airy tenor (straight 8ths)',

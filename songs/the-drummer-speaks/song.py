@@ -99,7 +99,7 @@ def build() -> Song:
     a3 = s.section('A3', bars=8)
     end = s.section('end', bars=4)
 
-    kit_sound = patches.get('sampled/big_rusty_kit').but(level=1.0, restrike=6.0)
+    kit_sound = patches.get('sampled/big_rusty_kit').but(level=1.0)
     b = bands.rock_band(s, without=('lead',), sounds={'drums': kit_sound})
     kit = b.drums
     drum_bus = kit.output

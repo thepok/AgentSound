@@ -78,6 +78,22 @@ class Ending(unittest.TestCase):
         self.assertLess(s.tempo_at(end.start), 120 * 0.75)             # the ritardando stays slow
         self.assertEqual(len(s._tempo_plan.fermatas), 1)
 
+    def test_room_keeps_the_tracks_own_send(self):
+        # the ramp never goes under the track's send, which holds until the chord (an automation's first value holds
+        # from bar 1: a bare ramp from -13 dB used to override a -3 dB send for the whole song)
+        s = song()
+        tag, end = s.form('tag:4 end:2', parts=CHANGES)
+        wet = s.track('wet', {'type': 'va', 'params': {}}, sends={'room': -3})
+        dry = s.track('dry', {'type': 'va', 'params': {}}, sends={'room': -20})
+        bare = s.track('bare', {'type': 'va', 'params': {}})
+        s.ending(end, chords=[(wet, notes('[C4 E4]:2'), 30), (dry, notes('[C3 G3]:2'), 30),
+                              (bare, notes('C2:2'), 30)], hold=None, room=(-13, -8))
+        pts = {t.id: [p for k, p in t._auto if k == 'send.room'][0] for t in (wet, dry, bare)}
+        self.assertEqual([p[1] for p in pts['wet']], [-3, -3, -3])
+        self.assertEqual(pts['wet'][0][0], end.start - 0.25)
+        self.assertEqual([p[1] for p in pts['dry']], [-20, -13, -8])
+        self.assertEqual([p[1] for p in pts['bare']], [-13, -8])
+
     def test_room_needs_an_end_for_a_beat_position(self):
         s = song()
         s.section('a', bars=2)

@@ -18,7 +18,8 @@ by phrase from the context (seeded, deterministic).
 Every move returns a Clip starting at `at` (default 0, beats) and takes the tempo (`bpm`) because fast figures are
 timed in real time: a real trill runs ~12-16 notes per second, a tremolo ~9-12 strokes, a glissando up to ~22.
 Velocities are shaped (accents, swells, the top voice sung out) and fast figures carry a few ms of timing wobble
-(seeded). Ornaments are light and legato: the principal note speaks, the figure 25-40 velocity under it.
+(seeded). Ornaments are light and legato: the principal note speaks, a trill / tremolo 25-40 velocity under it, the
+grace figures (turn, mordent, crush) ~10-22 (a line keeps its shape around them).
 
 User feedback on v3 (2026-09-30): "etwas zu viele von diesen schnellen Zwei-Tasten-Wechseln" - the FAST
 alternations (trill, tremolo, shake, repeated notes, alternating hands) are spice, not a habit: arrange() budgets
@@ -42,13 +43,13 @@ import random
 from . import tempo as _tempo
 from .budget import Budget
 from .patterns import Clip, Note, _as_prog, _vel, as_clip, seed_int
-from .theory import (Chord, ComposeError, Key, Progression, available_tensions, block, chord_kind, chord_scale,
+from .theory import (Chord, ComposeError, Key, Progression, available_tensions, block, chord_kind, chord_scale, clash,
                      guide_tones, jazz_voicings, mud, note, shell, upper_structure)
 
 __all__ = ['MOVES', 'DEVICES', 'STYLES', 'FILL_KINDS', 'ORNAMENTS', 'LH_STYLES', 'LH_METERS', 'FAST', 'SPICE',
            'Memory', 'trill', 'tremolo', 'mordent', 'inverted_mordent', 'turn', 'crush', 'blues_crush', 'slip_note',
            'repeated', 'roll', 'sweep', 'gliss', 'fourths', 'pentatonic_run', 'run', 'chromatic_run', 'octave_run',
-           'shake', 'alternating_hands', 'voicing', 'left_hand', 'pedal', 'arrange', 'Arrangement', 'crushes',
+           'shake', 'alternating_hands', 'voicing', 'left_hand', 'FIGURES', 'figure', 'broken', 'pedal', 'arrange', 'Arrangement', 'crushes',
            'vocabulary']
 
 _EPS = 1e-6
@@ -301,7 +302,7 @@ def mordent(pitch, dur, bpm, *, upper: bool = False, chord=None, key=None, ms: f
             at=0.0) -> Clip:
     """Mordent: the note, its lower neighbour (upper=True: the upper one - the inverted mordent / Pralltriller) and
     the note again, each `ms` long (45-70), then the note held for the rest of `dur`. The quick flick a pianist puts
-    on a melody note: the principal at `vel`, the neighbour `light` under it (default 25-40), the return softer,
+    on a melody note: the principal at `vel`, the neighbour about half `light` under it (~13-22), the return softer,
     legato."""
     p = note(pitch)
     D = _num(dur, 'mordent dur', 0.1)
@@ -312,8 +313,8 @@ def mordent(pitch, dur, bpm, *, upper: bool = False, chord=None, key=None, ms: f
         raise ComposeError(f"mordent: dur {D:g} beats is too short for two {ms:g} ms ornament notes")
     nb = _neighbour(p, upper, chord, key, chromatic_below=False)
     v0, _ = _vels(vel)
-    return _clip([(a, s * 1.2, p, v0), (a + s, s * 1.2, nb, _soft(v0, light)),
-                  (a + 2 * s, D - 2 * s, p, _soft(v0, light, 0.4))], a)
+    return _clip([(a, s * 1.2, p, v0), (a + s, s * 1.2, nb, _soft(v0, light, 0.55)),
+                  (a + 2 * s, D - 2 * s, p, _soft(v0, light, 0.3))], a)
 
 
 def inverted_mordent(pitch, dur, bpm, **kw) -> Clip:
@@ -326,7 +327,7 @@ def turn(pitch, dur, bpm, *, chord=None, key=None, inverted: bool = False, ms: f
     """Turn (gruppetto) on the beat: upper neighbour, the note, lower neighbour (a half step below with
     chromatic=True, the jazz way), then the note held for the rest of `dur`; inverted=True starts from below.
     Each ornament note `ms` long (55-90), legato and light (the first one on the beat a little heavier, the others
-    `light` under the principal, default 25-40); the held note lands at ~vel."""
+    about half `light` under the principal, ~10-22: a grace figure, not a ghost); the held note lands at ~vel."""
     p = note(pitch)
     D = _num(dur, 'turn dur', 0.1)
     b = _bpm(bpm)
@@ -338,7 +339,7 @@ def turn(pitch, dur, bpm, *, chord=None, key=None, inverted: bool = False, ms: f
     lo = _neighbour(p, False, chord, key, chromatic_below=chromatic)
     v0, _ = _vels(vel)
     fig = [lo, p, up] if inverted else [up, p, lo]
-    vs = (0.6, 1.0, 0.9)
+    vs = (0.35, 0.55, 0.5)                          # a grace figure, not a ghost: ~10-20 under
     out = [(a + i * s, s * 1.2, q, _soft(v0, light, vs[i])) for i, q in enumerate(fig)]
     out.append((a + 3 * s, D - 3 * s, p, v0 * 0.95))
     return _clip(out, a)
@@ -357,10 +358,10 @@ def crush(pitch, dur, bpm, *, grace: int = -1, together: bool = False, ms: float
     g = p + int(grace)
     v0, _ = _vels(vel)
     if together:
-        out = [(a, s * 1.2, g, _soft(v0, None, 0.7)), (a, D, p, v0)]
+        out = [(a, s * 1.2, g, _soft(v0, None, 0.5)), (a, D, p, v0)]
         t0 = a
     else:
-        out = [(a, s * 1.25, g, _soft(v0)), (a + s, D - s, p, v0)]
+        out = [(a, s * 1.25, g, _soft(v0, None, 0.6)), (a + s, D - s, p, v0)]
         t0 = a + s
     out += [(t0, D - (t0 - a), q, v0 * 0.8) for q in _pitches(under) if q < p] if under else []
     return _clip(out, a)
@@ -741,6 +742,15 @@ def _colour(ch: Chord) -> set[int]:
     return _tones(ch) | {(ch.root + t) % 12 for t in available_tensions(ch)}
 
 
+def _rings_clear(n, chord_at) -> bool:
+    """A melody note [start, dur, pitch, vel, harmony time] held over a chord change stays clear of the chord it
+    rings into: its pitch is a tone / safe tension there (or it does not cross a change)."""
+    a, b = chord_at(n[4]), chord_at(n[0] + n[1] - 0.1)
+    if a is None or b is None or (a.root, a.intervals) == (b.root, b.intervals):
+        return True
+    return n[2] % 12 in _colour(b)
+
+
 def _below(pc: int, mel: int, floor: int) -> int | None:
     """The highest pitch of class pc strictly under mel and >= floor."""
     q = mel - ((mel - pc) % 12 or 12)
@@ -836,11 +846,22 @@ def voicing(ch, melody, device: str = 'drop2', *, floor='G3', voices: int = 3, k
 
 # ------------------------------------------------------------------------------------------------ left hand
 
-LH_STYLES = ('guide', 'shell', 'rootless', 'tenths', 'stride', 'pedal')
+LH_STYLES = ('guide', 'shell', 'rootless', 'tenths', 'stride', 'pedal', 'broken')
 """Left-hand styles for left_hand() / arrange(lh=...): guide (3rd + 7th, the rootless shell: with a bassist),
 shell (1-7 / 1-3 Bud Powell shells, root in the bass: solo piano or a thin bass), rootless (Bill Evans A/B
 voicings), tenths (root + 10th, rolled), stride (a stride hint: bass note on 1 and 3, a chord on 2 and 4 - in
-the meter's own pulse: 'oom-pah-pah' in 3/4, see LH_METERS), pedal (a pedal point held under guide-tone shells)."""
+the meter's own pulse: 'oom-pah-pah' in 3/4, see LH_METERS), pedal (a pedal point held under guide-tone shells),
+broken (a broken-chord FIGURE per bar from FIGURES - left_hand(figure=...): flowing 8ths over a 10th, rocking,
+walking 10ths, a waltz's bass-chord-chord - held still under the right hand's breaths: broken())."""
+
+LH_SHELL = {'shell': 0.45, 'split': 0.35, 'rootless': 0.2}
+"""How the 'shell' left hand voices each chord (drawn per chord: a texture, not one grip - blind round 3: root-7
+shells only read as a machine): shell (root-7 / root-3), split (the root alone, a rootless voicing answering it: bass +
+chord, the waltz's oom-pah; a chord of 2+ beats), rootless (a rootless 3-7-9 / 7-3-13 voicing)."""
+
+LH_RESTRIKE = 4
+"""left_hand: a chord of two bars or more is struck again in a later bar when the right hand has fewer than this many
+attacks there (it fills the right hand's space and lays out under its lines - the comp answers the line's density)."""
 
 LH_METERS = {
     (4, 4): {'answer': (2.0, 1.5, 2.5), 'weights': None, 'lift': False, 'light': 0.82,
@@ -849,7 +870,7 @@ LH_METERS = {
              'stride': ((0, 'bass'), (1, 'chord'), (2, 'fifth'), (3, 'chord'))},
     (2, 4): {'answer': (1.0, 1.5), 'weights': None, 'lift': True, 'light': 0.74,
              'stride': ((0, 'bass'), (1, 'chord'), (2, 'fifth'), (3, 'chord'))},
-    (3, 4): {'answer': (1.0, 1.5, 2.0), 'weights': (0.53, 0.35, 0.12), 'lift': True, 'light': 0.74,
+    (3, 4): {'answer': (1.0, 1.5, 2.0), 'weights': (0.53, 0.35, 0.12), 'lift': True, 'light': 0.74, 'pulse': True,
              'stride': ((0, 'bass'), (1, 'chord'), (2, 'chord'), (3, 'fifth'), (4, 'chord'), (5, 'chord'))},
     (6, 8): {'answer': (1.5, 2.0, 2.5), 'weights': None, 'lift': True, 'light': 0.74,
              'stride': ((0, 'bass'), (1.5, 'chord'), (3, 'fifth'), (4.5, 'chord'))},
@@ -869,7 +890,9 @@ LH_METERS = {
 answering re-strike of a chord lasting a bar or more may go, the first place where the right hand leaves room;
 weights: instead one place is drawn (3/4: on 2, the & of 2 or 3) and the hand stays out when the right hand is
 there; lift: the held voicing is cut just before the answer (a real hand lifts; 4/4 keeps the held chord under it,
-as it always did); light: the answer's level against the strike (the 'pah' is light); stride: the stride pattern
+as it always did); pulse: a chord of two bars or more is struck again on every downbeat (the waltz: the bass on 1 of
+every bar, the answer on 2 / 3 - a left hand that rests a whole bar loses the time); light: the answer's level against
+the strike (the 'pah' is light); stride: the stride pattern
 (bass note, its fifth, chords on the other pulses; over one bar or two, repeated over a long chord) - 3/4
 'oom-pah-pah', 6/8 'oom-pah' on the dotted quarters, 5/4 3+2, 7/8 2+2+3. Other meters get a generic one: the
 answer near the middle of the bar, bass on 1, chords on the other beats."""
@@ -898,15 +921,192 @@ def _lh_meter(meter, bpb: float) -> tuple[float, dict]:
                  + tuple((bar + k, 'chord') for k in beats)}
 
 
+FIGURES = {
+    # broken-chord left-hand figures (letters-to-the-morning: the new-age / film-piano hand; the ballad pianist's
+    # tenths; the nocturne / waltz hands): one token per step - the tokens split the bar evenly (8 in 4/4 = 8ths, 6 in
+    # 3/4, 12 = triplet 8ths, 16 = 16ths); a shorter chord plays the figure's first tokens. Tokens index a LADDER of
+    # the chord: 0 = the bass (low, ringing through the chord), 1, 2, 3 ... = the chord tones above it (1 a 4th-6th
+    # up, 3 about the 10th, 5 the second octave), x = the chord's colour tone (7th / 9th / 6th) above step 2, o = the
+    # bass with its octave below, c = steps 1-3 together (a soft chord), R = the chord rolled up from the bass and
+    # held, a+b = together (0+3: a 10th), '-' holds the note before.
+    'flow': '0 1 2 3 4 3 2 1',           # up to the 12th and back: the flowing broken chord
+    'rock': '0 1 3 1 2 1 3 1',           # rocking on the 10th
+    'color': '0 1 2 x 3 x 2 1',          # with the 7th / 9th inside
+    'lilt': '0 - 1 3 2 - 3 1',           # a quarter, then 8ths: the hand rocks instead of running
+    'open': '0 - 1 3 - - - -',           # sparse
+    'quart': '0 - 1 - 3 - 1 -',          # quarter notes: the thinned hand
+    'ring': '0 1 2 3 - - - -',           # up, then the bar rings under a held melody note
+    'half': '0 1 3 - - - - -',           # three notes, then the bar rings: a phrase end breathes
+    'up': '0 1 2 3 4 5 - -',             # climbing into the next section
+    'big': 'o 1 2 3 4 5 4 2',            # the climax: bass octave, two octaves of chord
+    'sweep': 'o 1 2 3 4 5 4 3 2 3 4 5 4 3 2 1',   # the climax peaks: 16ths, two octaves up and down
+    'roll': 'R - - - - - - -',           # a rolled chord, held
+    'tenths': '0+3 - - - 1 - 3 -',       # the ballad hand: a 10th, then the chord answered
+    'walk10': '0+3 - 1+4 - 2+5 - 1+4 -',  # walking 10ths: the bass and its 10th moving up the chord and back
+    'nocturne': '0 2 3 4 3 2 0 2 3 4 3 2',   # 12 triplet 8ths: the nocturne's wide arpeggio
+    'waltz': '0 - c - c -',              # 3/4: bass, chord, chord (oom-pah-pah)
+    'waltz2': '0 - 2 3 c -',             # 3/4: bass, a broken step, the chord
+    'barcarolle': '0 2 3 1 2 3',         # 3/4 rocking
+    'waltz_held': '0 - c - - -',         # 3/4: bass, one chord held - the bar breathes under a long note
+    'waltz_open': '0 - 3 - c -',         # 3/4: bass, its 10th, the chord - the open salon hand
+    'waltz_arp': '0 2 3 4 3 2',          # 3/4: one arpeggio over the bar and back (the flowing middle strain)
+    'waltz_step': '0 - 2 - 1+3 -',       # 3/4: bass, a chord tone, two tones together - the chord walks
+    'waltz_big': 'o - c - c -',          # 3/4: the bass in octaves under the chords (the climax)
+    'still': '0+3 - - - - - - -',        # a 10th, held: the hand rests under a breath
+    # the lo-fi hand (endless lofi-piano): a 7th chord voiced root - 10th - 5th - 7th (x), struck and left to ring
+    'lofi_hold': '0+3+4+x - - - - - - -',     # the chord held through the bar
+    'lofi_push': '0 - - 3+4+x - - - -',       # the root on 1, the chord pushed onto the & of 2
+    'lofi_two': '0+3+4+x - - - 3+x - - -',    # on 1, the upper notes again on 3
+    'lofi_skip': '0 - 3+4+x - - - 3+x -',     # the root, the chord on 2, a light restrike on 4
+    'lofi_rest': '0+3+x - - - - - - -',       # a shell held under the melody's breath
+}
+"""Broken-chord figures for left_hand(style='broken', figure=...) / figure() / broken() - data: add a figure here."""
+
+
+def _ladder(ch: Chord, bass_lo: int = 37) -> tuple[list[int], int | None]:
+    """(bass + the chord tones above it, the colour tone above step 2): the bass in bass_lo..+11 (Db2-C3 by default:
+    lower ones boom under the pedal), the ladder from the triad (or sus) tones from a 4th above the bass up two
+    octaves and a bit."""
+    bass = bass_lo + (ch.bass_pc - bass_lo) % 12
+    triad = {(ch.root + i) % 12 for i in ch.intervals[:3]}
+    colour = [(ch.root + i) % 12 for i in ch.intervals[3:]]
+    up = [p for p in range(bass + 5, bass + 32) if p % 12 in triad]
+    lad = [bass] + up[:7]
+    x = next((p for p in range(lad[2] + 1, lad[2] + 13) if p % 12 == colour[0]), None) if colour else None
+    return lad, x
+
+
+def _fig_tokens(fig: str) -> list[str]:
+    toks = FIGURES.get(fig, fig).split()
+    ok = all(t in ('-', 'R', 'o', 'c') or all(u.isdigit() or u == 'x' for u in t.split('+')) for t in toks)
+    if not toks or not ok:
+        raise ComposeError(f"left-hand figure {fig!r}: a FIGURES name ({', '.join(FIGURES)}) or tokens: ladder steps "
+                           f"0-7, x, o, c, R, a+b, '-'")
+    return toks
+
+
+def figure(ch, fig: str, at: float, span: float, *, vel: float = 41, bar: float = 4.0, cap=67, bass_lo=37,
+           rng=None) -> list:
+    """One broken-chord figure (a FIGURES name or a token string) over the chord `ch` from `at` for `span` beats: the
+    bass carries and rings through the chord, the notes above crest on the figure's top note (x0.8-1.04), each held
+    into the next ones (finger legato), a few % of seeded jitter; nothing above `cap` (an octave down: the left hand
+    stays under the melody). A span shorter than a bar plays the figure's first tokens. -> [Note]."""
+    c = _chord(ch)
+    if c is None:
+        return []
+    toks = _fig_tokens(fig)
+    step = bar / len(toks)
+    n = max(1, int(round(span / step)))
+    toks = toks[:n] if n <= len(toks) else (toks * (n // len(toks) + 1))[:n]
+    cap, bass_lo = note(cap), note(bass_lo)
+    lad, x = _ladder(c, bass_lo)
+    rng = rng or random.Random(0)
+
+    def cp(p):
+        while p > cap:
+            p -= 12
+        return p
+
+    def pitches(t):
+        if t == 'c':
+            return [cp(q) for q in lad[1:4]]
+        return [cp(x if u == 'x' and x is not None else lad[3] if u == 'x' else lad[min(int(u), len(lad) - 1)])
+                for u in t.split('+')]
+    ups = [q for t in toks if t not in ('-', 'R', 'o') for q in pitches(t) if q != lad[0]] or [lad[1]]
+    lo, hi = min(ups), max(ups)
+    idx = [i for i, t in enumerate(toks) if t != '-']
+    out = []
+    for j, i in enumerate(idx):
+        t = toks[i]
+        start = at + i * step
+        dur = ((idx[j + 1] if j + 1 < len(idx) else len(toks)) - i) * step
+        left = span - i * step
+        jit = 1.0 + (rng.random() - 0.5) * 0.08
+        if t == 'R':                                 # a rolled, held chord from the bass
+            for k, p in enumerate(lad[:4]):
+                out.append(Note(start + k * 0.06, max(0.1, left - k * 0.06), cp(p),
+                                _vel(vel * (1.12 if k == 0 else 0.9) * jit)))
+            continue
+        if t == 'o':
+            out += [Note(start, left, lad[0] - 12, _vel(vel * 1.05 * jit)),
+                    Note(start, left, lad[0], _vel(vel * 1.02 * jit))]
+            continue
+        for p in pitches(t):
+            if p == lad[0]:
+                v, d = vel * 1.02, left                # the bass carries and rings through the chord
+            else:
+                v = vel * (0.8 + 0.24 * ((p - lo) / (hi - lo) if hi > lo else 0.5)) * (0.85 if t == 'c' else 1.0)
+                d = dur * 0.9 if t == 'c' else min(max(dur, 1.0), left + 0.5)
+            out.append(Note(start, max(0.05, d), p, _vel(v * jit)))
+    return out
+
+
+def broken(prog, bpm=None, *, figure_: str | dict = 'flow', rest: str | None = 'half', rh=None, vel: float = 41,
+           cap='G4', bass_lo='Db2', swell: float = 0.08, phrase_bars: int = 4, seed=0, length=None,
+           meter=None) -> Clip:
+    """A broken-chord left hand over `prog`: per chord a FIGURES figure (`figure_`: a name, or {name: weight} drawn
+    per bar, never the same twice running), cut at the bar lines (a chord of two bars plays it twice; half a bar its
+    first half); where the right hand (`rh`, a Clip) BREATHES - no onset in the second half of the span - the `rest`
+    figure (a few notes, then the chord rings: the hand holds still with the melody). A gentle swell over every
+    `phrase_bars` bars (+-`swell`). Deterministic by seed."""
+    p = _as_prog(prog, None, 4.0 if length is None else length)
+    bar, _ = _lh_meter(meter, p.beats_per_bar)
+    rng = random.Random(seed_int(seed) + 4447)
+    rh_on = sorted({round(n.start, 3) for n in as_clip(rh)}) if rh is not None else None
+    names = figure_ if isinstance(figure_, dict) else {figure_: 1.0}
+    for nm in list(names) + ([rest] if rest is not None else []):
+        _fig_tokens(nm)
+    out, last = [], None
+    for st, d, c in p:
+        if c is None:
+            continue
+        t = st
+        while t < st + d - _EPS:
+            pos = t % bar
+            pos = 0.0 if pos < _EPS or bar - pos < _EPS else pos
+            span = min(bar - pos, st + d - t)
+            breath = rh_on is not None and not any(t + span / 2 - _EPS <= x < t + span - _EPS for x in rh_on)
+            if breath and rest is not None:
+                fig = rest
+            else:
+                cand = {k: w for k, w in names.items() if k != last} or names
+                r, fig = rng.random() * sum(cand.values()), None
+                for k, w in cand.items():
+                    r -= w
+                    if r < 0:
+                        fig = k
+                        break
+                fig = fig or list(cand)[-1]
+                last = fig
+            out += figure(c, fig, t, span, vel=vel, bar=bar, cap=cap, bass_lo=bass_lo, rng=rng)
+            t += span
+    ph = phrase_bars * bar
+    ns = [n._replace(vel=_vel(n.vel * (1.0 - swell + 2 * swell * math.sin(math.pi * ((n.start % ph) / ph)))))
+          for n in out if n.start < p.length]
+    return Clip._raw(ns, p.length)
+
+
+def _bass_clash(old, new) -> bool:
+    """An anticipated chord's bass rubs against the chord still sounding: a half step from one of its chord tones
+    (root, 3rd, 5th, 7th / 6th) and not one itself (C pushed under G7: against its B)."""
+    tones = {(old.root + i) % 12 for i in old.intervals if i < 12}
+    b = new.bass_pc % 12
+    return b not in tones and any((b - x) % 12 in (1, 11) for x in tones)
+
+
 def left_hand(prog, bpm, *, style: str = 'guide', register=('C3', 'C4'), density: float = 0.5, vel: float = 58,
               roll=(12, 28), anticipate=(), rh=None, pedal_note=None, seed=0, length=None, touch: float = 1.0,
-              meter=None, answers: float | None = None) -> Clip:
-    """The pianist's left hand over `prog` (LH_STYLES): struck on every chord change (an 8th early where `anticipate`
-    lists the change - the right hand's anticipations - or, seeded, a push), held into the next chord, rolled up
-    (`roll` ms range, seeded per chord); on a chord of a bar or more the left hand answers the right hand: with
-    probability `answers` (default density x 0.8) it re-strikes once, softer and shorter, where `rh` (a Clip) has no
-    onset - in the meter's own place (LH_METERS): 4/4 on 3 or the & of 2; 3/4 on 2, the & of 2 or 3 (seeded; the
-    held voicing lifts before it: a light 'oom-pah-pah'); 6/8 on the second dotted quarter; 5/4 on 4 (3+2); 12/8,
+              meter=None, answers: float | None = None, figure: str | dict = 'flow',
+              rest: str | None = 'half') -> Clip:
+    """The pianist's left hand over `prog` (LH_STYLES; 'broken' = broken(prog, figure_=figure, rest=rest, rh=rh, vel=vel
+    x 0.75): broken-chord figures from FIGURES, held still under the right hand's breaths): struck on every chord change (an 8th early where `anticipate`
+    lists the change - the right hand's anticipations - or, seeded, a push; not when its bass would rub a half step
+    against the chord still sounding), held into the next chord, rolled up (`roll` ms range, seeded per chord); on a
+    chord of a bar or more the left hand answers the right hand: with probability `answers` (default density x 0.5) it
+    re-strikes once (3/4: once per bar, a chord of two bars+ struck again on every downbeat), softer and shorter, where
+    `rh` (a Clip) has no onset - in the meter's own place (LH_METERS): 4/4 on 3 or the & of 2; 3/4 on 2, the & of 2 or
+    3 (seeded; the held voicing lifts before it: a light 'oom-pah-pah'); 6/8 on the second dotted quarter; 5/4 on 4
+    (3+2); 12/8,
     7/8, 7/4, 9/8, 2/4 likewise. meter: '6/8', (5, 4), ... (default: from the progression's beats per bar - 3 beats
     read as 3/4, so pass meter='6/8' for compound time; 6 beats read as 12/8). register: where the voicing
     sits (the root of shell / tenths / stride goes below it, E1..D#3). vel: the level (seeded +-5). touch 0..1: the
@@ -920,6 +1120,8 @@ def left_hand(prog, bpm, *, style: str = 'guide', register=('C3', 'C4'), density
     if style not in LH_STYLES:
         raise ComposeError(f"left_hand style must be one of {', '.join(LH_STYLES)}, got {style!r}")
     dens = _num(density, 'left_hand density', 0, 1)
+    if style == 'broken':
+        return broken(p, b, figure_=figure, rest=rest, rh=rh, vel=vel * 0.75, seed=seed, meter=meter)
     lo, hi = note(register[0]), note(register[1])
     rng = random.Random(seed_int(seed))
     items = [(st, d, c) for st, d, c in p if c is not None]
@@ -931,7 +1133,7 @@ def left_hand(prog, bpm, *, style: str = 'guide', register=('C3', 'C4'), density
     trng = random.Random(seed_int(seed) + 313)      # the touch's own dice: the notes are the same with any touch
     bpb = p.beats_per_bar
     bar, mtr = _lh_meter(meter, bpb)
-    p_answer = dens * 0.8 if answers is None else _num(answers, 'left_hand answers', 0, 1)
+    p_answer = dens * 0.5 if answers is None else _num(answers, 'left_hand answers', 0, 1)
 
     def rh_level(t):
         near = [v for s_, v in rh_ns if t - 1.0 <= s_ <= t + 1.0]
@@ -979,13 +1181,35 @@ def left_hand(prog, bpm, *, style: str = 'guide', register=('C3', 'C4'), density
                 v = [root] + jazz_voicings([c], 'rootless', register=(52, 67), voices=3)[0]
             vs.append(v)
             prev = v
+    # the shell hand varies its texture per chord (LH_SHELL, drawn): the root-7 / root-3 shell, the root alone with a
+    # rootless voicing answering it (bass + chord: the waltz's oom-pah), or a rootless voicing (3-7-9 / 7-3-13)
+    ans = list(vs)
+    split = [False] * len(vs)
+    arng = random.Random(seed_int(seed) + 991)
+    if style == 'shell':
+        ups = jazz_voicings(chords, 'rootless', register=(lo, max(hi, lo + 14)), voices=3)
+        krng = random.Random(seed_int(seed) + 977)
+        for i_ in range(len(vs)):
+            r_, acc_ = krng.random() * sum(LH_SHELL.values()), 0.0
+            kind_ = 'shell'
+            for k_, w_ in LH_SHELL.items():
+                acc_ += w_
+                if r_ < acc_:
+                    kind_ = k_
+                    break
+            if kind_ == 'split' and items[i_][1] >= 2.0 - _EPS:
+                vs[i_], ans[i_], split[i_] = vs[i_][:1], ups[i_], True
+            elif kind_ == 'rootless':
+                vs[i_] = ans[i_] = ups[i_]
     ped = note(pedal_note) if pedal_note is not None else None
     out = []
     L = p.length
-    for (st, d, c), v in zip(items, vs):
+    for ci_, ((st, d, c), v) in enumerate(zip(items, vs)):
         t = st
-        if round(st, 3) in antic or (st >= 0.5 and rng.random() < 0.12 * dens and not rh_hits(st - 0.5, 0.1)):
-            t = st - 0.5
+        va = ans[ci_]
+        if round(st, 3) in antic or (st >= 0.5 and rng.random() < 0.25 * dens and not rh_hits(st - 0.5, 0.1)):
+            # pushed an 8th early - unless its bass rubs a half step against the chord still sounding
+            t = st if ci_ and _bass_clash(items[ci_ - 1][2], c) else st - 0.5
         end = st + d - 0.05
         lv0 = vel * (1.0 + (rng.random() - 0.5) * 0.16)
         lv = lv0 * feel(t, t < st - _EPS)
@@ -1016,9 +1240,35 @@ def left_hand(prog, bpm, *, style: str = 'guide', register=('C3', 'C4'), density
         struck = len(out)
         for i, (tt, dd, q) in enumerate(sorted(notes, key=lambda x: x[2])):
             out.append((tt + i * step, max(0.1, dd - i * step), q, lv * (1.0 if i == 0 else 0.9)))
-        # answer the right hand on a chord of a bar or more, in the meter's place
-        if d >= bar - _EPS and rng.random() < p_answer:
+        # answer the right hand on a chord of a bar or more, in the meter's place; a meter with a pulse (3/4: the
+        # waltz) re-strikes a chord of two bars+ on every downbeat - the bass on 1 keeps the time, no silent bar; in
+        # the others the chord is struck again in a later bar where the right hand is sparse (LH_RESTRIKE: fewer
+        # attacks there) and lays out under its lines (blind round 6: a fixed rest every second bar under 2-bar chords)
+        later = [k * bar for k in range(1, int((d + _EPS) // bar)) if k * bar < d - 0.5]
+        downs = [0.0] + (later if mtr.get('pulse') else
+                         [b0 for b0 in later if sum(1 for x in rh_on if st + b0 - 0.25 <= x < st + b0 + bar - 0.25)
+                          < LH_RESTRIKE] if rh is not None else [])
+        for b0 in downs:
+            if b0:
+                cand = st + b0
+                out[struck:] = [(s_, min(d_, max(0.1, cand - s_ - 0.04)) if q_ in v else d_, q_, v_)
+                                for s_, d_, q_, v_ in out[struck:]]
+                struck = len(out)
+                lv_p = lv0 * feel(cand) * 0.92
+                for i, q in enumerate(sorted(v)):
+                    out.append((cand + i * step, max(0.1, end - cand - i * step), q, lv_p * (1.0 if i == 0 else 0.9)))
+            if split[ci_] and d - b0 < bar - _EPS:            # bass + chord on a short chord: the chord on 2
+                cand = st + b0 + 1.0
+                if cand < st + d - 0.5 and not rh_hits(cand):
+                    lv_a = lv0 * feel(cand) * mtr['light']
+                    for i, q in enumerate(sorted(va)):
+                        out.append((cand + i * step * 0.6, min(1.0, st + d - cand - 0.05), q, lv_a))
+                continue
+            if d - b0 < bar - _EPS or (rng.random() >= p_answer and not split[ci_]):
+                continue
             cands = mtr['answer']
+            if abs(bar - 4.0) < _EPS and mtr['weights'] is None and len(cands) > 1 and arng.random() < 0.4:
+                cands = (cands[1], cands[0]) + tuple(cands[2:])   # now and then the & first: a comping push
             if mtr['weights'] is not None:                   # one place drawn: no hunting for a gap
                 r, pick = rng.random() * sum(mtr['weights']), len(cands) - 1
                 for j, w in enumerate(mtr['weights']):
@@ -1028,15 +1278,21 @@ def left_hand(prog, bpm, *, style: str = 'guide', register=('C3', 'C4'), density
                         break
                 cands = (cands[pick],)
             for off in cands:
-                cand = st + off
+                cand = st + b0 + off
                 if cand < st + d - 0.5 and not rh_hits(cand):
                     dd = min(1.0, st + d - cand - 0.05)
                     lv_a = lv0 * feel(cand) * mtr['light']
-                    if mtr['lift']:                          # the hand lifts off the held voicing to re-strike it
+                    if mtr['lift'] and not split[ci_]:       # the hand lifts off the held voicing to re-strike it
                         out[struck:] = [(s_, min(d_, max(0.1, cand - s_ - 0.04)) if q_ in v else d_, q_, v_)
                                         for s_, d_, q_, v_ in out[struck:]]
-                    for i, q in enumerate(sorted(v)):
+                    for i, q in enumerate(sorted(va)):
                         out.append((cand + i * step * 0.6, dd, q, lv_a))
+                    # now and then a comping stab on the & of 2 (or of 4 after an early answer; 4/4: an 8th, light)
+                    stab = st + b0 + (1.5 if cand >= st + b0 + 2.0 - _EPS else 3.5)
+                    if abs(bar - 4.0) < _EPS and abs(cand - stab) >= 0.5 - _EPS and stab < st + d - 0.4 \
+                            and arng.random() < 0.15 * dens:
+                        for i, q in enumerate(sorted(va)):
+                            out.append((stab + i * step * 0.6, 0.4, q, lv_a * 0.9))
                     break
     # the touch shapes the level, `vel` keeps the loudness (normalized in energy: a piano's energy grows ~ velocity^4)
     norm = (len(applied) / sum(f ** 4 for f in applied)) ** 0.25 if applied else 1.0
@@ -1161,12 +1417,16 @@ def pedal(prog, at=0.0, *, dry=(), lift: float = 0.1, end=None, early: float = 0
 # ------------------------------------------------------------------------------------------------ the arranger
 
 FILL_KINDS = ('run', 'chromatic', 'arpeggio', 'answer', 'stabs', 'fourths', 'pentatonic', 'hands', 'octave_run',
-              'tremolo', 'repeated', 'gliss')
-"""What arrange() plays in the melody's gaps: run (a scale run leading into the next note), chromatic (a run-down
-into it), arpeggio (a sweep through the chord), answer (the phrase's tail echoed below), stabs (comping chords),
-fourths (cascading 4ths), pentatonic (a pentatonic run), hands (alternating-hands 16ths), octave_run, tremolo (a
-chord tremolo swell), repeated (a repeated dyad figure), gliss (a fast scale sweep into the next section: only in the
-last gap before the clip end)."""
+              'tremolo', 'repeated', 'gliss', 'approach', 'enclosure')
+"""What arrange() plays in the melody's gaps: run (a scale run leading into the next note, up or down, its length
+and grid - 8ths, triplets, 16ths, sextuplets - drawn), chromatic (a run-down into it), arpeggio (a sweep through the
+chord), answer (the phrase's tail echoed below), stabs (comping chords), fourths (cascading 4ths), pentatonic (a
+pentatonic run), hands (alternating-hands 16ths), octave_run, tremolo (a chord tremolo swell), repeated (a repeated
+dyad figure), gliss (a fast scale sweep into the next section: only in the last gap before the clip end), approach (a
+single note a half / whole step from the next note, an 8th or a triplet before it), enclosure (the step above, the
+half step below, then the next note). Most phrase ends get NO fill (the held note or the rest is the answer): a fill
+needs three plain phrase ends before it (the style's fill rate is low: a breath is silence), and never the same fill
+shape (its place in the bar, notes, rate) twice within 8 bars."""
 
 ORNAMENTS = ('trill', 'tremolo', 'restrike', 'turn', 'mordent', 'inverted_mordent', 'roll', 'crush', 'blues_crush',
              'slip', 'repeated', 'shake')
@@ -1180,32 +1440,34 @@ STYLES = {
                      ornaments={'trill': 1.4, 'turn': 1.0, 'mordent': 0.8, 'inverted_mordent': 0.8, 'restrike': 1.5,
                                 'roll': 0.8, 'crush': 1.0, 'tremolo': 0.7, 'repeated': 0.5, 'blues_crush': 0.5},
                      fills={'run': 2.0, 'answer': 2.0, 'stabs': 1.5, 'fourths': 1.0, 'arpeggio': 1.2,
-                            'chromatic': 0.8, 'pentatonic': 1.0, 'hands': 0.5, 'repeated': 0.3},
-                     roll=(8, 20), anticipate=0.25, delay=0.08, voices=3, inner=0.8, fill=0.7, embellish=0.55,
-                     weak=1.0, quick=0.12, lh='guide', fast_every=16, spice_every=2),
+                            'chromatic': 0.8, 'pentatonic': 1.0, 'hands': 0.5, 'repeated': 0.3, 'approach': 1.5,
+                            'enclosure': 1.2},
+                     roll=(8, 20), anticipate=0.25, delay=0.08, voices=3, inner=0.8, fill=0.3, embellish=0.3,
+                     weak=1.0, quick=0.05, lh='guide', fast_every=16, spice_every=2),
     'ballad': dict(devices={'drop2': 3.0, 'close': 2.0, 'ust': 1.5, 'guide': 1.0, 'sixths': 1.0, 'quartal': 1.0},
                    ornaments={'trill': 1.4, 'roll': 2.0, 'restrike': 2.0, 'turn': 1.0, 'tremolo': 1.2, 'mordent': 0.5},
                    fills={'arpeggio': 3.0, 'answer': 2.0, 'run': 1.0, 'fourths': 0.6, 'pentatonic': 0.6,
-                          'tremolo': 0.6},
-                   roll=(15, 25), anticipate=0.1, delay=0.05, voices=3, inner=0.78, fill=0.6, embellish=0.6,
-                   weak=0.9, quick=0.08, lh='rootless', fast_every=10, spice_every=2),
+                          'tremolo': 0.6, 'approach': 1.2, 'enclosure': 1.0},
+                   roll=(15, 25), anticipate=0.1, delay=0.05, voices=3, inner=0.78, fill=0.3, embellish=0.35,
+                   weak=0.9, quick=0.04, lh='rootless', fast_every=10, spice_every=2),
     'bar': dict(devices={'octave': 3.0, 'drop2': 1.5, 'locked': 1.0, 'thirds': 1.5, 'guide': 1.0, 'sixths': 1.0},
                 ornaments={'crush': 1.5, 'blues_crush': 2.0, 'slip': 1.5, 'repeated': 1.2, 'tremolo': 1.5, 'shake': 1.0,
                            'trill': 1.0, 'mordent': 1.0, 'turn': 0.6},
                 fills={'chromatic': 2.0, 'hands': 1.5, 'run': 1.5, 'stabs': 2.0, 'octave_run': 1.0, 'fourths': 0.8,
-                       'repeated': 1.0, 'tremolo': 0.6, 'answer': 1.0},
-                roll=(6, 14), anticipate=0.35, delay=0.1, voices=3, inner=0.8, fill=0.75, embellish=0.6, weak=1.0,
-                quick=0.3, lh='guide', fast_every=16, spice_every=1.5),
+                       'repeated': 1.0, 'tremolo': 0.6, 'answer': 1.0, 'approach': 1.2, 'enclosure': 1.0},
+                roll=(6, 14), anticipate=0.35, delay=0.1, voices=3, inner=0.8, fill=0.4, embellish=0.35, weak=1.0,
+                quick=0.15, lh='guide', fast_every=16, spice_every=1.5),
     'lush': dict(devices={'drop2': 3.0, 'ust': 2.0, 'close': 2.0, 'quartal': 1.5, 'octave': 0.5},
                  ornaments={'roll': 2.0, 'tremolo': 2.0, 'trill': 1.5, 'restrike': 2.0, 'turn': 0.7},
-                 fills={'arpeggio': 3.0, 'answer': 1.0, 'fourths': 1.0, 'run': 1.0, 'tremolo': 1.0},
-                 roll=(15, 25), anticipate=0.15, delay=0.05, voices=4, inner=0.78, fill=0.7, embellish=0.7,
-                 weak=1.0, quick=0.08, lh='rootless', fast_every=12, spice_every=2),
+                 fills={'arpeggio': 3.0, 'answer': 1.0, 'fourths': 1.0, 'run': 1.0, 'tremolo': 1.0, 'approach': 1.0,
+                        'enclosure': 0.8},
+                 roll=(15, 25), anticipate=0.15, delay=0.05, voices=4, inner=0.78, fill=0.35, embellish=0.4,
+                 weak=1.0, quick=0.04, lh='rootless', fast_every=12, spice_every=2),
     'sparse': dict(devices={'guide': 3.0, 'single': 3.0, 'thirds': 1.0, 'quartal': 1.0},
                    ornaments={'mordent': 1.0, 'crush': 1.0, 'restrike': 1.0, 'turn': 0.5, 'trill': 0.5},
-                   fills={'answer': 3.0, 'stabs': 1.0, 'run': 0.5, 'pentatonic': 0.5},
-                   roll=(8, 16), anticipate=0.2, delay=0.1, voices=2, inner=0.8, fill=0.4, embellish=0.3, weak=0.4,
-                   quick=0.12, lh='guide', fast_every=0, spice_every=3),
+                   fills={'answer': 3.0, 'stabs': 1.0, 'run': 0.5, 'pentatonic': 0.5, 'approach': 1.0},
+                   roll=(8, 16), anticipate=0.2, delay=0.1, voices=2, inner=0.8, fill=0.2, embellish=0.2, weak=0.4,
+                   quick=0.05, lh='guide', fast_every=0, spice_every=3),
 }
 """arrange() style presets: which voicing devices (weights), ornaments on long notes, gap fills, the chord roll
 range (ms), anticipation / delayed-entrance probabilities, voices under the melody, the inner-voice level (x the
@@ -1213,16 +1475,22 @@ melody velocity: ~10-15 velocity under it), fill / embellish probabilities (scal
 short off-beat chord tones get a voice too), quick (the chance of a quick ornament - blues crush, crush, slip note,
 mordent, turn - on a shorter chord tone, at most one per phrase), the default left hand and the ornament budget:
 fast_every (bars per FAST alternation: straight / bar 16, lush 12, ballad 10, sparse 0 = none) and spice_every
-(bars between two SPICE ornaments: 1.5-3)."""
+(bars between two SPICE ornaments: 1.5-3). The fill / embellish / quick rates are low on purpose (user 2026-10-09,
+endless r6: "sounds like an endless monotone line of notes"): a phrase's rest is mostly silence or the held note
+ringing, an ornament sits on a held note now and then - decoration is the exception."""
 
-FAST = ('trill', 'tremolo', 'shake', 'repeated', 'hands')
-"""The fast two-key alternations (ornaments and fills of these names: trill, tremolo, shake, repeated notes,
-alternating hands). User feedback 2026-09-30 (perry-street-rain v3): "etwas zu viele von diesen schnellen
-Zwei-Tasten-Wechseln" - they are rare spice, not a habit: arrange() budgets them (fast_every / same_every)."""
+FAST = ('trill', 'tremolo', 'shake', 'repeated', 'hands', 'run', 'chromatic', 'pentatonic', 'octave_run', 'fourths',
+        'arpeggio', 'gliss')
+"""The fast figures (ornaments and fills of these names): the two-key alternations (trill, tremolo, shake, repeated
+notes, alternating hands) and the runs / sweeps (scale, chromatic, pentatonic and octave runs, cascading 4ths, the
+arpeggio sweep, the glissando). User feedback 2026-09-30 (perry-street-rain v3): "etwas zu viele von diesen schnellen
+Zwei-Tasten-Wechseln"; blind test round 3: trills / runs / sweeps piled up, in loud bars and the intro - they are rare
+spice, not a habit: arrange() budgets them (fast_every / same_every, structural moments only, never where the melody
+plays 100+) and puts an answer / stabs / approach in the gap instead."""
 
 SPICE = ('turn', 'mordent', 'inverted_mordent', 'crush', 'blues_crush', 'slip', 'roll')
-"""The other ornaments: a separate, larger budget (spice_every). 'restrike' (the voicing re-struck under a held
-melody note) is not an ornament figure and is not budgeted."""
+"""The other ornaments: a separate, larger budget (spice_every; one kind at most once per 8 bars). 'restrike' (the
+voicing re-struck under a held melody note) is not an ornament figure and is not budgeted."""
 
 
 def _fast_kind(name: str) -> str:
@@ -1236,14 +1504,24 @@ class Memory:
     two tremolos never land within same_every bars, never in neighbouring phrases. played(at, kind) books a move
     placed by hand (a pianist.trill() in the intro); save(at) keeps the fast budget free for a later moment (the
     climax: the calls before it keep their fast figures fast_every bars away from it). .fast / .spice: [(beat,
-    kind, phrase number)], .saved: [beat]."""
+    kind, phrase number)], .saved: [beat]. once=True: every FAST figure (a run, a sweep, a trill ...) at most once in
+    the song - a lick heard twice in one piece is a lick (blind round 4); avoid: kinds the piece before played (a
+    set's memory, Memory.after(previous)) are drawn a tenth as often."""
 
-    def __init__(self):
+    def __init__(self, once: bool = False, avoid=()):
         self.clock = 0.0
         self.phrases = 0
         self.fast: list = []
         self.spice: list = []
         self.saved: list = []
+        self.fills: list = []           # [(beat, shape)]: no fill shape twice within 8 bars, song-wide
+        self.once = bool(once)
+        self.avoid = set(avoid)
+
+    @staticmethod
+    def after(previous: 'Memory | None', once: bool = True) -> 'Memory':
+        """A Memory for the next piece of a set: the FAST kinds the previous one played are avoided."""
+        return Memory(once=once, avoid={k for _, k, _ in previous.fast} if previous is not None else ())
 
     def save(self, at) -> 'Memory':
         """Save the fast budget for beat `at` (a climax, the final chord): arrange() calls whose clip does not
@@ -1282,6 +1560,8 @@ def _budget(events, memory, at, L, nphr, bpb, fast_every, spice_every, same_ever
     fe = _num(fast_every, 'pianist fast_every (bars)', 0)
     sp = _num(spice_every, 'pianist spice_every (bars)', 0)
     se = _num(same_every, 'pianist same_every (bars)', 0)
+    if memory is not None and getattr(memory, 'once', False):
+        se = 1e6                                    # a FAST kind once per song
     if memory is not None and not isinstance(memory, Memory):
         raise ComposeError(f"pianist memory must be a pianist.Memory(), got {memory!r}")
     base = _pos(at) if at is not None else (memory.clock if memory is not None else 0.0)
@@ -1308,10 +1588,12 @@ def _spice(events, bud: dict, memory, bpb) -> None:
     nphr = bud.pop('_nphr')
     sp = bud['spice_every']
     booked = list(memory.spice) if memory is not None else []
-    bud_ = Budget({'spice': sp * bpb}, events=[(t, 'spice', k_, q) for t, k_, q in booked])
+    # the same ornament (a turn, a mordent) never twice within 8 bars: a habit, not a decoration
+    bud_ = Budget({'spice': sp * bpb}, same_every=8 * bpb, same=('spice',),
+                  events=[(t, 'spice', k_, q) for t, k_, q in booked])
     spice = [e for e in events if e['kind'] in SPICE and e.get('keep') is None]
     for e in spice:
-        e['cls'] = 'spice'
+        e['cls'], e['name'] = 'spice', e['kind']
     for e in bud_.keep(spice, base, slots=False):
         booked.append((base + e['t'], e['kind'], ph0 + e['phrase']))
     fast = bud.pop('_booked')
@@ -1405,15 +1687,18 @@ def arrange(melody, prog, *, bpm, key=None, style: str = 'straight', density: fl
             climax: bool = False, lead_in: bool = False, section_end: bool = True, inner: float | None = None,
             lh_vel: float = 58, lh_register=('C3', 'C4'), ceiling='C7', fast_every: float | None = None,
             spice_every: float | None = None, same_every: float = 32.0, memory: Memory | None = None,
-            at=None, meter=None, lh_answers: float | None = None, doubles: float | None = None) -> Arrangement:
+            at=None, meter=None, lh_answers: float | None = None, doubles: float | None = None,
+            written: bool = False, lh_figure: str | dict = 'tenths') -> Arrangement:
     """A pianist's arrangement of a melody over changes -> Arrangement (.rh, .lh, .pedal(prog, at), .moves).
 
     The melody stays on top; per phrase (split at rests of an 8th or more; a line longer than ~6 beats changes
     device after a long note or at a bar line) the right hand picks a voicing DEVICE
     (seeded from the style's weights, never the same one twice running; climax=True favours octaves / locked
-    hands / drop 2) and harmonizes: chord tones on strong beats and long notes get the full device, short weak
-    chord tones a guide tone at most, non-chord (passing) notes stay single (thirds / sixths move in parallel with
-    the line); long notes (1.5+ beats) are embellished with an ORNAMENT (trill, tremolo, restrike, turn, mordent,
+    hands / drop 2) and harmonizes: chord tones on beat 1 / 3, held notes and the phrase's goal get the full device,
+    short weak chord tones a guide tone at most, non-chord (passing) notes stay single (thirds / sixths move in
+    parallel with the line on the arrivals and about half the notes between; a chromatic note - outside the chord's
+    own scale - is never harmonized); long notes (1.5+ beats) are embellished with an ORNAMENT now and then (trill,
+    tremolo, restrike, turn, mordent,
     roll, crush / blues crush, slip note, repeated notes, shake - at most one per phrase, two when dense) and now and
     then a shorter chord tone gets a quick one (blues crush on a major 3rd, crush, slip note, mordent, turn: the
     style's `quick` rate); gaps of a
@@ -1425,7 +1710,7 @@ def arrange(melody, prog, *, bpm, key=None, style: str = 'straight', density: fl
     voices x inner (~10-15 under). lh= a LH_STYLES left hand (the style's default with lh=True; None = none): then
     the right hand stays above `floor` (default C4 with a left hand, G3 without); meter= ('6/8', ...; default from
     the progression's beats per bar, 3 = 3/4) and lh_answers= (the chance of an answering re-strike per chord of a
-    bar or more; default density x 0.8) go to left_hand().
+    bar or more; default density x 0.5: the held chord often just rings) go to left_hand(); lh_figure= the FIGURES figure (or {name: weight}) of lh='broken'.
 
     Ornament budget (user feedback 2026-09-30: too many fast two-key alternations): the FAST alternations (trill,
     tremolo, shake, repeated notes, alternating hands - ornaments and fills) are rare spice: at most one per
@@ -1444,7 +1729,13 @@ def arrange(melody, prog, *, bpm, key=None, style: str = 'straight', density: fl
     embellished and filled; devices= / ornaments= / fills= override the style's weights; voices, roll (ms range),
     anticipate, delay, fill, embellish, quick, inner, fast_every, spice_every override single settings.
     doubles= a velocity factor for the notes struck under the melody's top note (top_leads(): the octave / sixth /
-    third doubles softer, so the melody leads; 0.75 for a hook in octaves). Deterministic by seed."""
+    third doubles softer, so the melody leads; 0.75 for a hook in octaves). written=True: a written line played as
+    written - no anticipations, delayed entrances, fills or quick ornaments (anticipate / delay / fill / quick 0, no
+    lead-in or section-end fill); only the voicings and the ornaments on its long notes (embellish). Deterministic by
+    seed."""
+    if written:
+        anticipate = delay = fill = quick = 0.0
+        lead_in, section_end = False, False
     if style not in STYLES:
         raise ComposeError(f"pianist style must be one of {', '.join(STYLES)}, got {style!r}")
     S = dict(STYLES[style])
@@ -1474,6 +1765,10 @@ def arrange(melody, prog, *, bpm, key=None, style: str = 'straight', density: fl
     dev_w = dict(devices if devices is not None else S['devices'])
     orn_w = dict(ornaments if ornaments is not None else S['ornaments'])
     fill_w = dict(fills if fills is not None else S['fills'])
+    for k_ in getattr(memory, 'avoid', ()):          # what the piece before played (a set): rarely again
+        for w_ in (orn_w, fill_w):
+            if k_ in w_:
+                w_[k_] *= 0.1
     for name in dev_w:
         if name not in DEVICES:
             raise ComposeError(f"unknown voicing device {name!r}; use {', '.join(DEVICES)}")
@@ -1564,13 +1859,18 @@ def arrange(melody, prog, *, bpm, key=None, style: str = 'straight', density: fl
         last_dev = dev
         moves.append((ph[0][0], ph[-1][0] + ph[-1][1], 'device', dev))
         goal = max(ph, key=lambda x: (x[2], x[1]))
+        pv = sorted(x[3] for x in ph)
+        acc_v = pv[int(0.85 * (len(pv) - 1))] + 1 if len(pv) >= 4 else 999      # the phrase's accents
         n_orn = n_quick = 0
         max_orn = 2 if dens > 0.7 and style in ('ballad', 'lush') else 1
-        # the ornament goes on the phrase's best long note (the longest; ties: the later)
-        longs = [x for x in ph if x[1] >= 1.5 - _EPS and x[1] * 60.0 / b >= 0.7]
+        # the ornament goes on the phrase's best long note (the longest; ties: the later) - never the clip's last note,
+        # which rings plain (blind round 6: a turn into a section's last note in every piece read as a shared gesture)
+        longs = [x for x in ph if x[1] >= 1.5 - _EPS and x[1] * 60.0 / b >= 0.7 and x is not mel[-1]]
         orn_targets = []
         for x in sorted(longs, key=lambda x: (-x[1], -x[0])):
-            if len(orn_targets) < max_orn and rng.random() < p_emb:
+            # (not a note held across a chord change into a chord it clashes with: a tremolo / trill would ring
+            # its old voicing over the new chord)
+            if len(orn_targets) < max_orn and rng.random() < p_emb and _rings_clear(x, chord_at):
                 orn_targets.append(id(x))
         for idx, n in enumerate(ph):
             st, du, mp, mv, ht = n
@@ -1580,17 +1880,26 @@ def arrange(melody, prog, *, bpm, key=None, style: str = 'straight', density: fl
                 continue
             ct = mp % 12 in _colour(ch)
             on_beat = abs(st - round(st)) < 1e-6
-            strong = on_beat or du >= 1.0 - _EPS or n is goal
-            if dev in ('thirds', 'sixths') and du >= 0.25 - _EPS:
-                d_ = dev
-            elif not ct:
+            # strong: beat 1 / 3 (3/4: 1 / 3), a held note, the phrase's goal - the head is a melody with voicings at
+            # its arrivals, not a block chord under every note (r6: "a monotone line")
+            strong = (on_beat and int(round(st % bpb)) % 2 == 0) or du >= 1.5 - _EPS or n is goal
+            if not ct and mp % 12 not in _scale_pcs(ch):
+                d_ = 'single'                  # a chromatic note (outside the chord's own scale) is never harmonized
+            elif dev in ('thirds', 'sixths') and du >= 0.25 - _EPS and (strong or rng.random() < 0.25 + 0.4 * dens):
+                d_ = dev                       # parallel 3rds / 6ths: the arrivals, about half the notes between
+            elif not ct or dev in ('thirds', 'sixths'):
                 d_ = 'single'
             elif strong:
                 d_ = dev if rng.random() < 0.55 + 0.45 * dens else 'guide'
             else:
                 r_ = rng.random() / S['weak'] if dev != 'single' else 1.0
-                d_ = 'guide' if r_ < 0.25 + 0.45 * dens else 'thirds' if r_ < 0.35 + 0.55 * dens else 'single'
+                d_ = 'guide' if r_ < 0.15 + 0.35 * dens else 'thirds' if r_ < 0.2 + 0.4 * dens else 'single'
             if d_ in ('thirds', 'sixths') and not ct and du < 0.5 - _EPS and rng.random() < 0.5:
+                d_ = 'single'
+            # a fast line is single notes: inside a run (an 8th or less to both neighbours) only the phrase's goal,
+            # its end and an accent get a voice under them
+            if du <= 0.5 + _EPS and 0 < idx < len(ph) - 1 and st - ph[idx - 1][0] <= 0.5 + _EPS \
+                    and ph[idx + 1][0] - st <= 0.5 + _EPS and n is not goal and mv < acc_v:
                 d_ = 'single'
             try:
                 vc = voicing(ch, mp, d_, floor=fl, voices=1 if d_ == 'guide' and not strong else nv, key=k)
@@ -1606,8 +1915,8 @@ def arrange(melody, prog, *, bpm, key=None, style: str = 'straight', density: fl
             plain = chord_notes + [(st, du, mp, mv)]
             if id(n) in orn_targets:
                 kind = _ornament(rng, orn_w, ch, mp, under, du, p_end, b)
-                if kind is not None:
-                    fig, dry_w = _ornament_notes(kind, rng, ch, k, mp, mv, under, st, du, b, inn, fl)
+                fig, dry_w = _ornament_notes(kind, rng, ch, k, mp, mv, under, st, du, b, inn, fl) if kind else ([], 0)
+                if kind is not None and (not fig or max(x[2] for x in fig) <= max(top_lim, mp)):   # (not over the top)
                     # structural moments score high: the last note of the clip, a phrase end, the top of the line
                     score = (1.0 + 1.5 * (n is arrival) + 1.0 * p_end + 1.0 * height(mp) + 0.5 * min(du, 4.0) / 4.0
                              + 0.5 * climax)
@@ -1617,8 +1926,8 @@ def arrange(melody, prog, *, bpm, key=None, style: str = 'straight', density: fl
                     continue
             if id(n) not in orn_targets and n_quick < 1 and du >= 0.5 - _EPS and ct and rng.random() < p_quick:
                 kind = _quick(rng, orn_w, ch, mp, under, du, strong)
-                if kind is not None:
-                    fig, dry_w = _ornament_notes(kind, rng, ch, k, mp, mv, under, st, du, b, inn, fl)
+                fig, dry_w = _ornament_notes(kind, rng, ch, k, mp, mv, under, st, du, b, inn, fl) if kind else ([], 0)
+                if kind is not None and (not fig or max(x[2] for x in fig) <= max(top_lim, mp)):   # (not over the top)
                     events.append(dict(what='ornament', kind=kind, t=st, end=st + du, fig=fig, dry=dry_w,
                                        phrase=pi, score=0.3 + 0.5 * height(mp), ctx=ctx, plain=plain,
                                        under=bool(under)))
@@ -1639,25 +1948,41 @@ def arrange(melody, prog, *, bpm, key=None, style: str = 'straight', density: fl
 
     def fill_fig(kind, r, g0, g1, before, after):
         fig = _fill_notes(kind, r, p, k, g0, g1, before, after, b, fl, top_lim, ref_v, inn, L)
-        return [x for x in fig or [] if x[0] >= g0 - _EPS and x[0] + x[1] <= g1 + 0.02]
+        return _unclash([x for x in fig or [] if x[0] >= g0 - _EPS and x[0] + x[1] <= g1 + 0.02], chord_at, bpb)
+    base_at = _pos(at) if at is not None else (memory.clock if memory is not None else 0.0)
+    shapes = memory.fills if memory is not None else []
+    since = 3                                       # phrase ends since the last fill (a fill wants three plain ones)
     for g0, g1, before, after, gph in gaps:
         g = g1 - g0
-        if g < 0.75 - _EPS or rng.random() >= p_fill:
+        if g < 0.75 - _EPS or rng.random() >= p_fill or (since < 3 and after is not None):
+            since += 1
             continue
         fw = dict(fill_w)
         if after is None:
-            fw = {'gliss': 3.0, 'run': 1.0, 'arpeggio': 1.0} if section_end else fw
+            fw = {k_: w_ * (0.1 if k_ in getattr(memory, 'avoid', ()) else 1.0)
+                  for k_, w_ in {'gliss': 3.0, 'run': 1.0, 'arpeggio': 1.0}.items()} if section_end else fw
         else:
             fw.pop('gliss', None)
         if before is None:
             for x in ('answer', 'stabs'):
                 fw.pop(x, None)
-        kind = _pick(rng, fw)
-        if kind is None:
-            continue
-        fig = fill_fig(kind, rng, g0, g1, before, after)
+        fig, shape = None, None
+        for _ in range(3):                          # another kind when this one's shape was heard in the last 8 bars
+            kind = _pick(rng, fw)
+            if kind is None:
+                break
+            fig = fill_fig(kind, rng, g0, g1, before, after)
+            if fig:
+                shape = _fill_shape(fig, bpb)
+                if not any(s_ == shape and abs(base_at + fig[0][0] - t_) < 8 * bpb for t_, s_ in shapes):
+                    break
+            fw = {x: w for x, w in fw.items() if x != kind}
+            fig = None
         if not fig:
+            since += 1
             continue
+        since = 0
+        shapes.append((base_at + min(x[0] for x in fig), shape))
         a_, e_ = min(x[0] for x in fig), max(x[0] + x[1] for x in fig)
         events.append(dict(what='fill', kind=kind, t=a_, end=e_, fig=fig, phrase=gph, fw=fw,
                            gap=(g0, g1, before, after), score=0.8 + 1.5 * (after is None) + 0.5 * climax
@@ -1666,6 +1991,9 @@ def arrange(melody, prog, *, bpm, key=None, style: str = 'straight', density: fl
     # ---- the ornament budget: fast two-key alternations are rare spice, the other ornaments share a larger budget
     srng = random.Random(f"{seed_int(seed)}:budget")      # substitutes: the main stream (devices, fills) stays put
     side_groups: list[list[tuple]] = []
+    for e in events:                                # no fast figure where the melody plays loud: it would bang
+        if e['kind'] in FAST and max((n[3] for n in mel if e['t'] - 1.0 <= n[0] <= e['end'] + 1.0), default=0) >= 100:
+            e['score'] = -1.0
     budget = _budget(events, memory, at, L, len(phr), bpb, fast_every if fast_every is not None else S['fast_every'],
                      spice_every if spice_every is not None else S['spice_every'], same_every)
     for e in sorted((e for e in events if e.get('keep') is False and e['kind'] in FAST), key=lambda e: e['t']):
@@ -1731,7 +2059,7 @@ def arrange(melody, prog, *, bpm, key=None, style: str = 'straight', density: fl
         antic = [n[4] for n in mel if n[4] - n[0] > 0.25]
         lh_clip = left_hand(p, b, style=lh, register=lh_register, density=dens, vel=lh_vel,
                             anticipate=antic, rh=rh_clip, seed=seed_int(seed) + 7, length=L, meter=meter,
-                            answers=lh_answers)
+                            answers=lh_answers, figure=lh_figure)
     mel_clip = Clip._raw([Note(n[0], n[1], n[2], n[3]) for n in mel], L)
     if doubles is not None:
         rh_clip = top_leads(rh_clip, doubles)
@@ -1740,6 +2068,31 @@ def arrange(melody, prog, *, bpm, key=None, style: str = 'straight', density: fl
     arr.budget = budget
     arr.prog, arr.at = prog, at
     return arr
+
+
+def _unclash(fig, chord_at, bpb: float) -> list:
+    """A fill's notes that land on a strong beat (1 / 3, 3/4: 1) or ring past half a beat and break theory.clash() over
+    the chord there (a natural 11 over a dominant ...) move a half / whole step onto a tone that fits (blind round 4:
+    fills striking avoid notes on the downbeat)."""
+    out = []
+    for st, du, q, v in fig:
+        pos = st % bpb
+        strong = du > 0.15 and ((abs(pos - round(pos)) < 0.05 and int(round(pos)) % (3 if abs(bpb - 3) < _EPS else 2)
+                                 == 0) or du > 0.5 + _EPS)
+        ch = chord_at(st + 1e-3)
+        if strong and ch is not None and clash(ch, q):
+            q = next((q + d for d in (-1, 1, -2, 2) if not clash(ch, q + d)
+                      and (q + d - ch.root) % 12 in {x % 12 for x in ch.intervals}), q)
+        out.append((st, du, q, v))
+    return out
+
+
+def _fill_shape(fig, bpb: float) -> tuple:
+    """A fill's shape: where it starts in the bar, how many attacks, its rate (what a listener hears as 'the same
+    fill again')."""
+    on = sorted({round(x[0], 3) for x in fig})
+    rate = (on[-1] - on[0]) / (len(on) - 1) if len(on) > 1 else 0.0
+    return (round((on[0] % bpb) * 12), len(on), round(rate * 24))
 
 
 def _ornament(rng, weights, ch, mp, under, du, phrase_end, b) -> str | None:
@@ -1831,7 +2184,23 @@ def _ornament_notes(kind, rng, ch, k, mp, mv, under, st, du, b, inn, fl):
 
 
 def _fill_notes(kind, rng, p, k, g0, g1, before, after, b, fl, top_lim, ref_v, inn, L):
-    """The notes of one gap fill between g0 and g1 (beats)."""
+    """The notes of one gap fill between g0 and g1 (beats): a figure leading into the next melody note rises to
+    within 12 velocity of it (a line, not a soft run and a loud landing)."""
+    fig = _fill_raw(kind, rng, p, k, g0, g1, before, after, b, fl, top_lim, ref_v, inn, L)
+    if not fig or not after or kind in ('answer', 'stabs', 'tremolo', 'repeated'):
+        return fig
+    fig = [tuple(x) for x in fig]
+    goal = after[0][3] - 12
+    last = max(fig, key=lambda x: (x[0], x[2]))
+    lift = goal - last[3]
+    if lift <= 0:
+        return fig
+    a0, a1 = min(x[0] for x in fig), last[0]
+    return [(s, d, q, v + lift * ((s - a0) / (a1 - a0) if a1 - a0 > _EPS else 1.0)) for s, d, q, v in fig]
+
+
+def _fill_raw(kind, rng, p, k, g0, g1, before, after, b, fl, top_lim, ref_v, inn, L):
+    """The notes of one gap fill between g0 and g1 (beats), as the figure plays them."""
     sd = rng.randrange(1 << 30)
     g = g1 - g0
     nxt = after[0][2] if after else None
@@ -1844,8 +2213,24 @@ def _fill_notes(kind, rng, p, k, g0, g1, before, after, b, fl, top_lim, ref_v, i
         return []
     # the fill leads into the next note: it ends a little before it
     margin = 0.03
+    if kind in ('approach', 'enclosure'):
+        if nxt is None:
+            return []
+        dd = rng.choice((0.5, 1.0 / 3.0, 0.25))
+        pcs = _scale_pcs(ch_end, k)
+        if kind == 'approach':
+            q = rng.choice((nxt - 1, nxt + 1, _step(nxt, pcs, 1), _step(nxt, pcs, -1)))
+            notes = [q]
+        else:
+            notes = [_step(nxt, pcs, 1), nxt - 1] if rng.random() < 0.6 else [nxt - 1, _step(nxt, pcs, 1)]
+        a = g1 - margin - dd * len(notes)
+        if a < g0 - _EPS:
+            return []
+        return [(a + i * dd, dd * 0.92, q, fv * (0.82 + 0.06 * i)) for i, q in enumerate(notes) if fl <= q <= top_lim]
     if kind in ('run', 'chromatic', 'pentatonic', 'octave_run', 'gliss'):
         ln = min(g - 0.25 if g >= 1.25 else g, 2.0)
+        if kind != 'gliss':
+            ln *= rng.uniform(0.5, 1.0)
         a = g1 - ln
         a = max(g0, math.ceil(a * 4 - _EPS) / 4)
         ln = g1 - margin - a
@@ -1858,8 +2243,11 @@ def _fill_notes(kind, rng, p, k, g0, g1, before, after, b, fl, top_lim, ref_v, i
             return [x for x in c if x.pitch >= fl]
         if nxt is None:
             nxt = ref
-        n_notes = max(3, int(round(ln / (0.25 if ln >= 1.0 else 1.0 / 6.0))))
+        grids = [x for x in (0.5, 1.0 / 3.0, 0.25, 1.0 / 6.0) if ln / x >= 2.5 and _sec(x, b) >= 1.0 / 14.0]
+        n_notes = max(3, int(round(ln / (rng.choice(grids) if grids else 0.25))))
         down = prv is not None and prv > nxt + 2 or (prv is None and rng.random() < 0.5)
+        if rng.random() < 0.3:
+            down = not down
         if kind == 'chromatic':
             end = nxt + 1 if down else nxt - 1
             start = end + (n_notes - 1) * (1 if down else -1)
@@ -1889,6 +2277,8 @@ def _fill_notes(kind, rng, p, k, g0, g1, before, after, b, fl, top_lim, ref_v, i
             return []
         hi = min(top_lim, max(ref, nxt or ref) + rng.choice((3, 5, 8)))
         lo_ = max(fl, hi - rng.choice((17, 19, 24)))
+        if hi - lo_ < 7:                                 # a line at the floor: no room for a sweep under it
+            return []
         c = sweep(ch, ln, b, low=lo_, high=hi, direction=rng.choice(('up', 'up', 'down')), ring=False,
                   vel=(fv * 0.7, fv), seed=sd, at=a)
         return [(x.start, min(x.dur, g1 - margin - x.start), x.pitch, x.vel) for x in c if x.start < g1 - margin]

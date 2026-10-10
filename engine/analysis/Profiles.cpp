@@ -332,6 +332,32 @@ std::vector<AnalysisProfile> makeProfiles() {
     p.tailMinDb = -36.0;     // plates and rooms of 1.2-2 s
     v.push_back(p);
 
+    // EDM (house / techno / big room / future bass / melodic house; recipes/edm.md): the club master - the
+    // four-on-the-floor kick and the sub bass own 40-70 Hz (between pop and synthwave: the bass-heavy mastering
+    // curves), the low mids carved for the kick / bass split, a bright controlled top, wide, LOUD (the drops -9..-6 LUFS
+    // at -1 dBTP: PLR 5-8; the whole song with its breakdowns -10..-6 integrated) and flat over the drops (LRA ~4-8;
+    // the breakdowns are the quiet part).
+    AnalysisProfile e = p;
+    e.name = "edm";
+    e.description = "EDM / house / techno / future bass: kick + sub own 40-70 Hz, carved low mids, bright controlled top, "
+                    "wide, loud -10..-6 LUFS (drops -9..-6)";
+    e.psdOffsetDb = {{25, -1.0},   {31.5, 2.5},  {40, 4.5},    {50, 5.0},    {63, 4.0},    {80, 2.0},
+                     {100, 0.5},   {125, -0.5},  {200, -1.5},  {400, -1.5},  {630, -1.0},  {800, -0.5},
+                     {2000, 0.0},  {2500, 0.5},  {5000, 0.5},  {6300, 1.0},  {8000, 1.5},  {10000, 2.0},
+                     {12500, 2.0}, {16000, 1.0}};
+    e.lufsMin = -10.0;      // integrated over breakdowns + drops; the drops themselves at -9..-6
+    e.lufsMax = -6.0;
+    e.bandHighDb = {Lim(5.0), Lim(4.0), Lim(3.0), Lim(4.0), Lim(3.5), Lim(4.5), Lim(6.0)};
+    e.bandLowDb = {Lim(-5.0), Lim(-6.0), none, none, Lim(-6.0), none, none};  // no club master without its sub
+    e.plrMinDb = 5.0;        // -7 LUFS at -1 dBTP = PLR 6
+    e.lraMinLu = 2.0;
+    e.lraMaxLu = 10.0;
+    e.widthMinPct = 35.0;
+    e.widthMaxPct = 110.0;   // supersaw walls and wide future-bass chords
+    e.wetMinLu = -18.0;      // the drops are dense and fairly dry, the breakdowns wet
+    e.wetMaxLu = -6.0;
+    v.push_back(e);
+
     AnalysisProfile r = d;
     r.name = "rock";
     r.description = "rock band: kick and bass punch at 60-100 Hz with less sub than pop, guitars and snare forward in the "

@@ -568,19 +568,18 @@ def _build(song, preset: str, table: dict, *, without, sounds, ids, hall_kind: s
             info['mono'].append(role)
         info['seating'][role] = {'pan': r.pan, 'width': r.width, 'hall_send': r.send, 'high_shelf': r.shelf}
         info['sound'][role] = 'custom' if custom else r.desc
-    if any(getattr(f, 'type', '') == 'limiter' for f in song.master.fx):
-        pass                         # the master already has its chain (another band, the song): keep it
-    elif master == 'classical':
-        song.master.add(fx.limiter(ceiling=-1.0, release=300))
+    band.info = info
+    # the master (bands.master_chain: a song / band that set one already keeps it)
+    if master == 'classical':
+        bands.master_chain(band, fx.limiter(ceiling=-1.0, release=300))
     elif master == 'film':
         # a film mix is brighter and less boxy than the raw sample sets: a broad mid dip and an air shelf, 1-2 dB of
         # slow glue, the limiter (ceiling -1.2 dB: the true peak stays <= -1 dBTP)
-        song.master.add(fx.eq({'peak2.freq': 1100, 'peak2.gain': -3.5, 'peak2.q': 0.6, 'peak1.freq': 400,
-                               'peak1.gain': -2.5, 'peak1.q': 0.7, 'high.freq': 7500, 'high.gain': 4.0}),
-                        fx.compressor(threshold=-16, ratio=1.6, knee=10, attack=30, release=400, detector='rms',
-                                      keyhp=120, makeup=1.0),
-                        fx.limiter(ceiling=-1.2, release=200))
-    band.info = info
+        bands.master_chain(band, fx.eq({'peak2.freq': 1100, 'peak2.gain': -3.5, 'peak2.q': 0.6, 'peak1.freq': 400,
+                                        'peak1.gain': -2.5, 'peak1.q': 0.7, 'high.freq': 7500, 'high.gain': 4.0}),
+                           fx.compressor(threshold=-16, ratio=1.6, knee=10, attack=30, release=400, detector='rms',
+                                         keyhp=120, makeup=1.0),
+                           fx.limiter(ceiling=-1.2, release=200))
     return band
 
 

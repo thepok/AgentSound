@@ -194,6 +194,7 @@ std::vector<json> assessSilentNotes(MixImpl& m, std::vector<DynamicsFinding>& fi
         for (std::size_t k = 0; k < r.notes.size(); ++k) {
             const double s = m.secAtBeat(r.notes[k].first);
             if (!(s >= 0.0) || s >= m.durationSec - kEndGuardSec || !(r.notes[k].second > 0.0)) continue;
+            if (r.notes[k].first >= m.endBeat - 1e-9) continue;   // after a preview window: never played
             order.emplace_back(s, k);
         }
         std::stable_sort(order.begin(), order.end(), [](const auto& a, const auto& b) { return a.first < b.first; });

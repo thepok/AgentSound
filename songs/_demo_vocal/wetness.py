@@ -2,6 +2,8 @@
 
     python songs/_demo_vocal/wetness.py songs/<slug> [--from-beat X --to-beat Y] [--json out.json]
 
+Every build prints the quick estimate already (singer.wetness: 'vocals    space:' and report.json nodes[].wetLu, from
+the send shares, no extra render); this script measures it exactly, with the tails and the singing numbers.
 Renders the song with every non-vocal track muted (a muted track feeds no send either), so each return bus carries
 only what the sung tracks send into it, and writes the stems. Measured (numpy; BS.1770 K-weighting):
   dry_lufs / wet_lufs   the sung tracks (+ their grit buses: distortion of the dry voice, not space) vs the sum of
@@ -537,6 +539,9 @@ def main(argv=None) -> int:
         span = (song.seconds(a.from_beat), song.seconds(a.to_beat) if a.to_beat is not None else 1e9)
     res['singing'] = singing(song, stem=out / 'stems' / 'vocal.wav',
                              t_off=song.seconds(a.from_beat) if a.from_beat is not None else 0.0, span=span)
+    res['timing'] = timing(song, span=span)                 # the lay-back / P-centre against the grid
+    res['line_shape'] = line_shape(song, span=span)
+    res['take_character'] = take_character(song, span=span)
     txt = json.dumps({k: v for k, v in res.items() if k != 'tails'}, indent=1)
     print(txt)
     if a.json:

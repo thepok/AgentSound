@@ -169,7 +169,7 @@ register(Patch(
         'osc.retrig': 'on', 'mode': 'mono',
         'filter.type': 'ladder', 'cutoff': 800, 'resonance': 0.3, 'filter.drive': 0.35,
         'filter.keytrack': 0.5, 'filter.env': 3.0, 'filter.velocity': 0.5,
-        'fenv.attack': 0.001, 'fenv.decay': 0.16, 'fenv.sustain': 0.15, 'fenv.release': 0.06,
+        'fenv.attack': 0.004, 'fenv.decay': 0.16, 'fenv.sustain': 0.15, 'fenv.release': 0.06,
         'amp.attack': 0.001, 'amp.decay': 0.3, 'amp.sustain': 0.6, 'amp.release': 0.04,
         'drift.pitch': 1, 'level': 3,
     }),
@@ -177,7 +177,8 @@ register(Patch(
     notes=(
         "THE synthwave bass: 8th-note root/octave pulse (bassline(prog, 'octave', rate='1/8')). Two saws 7 ct "
         "apart, retriggered oscillators for an identical punchy attack, 24 dB ladder with a snappy 3-octave "
-        "filter pluck (decay 0.16 s), mono (every note retriggers), tape saturation for small-speaker "
+        "filter pluck (decay 0.16 s; its 4 ms attack: a retrigger out of the release snapped the ladder 3 octaves in "
+        "1 ms - a click at every note change), mono (every note retriggers), tape saturation for small-speaker "
         "harmonics. Measured -18.3 LUFS (8ths at 100 BPM; 16ths ~ -17.4), true peak -5.1 dBTP. Play roots "
         "E1-A2 (the octave jumps to E2-A3). Tweak: cutoff 500-1500 (Hz at C4; the filter key-tracks at 0.5 so "
         "A1 sits at ~0.4x that), filter.env 2-4 oct (pluck amount), fenv.decay 0.1-0.3, resonance 0.1-0.5, "

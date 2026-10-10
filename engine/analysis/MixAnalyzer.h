@@ -66,6 +66,7 @@
 #include "core/Params.h"  // as::json
 #include "core/TempoMap.h"
 
+#include <limits>
 #include <memory>
 #include <string>
 #include <utility>
@@ -148,7 +149,9 @@ public:
     // Integrated loudness target; overrides the profile's window whatever the call order.
     // Throws std::invalid_argument unless min < max (both finite).
     void setLoudnessTarget(double minLufs, double maxLufs);
-    void setStartBeat(double beat);  // song beat of the first rendered sample (preview renders) so bar numbers follow the song
+    // song beat of the first rendered sample (preview renders) so bar numbers follow the song; endBeat: where the
+    // rendered notes stop (a preview window): notes from there on are not played, so the silent-notes ear skips them
+    void setStartBeat(double beat, double endBeat = std::numeric_limits<double>::infinity());
     // Song time: a tempo map (bar lines, bar/beat labels and the report's tempo info follow it; a constant map
     // keeps `bpm`) and the meter (bars other than 4/4). Before feeding; copies both.
     void setTimeGrid(const TempoMap& tempo, const MeterMap& meter);

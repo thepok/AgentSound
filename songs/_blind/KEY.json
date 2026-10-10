@@ -1,0 +1,34 @@
+{
+ "AEYW": {
+  "source": "generated",
+  "path": "songs/_endless_jazz_piano/out/r8/004-carmine-window"
+ },
+ "CMRF": {
+  "source": "composed",
+  "path": "songs/pro2-piano-waltz"
+ },
+ "DXQN": {
+  "source": "composed",
+  "path": "songs/pro2-piano-latenight"
+ },
+ "JKAM": {
+  "source": "composed",
+  "path": "songs/pro2-piano-bossa"
+ },
+ "LFXQ": {
+  "source": "generated",
+  "path": "songs/_endless_jazz_piano/out/r8/002-the-other-promise-blues"
+ },
+ "MBHN": {
+  "source": "generated",
+  "path": "songs/_endless_jazz_piano/out/r8/003-a-bridge-for-grove"
+ },
+ "SYFL": {
+  "source": "generated",
+  "path": "songs/_endless_jazz_piano/out/r8/001-a-stairway-for-christopher-waltz"
+ },
+ "UPUF": {
+  "source": "composed",
+  "path": "songs/pro2-piano-blues"
+ }
+}

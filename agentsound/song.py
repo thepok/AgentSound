@@ -34,8 +34,7 @@ from . import modulation as _modulation
 from . import patches as _patches
 from . import silent_notes as _silent
 from . import tempo as _tempo
-from .humanize import _groove
-from .humanize import groove as _apply_groove
+from .humanize import _groove, _grooved, apply_plan, body_profile, follow_plan, gesture
 from .humanize import humanize as _apply_humanize
 from .modulation import Mod
 from .patches import FX, Instrument, Patch, _ref
@@ -412,6 +411,8 @@ class Track(_Node):
         self._origin: list[str] = []   # call site that placed each note (for error messages)
         self._groove = None
         self._human: tuple | None = None
+        self._body: tuple | None = None        # (Body, lead track id or None): humanize(body=...)
+        self._phrase_marks: list[float] = []   # beats where the player's phrases start (mark_phrases)
 
     # --- placing notes
     def play(self, what, at=0.0, *, times: int = 1, transpose: int = 0, vel: float = 1.0, replace: bool = False):
@@ -592,9 +593,30 @@ class Track(_Node):
         return c
 
     # --- feel
-    def humanize(self, timing_ms: float = 4.0, vel: float = 6, seed=None):
-        """Seeded timing (+-ms) and velocity jitter, applied at compile with the local song tempo."""
-        self._human = (_num(timing_ms, 'timing_ms', 0, 50), _num(vel, 'vel', 0, 64), seed)
+    def humanize(self, timing_ms: float | None = None, vel: float | None = None, seed=None, *, body=None,
+                 lead=None):
+        """Seeded timing (+-ms, default 4) and velocity (+-, default 6) jitter, applied at compile with the local
+        song tempo. body= ('calm' | 'lyrical' | 'swing' | a humanize.Body; 'none' = the plain jitter): a player's
+        body instead - one gesture per phrase moves timing and dynamics together (humanize.body: the phrase arc,
+        ritardandi into phrase / section ends, leaps, breaths, the weight in the bar); timing_ms / vel are then
+        only its motor noise (default the profile's). lead='piano': this track (the other hand) follows that
+        track's gesture instead of its own (the lead needs a body too). humanize(0, 0) turns everything off."""
+        b = None if body is None else body_profile(body)
+        if lead is not None and b is None:
+            raise ComposeError(f"track {self.id!r}: humanize(lead={lead!r}) follows a body - give body= too")
+        if lead is not None and (not isinstance(lead, str) or lead == self.id):
+            raise ComposeError(f"track {self.id!r}: humanize lead must be another track's id, got {lead!r}")
+        self._body = None if b is None else (b, lead)
+        tm = (b.noise_ms if b is not None else 4.0) if timing_ms is None else timing_ms
+        vv = (b.noise_vel if b is not None else 6.0) if vel is None else vel
+        self._human = (_num(tm, 'timing_ms', 0, 50), _num(vv, 'vel', 0, 64), seed)
+        return self
+
+    def mark_phrases(self, *beats):
+        """Beats where the player's phrases start (a notation's phrases, a soloist's plan): the body's phrase
+        boundaries besides the rests (humanize(body=...))."""
+        for x in beats:
+            self._phrase_marks.append(_num(self._song._at(x), 'phrase mark (beat)', 0))
         return self
 
     def groove(self, g):
@@ -1089,7 +1111,8 @@ class Song:
           rit       where the ritardando into the chord starts (to=`to` x the tempo; it stays slow)
           hold / seconds / length   the fermata on the chord (song.fermata)
           room      (from_db, to_db): the chord tracks (and room_tracks) send more into `send` while it rings, from
-                    `at` to the end (`until`, default the section end)
+                    `at` to the end (`until`, default the section end); never below the track's own send, which
+                    holds until the chord
         Everything stays overridable: leave a part out and write it by hand.
             s.ending(end, chords=[(b.comp, hold('Ab2 Eb3 G3', 7.9), 70), (b.piano, END_RH, 80, 0.25)],
                      bass=(b.bass, 'Ab1', 7, 92), drums=(b.drums, jazz.last_stir(kit, 8, every=2, last=3)),
@@ -1127,7 +1150,12 @@ class Song:
             if end is None:
                 raise ComposeError("ending(room=...): give until= (where the room ramp ends) for a beat position")
             for t in list(dict.fromkeys(tracks + list(room_tracks))):
-                t.automate(f'send.{send}', _ramp_pts(a, end, room[0], room[1]))
+                # never less than the track's own send, which holds until the chord (an automation's first value
+                # holds from bar 1: a bare ramp from -13 dB overrode a band's -3 dB room send for the whole song)
+                s0 = t.sends.get(send)
+                lo, hi = (room[0], room[1]) if s0 is None else (max(room[0], s0), max(room[1], s0))
+                pts = _ramp_pts(a, end, lo, hi)
+                t.automate(f'send.{send}', pts if s0 is None or a < 0.25 else [(a - 0.25, s0)] + pts)
         return self
 
     # --- music helpers bound to the song key / meter
@@ -1195,7 +1223,8 @@ class Song:
         """Add an instrument track. sound = Patch, patch name, inst.va(...) or {'type', 'params'}.
         `pre` effects come first (before the patch chain: drive / compression in front of its chorus, echo or
         reverb), then the patch fx, then `fx`; gain_db adds to the patch level; pan None keeps the patch pan;
-        sends merge with the patch's (patch sends to buses that don't exist are dropped with a warning); a send
+        sends merge with the patch's (patch sends to buses that don't exist are dropped - with a warning when the
+        track has no sends of its own); a send
         may be (dB, tap): sends={crush: (-6, 'prefader')}."""
         t = Track(self, self._new_id(id, 'track'), sound, fx, gain_db, pan, output, sends, mute, pre)
         self.tracks[id] = t
@@ -1481,6 +1510,7 @@ class Song:
         """Validate everything and return the render dict (docs/RENDER_FORMAT.md). Raises ComposeError
         with a precise message on any problem; non-fatal issues go to song.warnings."""
         self.warnings = list(dict.fromkeys(self.advice))   # the players' warnings (drummer), then compile's own
+        self._motions = {}                                  # the bodies' gestures (humanize body=), per compile
         for fn in self._compile_hooks:
             fn(self)
         self._auto_gate_keys()
@@ -1848,6 +1878,62 @@ class Song:
             raise ComposeError(f"{where} matches no articulation of the instrument; articulations: {listing}")
         raise ComposeError(f"{where} is ambiguous; articulations: {listing}")
 
+    def _motion(self, t: Track, L: float, bpm):
+        """(the body's plan for the track's notes (sorted as Clip._raw sorts them), Motion) - cached per bpm."""
+        cache = self.__dict__.setdefault('_motions', {})
+        key = (t.id, id(bpm) if callable(bpm) else bpm, len(t._notes))
+        if key in cache:
+            return cache[key]
+        b, lead = t._body
+        c = Clip._raw(t._notes, L)
+        mg = self.meter_grid()
+
+        def bar_of(beat):
+            k = math.floor(mg.bar_at(beat) + 1e-6)
+            m = mg.meter_at(beat)
+            return beat - mg.bar_start(k), _tempo.beats_per_bar(m)
+        if lead is not None:
+            lt = self.tracks.get(lead)
+            if lt is None or lt._body is None or lt._body[1] is not None:
+                raise ComposeError(f"track {t.id!r}: humanize lead {lead!r} must be a track with a body of its own "
+                                   f"(humanize(body=...) without lead=)")
+            mo = self._motion(lt, L, bpm)[1]
+            res = (follow_plan(c, mo, b, bpm, bar_of=bar_of), mo)
+        else:
+            ends = [s.end for s in self.sections]
+            res = gesture(c, b, bpm, marks=t._phrase_marks, ends=ends, busy=self._tempo_plan.shapes,
+                              bar_of=bar_of)
+        cache[key] = res
+        return res
+
+    def _played(self, t: Track, L: float, bpm) -> tuple[list, list]:
+        """(the track's notes as written - sorted, after the groove; as played - groove, body / humanize): two
+        aligned lists, note i of one is note i of the other."""
+        c = Clip._raw(t._notes, L)
+        marked = any(_art.articulation_of(n) is not None or _art.glide_of(n) for n in c)
+        notes = list(c)
+        if t._groove is not None:
+            drums = t.instrument.type == 'drums'
+            if marked:   # note by note (a groove moves each note on its own), so the marks stay on their notes
+                notes = [_art._mark(_grooved(Clip._raw([n], L), t._groove, bpm, drums)[0],
+                                    art=_art.articulation_of(n), gl=_art.glide_of(n)) for n in c]
+            else:
+                notes = _grooved(c, t._groove, bpm, drums)
+        written = notes
+        if t._human is not None:
+            ms, vel, seed = t._human
+            s = seed_int(f"{self.seed}:{t.id}:humanize") if seed is None else seed_int(seed)
+            if t._body is not None:     # the body's gesture, computed on the written (ungrooved) notes
+                plan = self._motion(t, L, bpm)[0]
+                notes = apply_plan(notes, plan, bpm, at=[n.start for n in c], noise_ms=ms, noise_vel=vel,
+                                       seed=s)
+            else:
+                notes = list(_apply_humanize(Clip._raw(notes, L), timing_ms=ms, vel=vel, bpm=bpm, seed=s))
+                written = None
+        if written is None:            # (the plain jitter re-sorts: the written notes are not aligned with it)
+            written = []
+        return written, notes
+
     def _compile_notes(self, t: Track, L: float, marks: dict | None = None, bpm=None) -> list[list]:
         """The track's notes for the render JSON; bpm = the tempo for groove / humanize ms (a number, or a
         function of the beat when the tempo changes)."""
@@ -1859,20 +1945,9 @@ class Song:
             if n.start >= L - 1e-9:
                 raise ComposeError(f"{where} starts at/after the song end (beat {L:g}); add or lengthen "
                                    f"sections, or don't place notes there")
-        c = Clip._raw(t._notes, L)
         bpm = self.tempo if bpm is None else bpm
-        marked = any(_art.articulation_of(n) is not None or _art.glide_of(n) for n in c)
-        if t._groove is not None:
-            drums = t.instrument.type == 'drums'
-            if marked:   # note by note (a groove moves each note on its own), so the marks stay on their notes
-                c = Clip._raw([_art._mark(_apply_groove(Clip._raw([n], L), t._groove, bpm=bpm, drums=drums)[0],
-                                          art=_art.articulation_of(n), gl=_art.glide_of(n)) for n in c], L)
-            else:
-                c = _apply_groove(c, t._groove, bpm=bpm, drums=drums)
-        if t._human is not None:
-            ms, vel, seed = t._human
-            s = seed_int(f"{self.seed}:{t.id}:humanize") if seed is None else seed_int(seed)
-            c = _apply_humanize(c, timing_ms=ms, vel=vel, bpm=bpm, seed=s)
+        marked = any(_art.articulation_of(n) is not None or _art.glide_of(n) for n in t._notes)
+        c = Clip._raw(self._played(t, L, bpm)[1], L)
         out = []
         for n in c:
             where = f"track {t.id!r}: note (start={n.start:g}, dur={n.dur:g}, pitch={n.pitch}, vel={n.vel})"
@@ -1922,7 +1997,7 @@ class Song:
             for b, db in node._patch_sends.items():
                 if b in bus_ids and b != node.id:
                     sends[b] = db
-                else:
+                elif not node.sends:        # sends of its own: the song / preset chose the space, nothing is lost
                     self.warnings.append(f"{where}: patch send to {b!r} dropped (no such bus; create it with "
                                          f"song.bus({b!r}, ...) or song.hall()/plate()/echo())")
             for b, db in node.sends.items():

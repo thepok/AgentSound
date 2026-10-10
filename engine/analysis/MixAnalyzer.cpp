@@ -1083,13 +1083,14 @@ void ReportBuilder::checkSectionsAndStereo() {
         const double mid = 0.5 * (m_.lufsMin + m_.lufsMax);
         const std::string whose = m_.loudnessOverride ? std::string("render JSON analysis.loudness")
                                                       : "'" + P.name + "' profile";
-        if (m_.lufsI < m_.lufsMin) {
+        // inside when it reads inside at the printed 0.1 LU (agentsound.mastering.check uses the same 0.05 LU rule)
+        if (m_.lufsI < m_.lufsMin - 0.05) {
             warn(1, "loudness_low", fmt("Integrated loudness %.1f LUFS is %.1f LU below the target %.0f..%.0f LUFS (%s; sample peak "
                                         "%.1f dBFS).", m_.lufsI, m_.lufsMin - m_.lufsI, m_.lufsMin, m_.lufsMax, whose.c_str(),
                                         m_.samplePeakDb));
             suggest(fmt("Raise the master limiter's input \"gain\" by about %.1f dB to land near %.0f LUFS (add {\"type\": \"limiter\", "
                         "\"params\": {\"ceiling\": -1.0}} last in the master fx if there is none).", mid - m_.lufsI, mid));
-        } else if (m_.lufsI > m_.lufsMax) {
+        } else if (m_.lufsI > m_.lufsMax + 0.05) {
             warn(1, "loudness_high", fmt("Integrated loudness %.1f LUFS is %.1f LU above the target %.0f..%.0f LUFS (%s): streaming "
                                          "services will turn it down and the limiting costs punch (PLR %.1f dB).",
                                          m_.lufsI, m_.lufsI - m_.lufsMax, m_.lufsMin, m_.lufsMax, whose.c_str(), m_.truePeakDb - m_.lufsI));
@@ -1471,7 +1472,8 @@ json ReportBuilder::build() {
                      "with automatedDynamics: expression / dynamics automation, or an automated insert gain stage fx.<i>.output / gain "
                      "- e.g. hornist's breath after the compressor); flatPhrases = phrases under thresholdDb "
                      "(reference.noteSpreadMinDb); velocity = what the notes were given; kind = lead / melodic (judged; bass too "
-                     "when reference.judgeBassDynamics) or bass / bed / even (arps, 8th/16th pulses: never flagged), why = how the "
+                     "when reference.judgeBassDynamics) or bass / bed (also a part named lead that plays sustained chords) / even (arps, 8th/16th "
+                     "pulses) / backing (a vocal's _dbl / _harm / _prism parts): never flagged, why = how the "
                      "kind was decided; warning flat_dynamics (lead: warn, other judged parts: info)"},
         {"silentNotes", "nodes[].silentNotes: notes of a track that made no audible sound (analysis/SilentNotes.h) - notes = the "
                         "judged notes, events = the same with chord notes (within 30 ms) as one; each event's level = the loudest 10 ms "
@@ -1544,10 +1546,11 @@ void MixAnalyzer::setLoudnessTarget(double minLufs, double maxLufs) {
     m.loudnessOverride = true;
 }
 
-void MixAnalyzer::setStartBeat(double beat) {
+void MixAnalyzer::setStartBeat(double beat, double endBeat) {
     auto& m = *impl_;
     if (m.fed) throw std::logic_error("MixAnalyzer::setStartBeat after feeding started");
     m.startBeat = std::isfinite(beat) ? beat : 0.0;
+    m.endBeat = endBeat > m.startBeat ? endBeat : std::numeric_limits<double>::infinity();
     m.startSample = m.tempo.sampleAt(m.startBeat);
     for (auto& n : m.nodes) n.stats->setBoundaries(m.boundaries, m.barGrid());  // bar grid moved
 }

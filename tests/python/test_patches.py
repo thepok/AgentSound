@@ -1,3 +1,4 @@
+import json
 import os
 import pathlib
 import shutil
@@ -231,6 +232,25 @@ class LushLibraryEngine(unittest.TestCase):
             rj.write_text(dumps(s.compile()), encoding='utf-8')
             proc = subprocess.run([str(_engine()), 'validate', str(rj)], capture_output=True, text=True)
             self.assertEqual(proc.returncode, 0, f"{name}: {proc.stderr}")
+
+    def test_octave_bass_retriggers_without_clicks(self):
+        """synthwave/octave_bass in the retrowave preset (gate 0.85 8ths, release 0.2: every note retriggers out of the
+        last one's release): the filter envelope's 4 ms attack - with 1 ms the ladder snapped 3 octaves at every note
+        change (5 clicks in 8 bars, expensive-habits)."""
+        from agentsound import bands
+        s = Song('Click Probe', tempo=118, key='A minor', seed=1)
+        a = s.section('verse', bars=8, prog=s.prog('i VI III VII'))
+        b = bands.make('retrowave', s, without=('drums', 'pad', 'keys', 'brass', 'choir', 'lead'))
+        b.bass.bassline('octave', a, rate='1/8', gate=0.85, vel=96)
+        d = pathlib.Path(tempfile.mkdtemp(prefix='agentsound_octbass_'))
+        self.addCleanup(shutil.rmtree, d, True)
+        rj = d / 'song.render.json'
+        rj.write_text(dumps(s.compile()), encoding='utf-8')
+        proc = subprocess.run([str(_engine()), 'render', str(rj), '--out', str(d), '--no-png', '--quiet'],
+                              capture_output=True, text=True)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        rep = json.loads((d / 'report.json').read_text(encoding='utf-8'))
+        self.assertEqual(rep['clicks'], [])
 
 
 if __name__ == '__main__':

@@ -392,6 +392,15 @@ class WrapperMixRules(Base):
         roles, why = mixer.infer_roles(s)
         self.assertEqual((roles['lead'], why['lead']), ('lead', 'hero()'))
 
+    def test_throw_level(self):
+        # throw= sets the echo send's level on a throw (the default -8 dB measured wetter than wanted: expensive-habits)
+        s, lead, *_ = self.song(genre='film', throw=-14)
+        self.assertEqual(lead.hero.throw_db, -14.0)
+        t = next(x for x in s.compile()['tracks'] if x['id'] == 'lead')
+        self.assertEqual(max(p[1] for a in t['automation'] if a['target'] == 'send.echo' for p in a['points']), -14.0)
+        with self.assertRaises(ComposeError):
+            heroes.hero('sampled/trumpet', family='brass', throw=-12)        # a mix rule: needs the track
+
     def test_genre_profiles_and_disables(self):
         s, lead, pad, strings, keys = self.song(genre='rock')        # rock: no bed duck
         self.assertFalse(any(f.type == 'ducker' for f in pad.fx))
@@ -428,6 +437,45 @@ class WrapperMixRules(Base):
         t2 = heroes.hero(s2.track('lead', self.sampler()), family='brass', air=False, space=False)
         self.assertNotIn('air', [f.name for f in t2.fx])
         self.assertFalse(any(f.name == 'air' for f in heroes.build('brass', air=False).fx))
+
+    def test_acoustic_heroes_play_plain_in_jazz(self):
+        # jazz / ballad / classical: the sax is one natural instrument (Preset.genres) - no double, no octave, the
+        # soft voicing (no tube, no exciter, 2:1); synthwave keeps the doublers; explicit arguments win
+        def sax(genre, **kw):
+            s = Song('g', tempo=120)
+            s.section('a', bars=1)
+            return heroes.hero(s.track('sax', self.sampler()), family='sax', genre=genre, space=False, **kw)
+        jz = sax('jazz')
+        self.assertEqual(jz.instrument.type, 'sampler')                          # no octave layer: no stack
+        self.assertFalse([f for f in jz.fx if f.type in ('microshift', 'saturator', 'exciter')])
+        comp = next(f for f in jz.fx if f.type == 'compressor')
+        self.assertEqual((comp.params['ratio'], comp.params['threshold']), (2.0, -26))
+        self.assertTrue(any('jazz voicing' in x for x in jz.hero.log))
+        self.assertTrue(any(f.type == 'microshift' for f in sax('synthwave').fx))
+        self.assertTrue(any(f.type == 'microshift' for f in sax('jazz', double='shift').fx))
+        for fam in ('strings', 'brass', 'woodwind'):
+            self.assertEqual(heroes.PRESETS[fam].genres['classical'], heroes.PLAIN)
+
+    def test_hero_on_a_band_role_and_after_the_hornist(self):
+        from agentsound import bands, hornist
+        # a preset's role: the band's mix chain for the sax (eq, 2:1 compressor, microshift) is replaced, not stacked
+        s = Song('b', tempo=120)
+        s.section('a', bars=1)
+        b = bands.make('bossa', s)
+        heroes.hero(b.sax, family='sax', genre='jazz', space=False)
+        self.assertEqual([f.type for f in b.sax.fx].count('compressor'), 1)
+        self.assertFalse([f for f in b.sax.fx if f.type == 'microshift'])
+        self.assertTrue(any('replaced' in x for x in b.sax.hero.log))
+        # after the hornist placed its breath stage: one 'air' stage (the hero chain's), its lane still lands
+        s = Song('h', tempo=120)
+        s.section('a', bars=1)
+        t = s.track('lead', self.sampler())
+        t.note('A4', 0, 4)
+        hornist.air_stage(t)
+        t.automate('fx.air.gain', [(0, 0.0), (2, 2.0)])
+        heroes.hero(t, family='brass', space=False)
+        self.assertEqual([f.name for f in t.fx].count('air'), 1)
+        s.compile()
 
     def test_existing_hero_track_keeps_its_sound(self):
         s = Song('sax', tempo=120)

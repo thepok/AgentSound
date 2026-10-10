@@ -8,7 +8,6 @@ auditions/
 .claude/
 assets/samples/*
 !assets/samples/manifest.json
-!assets/samples/README.md
 
 # Yamaha DX7 factory ROM cartridges: not redistributable, install them yourself (assets/dx7/README.md)
 assets/dx7/*.syx
@@ -25,3 +24,4 @@ assets/voices/*
 !assets/voices/manifest.json
 !assets/voices/README.md
 songs/**/samples/vocals/
+tests/.timings.json

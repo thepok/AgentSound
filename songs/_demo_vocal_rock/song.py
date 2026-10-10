@@ -86,7 +86,7 @@ def build() -> Song:
     chorus = s.section('chorus', bars=8)
     tail = s.section('tail', bars=2)
 
-    kit_sound = patches.get('sampled/big_rusty_kit').but(level=1.0, restrike=6.0)
+    kit_sound = patches.get('sampled/big_rusty_kit').but(level=1.0)
     b = bands.rock_band(s, without=('lead',), sounds={'drums': kit_sound})
     kit = b.drums
     s.node(kit.output).add_fx(fx.compressor(threshold=-9, ratio=8, attack=0.3, release=60, knee=3, detector='peak'))

@@ -1745,8 +1745,27 @@ def load(path, articulation=None, cc=None, mics=None, strict: bool = False, call
     return imp.zones, info
 
 
-# zone params a load_multi program's 'zone' overrides must not set (mapping, keyswitches, trigger; level: 'gain')
+# zone params a 'zone' override (inst.sfz(zone=), a load_multi program's 'zone') must not set (mapping, keyswitches,
+# trigger; level: 'gain')
 _ZONE_FIXED = ('file', 'lo', 'hi', 'root', 'swLast', 'swDefault', 'swLo', 'swHi', 'trigger', 'gain')
+
+
+def check_zone(over, where: str) -> dict:
+    """A validated zone override {zone param: value} (inst.sfz(zone=), sfz_multi programs' 'zone')."""
+    over = over or {}
+    if not isinstance(over, dict) or not all(isinstance(k, str) and k for k in over) or \
+            any(k in over for k in _ZONE_FIXED):
+        raise ComposeError(f"{where}: 'zone' must be {{zone param: value}} (not file / key range / keyswitch / "
+                           f"trigger; dB: 'gain' / 'keygain' / level), got {over!r}")
+    return dict(over)
+
+
+def apply_zone(zones: list, over: dict) -> list:
+    """The zones with `over` set on every attack zone (release-triggered zones keep theirs): the file's envelope
+    or filter overridden - a choir that speaks sooner at low velocity, a release that a track cannot shorten."""
+    if not over:
+        return zones
+    return [dict(z, **over) if z.get('trigger') not in ('release', 'release_key') else z for z in zones]
 
 
 def _keygain(spec, where: str) -> list | None:
@@ -1886,11 +1905,7 @@ def load_multi(programs: dict, keyswitch=0, default=None, cc=None, mics=None, st
             raise ComposeError(f"sfz_multi[{name!r}]: a path or a dict with 'path' and optionally 'articulation', 'cc', "
                                f"'mics', 'gain' (dB), 'zone' (zone param overrides), 'keygain' ([[key, dB], ...]), "
                                f"got {spec!r}")
-        over = opts.get('zone') or {}
-        if not isinstance(over, dict) or not all(isinstance(k, str) and k for k in over) or \
-                any(k in over for k in _ZONE_FIXED):
-            raise ComposeError(f"sfz_multi[{name!r}]: 'zone' must be {{zone param: value}} (not file / key range / "
-                               f"keyswitch / trigger; dB: the program's 'gain' / 'keygain'), got {over!r}")
+        over = check_zone(opts.get('zone'), f"sfz_multi[{name!r}]")
         keygain = _keygain(opts.get('keygain'), f"sfz_multi[{name!r}]")
         pcc = dict(cc or {})
         pcc.update(opts.get('cc') or {})

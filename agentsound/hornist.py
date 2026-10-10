@@ -375,14 +375,20 @@ def targets(track, *, room=None, level: str | None = None) -> dict:
 
 
 def render(track, gestures, *, bpm=None, room=None, level: str | None = None, vibrato: bool = True,
-           accents=None) -> dict:
+           accents=None, mic_post: bool = False) -> dict:
     """Write gestures (absolute beats) on a track: the air on its level target (targets()), the air's tone and the
     mic moves on the mic stage, the room on the reverb sends, bend on 'instrument.pitchbend', vibrato on the
     sampler's vibrato (depth deepened by the air), its rate on 'vibratorate'. accents (the note-to-note 'accents'
     gestures): None = only on a compressed chain (targets()['compressed']: there the velocities alone are squeezed
-    flat), True / False. Returns the targets plan."""
+    flat), True / False. mic_post=True: the mic lane's LEVEL (the distance) goes on the air target after the
+    compressor too (summed with the air) instead of the mic stage's output before it - a singer's pull-back on a long
+    note that the vocal compressor must not undo (agentsound.singer mic_pull); the tone (proximity, axis) stays on the
+    mic stage. Returns the targets plan."""
     b = _bpm(bpm if bpm is not None else track._song.tempo)
     plan = targets(track, room=room, level=level)
+    if mic_post and plan['kind'] == 'dynamics':
+        raise ComposeError(f"track {track.id!r}: mic_post needs a level stage after the compressor (level='air'), "
+                           f"not 'dynamics'")
     acc = plan['compressed'] if accents is None else bool(accents)
     shapes = [s for g in gestures if acc or g.name != 'accents' for s in g.shapes]
     by = {ln: [s for s in shapes if s.lane == ln] for ln in LANES}
@@ -401,9 +407,12 @@ def render(track, gestures, *, bpm=None, room=None, level: str | None = None, vi
         if plan['kind'] == 'dynamics':
             write(plan['level'], by['air'],
                   lambda v: min(1.0, max(0.0, home + min(HEADROOM, v.get('air', 0.0)) * per)))
+        elif mic_post:
+            write(plan['level'], by['air'] + by['mic'], lambda v: home + v.get('air', 0.0) + v.get('mic', 0.0))
         else:
             write(plan['level'], by['air'], lambda v: home + v.get('air', 0.0))
-        write('fx.mic.output', by['mic'], lambda v: comp + v.get('mic', 0.0))
+        if not mic_post:
+            write('fx.mic.output', by['mic'], lambda v: comp + v.get('mic', 0.0))
     tone = by['shelf'] + (by['bright'] if plan['tone'] else [])
     write('fx.mic.high.gain', tone, lambda v: max(-24.0, min(24.0, v.get('shelf', 0.0) + v.get('bright', 0.0))))
     write('fx.mic.peak1.gain', by['prox'], lambda v: v.get('prox', 0.0))

@@ -50,6 +50,11 @@ class Band:
         if role in self.roles:
             raise ComposeError(f"band {self.preset!r}: role {role!r} added twice")
         self.roles[role] = track
+        # the preset's mix chain for the role (the inserts after the patch's own chain): hero() replaces it
+        from . import patches
+        old = patches.get(track.patch) if getattr(track, 'patch', None) and patches.has(track.patch) else None
+        n = len(old.fx) if old is not None and track.fx[:len(old.fx)] == old.fx else 0
+        track._band_fx = tuple(track.fx[n:])
         return track
 
     def bus(self, name: str, bus):
@@ -138,6 +143,23 @@ def get(name: str) -> Preset:
         raise ComposeError(f"no band preset {name!r}" + (f"; did you mean {', '.join(close)}?" if close else '')
                            + f" (python -m agentsound bands lists {len(_REGISTRY)})")
     return _REGISTRY[name]
+
+
+def master_chain(band: Band, *chain) -> bool:
+    """Set the song's master chain - only when it has none yet: a song that set its own master (or a second preset on
+    the same song) keeps the first chain instead of stacking two limiters. chain: effects, or one fx-chain patch (or
+    its name, e.g. 'master/synthwave': its gain too). band.info['master'] says which happened ('set' / 'kept').
+    Every preset sets its master through here (rock, pop, jazz, synthwave, orchestra)."""
+    master = band.song.master
+    if master.fx:
+        band.info['master'] = 'kept'
+        return False
+    if len(chain) == 1 and (isinstance(chain[0], str) or getattr(chain[0], 'instrument', 0) is None):
+        master.use(chain[0])                       # an fx-chain patch
+    else:
+        master.add(*chain)
+    band.info['master'] = 'set'
+    return True
 
 
 def make(name: str, song, **options) -> Band:

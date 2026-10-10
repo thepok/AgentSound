@@ -9,7 +9,9 @@ transpose, the stack layer ranges and velocity curves and the keyswitch articula
   - drums (the engine's drum machine): its key is none of the machine's pieces (35-51, 54, 56, 57, 59);
   - stack: no unmuted layer takes it (key / velocity range and fades, as the engine's gainAt), or every layer that
     takes it is silent for it (a sampler child with no zone). Notes that only muted layers take are listed apart.
-va, dx7 and sf2 are not checked here (every key sounds; the render-time ear measures them). Keyswitch notes select,
+  - sf2: the preset's zones (preset key range x its instruments' key ranges, read from the file's 'pdta' chunk:
+    sf2_keys) do not cover its key after 'transpose' (a GM drum kit without that piece, an instrument's range);
+va and dx7 are not checked here (every key sounds; the render-time ear measures them). Keyswitch notes select,
 they never sound, and are not counted. The patches' prose 'Range:' notes are playing advice, not limits: the zones are
 the machine-readable range. Conservative on purpose: round robins, random layers and trigger conditions count as
 covered when any zone of the key could play.
@@ -19,6 +21,8 @@ from __future__ import annotations
 
 import math
 import os
+import struct
+from functools import lru_cache
 from pathlib import Path
 
 from .theory import note_name
@@ -142,7 +146,8 @@ class _Sampler:
             if self.default is None and z.get('swDefault') is not None:
                 self.default = int(z['swDefault'])
         self.has_down = any(z.get('swDown') is not None for z in self.zones)
-        self.sounding = [z for z in self.zones if z.get('file') != '*silence']
+        # a silent zone with a group is a choke key (inst.kit's CHOKE_KEYS): meant to be silent, never 'no sound'
+        self.sounding = [z for z in self.zones if z.get('file') != '*silence' or z.get('group')]
         # a drum kit: unpitched one-shots (inst.kit writes pitchKeytrack 0; SFZ kits pitch_keytrack=0) - note names
         # would mislead, GM names help. (One zone per key alone says nothing: choirs / pianos are sampled per key.)
         self.drumlike = bool(self.zones) and sum(
@@ -184,6 +189,120 @@ class _Sampler:
             return None
         return (min(z.get('lo', 0) for z in self.sounding) - self.transpose,
                 max(z.get('hi', 127) for z in self.sounding) - self.transpose)
+
+
+# ------------------------------------------------------------------------------------------------ SoundFonts
+
+def _norm(s: str) -> str:
+    return ' '.join(s.split()).lower()
+
+
+@lru_cache(maxsize=64)
+def _sf2_presets(path: str) -> dict:
+    """{(bank, program): (name, frozenset of covered keys)} of a SoundFont, from its 'pdta' chunk only (the sample
+    data is skipped): a key is covered when a preset zone's key range and one of its instrument's zones (with a
+    sample) both hold it - global zones give the defaults. {} when the file cannot be read."""
+    chunks = {}
+    try:
+        with open(path, 'rb') as f:
+            if f.read(4) != b'RIFF':
+                return {}
+            f.read(8)
+            while True:
+                hdr = f.read(8)
+                if len(hdr) < 8:
+                    break
+                cid, size = hdr[:4], struct.unpack('<I', hdr[4:])[0]
+                if cid == b'LIST':
+                    kind = f.read(4)
+                    if kind == b'pdta':
+                        end = f.tell() + size - 4
+                        while f.tell() < end:
+                            sid, ssz = f.read(4), struct.unpack('<I', f.read(4))[0]
+                            chunks[sid] = f.read(ssz + (ssz & 1))[:ssz]
+                        break
+                    f.seek(size - 4 + (size & 1), 1)
+                else:
+                    f.seek(size + (size & 1), 1)
+    except (OSError, struct.error):
+        return {}
+    if not all(k in chunks for k in (b'phdr', b'pbag', b'pgen', b'inst', b'ibag', b'igen')):
+        return {}
+
+    def recs(k, n, fmt):
+        b = chunks[k]
+        return [struct.unpack_from(fmt, b, i * n) for i in range(len(b) // n)]
+    phdr = recs(b'phdr', 38, '<20sHHH')
+    pbag, ibag = recs(b'pbag', 4, '<HH'), recs(b'ibag', 4, '<HH')
+    pgen, igen = recs(b'pgen', 4, '<HBB'), recs(b'igen', 4, '<HBB')
+    inst = recs(b'inst', 22, '<20sH')
+
+    def zones(bags, gens, a, b, link):
+        """(key range or None, linked index or None) per zone of bags[a:b] (link: the generator naming the
+        instrument / sample; a zone without it is the global zone)."""
+        out = []
+        for z in range(a, b):
+            g0 = bags[z][0]
+            g1 = bags[z + 1][0] if z + 1 < len(bags) else len(gens)
+            kr, ln = None, None
+            for op, lo, hi in gens[g0:g1]:
+                if op == 43:
+                    kr = (lo, hi)
+                elif op == link:
+                    ln = lo | (hi << 8)
+            out.append((kr, ln))
+        return out
+
+    def ranges(zs):
+        glob = zs[0][0] if zs and zs[0][1] is None else None
+        return [(kr or glob or (0, 127), ln) for kr, ln in zs if ln is not None]
+    ikeys = []
+    for i in range(len(inst) - 1):
+        ks: set = set()
+        for (lo, hi), _ in ranges(zones(ibag, igen, inst[i][1], inst[i + 1][1], 53)):
+            ks.update(range(lo, hi + 1))
+        ikeys.append(ks)
+    out: dict = {}
+    for i in range(len(phdr) - 1):
+        name, prog, bank, bag = phdr[i]
+        ks = set()
+        for (lo, hi), ln in ranges(zones(pbag, pgen, bag, phdr[i + 1][3], 41)):
+            if ln < len(ikeys):
+                ks.update(k for k in ikeys[ln] if lo <= k <= hi)
+        out.setdefault((bank, prog), (name.split(b'\0')[0].decode('latin-1'), frozenset(ks)))
+    return out
+
+
+def sf2_keys(params: dict):
+    """(covered keys, bank) of an 'sf2' instrument's preset, resolved as the engine does ('bank:program', the exact
+    name - ties to the lowest bank -, the name without spaces / punctuation, bank= / program=, else the first preset),
+    or None when the font or the preset cannot be found (the engine reports that)."""
+    from .delivery import ASSETS
+    f = params.get('file') or 'GeneralUser-GS.sf2'
+    path = Path(f) if Path(f).is_absolute() else ASSETS / 'soundfonts' / f
+    presets = _sf2_presets(str(path))
+    if not presets:
+        return None
+    order = sorted(presets)
+    spec = params.get('preset')
+    if isinstance(spec, str):
+        n = _norm(spec)
+        a, _, b = n.partition(':')
+        if a.isdigit() and b.isdigit():
+            key = (int(a), int(b))
+        else:
+            key = next((k for k in order if _norm(presets[k][0]) == n), None)
+            c = ''.join(ch for ch in n if ch.isalnum())
+            if key is None and c:
+                key = next((k for k in order if ''.join(ch for ch in presets[k][0].lower() if ch.isalnum()) == c),
+                           None)
+    elif params.get('program') is not None and params['program'] >= 0:
+        key = (max(0, int(params.get('bank', 0))), int(params['program']))
+    else:
+        key = order[0]
+    if key not in presets:
+        return None
+    return presets[key][1], key[0]
 
 
 def _child_why(child: dict, pitch: int, vel: int, cache: dict) -> str | None:
@@ -242,6 +361,17 @@ def check(tid: str, inst: dict, notes: list, automation=None, grid=None, info: d
     elif t == 'drums':
         for n in notes:
             if int(n[2]) not in DRUM_MACHINE_KEYS:
+                silent.append((float(n[0]), int(n[2]), int(n[3]), 'range'))
+    elif t == 'sf2':
+        res = sf2_keys(params)
+        if not res or not res[0]:
+            return []
+        keys, bank = res
+        drum = bank >= 120
+        tr = _int(params.get('transpose'), 0)
+        span = (min(keys) - tr, max(keys) - tr)
+        for n in notes:
+            if int(n[2]) + tr not in keys:
                 silent.append((float(n[0]), int(n[2]), int(n[3]), 'range'))
     elif t == 'stack':
         layers = [L for L in (params.get('layers') or []) if isinstance(L, dict)]
@@ -371,6 +501,9 @@ def _fix(drum: bool, itype: str, keys: list, span, info, reasons: set) -> str:
             text += f" - this pack has {roles[0]} samples: {', '.join(repr(c) for c in cands)}"
         if itype == 'drums':
             text = "play the machine's keys (35-51, 54, 56, 57, 59) or use a sampled kit that has the piece"
+        elif itype == 'sf2':
+            text = (f"this SoundFont kit has no sample on {', '.join(names)}: play a key it has, or another kit "
+                    f"preset (python -m agentsound sf2 kit)")
         return text + "; a drummer part: arrange it with kit=<this track> so it plays the kit's fallback pieces"
     if 'range' in reasons and span:
         lo, hi = min(keys), max(keys)

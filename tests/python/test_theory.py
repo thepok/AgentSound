@@ -138,6 +138,22 @@ class RomanNumerals(unittest.TestCase):
         got = [c.symbol for c in Key('C major').chords(seventh=True)]
         self.assertEqual(got, ['Cmaj7', 'Dm7', 'Em7', 'Fmaj7', 'G7', 'Am7', 'Bm7b5'])
 
+    def test_roots_spelled_by_the_key(self):
+        # the root's letter is its degree's: Cb (not B) as the IV of Gb, Fb as the Neapolitan of Eb, B# as the
+        # leading tone of C# minor; a double accidental falls back to the plain name
+        from agentsound.theory import spell_above
+        self.assertEqual(Key('Gb major').chord('IV').symbol, 'Cb')
+        self.assertEqual([c.root_name for c in Key('Gb major').chords()], ['Gb', 'Ab', 'Bb', 'Cb', 'Db', 'Eb', 'F'])
+        self.assertEqual(Key('Eb major').chord('bII').symbol, 'Fb')
+        self.assertEqual(Key('C# minor').chord('vii°7').symbol, 'B#dim7')
+        self.assertEqual(Key('E major').chord('bVI').symbol, 'C')
+        self.assertEqual(Key('C major').chord('#IV°').symbol, 'F#dim')
+        self.assertEqual(spell_above('Fb', 4, 2), 'Ab')
+        self.assertEqual(spell_above('Db', 8), 'A')          # (Bbb)
+        self.assertEqual(spell_above('A', 3), 'C')
+        with self.assertRaises(ComposeError):
+            spell_above('H', 2)
+
 
 class KeysAndScales(unittest.TestCase):
     def test_parse(self):

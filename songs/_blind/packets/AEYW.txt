@@ -1,0 +1,342 @@
+BLIND PACKET ------------------------------------------------------------
+key      Bb major
+meter    4/4
+tempo    131 BPM (ritardando into the ending; rubato intro)
+feel     bossa nova, straight 8ths
+form     ABAC, head parts: A1 B A2 C
+length   90 bars, 2:54 incl. the ring-out
+layout   intro 4 | head 32 | solo 32 | head-out 16 | tag 4 | ending 2 (bars)
+
+CHORD CHART (one cell per bar; "%" = same chord; two symbols in a cell = split bar)
+  intro                  (bars 1-4) | Ebmaj9 | Ebm6 | Cm9 | F13 |
+  head A1                (bars 5-12) | Gm7 | Ebmaj9 | Cm11 | F13 | Cm7 | F7 | Dm11 G7b13 | Cm9 F7#11 |
+  head B                 (bars 13-20) | Ebmaj9 | Edim7 | Dm9 | Db7#11 | Cm11 | F9 | Bb69 | F13 |
+  head A2                (bars 21-28) | Gm7 | Ebmaj9 | Cm11 | F13 | Dm9 | G7b13 | Cm7 F13 | Bb6 F7#11 |
+  head C                 (bars 29-36) | Ebmaj9 | Em7b5 | Dm9 | G7b9 | Cm9 | Cb9 | Bbmaj7 | % |
+  solo chorus 1 A1       (bars 37-44) | Gm7 | Ebmaj9 | Cm11 | F13 | Cm7 | F7 | Dm11 G7b13 | Cm9 F7#11 |
+  solo chorus 1 B        (bars 45-52) | Ebmaj9 | Edim7 | Dm9 | Db7#11 | Cm11 | F9 | Bb69 | F13 |
+  solo chorus 1 A2       (bars 53-60) | Gm7 | Ebmaj9 | Cm11 | F13 | Dm9 | G7b13 | F9sus4 F13 | Bb6 F7#11 |
+  solo chorus 1 C        (bars 61-68) | Ebmaj9 | Em7b5 | Dm9 | G7b9 | Cm9 | Cb9 | Bbmaj7 | % |
+  head-out A             (bars 69-76) | Gm7 | Ebmaj9 | Cm11 | F13 | Dm9 | G7b13 | F9sus4 F13 | Bb6 F7#11 |
+  head-out C             (bars 77-84) | Ebmaj9 | Em7b5 | Dm9 | G7b9 | Cm9 | Cb9 | Bbmaj7 | % |
+  tag                    (bars 85-88) | Ebmaj9 | Ebm6 | Cm9 | F7alt |
+  ending                 (bars 89-90) | Bb69 | % |
+
+NOTATION
+  bar numbers count from 1 over the whole piece; positions are beats in the bar (1 = downbeat)
+  RH  position:top-note duration(beats) velocity(1-127) [+n = n more right-hand notes struck under it]
+  LH  chord: voicing low->high, velocity of the first attack, (xN = N attacks while that chord lasts)
+
+[intro]
+bar   1  Ebmaj9
+   RH  1.08:G5 0.5 v66 +3  1.5:D5 1 v63  2.5:C5 0.5 v37
+   LH  Ebmaj9: Eb3 G4 v48 (x2)
+bar   2  Ebm6
+   RH  1:Gb5 0.5 v60 +3  1.58:F5 0.17 v59  1.67:Eb5 0.17 v54  1.83:D5 0.17 v53  2:Eb5 0.5 v63  2.5:Db5 0.5 v37
+   LH  Ebm6: Eb3 Gb4 v42
+bar   3  Cm9
+   RH  1:A5 0.5 v63 +3  1.5:F5 1 v55 +1
+   LH  Cm9: C3 Eb4 v49
+bar   4  F13
+   RH  1:F5 3.5 v65 +2
+   LH  F13: F2 A3 v42 (x2)
+
+[head A1]
+bar   5  Gm7
+   RH  1.5:G5 0.5 v64 +2  2:D5 0.5 v74  2.5:C5 1 v63  3.5:Bb4 1.5 v70 +3  4.92:Bb4 2 v56 +3
+   LH  Gm7: G2 F3 A3 Bb3 D4 v34 (x5)
+bar   6  Ebmaj9
+   RH  3:C5 1 v46 +2
+   LH  Ebmaj9: Eb2 v38 (x6)
+bar   7  Cm11
+   RH  2.08:Eb5 0.5 v48  2.58:B4 0.5 v41  3.08:C5 1 v56 +1  4.08:Eb5 1 v69
+   LH  Cm11: C2 Eb3 F3 Bb3 D4 v49 (x5)
+bar   8  F13
+   RH  1.08:F5 2 v73 +1
+   LH  F13: F2 v48 (x6)
+bar   9  Cm7
+   RH  2.08:Bb5 1 v56  3.08:G5 2 v65 +2
+   LH  Cm7: C2 Eb3 G3 Bb3 D4 v33 (x5)
+bar  10  F7
+   RH  1:F5 1 v85 +3  2:C6 2.5 v83 +3  4.42:A5 2 v77 +2
+   LH  F7: F2 v42 (x6)
+bar  11  Dm11 G7b13
+   RH  2.5:E5 0.5 v66  3:Eb5 1.5 v61 +2  4.5:D5 0.5 v43 +1
+   LH  Dm11: D2 F3 G3 C4 E4 v52 (x2) | G7b13: G2 v50 (x3)
+bar  12  Cm9 F7#11
+   RH  1:Eb5 2 v50 +1
+   LH  Cm9: C2 v45 (x3) | F7#11: F2 v34 (x3)
+
+[head B]
+bar  13  Ebmaj9
+   RH  1.08:G5 4 v80 +1  4.92:C#5 1.5 v67 +3
+   LH  Ebmaj9: Eb2 G3 Bb3 D4 F4 v35 (x5)
+bar  14  Edim7
+   RH  2.5:D#5 1.5 v58 +2
+   LH  Edim7: E2 v42 (x6)
+bar  15  Dm9
+   RH  1:F5 1 v74 +1  2:F5 1 v84  3:D5 2 v71 +1
+   LH  Dm9: D2 F3 A3 C4 E4 v54 (x5)
+bar  16  Db7#11
+   RH  1:Cb5 3 v55 +1
+   LH  Db7#11: Db2 v46 (x6)
+bar  17  Cm11
+   RH  1.08:Eb5 0.17 v50 +1  1.17:D5 0.17 v35  1.33:Eb5 3.25 v43  4.5:A5 2 v87 +1
+   LH  Cm11: C2 Eb3 F3 Bb3 D4 v33 (x5)
+bar  18  F9
+   RH  2.5:G5 1.5 v63 +2
+   LH  F9: F2 v44 (x6)
+bar  19  Bb69
+   RH  1.75:Ab5 0.25 v61  2.08:G5 0.5 v79 +1  2.58:Db5 0.5 v68  3:D5 1 v86 +1  4:C5 1 v75
+   LH  Bb69: Bb2 D3 F3 G3 C4 v56 (x5)
+bar  20  F13
+   RH  1.08:F5 2.5 v81 +1  4.08:Bb4 0.5 v37  4.58:C5 0.5 v40 +2
+   LH  F13: F2 v52 (x6)
+
+[head A2]
+bar  21  Gm7
+   RH  1.5:G5 0.5 v84 +2  2:D5 0.5 v94  2.5:C5 1 v71  3.5:Bb4 1.5 v81 +3  4.92:Bb4 2 v63 +3
+   LH  Gm7: G2 F3 A3 Bb3 D4 v36 (x6)
+bar  22  Ebmaj9
+   RH  3:C5 1 v54 +2
+   LH  Ebmaj9: D3 F3 G3 Bb3 v24 (x5)
+bar  23  Cm11
+   RH  2.08:Eb5 0.5 v55  2.58:B4 0.5 v46  3.08:C5 1 v66 +1  4.08:Eb5 1 v81
+   LH  Cm11: C2 Eb3 F3 Bb3 D4 v51 (x5)
+bar  24  F13
+   RH  1.08:F5 2 v88 +1
+   LH  F13: F2 v53 (x6)
+bar  25  Dm9
+   RH  2.08:A5 1 v58  3:G5 2 v73 +2
+   LH  Dm9: D2 F3 A3 C4 E4 v37 (x5)
+bar  26  G7b13
+   RH  1:F5 1 v99 +3  2:B5 2.5 v100 +3  4.42:A5 2 v89 +2
+   LH  G7b13: G2 v45 (x7)
+bar  27  Cm7 F13
+   RH  2.5:G5 0.5 v66  3:F5 1.5 v68 +2  4.5:Eb5 0.5 v50 +1
+   LH  Cm7: G2 Eb3 G3 A3 D4 v42 | F13: F2 v49 (x3)
+bar  28  Bb6 F7#11
+   RH  1:D5 2 v57 +1
+   LH  Bb6: Bb2 v53 (x3) | F7#11: F2 v38 (x3)
+
+[head C]
+bar  29  Ebmaj9
+   RH  1.5:G5 0.5 v81 +3  2:Eb5 0.5 v90 +1  2.5:D5 1 v80 +1  3.42:C5 1 v87 +1  4.42:D5 2.5 v73 +3
+   LH  Ebmaj9: Eb2 G3 Bb3 D4 F4 v39 (x5)
+bar  30  Em7b5
+   RH  3:E5 1 v62 +2  4.58:Bb4 0.42 v44 +2
+   LH  Em7b5: E2 v44 (x6)
+bar  31  Dm9
+   RH  1.08:F5 0.42 v66 +2  1.58:C5 0.5 v66  2.08:C5 0.5 v58  2.58:D5 0.5 v68  3.08:F5 1 v80 +1  4:C6 1 v100 +1
+   LH  Dm9: D2 F3 A3 C4 E4 v53 (x5)
+bar  32  G7b9
+   RH  1:D6 0.5 v98 +2  1.58:E6 0.5 v93  2:F6 1 v97 +1  3.08:E6 1 v66 +3
+   LH  G7b9: G2 v54 (x6)
+bar  33  Cm9
+   RH  1:C6 0.5 v73 +3  1.58:Bb5 0.5 v86  2:G5 0.5 v86 +1  2.5:Eb5 0.5 v71  3:G5 1 v81 +3  4:Eb5 1 v64
+   LH  Cm9: C2 Eb3 G3 Bb3 D4 v32 (x5)
+bar  34  Cb9
+   RH  1:Cb5 0.5 v48 +3  1.5:Db5 0.5 v43  1.92:Eb5 1 v50 +1  3.08:Db5 1 v46 +2
+   LH  Cb9: Cb3 v42 (x6)
+bar  35  Bbmaj7
+   RH  2:F5 0.5 v47 +1  2.58:D5 0.5 v47  3.08:C5 1 v59 +3  4.08:Bb4 0.5 v67 +1  4.58:F5 3.5 v70 +3
+   LH  Bbmaj7: Bb2 D3 F3 A3 C4 v53 (x5)
+bar  36  Bbmaj7
+   RH  rest
+   LH  Bbmaj7: Bb2 v47 (x6)
+
+[solo chorus 1 A1]
+bar  37  Gm7
+   RH  2.08:G5 0.5 v65 +2  2.5:D5 1 v75 +1  3.5:C5 0.5 v63 +1  4:Bb4 1.5 v64 +1
+   LH  Gm7: G2 F3 A3 Bb3 D4 v39 (x5)
+bar  38  Ebmaj9
+   RH  1.42:Bb4 2 v62 +2  3.5:C5 1 v55
+   LH  Ebmaj9: Eb2 v45 (x6)
+bar  39  Cm11
+   RH  2.58:Eb5 0.5 v47 +1  3.08:Bb4 0.5 v42  3.58:C5 0.5 v46  4.08:D5 1 v44
+   LH  Cm11: C2 Eb3 F3 Bb3 D4 v54 (x5)
+bar  40  F13
+   RH  1.08:Eb5 0.5 v49  1.58:Ab5 0.5 v57  2.08:A5 0.5 v60  2.58:B5 0.5 v60  3.08:C6 0.5 v66 +2  3.58:Bb5 0.5 v59  4.08:A5 0.5 v67 +1  4.58:E5 0.5 v55
+   LH  F13: F2 v52 (x6)
+bar  41  Cm7
+   RH  1.08:Eb5 0.33 v51  1.42:F5 0.33 v61  1.75:F#5 0.33 v65  2.08:G5 0.5 v69  2.58:A5 0.5 v69 +2  3:Bb5 0.5 v76  3.5:C6 0.5 v73  4:Eb6 0.5 v77 +1  4.5:C6 0.5 v74
+   LH  Cm7: C2 Eb3 G3 Bb3 D4 v38 (x5)
+bar  42  F7
+   RH  1:A5 0.5 v68  1.58:C6 1 v70 +1  3.08:F5 0.25 v56  3.25:Eb5 0.75 v56 +1  4.08:F5 1.5 v53 +1
+   LH  F7: F2 v46 (x6)
+bar  43  Dm11 G7b13
+   RH  rest
+   LH  Dm11: D2 F3 G3 C4 E4 v55 (x2) | G7b13: G2 v55 (x3)
+bar  44  Cm9 F7#11
+   RH  1:G5 0.5 v65 +4  1.58:D5 1 v70  2.5:C5 0.5 v66 +4  3:A4 1.5 v69 +2  4.42:A4 1.5 v53 +2
+   LH  Cm9: C2 v53 (x3) | F7#11: F2 v41 (x3)
+
+[solo chorus 1 B]
+bar  45  Ebmaj9
+   RH  1.92:D5 0.25 v45 +1  2.25:A4 0.5 v42  2.75:G5 0.25 v59  3:Eb5 0.75 v54 +1  3.83:F5 0.5 v43 +1
+   LH  Ebmaj9: Eb2 G3 Bb3 D4 F4 v41 (x5)
+bar  46  Edim7
+   RH  1.75:C5 0.25 v40 +1  2.08:G5 0.5 v59  2.58:E5 0.25 v59  2.83:C#5 0.75 v48 +1  3.5:D#5 0.5 v53 +1  4:E5 0.25 v63  4.25:Bb4 0.5 v56  4.75:G5 0.25 v77
+   LH  Edim7: E2 v53 (x6)
+bar  47  Dm9
+   RH  1:E5 0.75 v69 +1  1.67:F5 0.5 v67 +1  2.25:G5 0.25 v67  2.5:C6 0.5 v73 +3  3:D6 0.25 v78 +1  3.17:F6 0.75 v83 +1  3.92:G5 0.5 v75 +1
+   LH  Dm9: D2 F3 A3 C4 E4 v67 (x5)
+bar  48  Db7#11
+   RH  1:Eb5 0.25 v50 +1  1.33:Ab5 1 v58 +3
+   LH  Db7#11: Db2 v58 (x6)
+bar  49  Cm11
+   RH  4.08:F5 0.25 v58  4.33:Eb5 0.25 v60  4.58:C5 0.25 v59  4.83:Bb4 0.25 v56
+   LH  Cm11: C2 Eb3 F3 Bb3 D4 v41 (x5)
+bar  50  F9
+   RH  1.08:A4 0.25 v53  1.33:Bb4 0.25 v56  1.58:C5 0.25 v60  1.83:D5 0.25 v65  2.08:Eb5 0.5 v67  2.58:Gb5 0.5 v72  3.08:G5 0.25 v76  3.33:Eb5 0.25 v74  3.58:Bb4 0.25 v58  3.75:C5 0.25 v68  4:B4 0.25 v70  4.25:Bb4 0.25 v64  4.5:C5 0.25 v66  4.75:Db5 0.25 v66
+   LH  F9: F2 v51 (x6)
+bar  51  Bb69
+   RH  1:D5 0.5 v78  1.58:F5 0.5 v68  2.08:G5 0.33 v77  2.42:F5 0.33 v71  2.75:Eb5 0.33 v68  3.08:D5 0.25 v63  3.33:Eb5 0.25 v73  3.58:F5 0.25 v81  3.75:Gb5 0.25 v77  4:G5 0.25 v79  4.25:A5 0.25 v83  4.5:C6 0.25 v82  4.75:D6 0.25 v90
+   LH  Bb69: Bb2 D3 F3 G3 C4 v69 (x5)
+bar  52  F13
+   RH  1:Eb6 0.25 v97  1.25:D6 0.25 v91  1.5:C6 0.25 v82  1.75:Bb5 0.25 v83  2:A5 0.5 v84  2.5:Gb5 0.5 v77  3:F5 0.5 v81  3.5:E5 0.5 v79  4:Eb5 0.25 v71  4.25:F5 0.25 v76  4.5:C6 0.25 v87  4.75:A5 0.25 v66
+   LH  F13: F2 v63 (x7)
+
+[solo chorus 1 A2]
+bar  53  Gm7
+   RH  1:Bb5 0.25 v84  1.25:A5 0.25 v76  1.5:G5 0.25 v76  1.75:E5 0.25 v66  2:F5 0.5 v68  2.5:Eb5 0.5 v66  3:D5 0.25 v65  3.25:Eb5 0.25 v67  3.5:F5 0.25 v69  3.75:F#5 0.25 v70  4:G5 0.33 v69 +1  4.33:Eb6 0.33 v75  4.67:C#6 0.33 v67
+   LH  Gm7: D3 F3 A3 Bb3 D4 v41 (x4)
+bar  54  Ebmaj9
+   RH  1:D6 0.5 v73 +1  1.5:Bb5 0.5 v69 +1  2.08:G5 0.25 v63  2.33:F5 0.25 v69  2.58:Eb5 0.25 v59  2.83:F5 0.25 v73  3.08:D5 0.25 v65  3.33:Eb5 0.25 v69  3.58:F5 0.25 v79  3.75:Gb5 0.25 v79  4:G5 0.25 v81  4.25:A5 0.25 v87  4.5:Bb5 0.25 v85  4.75:A5 0.25 v77
+   LH  Ebmaj9: Eb2 v58 (x6)
+bar  55  Cm11
+   RH  1:Bb5 0.5 v95  1.5:Db6 0.5 v95  2:D6 0.5 v100 +1  2.5:C6 0.5 v87  3:A5 0.25 v88  3.25:G5 0.25 v80  3.5:F5 0.25 v73  3.75:E5 0.25 v71  3.92:Eb5 0.5 v64 +1  4.5:C5 0.5 v58
+   LH  Cm11: C2 Eb3 F3 Bb3 D4 v73 (x5)
+bar  56  F13
+   RH  1:A4 0.25 v49  1.25:Bb4 0.25 v57  1.5:C5 0.25 v56  1.75:Db5 0.25 v58  2:D5 0.5 v64  2.5:Eb5 0.5 v63  3:F5 0.5 v69  3.5:G5 0.5 v68  4:A5 0.5 v74  4.5:Bb5 0.5 v71
+   LH  F13: F2 v64 (x6)
+bar  57  Dm9
+   RH  1:C6 0.25 v79 +1  1.25:G5 0.25 v68 +1  1.58:F5 0.25 v53  1.83:A5 1.5 v62 +2
+   LH  Dm9: D2 F3 A3 C4 E4 v46 (x5)
+bar  58  G7b13
+   RH  3:G5 0.5 v82 +2  3.5:D5 1 v92 +2  4.5:C5 0.5 v72
+   LH  G7b13: G2 v60 (x6)
+bar  59  F9sus4 F13
+   RH  1:Bb4 1.5 v84 +1  2.58:Bb4 0.5 v50 +1  3.58:Eb5 0.5 v54 +1  4.08:A4 0.5 v53  4.58:Db5 0.5 v63
+   LH  F9sus4: F2 Eb3 G3 Bb3 C4 v72 (x2) | F13: F2 v67 (x3)
+bar  60  Bb6 F7#11
+   RH  1.08:D5 0.5 v70  1.58:F5 0.5 v72  2.08:G5 0.33 v75  2.42:Ab5 0.33 v72  2.75:G5 0.33 v68  3.08:A5 0.5 v84  3.5:D6 0.5 v87 +1  4:Eb6 0.5 v90 +1  4.5:F6 0.5 v86
+   LH  Bb6: Bb2 v70 (x3) | F7#11: F2 v53 (x3)
+
+[solo chorus 1 C]
+bar  61  Ebmaj9
+   RH  1:D6 0.5 v100 +1  1.5:Ab5 0.5 v93 +1  2:G5 0.5 v88  2.5:Eb5 0.5 v83  2.92:D5 0.5 v69 +1  3.42:Eb5 1.5 v73 +1
+   LH  Ebmaj9: Eb2 G3 Bb3 D4 F4 v54 (x5)
+bar  62  Em7b5
+   RH  1:Bb5 0.5 v73  1.5:G#5 0.5 v70  2:G5 0.5 v67  2.5:D#5 0.5 v62  3.08:D5 0.17 v60  3.25:C5 0.17 v49  3.33:D5 1.25 v49
+   LH  Em7b5: E2 v66 (x6)
+bar  63  Dm9
+   RH  2.58:C6 0.5 v83 +2  3:D6 1 v102 +1  4.08:A6 0.5 v104 +2  4.58:C6 0.5 v97
+   LH  Dm9: D2 F3 A3 C4 E4 v81 (x5)
+bar  64  G7b9
+   RH  1.08:B5 0.5 v98  1.58:Ab5 0.5 v95  2.08:G5 0.5 v84  2.58:F#5 0.5 v86  3.08:F5 1 v85  4.08:Bb5 0.5 v102 +1  4.58:B5 0.5 v105 +1
+   LH  G7b9: G2 v77 (x6)
+bar  65  Cm9
+   RH  1.08:Bb5 1 v116 +1  2.08:Eb6 0.5 v112 +1  2.58:C6 0.5 v86  3.08:Bb5 0.5 v86  3.58:Db6 0.5 v97  4:D6 0.5 v100  4.5:C6 0.5 v92
+   LH  Cm9: C2 Eb3 G3 Bb3 D4 v52 (x5)
+bar  66  Cb9
+   RH  1:Eb6 0.5 v110  1.5:Fb6 0.5 v104  2:Gb6 0.33 v111 +2  2.33:Fb6 0.33 v98  2.67:F6 0.33 v100  3:Eb6 1 v91 +1  4.08:A5 0.5 v75 +4
+   LH  Cb9: Cb3 v68 (x6)
+bar  67  Bbmaj7
+   RH  2.58:G5 0.5 v82 +1  3.08:D5 1 v90 +1  4.08:C5 0.5 v64  4.58:Bb4 0.5 v56 +1
+   LH  Bbmaj7: Bb2 D3 F3 A3 C4 v82 (x5)
+bar  68  Bbmaj7
+   RH  1.08:C5 0.5 v78 +2  1.58:Eb5 0.5 v91  2.08:C5 0.5 v82  2.67:Eb5 0.5 v75  3.17:D5 1.67 v68 +1
+   LH  Bbmaj7: Bb2 v72 (x6)
+
+[head-out A]
+bar  69  Gm7
+   RH  1.5:G5 0.5 v76 +2  2:D5 0.5 v91  2.5:C5 1 v97  3.5:Bb4 1 v87  4.5:Bb4 2.5 v75 +2
+   LH  Gm7: G2 F3 A3 Bb3 D4 v45 (x5)
+bar  70  Ebmaj9
+   RH  3:C5 1 v56 +2
+   LH  Ebmaj9: Eb2 v51 (x6)
+bar  71  Cm11
+   RH  2:Eb5 0.5 v52 +1  2.58:Bb4 0.5 v48  3.08:C5 1 v73 +3  4.08:Eb5 0.5 v86  4.58:F5 2.5 v83 +3
+   LH  Cm11: C2 Eb3 F3 Bb3 D4 v60 (x5)
+bar  72  F13
+   RH  rest
+   LH  F13: F2 v58 (x6)
+bar  73  Dm9
+   RH  2.5:A5 0.5 v58 +1  3:G5 2 v69 +1
+   LH  Dm9: D2 F3 A3 C4 E4 v39 (x5)
+bar  74  G7b13
+   RH  1:F5 1 v88 +1  2.08:C6 0.17 v81 +2  2.33:Bb5 0.17 v76  2.5:B5 2.5 v88  4.92:Bb5 1.5 v86 +1
+   LH  G7b13: G2 v51 (x7)
+bar  75  F9sus4 F13
+   RH  2.5:G5 0.5 v65  2.92:F5 1.5 v61 +1  4.5:Eb5 0.5 v46 +1
+   LH  F9sus4: C3 Eb3 G3 A3 D4 v49 | F13: F2 v55 (x3)
+bar  76  Bb6 F7#11
+   RH  1:D5 2 v54 +1
+   LH  Bb6: Bb2 v53 (x3) | F7#11: F2 v39 (x3)
+
+[head-out C]
+bar  77  Ebmaj9
+   RH  1.5:G5 0.5 v51 +1  2:Eb5 1 v53  3:D5 0.5 v49 +3  3.42:C5 1.5 v52 +2  4.92:D5 1.5 v56 +3
+   LH  Ebmaj9: Eb2 G3 Bb3 D4 F4 v32 (x5)
+bar  78  Em7b5
+   RH  2.58:E5 1.5 v63 +3  4.58:F5 1 v64
+   LH  Em7b5: E2 v39 (x6)
+bar  79  Dm9
+   RH  1.5:C5 0.5 v66 +1  2:C5 0.5 v57  2.5:D5 0.5 v64  3:F5 1 v69 +3  4:C6 1 v82 +1  4.92:D6 0.5 v69 +3
+   LH  Dm9: D2 F3 A3 C4 E4 v46 (x5)
+bar  80  G7b9
+   RH  1.5:E6 0.5 v67  2:F6 1 v70 +3  3.08:E6 1 v51 +2  4.75:B5 0.25 v57
+   LH  G7b9: G2 v46 (x6)
+bar  81  Cm9
+   RH  1:C6 0.5 v74 +2  1.5:Bb5 0.5 v80  2:G5 0.5 v81  2.5:Eb5 0.5 v66  2.92:G5 1 v75 +3  3.92:Eb5 1 v61 +1  4.92:Cb5 0.5 v46 +3
+   LH  Cm9: C2 Eb3 G3 Bb3 D4 v29 (x5)
+bar  82  Cb9
+   RH  1.5:Db5 0.5 v44  2:Eb5 1 v52  3.08:Db5 1 v47 +3
+   LH  Cb9: Cb3 v38 (x6)
+bar  83  Bbmaj7
+   RH  2:F5 0.5 v43 +1  2.58:D5 0.5 v45  3.08:C5 1 v51 +3  4.08:Bb4 1 v59
+   LH  Bbmaj7: Bb2 D3 F3 A3 C4 v50 (x5)
+bar  84  Bbmaj7
+   RH  1.08:F5 3 v64 +3
+   LH  Bbmaj7: Bb2 v45 (x6)
+
+[tag]
+bar  85  Ebmaj9
+   RH  1.08:G5 1 v81 +1  2:D5 2 v86 +1  4:C5 1 v71
+   LH  Ebmaj9: Eb2 G3 Bb3 D4 F4 v36 (x5)
+bar  86  Ebm6
+   RH  1:Bb4 3 v73 +2  4:Bb4 0.5 v52  4.5:F5 1.5 v55 +2
+   LH  Ebm6: Eb2 v42 (x6)
+bar  87  Cm9
+   RH  2:Eb5 2 v50 +3
+   LH  Cm9: C2 Eb3 G3 Bb3 D4 v51 (x5)
+bar  88  F7alt
+   RH  rest
+   LH  F7alt: F2 v48
+
+[ending]
+bar  89  Bb69
+   RH  1.25:D4 7.58 v43  1.42:F4 7.42 v49  1.58:G4 7.33 v52  1.75:C5 7.17 v58  1.92:G5 7 v74
+   LH  Bb69: Bb1 v57 (x2)
+bar  90  Bb69
+   RH  rest
+   LH  rest
+
+ANALYSIS (from the rendered audio; the same analyser for every packet)
+  loudness range 8.2 LU
+  section loudness (LU relative to the whole piece):  intro -3.9  head -1.1  solo +1.6  head-out -1.1  tag -2.4  ending -3.7
+  note dynamics, right hand: level spread (10-90 %) 10.8 dB, within phrases 9.7 dB, dynamics 7.2 dB; velocities p10 49 p90 90 (min 35, max 116)
+     spread per section (dB): intro 7.2  head 12.0  solo 9.7  head-out 10.5  tag 7.1  ending 8.3
+  note dynamics, left hand: level spread (10-90 %) 8.5 dB, within phrases 5.6 dB, dynamics 4.1 dB; velocities p10 27 p90 53 (min 18, max 82)
+     spread per section (dB): intro 7.2  head 6.1  solo 7.8  head-out 8.1  tag 5.6  ending 1.6
+  density per section (per bar):  section: RH attacks / RH notes / LH attacks / mean RH top velocity
+     intro       3.0 /   6.0 /   1.5 /  56.2
+     head        2.9 /   6.4 /   5.5 /  67.7
+     solo        6.8 /   9.6 /   5.5 /  72.1
+     head-out    3.4 /   7.5 /   5.5 /  65.3
+     tag         1.8 /   4.0 /   4.2 /  66.9
+     ending      2.5 /   2.5 /   1.0 /  55.2
+  highest note: A6 at bar 63 beat 4.08 (solo chorus 1 C, bar 3 of 8; 70% into the piece), velocity 104
+  highest note before the ending: A6 at bar 63 beat 4.08 (solo chorus 1 C, bar 3 of 8; 70% into the piece), velocity 104
+  lowest note: Bb1

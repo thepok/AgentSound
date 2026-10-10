@@ -92,6 +92,21 @@ class CompileTime(unittest.TestCase):
         self.assertEqual(f['pitches'], [70])
         self.assertIn('maracas (70)', f['message'])
 
+    def test_soundfont_key_ranges(self):
+        # the preset's zones from the font's pdta chunk: GeneralUser's Standard kit has samples on 27-87 only
+        keys = silent_notes.sf2_keys({'preset': 'Standard 1'})
+        if keys is None:
+            self.skipTest('GeneralUser GS not found')
+        self.assertEqual((min(keys[0]), max(keys[0]), keys[1]), (27, 87, 128))
+        s, _ = _song(inst.sf2('Standard 1'), [(36, 0), (100, 1)])
+        f = _silent(s.compile())[0]
+        self.assertEqual(f['pitches'], [100])
+        self.assertIn('SoundFont kit', f['message'])
+        s, _ = _song(inst.sf2('Standard 1', transpose=-20), [(100, 0)])      # 80: covered after the transpose
+        self.assertEqual(_silent(s.compile()), [])
+        s, _ = _song(inst.sf2('Grand Piano'), [(21, 0), (108, 1)])
+        self.assertEqual(_silent(s.compile()), [])
+
     def test_stack_layer_ranges_and_muted_layers(self):
         smp = inst.sampler(zones=[dict(file='samples/x/a.wav', root=60, lo=60, hi=72)])
         st = inst.stack(layer(smp, 'smp', keys=(55, 80)), layer(inst.va(), 'low', keys=(30, 50)))

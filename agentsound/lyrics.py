@@ -13,7 +13,11 @@ THE SYNTAX (one token per note, whitespace between tokens; it is what agentsound
     word{hh ah l ow}   the phonemes given by hand (ARPAbet, stress digits optional: {hh ah0 l ow1})
     ,  ;  .  !  ?      after a word: a phrase mark - a preferred breath spot (the singer breathes there when the
                        line rests; with no rest it only lifts)
-Apostrophes stay ("don't", "rock'n'roll"); other punctuation is ignored.
+    *word*      emphasis: a key word (the singer leans in: a little louder, brighter, a longer vowel, a crisper
+                consonant - agentsound.singer sing(emphasis=)); *two words* marks a span
+    (( ... ))   an intimate line: near-whispered (softest voice mode, softer, closer to the mic); '((' / '))' may
+                stand alone or touch the first / last word
+Apostrophes stay ("don't", "rock'n'roll"); other punctuation is ignored (the markup never changes the syllables).
 
 G2P: the CMU Pronouncing Dictionary (CMUdict, ARPAbet with lexical stress; bundled: third_party/cmudict, BSD-2),
 then a voicebank's own dictionary (its dsdict entries: names, special words), then letter-to-sound rules (a warning
@@ -268,15 +272,36 @@ def syllabify(phones, word: str = '', source: str = 'cmudict') -> list[Syllable]
 @dataclass
 class Token:
     """One lyrics token: kind 'word' | 'melisma' | 'hold'; text; pieces (a hand-split word); phonemes (given by
-    hand); mark (a phrase mark after it: ',' '.' ...)."""
+    hand); mark (a phrase mark after it: ',' '.' ...); emph (the markup: '' | 'emph' (*word*) | 'intimate'
+    ((( ... ))))."""
     kind: str
     text: str = ''
     pieces: list = field(default_factory=list)
     phonemes: list | None = None
     mark: str = ''
+    emph: str = ''
 
 
 _TOKEN = re.compile(r'^(?P<word>[^{}]*?)(?:\{(?P<ph>[^{}]*)\})?(?P<mark>[,;.!?:]*)$')
+
+
+def _markup(raw: str) -> tuple[str, bool, bool, bool, bool]:
+    """A raw token without its markup: (token, opens an intimate span '((', closes it '))', opens an emphasis '*',
+    closes it '*'). A single '(' / ')' stays ordinary punctuation."""
+    o_int = raw.startswith('((')
+    if o_int:
+        raw = raw[2:]
+    o_em = raw.startswith('*')
+    if o_em:
+        raw = raw[1:]
+    m = re.search(r'(?P<t>[*)]*)(?P<m>[,;.!?:]*)$', raw)
+    t = m.group('t')
+    c_int = '))' in t
+    c_em = '*' in t
+    if c_int or c_em:
+        rest = t.replace('))', '', 1) if c_int else t
+        raw = raw[:m.start('t')] + rest.replace('*', '') + m.group('m')
+    return raw, o_int, c_int, o_em, c_em
 
 
 def parse(text: str) -> list[Token]:
@@ -284,37 +309,61 @@ def parse(text: str) -> list[Token]:
     if not isinstance(text, str) or not text.strip():
         raise LyricsError(f"lyrics must be a non-empty string, got {text!r}")
     out: list[Token] = []
+    span = {'intimate': False, 'emph': False}           # the markup spans open before this token
     for raw in re.findall(r'[^\s{}]*\{[^{}]*\}\S*|\S+', text):     # word{ph ph} stays one token
-        if raw in ('-', '–', '—'):
-            out.append(Token('melisma', '-'))
+        if raw in ('((', '))'):
+            if (raw == '((') == span['intimate']:
+                raise LyricsError(f"lyrics: a stray {raw!r} - an intimate line is '(( words ))', one at a time")
+            span['intimate'] = raw == '(('
             continue
-        if raw == '_':
-            out.append(Token('hold', '_'))
+        raw, o_int, c_int, o_em, c_em = _markup(raw)
+        if (o_int and span['intimate']) or (c_int and not span['intimate'] and not o_int):
+            raise LyricsError(f"lyrics: a stray {'((' if o_int else '))'!r} at {raw!r} - an intimate line is "
+                              f"'(( words ))', one at a time")
+        tag = ('intimate' if span['intimate'] or o_int else 'emph' if span['emph'] or o_em or c_em else '')
+        span['intimate'] = (span['intimate'] or o_int) and not c_int
+        span['emph'] = (span['emph'] or o_em) and not c_em
+        if not raw:
             continue
-        lead = re.match(r'^[\"(\[]+', raw)
-        if lead:
-            raw = raw[lead.end():]
-        raw = re.sub(r'[\")\]]+(?=[,;.!?:]*$)', '', raw)
-        m = _TOKEN.match(raw)
-        if not m:
-            raise LyricsError(f"lyrics token {raw!r}: braces give phonemes after a word, like night{{n ay t}}")
-        word, ph, mark = m.group('word'), m.group('ph'), m.group('mark')
-        if mark and out and not word and ph is None:      # a lone ',' after a space
-            out[-1].mark = out[-1].mark + mark
-            continue
-        if word in ('-', '_'):
-            out.append(Token('melisma' if word == '-' else 'hold', word, mark=mark))
-            continue
-        word = re.sub(r"[^A-Za-z'\-]", '', word)
-        pieces = [x for x in word.split('-') if x] if '-' in word.strip('-') else []
-        word = word.replace('-', '')
-        if not word and ph is None:
-            raise LyricsError(f"lyrics token {raw!r} has no word")
-        phon = ph.split() if ph is not None else None
-        if phon is not None and not phon:
-            raise LyricsError(f"lyrics token {raw!r}: empty phonemes {{}}")
-        out.append(Token('word', word or ''.join(phon), pieces, phon, mark))
+        tok = _token(raw, out)
+        if tok is not None:
+            tok.emph = tag
+            out.append(tok)
+    if span['intimate']:
+        raise LyricsError("lyrics: an intimate line '(( ...' is never closed with '))'")
+    if span['emph']:
+        raise LyricsError("lyrics: an emphasis '*...' is never closed with '*'")
     return out
+
+
+def _token(raw: str, out: list) -> Token | None:
+    """One token (None: a lone phrase mark, appended to the token before it)."""
+    if raw in ('-', '–', '—'):
+        return Token('melisma', '-')
+    if raw == '_':
+        return Token('hold', '_')
+    lead = re.match(r'^[\"(\[]+', raw)
+    if lead:
+        raw = raw[lead.end():]
+    raw = re.sub(r'[\")\]]+(?=[,;.!?:]*$)', '', raw)
+    m = _TOKEN.match(raw)
+    if not m:
+        raise LyricsError(f"lyrics token {raw!r}: braces give phonemes after a word, like night{{n ay t}}")
+    word, ph, mark = m.group('word'), m.group('ph'), m.group('mark')
+    if mark and out and not word and ph is None:      # a lone ',' after a space
+        out[-1].mark = out[-1].mark + mark
+        return None
+    if word in ('-', '_'):
+        return Token('melisma' if word == '-' else 'hold', word, mark=mark)
+    word = re.sub(r"[^A-Za-z'\-]", '', word)
+    pieces = [x for x in word.split('-') if x] if '-' in word.strip('-') else []
+    word = word.replace('-', '')
+    if not word and ph is None:
+        raise LyricsError(f"lyrics token {raw!r} has no word")
+    phon = ph.split() if ph is not None else None
+    if phon is not None and not phon:
+        raise LyricsError(f"lyrics token {raw!r}: empty phonemes {{}}")
+    return Token('word', word or ''.join(phon), pieces, phon, mark)
 
 
 # ------------------------------------------------------------------------------------------------ alignment
@@ -324,7 +373,8 @@ class Sung:
     """What one note sings: kind 'syllable' (a new syllable: its consonants and vowel), 'melisma' (the previous
     vowel continues on this note's pitch) or 'hold' (the previous syllable continues, same breath); syllable (the
     syllable this note belongs to - for a melisma / hold the one it continues), word_start / word_end (the first /
-    last note of a word), mark (a phrase mark after this note), note (index into the line's notes)."""
+    last note of a word), mark (a phrase mark after this note), note (index into the line's notes), emph (the
+    lyrics' markup on it: '' | 'emph' | 'intimate'; a run / hold continues its syllable's)."""
     note: int
     kind: str
     syllable: Syllable
@@ -332,6 +382,7 @@ class Sung:
     word_end: bool = False
     mark: str = ''
     guessed: bool = False
+    emph: str = ''
 
     def __str__(self) -> str:
         if self.kind != 'syllable':
@@ -376,7 +427,7 @@ def align(line, text: str, *, extra: dict | None = None, warnings: list | None =
                 raise LyricsError(_mismatch(notes, toks, i, f"'{t.text}' has no note left"))
             if out:
                 out[-1].word_end = False if t.kind == 'hold' and not out[-1].word_end else out[-1].word_end
-            out.append(Sung(i, t.kind, last, mark=t.mark))
+            out.append(Sung(i, t.kind, last, mark=t.mark, emph=t.emph or (out[-1].emph if out else '')))
             # a melisma / hold on the last syllable of a word keeps the word end on the last note of the run
             if out[-2].word_end:
                 out[-2].word_end = False
@@ -409,7 +460,7 @@ def align(line, text: str, *, extra: dict | None = None, warnings: list | None =
             if i >= len(notes):
                 raise LyricsError(_mismatch(notes, toks, i, f"{t.text!r} syllable {k + 1} has no note left"))
             out.append(Sung(i, 'syllable', s, word_start=k == 0, word_end=k == len(syl) - 1,
-                            mark=t.mark if k == len(syl) - 1 else '', guessed=guessed))
+                            mark=t.mark if k == len(syl) - 1 else '', guessed=guessed, emph=t.emph))
             i += 1
         last = syl[-1]
     if i != len(notes):

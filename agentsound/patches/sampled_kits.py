@@ -30,7 +30,8 @@ def _hp(freq: float = 25.0):
 
 
 def _kit(source: str, level: float, **kw):
-    return inst.kit(source, lazy=True, level=level, **kw)
+    from .sampled_drums import RESTRIKE                 # the drum patches' re-strike damping
+    return inst.kit(source, lazy=True, level=level, **{'restrike': RESTRIKE, **kw})
 
 
 # --------------------------------------------------------------------------------------------- drum machines

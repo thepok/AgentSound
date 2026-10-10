@@ -1,0 +1,8 @@
+Window on Barrow  (jazz-piano, mood late-night, seed 7301)
+C minor, 100 BPM, 4/4, straight (swing 0.60), form AABA (4 x 8 bars)
+A1   | Cm9 | Ab7#11 | Fm9 | Bb13 | Ebmaj9 | Abmaj7 | Dm7b5 | G7alt |
+A2   | Cm9 | Ab7#11 | Fm9 | Bb13 | Ebmaj9 | Abmaj7 | Dm7b5(0.5) G7b9(0.5) | Cm9(0.5) C7b9(0.5) |
+B    | Fm9 | Bb13 | Ebmaj9 | % | Ebm9 | Ab13 | Dbmaj7#11 | G7alt |
+A3   | Cm9 | Ab7#11 | Fm9 | Bb13 | Ebmaj9 | Abmaj7 | Dm7b5(0.5) Db7#11(0.5) | CmMaj9 |
+
+226 s of music, -17.1 LUFS

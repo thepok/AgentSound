@@ -67,6 +67,21 @@ class Roles(unittest.TestCase):
         with self.assertRaises(ComposeError):
             mixer.infer_roles(report=rep, roles={'robot': 'singer'})
 
+    def test_instrument_words_pin_the_role(self):
+        # the report guessed by register: a palm-muted E2 guitar riff 'bass', a vocoder voice 'bass'
+        rep = report({'gtr_r': {'verse': -20}, 'robot': {'verse': -24}, 'choir_vox': {'verse': -26},
+                      'lead': {'verse': -18}}, roles={'gtr_r': 'bass', 'robot': 'bass', 'choir_vox': 'bed', 'lead': 'lead'})
+        s = Song('p', tempo=120)
+        s.section('verse', bars=8)
+        s.track('gtr_r', inst.va())
+        s.track('robot', 'synthwave/talkbox')
+        s.track('choir_vox', 'synthwave/vocoder_choir')
+        s.track('lead', 'layered/hero_guitar')
+        roles, why = mixer.infer_roles(s, rep)
+        self.assertEqual((roles['gtr_r'], roles['robot'], roles['choir_vox'], roles['lead']),
+                         ('other', 'lead', 'bed', 'lead'))
+        self.assertIn('instrument words', why['robot'])
+
     def test_melodic_lead_fallback(self):
         rep = report({'piano': {'verse': -20}, 'drums': {'verse': -35}}, roles={'drums': 'drums'}, profile='jazz')
         rep['nodes'][0]['dynamics'] = {'kind': 'lead'}
@@ -110,6 +125,36 @@ class Measure(unittest.TestCase):
         s.track('drums', inst.va()).feature(head, db=1)        # a feature from beat 0: no glide before the start
         self.assertEqual(mixer.features(s), {'bass_solo': 'bass', 'head': 'drums'})
 
+    def test_lead_per_section_group_and_melodic_fallback(self):
+        # oboes are the song's lead role, but the finale's tune is on the violins; a split choir leads as a group;
+        # where no lead-role part plays, the report's melodic lead (dynamics kind 'lead') leads
+        lv = {'oboes': {'a': -20, 'finale': -24, 'chant': None, 'coda': None},
+              'violins1': {'a': -26, 'finale': -18, 'chant': -30, 'coda': -22},
+              'choir_s': {'a': None, 'finale': None, 'chant': -23, 'coda': None},
+              'choir_a': {'a': None, 'finale': None, 'chant': -23, 'coda': None},
+              'drums': {'a': -26, 'finale': -24, 'chant': -30, 'coda': -28}}
+        secs = (('a', -14.0), ('finale', -12.0), ('chant', -14.0), ('coda', -14.0))
+        rep = report(lv, profile='synthwave', sections=secs, roles={'oboes': 'lead', 'drums': 'drums'})
+        next(n for n in rep['nodes'] if n['id'] == 'violins1')['dynamics'] = {'kind': 'lead'}
+        roles = mixer.infer_roles(report=rep, bed=['choir_s', 'choir_a'])[0]
+        prof = mixer.get_profile('synthwave')
+        a, fin, chant, coda = mixer.measure(rep, roles, prof)
+        self.assertEqual((a.lead, fin.lead, chant.lead, coda.lead), ('oboes', 'oboes', 'violins1', 'violins1'))
+        leads = mixer.section_leads(mix={'lead': {'finale': 'violins1', 'chant': ['choir_s', 'choir_a']}})
+        self.assertEqual(leads, {'finale': ['violins1'], 'chant': ['choir_s', 'choir_a']})
+        a, fin, chant, coda = mixer.measure(rep, roles, prof, featured=leads)
+        self.assertEqual(fin.lead, 'violins1')
+        self.assertAlmostEqual(fin.rel['rhythm'], -6.0, delta=0.05)
+        self.assertTrue(chant.judged)
+        self.assertNotIn('bed', chant.rel)                               # the voices are the lead there, summed:
+        self.assertAlmostEqual(chant.rel['rhythm'], -10.0, delta=0.05)  # -30 vs two parts at -23 (= -20)
+        # a part that leads only some sections rides there, it gets no song-wide trim
+        moves = mixer.propose(rep, roles, prof, mix={'lead': {'finale': 'violins1'}})[0]
+        self.assertFalse([m for m in moves if m.kind == 'trim' and m.node == 'violins1'])
+        with self.assertRaisesRegex(ComposeError, "no section 'fin'"):
+            small_song().mix({'lead': {'fin': 'lead'}})
+        self.assertEqual(small_song().mix({'lead': {'chorus': 'pad'}}).applied_mix['lead'], {'chorus': ['pad']})
+
     def test_space_bed_and_unjudged_sections(self):
         rep = report({'lead': {'verse': None, 'chorus': -20}, 'pad': {'verse': -24, 'chorus': -24}},
                      roles={'lead': 'lead', 'pad': 'bed'}, bed={'chorus': -1.2})
@@ -131,6 +176,30 @@ def synth(lead=-20.0, drums=-23.0, bass=-23.0, pad=-24.0, keys=-28.0, peak=-6.0,
     lv = {n: {'verse': v - 1.0 if n != 'lead' else v, 'chorus': v} for n, v in
           (('lead', lead), ('drums', drums), ('bass', bass), ('pad', pad), ('keys', keys))}
     return report(lv, roles=SYNTH_ROLES, peaks={'lead': peak}, **kw)
+
+
+class VoiceAndArc(unittest.TestCase):
+    def test_voice_vs_band_and_arc_proposal(self):
+        def node(i, secs, bus=False):
+            return {'id': i, 'bus': bus, 'sections': [{'section': k, 'rmsDb': v} for k, v in secs.items()]}
+        rep = {'nodes': [node('vocal', {'intro': -80.0, 'verse': -20.0, 'chorus': -18.0}),
+                         node('piano', {'intro': -20.0, 'verse': -23.0, 'chorus': -21.0}),
+                         node('bass', {'intro': -30.0, 'verse': -23.0, 'chorus': -21.0}),
+                         node('hall', {'verse': -10.0}, bus=True)],
+               'sections': [{'name': 'intro', 'lufs': -20.0}, {'name': 'verse', 'lufs': -14.5},
+                            {'name': 'chorus', 'lufs': -14.0}],
+               'global': {'loudnessRange': 3.0}, 'reference': {'lraRangeLu': [5.0, 14.0]}}
+        self.assertEqual(mixer.voice_vs_band(rep), {'verse': 0.0, 'chorus': 0.0})    # piano + bass = +3 dB
+        self.assertEqual(mixer.arc_proposal(rep), {'verse': -2.0})                    # too flat: the verse steps down
+        self.assertEqual(mixer.arc_proposal(rep, base={'arc': {'verse': -1}}), {})
+        rep['global']['loudnessRange'] = 17.0
+        rep['sections'][0]['lufs'] = -24.0
+        self.assertEqual(mixer.arc_proposal(rep), {'intro': 3.0})                     # too wide: the quiet one up
+        rep['global']['loudnessRange'] = 8.0
+        self.assertEqual(mixer.arc_proposal(rep), {})
+        rep['global']['loudnessRange'] = 3.0
+        f = [x for x in mixer.check(rep) if x.code == 'arc']
+        self.assertEqual(f[0].mix, {'arc': {'verse': -2.0}})
 
 
 class Propose(unittest.TestCase):
@@ -181,6 +250,18 @@ class Propose(unittest.TestCase):
         self.assertEqual(d[0].db, -mixer.MAX_STEP)
         m = self.moves(synth(drums=-5.0), max_step=3.0)
         self.assertEqual([x for x in m if x.node == 'drums'][0].db, -3.0)
+
+    def test_some_sections_out_get_rides_not_a_trim(self):
+        # catch-fire: the drums too quiet only in the chorus -> a ride there, the verse stays where it is
+        rep = report({'lead': {'verse': -20, 'chorus': -20}, 'drums': {'verse': -23.5, 'chorus': -29.0}},
+                     roles={'lead': 'lead', 'drums': 'drums'})
+        m = self.moves(rep)
+        self.assertFalse([x for x in m if x.kind == 'trim' and x.node == 'drums'])
+        rides = {(x.node, x.section): x.db for x in m if x.kind == 'ride'}
+        self.assertGreaterEqual(rides[('drums', 'chorus')], 4.0)
+        f = next(x for x in mixer.check(rep) if x.code == 'drums_too_quiet')
+        self.assertEqual(list(f.mix), ['ride'])
+        self.assertGreater(f.mix['ride']['drums']['chorus'], 3.0)
 
     def test_deterministic(self):
         rep = synth(lead=-20, drums=-18, pad=-18, keys=-17)
@@ -261,6 +342,18 @@ class Apply(unittest.TestCase):
             small_song().mix({'duck': [{'targets': ['pad'], 'key': 'lead', 'dept': 3}]})
         with self.assertRaisesRegex(ComposeError, "already has a MIX"):
             small_song().mix({}).mix({})
+
+    def test_arc_is_the_conductors_ride(self):
+        s = small_song().mix({'arc': {'verse': 2.0, 'chorus': -1.0}})
+        r = s.compile()
+        fx = r['master']['fx']
+        self.assertEqual((fx[0]['type'], fx[0]['params']['gain']), ('utility', 0.0))
+        lane = next(a for a in r['master']['automation'] if a['target'] == 'fx.0.gain')
+        self.assertEqual(lane['points'][0], [0.0, 2.0])
+        self.assertEqual(lane['points'][-1][:2], [8.0, -1.0])
+        with self.assertRaisesRegex(ComposeError, 'unknown section'):
+            small_song().mix({'arc': {'vers': 1.0}})
+        self.assertIn("'arc'", mixer.to_code({'arc': {'verse': 2.0}}))
 
     def test_song_with_gain_lane_keeps_it(self):
         s = small_song()

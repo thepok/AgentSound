@@ -307,14 +307,22 @@ void rock(Raster& r, Ctx& c) {
         kick.weight = 0.16;
         kick.squareCaps = true;
         kick.tracking = 0.28;
-        const kit::TitleFit sf = kit::fitTitle(kit::upper(c.spec.subtitle), kick, S * 0.7, S * 0.034, 1);
+        // The kicker fits left of the disc on its line (a long artist name ran under the red disc, red on red); when
+        // that leaves too little room it keeps its width and takes the title's colour over the disc.
+        const double top = titleTop - S * 0.035 - S * 0.034, dy = top - cy;
+        const double edge = std::fabs(dy) < R ? cx - std::sqrt(R * R - dy * dy) : S;
+        const double room = edge - margin - S * 0.02;
+        const bool fits = room >= S * 0.25;
+        const kit::TitleFit sf = kit::fitTitle(kit::upper(c.spec.subtitle), kick, fits ? std::min(S * 0.7, room) : S * 0.7,
+                                               S * 0.034, 1);
         if (!sf.lines.empty()) {
             const TextLayout lay = layoutText(sf.lines[0], kick, sf.cap, {margin, titleTop - S * 0.035});
+            const Color ink = margin + lay.advance > edge ? white : red;
             Mask bar(c.S, c.S);
             fillPolygon(bar, std::vector<Vec2>{{margin, titleTop - S * 0.03 + 4 * k}, {margin + lay.advance, titleTop - S * 0.03 + 4 * k},
                                                {margin + lay.advance, titleTop - S * 0.03 + 9 * k}, {margin, titleTop - S * 0.03 + 9 * k}});
             paintSolid(r, bar, red);
-            kit::drawDistressed(r, lay, red, 0.25, c.seed + 22u);
+            kit::drawDistressed(r, lay, ink, 0.25, c.seed + 22u);
         }
     }
     kit::grain(r, 0.09, c.seed);

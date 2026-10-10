@@ -103,11 +103,11 @@ VOX_END = notes('D5:4.5', length=8)       # the voice lets go first, the chord r
 
 LYRICS_A1 = "Down on Jane Street rain, taps the awn-ing, sings a while. I or-dered two, I drank them both, I tipped the band a smile."
 LYRICS_A1_FEW = "Down on Jane Street rain, taps and sings a while. Or-dered two, drank them both, tipped the band a smile."
-LYRICS_A2_FEW = "Down on Jane Street rain, writes your name on glass. Let you be, let you go, let the tax-is pass."
+LYRICS_A2_FEW = "Down on Jane Street rain, writes your name on glass. ((Let you be, let you go,)) let the tax-is pass."
 LYRICS_B = "Your chair is full of eve-ning, the can-dle leans your way, the wai-ter wipes the ta-ble, I tell the eve-ning, stay."
 LYRICS_A2 = "Down on Jane Street rain, writes your name a-cross the glass. I let you be, I let you go, I let the tax-is pass."
 LYRICS_C = "Let the bass walk me home, I'm not the one who's late, down on Jane Street rain, so I don't mind the wait."
-LYRICS_C_OUT = "Let the bass walk me home, I'm not the one who's late, down on Jane Street rain, now you can keep the wait."
+LYRICS_C_OUT = "Let the bass walk me home, I'm not the one who's *late*, down on Jane Street rain, now you can *keep* the wait."
 LYRICS_TAG = "Down on Jane Street rain, down on Jane Street"
 LYRICS_END = "rain."
 
@@ -134,6 +134,13 @@ ORN = {'turn': 1.2, 'mordent': 1.0, 'inverted_mordent': 0.5, 'crush': 1.0, 'rest
 # sein") - her soft mode (Nectar) as the base, power only on the loudest peaks, few small scoops, a slow narrow vibrato
 # late on the long notes only, no falls, small swings, smooth legato, laid back
 VOICE = dict(voice='hanami', style='jazz')
+
+# the singer's expression (agentsound.singer: back_phrase, ornament, messa_di_voce, emphasis; expression_ab.py has the
+# A/B): OFF in the shipped render until the user has heard it - the takes stay the cached ones
+BACK_PHRASE = True      # whole phrases laid back against the band (1/8-1/4 beat), caught up on the next bar line
+ORNAMENTS = 'out'       # False | 'out' (the out chorus' repeats only) | True (every repeat of a melody)
+MESSA = True            # messa di voce on the held peaks (the voice mode + the level after the compressor)
+EMPHASIS = True         # the lyrics' markup: *late*, *keep*, ((let you be, let you go,)) - the words are the same
 
 
 def bossa_bass(prog, lo, hi, seed=0):
@@ -169,13 +176,14 @@ def build() -> Song:
     COMP_REGISTER = ('C3', 'G4') if TRANSPOSE == -3 else ('A2', 'E4')
     vox_a = VOX('hook a_few') if FEW_A else VOX('hook a_calm') if CALM_A else VOX_A
     lyr_a1, lyr_a2 = (LYRICS_A1_FEW, LYRICS_A2_FEW) if FEW_A else (LYRICS_A1, LYRICS_A2)
-    voice = dict(VOICE, **({'transpose': TRANSPOSE, 'makeup_db': TRANSPOSE_MAKEUP_DB} if TRANSPOSE else {}))
+    voice = dict(VOICE, **({'transpose': TRANSPOSE, 'makeup_db': TRANSPOSE_MAKEUP_DB} if TRANSPOSE else {}),
+                 back_phrase=BACK_PHRASE, messa_di_voce=MESSA, emphasis=EMPHASIS, ornament=ORNAMENTS is True)
+    out_orn = dict(ornament=bool(ORNAMENTS))     # the out chorus (and the tag): 'out' embellishes them
     intro, head, solo, hout, tag, end = s.form(FORM, parts=CHANGES)
     # the bossa band as a trio: Salamander grand (both hands on one track), Meatbass, Swirly brushes, Blonde Bop
     # cross-stick, FreePats shaker, salon IR + 224XL plate; straight 8ths (the preset's Feel, ratio 0.5)
     b = bands.make('bossa', s, without=('guitar', 'sax'), master_gain=MASTER_DRIVE)
     b.piano.gain_db += PIANO_TRIM
-    b.piano.pan = -0.25               # no guitar on the left: the piano nearer the centre (the mix leaned 1.8 dB left)
     b.bass.gain_db += BASS_TRIM       # the preset's bass fader is set for the guitar band's accented pattern
     b.shaker.gain_db += 4.0           # a whisper, but audible (0.2 % of any band at +2; at 100 BPM fewer shakes: +4)
     b.drums.gain_db += 1.5            # brushes 17 dB under the piano: up into the 13-16 dB window
@@ -265,10 +273,10 @@ def build() -> Song:
     # second time through), and a soft third below on the climax line ('down on Jane Street, rain')
     def loose(line, seed):
         return jazz.paraphrase(line, seed=seed, anticipate=0.3, delay=0.15, embellish=0.0, key=s.key)
-    sing(loose(VOX_B, 81), LYRICS_B, hB, take=1, split_s=BREATH_S)
-    sing(loose(vox_a, 82), lyr_a2, hA2, take=1)
+    sing(loose(VOX_B, 81), LYRICS_B, hB, take=1, split_s=BREATH_S, **out_orn)
+    sing(loose(vox_a, 82), lyr_a2, hA2, take=1, **out_orn)
     out_c = loose(VOX_C, 83)
-    sing(out_c, LYRICS_C_OUT, hC, take=1)
+    sing(out_c, LYRICS_C_OUT, hC, take=1, **out_orn)
     harm = sing(out_c.slice(16, 24).transpose_scale(-2, s.key), 'down on Jane Street rain.', hC.start + 16, take=2,
                 track_id='vocal_harm', pan=0.3, gain_db=-8.0, formant=0.25)
     for part, v, sd in ((hB, 54, 15), (hA2, 54, 16), (hC, 58, 17)):
@@ -285,8 +293,8 @@ def build() -> Song:
     bossa_kit(b, hA2, 8, seed=173, vel=0.9)
 
     # ============================================================== tag + ending
-    sing(VOX_TAG, LYRICS_TAG, tag)
-    sing(VOX_END, LYRICS_END, end, vel=(52, 62))                # the last 'rain': soft, over the rolled chord
+    sing(VOX_TAG, LYRICS_TAG, tag, **out_orn)
+    sing(VOX_END, LYRICS_END, end, vel=(52, 62), **out_orn)              # the last 'rain': soft, over the rolled chord
     comp(tag, 50, intensity=0.3, seed=18)
     play(tag, FILL_TAG, pedal_end=end.start - 0.1, bass=None, piano=dict(
         touch=(50, 84), style='ballad', density=0.5, seed=501, bpm=TEMPO * 0.85, fill=0.0, section_end=False,

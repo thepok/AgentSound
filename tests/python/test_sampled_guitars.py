@@ -229,6 +229,21 @@ class MultiOptions(unittest.TestCase):
             with self.subTest(bad=bad), self.assertRaises(ComposeError):
                 inst.sfz_multi({'a': {'path': str(self.path), 'zone': bad}})
 
+    def test_sfz_zone_override(self):
+        # inst.sfz(zone=): the same override for one file (a release the track cannot shorten, a choir's attack curve)
+        ins = inst.sfz(str(self.path), zone={'release': 0.3, 'attack': 0.25, 'velAttack': -0.25})
+        zones = ins.params['samples']
+        self.assertEqual([(z['release'], z['velAttack']) for z in zones if z.get('trigger') != 'release'],
+                         [(0.3, -0.25)] * 2)
+        self.assertFalse(any('velAttack' in z for z in zones if z.get('trigger') == 'release'))
+        with self.assertRaises(ComposeError):
+            inst.sfz(str(self.path), zone={'file': 'x.wav'})
+        from agentsound import patches
+        from agentsound.patches import sampled
+        for name in ('sampled/choir', 'sampled/choir_mixed', 'sampled/choir_male'):   # the VPO choirs speak sooner
+            self.assertEqual(patches.get(name).instrument.lazy['zone'], sampled.CHOIR_SPEAK, name)
+        self.assertNotIn('zone', patches.get('sampled/choir_oh').instrument.lazy)
+
     def test_lazy_sampler_zones(self):
         """inst.sampler(zones=..., lazy=True): nothing is looked up until the render JSON is built; a missing file is
         a ComposeError then."""

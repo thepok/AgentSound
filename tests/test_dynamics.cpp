@@ -266,6 +266,26 @@ void testFlatAndDynamic(const std::string& outDir) {
     check(arp && (*arp)["dynamics"]["kind"] == "even" && pulse && (*pulse)["dynamics"]["kind"] == "even" && fig &&
               (*fig)["dynamics"]["kind"] == "even",
           "arp id, unnamed 16th pulse and a fast figure of short notes: kind even");
+    {   // A part named lead that plays sustained chords is a bed; a vocal's double / harmony / prism is backing:
+        // neither is judged (children-of-neon's supersaw bed 'lead' read flat_dynamics)
+        std::vector<Part> parts = flatParts();
+        Part pad{"lead"};
+        for (int bar = 0; bar < kBars; ++bar)
+            for (int p : {57, 60, 64}) pad.notes.push_back({bar * 4.0, 3.8, p, 90});
+        Part dbl{"vocal_dbl1"};
+        dbl.notes = melody(64, [](int) { return 92; });
+        parts[0].id = "hook";
+        parts.push_back(pad);
+        parts.push_back(dbl);
+        const json r = analyse(parts, "");
+        const json* bed = node(r, "lead");
+        const json* bk = node(r, "vocal_dbl1");
+        check(bed && (*bed)["dynamics"]["kind"] == "bed" && finding(r, "lead").empty(),
+              "a part named lead playing sustained chords: kind bed, not judged");
+        check(bk && (*bk)["dynamics"]["kind"] == "backing" && finding(r, "vocal_dbl1").empty(),
+              "a vocal's _dbl part: kind backing, not judged");
+        check(finding(r, "hook") == "warn", "the flat hook is still judged");
+    }
     check(r1["reference"]["noteSpreadMinDb"] == 3.0, "reference.noteSpreadMinDb = 3 (default profile)");
     check(std::filesystem::exists(outDir + "/tracks.png"), "tracks.png written with the flat-dynamics marks");
 

@@ -283,6 +283,13 @@ class PatchesInSongs(unittest.TestCase):
         self.assertEqual(tr['sends'], {'hall': -12.0})
         self.assertTrue(any("'echo' dropped" in w for w in s.warnings))
         self.assertEqual(t.patch, 'test/lead')
+        # a track with sends of its own chose its space: the missing patch send drops silently
+        s2 = Song('y')
+        s2.section('a', 1)
+        room = s2.bus('room', [fx.reverb(type='room', mix=1.0)])
+        s2.track('lead', p, sends={room: -14}).note(60, 0)
+        self.assertEqual(s2.compile()['tracks'][0]['sends'], {'room': -14.0})
+        self.assertFalse(any('dropped' in w for w in s2.warnings))
 
     def test_chain_patch_on_bus_and_tempo_ducker(self):
         chain = Patch('bus/test_verb', fx=[fx.reverb(type='plate', mix=1.0)], gain_db=-3)

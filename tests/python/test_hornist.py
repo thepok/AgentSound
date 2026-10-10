@@ -137,6 +137,25 @@ class MoveShapes(unittest.TestCase):
         self.assertLess(val(fa, 'shelf', 4.0), -3)
         self.assertLess(val(fa, 'mic', 4.0), -3)
 
+    def test_pull_back_fades_shaped_and_leans_in_for_the_coda(self):
+        from agentsound import gesture
+        g = gesture.pull_back(1.0, 4.0, BPM, db=-5, prox=-2, room=2, curve=1.7, coda=(5.0, 5.2), back=6.0)
+        self.assertEqual(g.kind, 'mic')
+        self.assertEqual(val(g, 'mic', 1.0), 0.0)
+        vals = [val(g, 'mic', 1.0 + 4.0 * k / 40) for k in range(41)]
+        self.assertTrue(all(b <= a + 1e-9 for a, b in zip(vals, vals[1:])), 'monotonic down over the vowel')
+        self.assertAlmostEqual(val(g, 'mic', 5.0), -5.0, places=6)
+        self.assertGreater(val(g, 'mic', 3.0), -2.5, 'shaped: hardly at first, then more (not linear)')
+        self.assertAlmostEqual(val(g, 'mic', 5.15), -5.0 * 0.25, places=6, msg='leaning back in for the consonant')
+        self.assertAlmostEqual(val(g, 'prox', 5.0), -2.0, places=6)
+        self.assertAlmostEqual(val(g, 'room', 5.15), 2.0, places=6, msg='the room stays up into the tail')
+        self.assertEqual(val(g, 'mic', 6.0), 0.0)
+        self.assertLessEqual(max(s.t1 for s in g.shapes), 6.0, 'back at rest by the next onset')
+        open_ = gesture.pull_back(0.0, 2.0, BPM, db=-4)
+        self.assertAlmostEqual(val(open_, 'mic', 2.0 + 0.3 / SPB), -4.0, places=6, msg='held into the tail')
+        with self.assertRaises(ComposeError):
+            gesture.pull_back(0.0, 2.0, BPM, db=3)
+
     def test_accents_follow_the_velocities(self):
         g = hornist.accents([(0, 1, 80), (1, 1, 100), (2, 1, 120)], BPM, db_per_vel=0.1)
         self.assertAlmostEqual(val(g, 'air', 0.5), -2.0)
@@ -317,6 +336,24 @@ class Targets(unittest.TestCase):
         s.compile()
         mods = [m for m in t._mods if m[0] == 'instrument.pitchbend']
         self.assertTrue(mods, 'va: the vibrato as a pitch-bend lfo')
+
+    def test_mic_post_puts_the_distance_after_the_compressor(self):
+        from agentsound import gesture
+        s, t = track(inst.va(), [fx.compressor(threshold=-30, ratio=3)], sends={'hall': -12})
+        g = gesture.pull_back(1.0, 4.0, BPM, db=-5, prox=-2, room=2)
+        hornist.render(t, [g], bpm=BPM, level='air', vibrato=False, mic_post=True)
+        auto = dict(t._auto)
+        self.assertIn('fx.air.gain', auto)
+        self.assertNotIn('fx.mic.output', auto, 'the level is not on the stage before the compressor')
+        self.assertAlmostEqual(min(v for _, v, *_ in auto['fx.air.gain']), -5.0, places=2)
+        self.assertAlmostEqual(min(v for _, v, *_ in auto['fx.mic.peak1.gain']), -2.0, places=2)
+        self.assertAlmostEqual(max(v for _, v, *_ in auto['send.hall']), -10.0, places=2)
+        s2, t2 = track(inst.va(), [fx.compressor(threshold=-30, ratio=3)])
+        hornist.render(t2, [g], bpm=BPM, level='air', vibrato=False)
+        self.assertIn('fx.mic.output', dict(t2._auto), 'without mic_post the mic stage carries the distance')
+        s3, t3 = track(Instrument('sampler', {'layers': 'dynamics', 'dynrange': 12}))
+        with self.assertRaises(ComposeError):
+            hornist.render(t3, [g], bpm=BPM, level='dynamics', mic_post=True)
 
     @unittest.skipUnless(installed('karoryfer-weresax') and installed('mtg-solo-sax'), 'sax packs not installed')
     def test_real_instruments(self):

@@ -61,11 +61,19 @@ def _hp(freq: float = 25.0, slope: int = 24):
     return fx.eq({'hp.freq': freq, 'hp.slope': slope})
 
 
+RESTRIKE = 6.0
+"""Re-strike damping of the drum kit patches (sampler 'restrike', dB): a drum or cymbal struck again while it still
+rings falls 6 dB in ~12 ms - rolls, tom runs and cymbal swells stop piling up boom and wash (a 16th floor-tom run:
+~+7 dB of low ring layered fully, ~+1.2 dB at 6; the-drummer-speaks' solo)."""
+
+
 def _kit(name: str, source: str, **kw):
-    return inst.kit(source, lazy=True, level=LEVELS[name], **kw)
+    return inst.kit(source, lazy=True, level=LEVELS[name], **{**({} if 'brush' in name else {'restrike': RESTRIKE}), **kw})
 
 
 def _sfz(name: str, path: str, **kw):
+    if name.endswith('_kit'):
+        kw.setdefault('restrike', RESTRIKE)
     return inst.sfz(path, lazy=True, level=LEVELS[name], **kw)
 
 

@@ -41,6 +41,10 @@ MEASURED: dict = {}
 """The calibration / validation numbers per preset (filled below; see the module docstring)."""
 
 
+ACOUSTIC = {g: heroes.PLAIN for g in heroes.PLAIN_GENRES}
+"""Preset.genres of the acoustic heroes (strings, brass, woodwind): one natural instrument in jazz / ballad / classical."""
+
+
 def _define(name: str, **kw) -> None:
     kw.setdefault('audition', {'notes': 'phrase'})
     kw['notes'] = kw['notes'] + ' Measured -18.0 LUFS (audition phrase).'
@@ -50,6 +54,7 @@ def _define(name: str, **kw) -> None:
 
 _define(
     'strings', sound='sampled/solo_violin', aliases=('violin', 'string', 'fiddle'), words=('violin', 'fiddle'),
+    genres=ACOUSTIC,
     chain={'tone': {'hp.freq': 150, 'hp.slope': 24, 'peak1.freq': 500, 'peak1.gain': -1.5, 'peak1.q': 1.0,
                     'peak2.freq': 1100, 'peak2.gain': -1.5, 'peak2.q': 1.2, 'peak3.freq': 3800, 'peak3.gain': -1.5,
                     'peak3.q': 1.4},
@@ -79,7 +84,7 @@ _define(
           'violin plays, competitors -1.5 dB there, +1 dB in the hooks. Credit: VSCO 2 CE (Versilian Studios, CC0).')
 
 _define(
-    'brass', sound='sampled/solo_trumpet', aliases=('trumpet', 'horn_lead'),
+    'brass', sound='sampled/solo_trumpet', aliases=('trumpet', 'horn_lead'), genres=ACOUSTIC,
     words=('trumpet', 'flugelhorn', 'cornet', 'brass', 'trombone', 'horn'),
     chain={'tone': {'hp.freq': 140, 'hp.slope': 24, 'peak1.freq': 420, 'peak1.gain': -1.5, 'peak1.q': 1.0,
                     'peak2.freq': 1200, 'peak2.gain': -2.0, 'peak2.q': 1.2, 'peak3.freq': 4800, 'peak3.gain': -1.5,
@@ -116,7 +121,7 @@ _define(
           '(Paul Battersby) and SSO 4.0 (CC Sampling Plus 1.0) for the options.')
 
 _define(
-    'woodwind', sound='sampled/solo_flute', aliases=('flute', 'winds', 'wind'),
+    'woodwind', sound='sampled/solo_flute', aliases=('flute', 'winds', 'wind'), genres=ACOUSTIC,
     words=('flute', 'clarinet', 'oboe', 'piccolo', 'woodwind', 'bassoon', 'recorder', 'whistle', 'english_horn'),
     chain={'tone': {'hp.freq': 200, 'hp.slope': 24, 'peak1.freq': 450, 'peak1.gain': -1.5, 'peak1.q': 1.0,
                     'peak2.freq': 1500, 'peak2.gain': -1.0, 'peak2.q': 1.2},

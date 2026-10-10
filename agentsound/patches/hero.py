@@ -61,6 +61,12 @@ HERO_SAX = {
     'air': {'freq': 3500, 'drive': 30, 'amount': 0.25, 'character': 0.4},
     'space': {'plate': -14.0, 'hall': -16.0, 'echo': -24.0, 'throw': -5.0, 'plate_bus': 'bus/hero_plate'},
     'mix': {'bed_under_db': 5.0, 'carve_db': 4.0, 'carve_freq': 2500, 'carve_q': 0.7, 'ride_db': 2.0},
+    # hero(genre='jazz' / 'ballad'): a soft tenor-style hero - one take, no octave, no tube grit, no exciter, 2:1 at
+    # -26 dB (the 3:1 / -31 chain flattened the MTG tenor to 3.6 dB per phrase: 5.4 dB here), the presence gentle
+    # (songs/nowhere-to-be; user: "was ist das fuer ein merkwuerdiges Lead-Instrument?" about the doubled sax)
+    'soft': {'drive': False, 'exciter': False,
+             'comp': {'threshold': -26, 'ratio': 2.0, 'attack': 30, 'release': 160},
+             'presence': {'peak3.freq': 3000, 'peak3.gain': 0.0, 'peak3.q': 0.7, 'high.freq': 9000, 'high.gain': 1.0}},
 }
 GAIN_DB = -2.6   # audition calibration of layered/hero_sax (-18.0 LUFS)
 
@@ -137,6 +143,8 @@ heroes.define(
          'ride_db': HERO_SAX['mix']['ride_db'], 'dip_db': -2.0, 'dip_freq': 2500.0},
     play={'vel': (84, 124), 'vib': {'depth': 24, 'rate': 5.4, 'delay': 0.3}},
     user_gain_db=-2.8,
+    genres={'jazz': {**heroes.PLAIN, **HERO_SAX['soft']}, 'ballad': {**heroes.PLAIN, **HERO_SAX['soft']},
+            'classical': heroes.PLAIN},
     notes=_NOTES, audition={'notes': 'phrase'}, patch='layered/hero_sax',
     words=('sax', 'saxophone', 'alto', 'tenor', 'soprano', 'bari', 'weresax'),
     measured={'lufs': -18.0, 'gr_median_db': 6.5, 'gr_p90_db': 8.7, 'spread_50ms_db': (7.0, 4.2),

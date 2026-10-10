@@ -223,7 +223,7 @@ int main() {
             d["analysis"] = analysis;
             return throwsConfig(d, expect);
         };
-        check(rejects({{"profile", "outrun"}}, "unknown analysis profile 'outrun' (profiles: default, synthwave, dreamwave, darksynth, jazz, classical, piano, pop, rock, film)"),
+        check(rejects({{"profile", "outrun"}}, "unknown analysis profile 'outrun' (profiles: default, synthwave, dreamwave, darksynth, jazz, classical, piano, pop, edm, rock, film)"),
               "unknown profile rejected, message lists the profiles");
         check(rejects({{"profil", "synthwave"}}, "unknown key 'profil'"), "unknown analysis key rejected");
         check(rejects("synthwave", "$.analysis: must be an object"), "non-object analysis rejected");

@@ -44,6 +44,13 @@ def _hp(freq: float, slope: int = 24):
     return fx.eq({'hp.freq': freq, 'hp.slope': slope})
 
 
+CHOIR_SPEAK = {'attack': 0.25, 'velAttack': -0.25}
+"""The VPO choirs' velocity -> attack curve, flattened (inst.sfz zone=): the files fade in over 0.625 s x (1 - vel/127)
+(a soft answer at velocity 40 took ~0.43 s to be heard); here 0.25 s x (1 - vel/127) (velocity 40: 0.17 s, 64: 0.12 s,
+120: 14 ms) - a soft choir still breathes in, but speaks on time when played directly (track.play); orch.Choir's
+speaking velocity and lanes stay the way for written dynamics."""
+
+
 def _sfz(path: str, level: float, **kw):
     return inst.sfz(path, lazy=True, level=level, **kw)
 
@@ -299,7 +306,7 @@ for _name, _file, _level, _material, _hp_hz, _send, _desc in (
          'Female choir "ah" sustain: angelic pads and chorales G4-C6 (the samples: notes below G4 are silent).')):
     register(Patch(
         f'sampled/{_name}',
-        instrument=_sfz(_VPO + _file, level=_level),
+        instrument=_sfz(_VPO + _file, level=_level, **({'zone': CHOIR_SPEAK} if _name == 'choir' else {})),
         fx=[_hp(_hp_hz)],
         sends={'hall': _send},
         notes=f'v1. {_desc} {_VPO_NOTE} Sends: hall {_send}. Measured -18.0 LUFS (audition {_material}).',

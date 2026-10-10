@@ -220,6 +220,34 @@ class SingerPlan(_Env):
         with self.assertRaises(lyrics.LyricsError):
             singer.sing(s, LINE, 'too few words')
 
+    def test_slow_ballad_vibrato_and_held_notes(self):
+        # the ballad style at <= 80 BPM sings the narrower, later vibrato (STYLES['ballad']['slow']); a call's own
+        # value wins; at 100 BPM the style is as it was
+        slow = Song('t', tempo=62, key='C major')
+        slow.section('a', bars=8)
+        slow._singer_dir = self.tmp
+        vo = singer.sing(slow, LINE, TEXT, at=0, style='ballad')
+        self.assertEqual((vo.params['vib_ct'], vo.params['vib_min_s'], vo.params['model_vib']), (13.0, 1.1, 0.35))
+        self.assertNotIn('slow', vo.params)
+        self.assertEqual(singer.sing(slow, LINE, TEXT, at=0, style='ballad', vib_ct=20.0,
+                                     track_id='v2').params['vib_ct'], 20.0)
+        s = _song()
+        s._singer_dir = self.tmp
+        self.assertEqual(singer.sing(s, LINE, TEXT, at=0, style='ballad').params['vib_ct'],
+                         singer.STYLES['ballad']['vib_ct'])
+        # held_notes: the 3-beat C5 through a fermata of 8 extra beats (~6.6 s at 62 BPM): info; 16 more: warn
+        self.assertEqual(singer.held_notes(slow), [])
+        slow.fermata(3, hold=8)
+        self.assertEqual([f['code'] for f in singer.held_notes(slow) if f['node'] == 'vocal'], ['note_fermata'])
+        long = Song('u', tempo=62, key='C major')
+        long.section('a', bars=8)
+        long._singer_dir = self.tmp
+        singer.sing(long, LINE, TEXT, at=0, style='ballad')
+        long.fermata(3, hold=16)
+        f = singer.held_notes(long)
+        self.assertEqual([x['code'] for x in f], ['held_note'])
+        self.assertIn('through a fermata', f[0]['message'])
+
     def test_spice_budget_song_wide(self):
         s = _song()
         s._singer_dir = self.tmp
@@ -349,6 +377,31 @@ class SingerRender(_Env):
         self.assertEqual([n.pitch for n in h.notes][:2], [67, 71])            # E4 G4 -> G4 B4 (a third up)
         self.assertNotEqual(singer._key(singer._phrase_spec(d, d.phrases[0])),
                             singer._key(singer._phrase_spec(vo, vo.phrases[0])))
+        # doubles onto tracks that already exist (catch-fire: L and R per line): never the same take twice
+        dl = singer.double(vo, pan=-0.8, track_id='dl')
+        dr = singer.double(vo, pan=0.8, track_id='dr')
+        vo2 = singer.sing(s, LINE, TEXT, at=8, seed=4)
+        dl2 = singer.double(vo2, pan=-0.8, track_id='dl')
+        dr2 = singer.double(vo2, pan=0.8, track_id='dr')
+        self.assertEqual(len({vo.take, d.take, dl.take, dr.take}), 4)
+        self.assertNotEqual(dl2.take, dr2.take)
+
+    def test_calm_lay_back_follows_the_consonants(self):
+        # jazz / ballad: the vowel lands half its onset consonants + pcentre_ms behind the beat (P-centre ~ on it)
+        s = _song()
+        s._singer_dir = self.tmp
+        vo = singer.sing(s, LINE, TEXT, at=0, seed=2, style='jazz')
+        spec = singer._phrase_spec(vo, vo.phrases[0])
+        job = singer._dur_job(spec)
+        for pred in (4.0, 9.0):          # short and long consonants (frames per phoneme)
+            cons = singer._cons_lengths(job, [pred] * len(job['phonemes']), spec)
+            tl = singer._timeline(spec, cons, vb.get('hanami'))
+            toks = tl['tokens']
+            i = next(k for k, t in enumerate(toks) if t[0] == 'ow')
+            onset = toks[i][1] - toks[i - 1][1]                       # 'hh' before the vowel
+            S = vo.params
+            want = (vo.plan[0]['late_ms'] - S['late_ms'] + S['pcentre_ms']) / 1000.0 + 0.5 * onset
+            self.assertAlmostEqual(toks[i][1], want, delta=0.004)
 
 
 def _timeline(vo, k=0, pred=6.0):
@@ -479,6 +532,333 @@ class Diction(_Env):
         self.assertTrue(any(f['code'] == 'coda_buried' for f in singer.diction(vo)))
 
 
+class SingerMicPull(_Env):
+    """mic_pull: the singer slowly pulls back from the mic on long held notes (automation after the compressor)."""
+
+    def _compiled(self, s):
+        calls = []
+        with mock.patch.object(vb, 'run', _fake_run(calls)), mock.patch.object(vb, 'runner_ok', lambda: (True, '')):
+            return s.compile()
+
+    def test_plan_long_notes_only_and_by_style(self):
+        s = _song()
+        s._singer_dir = self.tmp
+        bal = singer.sing(s, LINE, TEXT, at=0, seed=4, style='ballad')
+        # only the two held phrase ends (3 beats at 100 bpm = 1.8 s): 'night' and 'young', never the short notes
+        self.assertEqual(sorted(bal.mic), [3, 7])
+        self.assertTrue(all(p['role'] == 'end' for p in bal.mic.values()))
+        self.assertTrue(all(-6.0 <= p['db'] <= -4.0 for p in bal.mic.values()))
+        self.assertEqual(sum(1 for _, n, _ in bal.moves if n == 'mic_pull'), 2)
+        jaz = singer.sing(s, LINE, TEXT, at=0, seed=4, style='jazz', track_id='j')
+        self.assertEqual(sorted(jaz.mic), [3, 7])
+        self.assertLess(sum(p['db'] for p in bal.mic.values()), sum(p['db'] for p in jaz.mic.values()))  # deeper
+        # pop / rock: off unless asked for; a number is the depth in dB
+        self.assertEqual(singer.sing(s, LINE, TEXT, at=0, seed=4, track_id='p').mic, {})
+        self.assertEqual(singer.sing(s, LINE, TEXT, at=0, seed=4, style='rock', track_id='r').mic, {})
+        pop = singer.sing(s, LINE, TEXT, at=0, seed=4, track_id='p2', mic_pull=True)
+        self.assertTrue(pop.mic)
+        deep = singer.sing(s, LINE, TEXT, at=0, seed=4, track_id='p3', mic_pull=7)
+        self.assertTrue(all(-8.1 <= p['db'] <= -5.9 for p in deep.mic.values()))
+        self.assertEqual(singer.sing(s, LINE, TEXT, at=0, style='jazz', track_id='off', mic_pull=False).mic, {})
+        self.assertEqual(singer.sing(s, LINE, TEXT, at=0, style='jazz', track_id='rb', moves=False).mic, {})
+        with self.assertRaises(singer.SingerError):
+            singer.sing(s, LINE, TEXT, track_id='bad', mic_pull={'depth': 3})
+        # the takes do not change: the pull is not part of what is sung (no new cache keys)
+        plain = singer.sing(s, LINE, TEXT, at=0, seed=4, style='ballad', track_id='plain', mic_pull=False)
+        self.assertEqual([singer._key(singer._phrase_spec(bal, ph)) for ph in bal.phrases],
+                         [singer._key(singer._phrase_spec(plain, ph)) for ph in plain.phrases])
+
+    def test_budget_ends_first(self):
+        s = Song('t', tempo=60, key='C major')
+        s.section('a', bars=8)
+        s._singer_dir = self.tmp
+        line = Clip([(0, 2, 'E4', 90), (2, 2, 'G4', 90), (4, 2, 'A4', 90), (6, 3, 'C5', 90)], length=12)
+        vo = singer.sing(s, line, 'we were so young', at=0, seed=1, style='ballad', mic_pull={'other': 1.0})
+        beats = sorted(vo.notes[p['at']].start for p in vo.mic.values())
+        self.assertTrue(all(b - a >= 4 - 1e-6 for a, b in zip(beats, beats[1:])))     # one per bar at most
+        self.assertIn(3, vo.mic)                                                        # the phrase end always
+        self.assertEqual(vo.mic[3]['role'], 'end')
+        self.assertLess(len(vo.mic), 4)                                                 # not every long note
+        free = singer.sing(s, line, 'we were so young', at=0, seed=1, style='ballad', track_id='v2',
+                           mic_pull={'other': 1.0, 'every': 0})
+        self.assertEqual(len(free.mic), 4)
+        self.assertLess(free.mic[3]['db'], free.mic[0]['db'])                           # the end the deepest
+
+    def test_lanes_on_long_notes_codas_kept(self):
+        s = _song()
+        s._singer_dir = self.tmp
+        vo = singer.sing(s, LINE, TEXT, at=0, seed=4, style='ballad')
+        heroes.hero(vo.track, family='vocal')
+        r = self._compiled(s)
+        r2 = self._compiled(s)                                       # idempotent: a second compile writes the same
+        t = next(x for x in r2['tracks'] if x['id'] == 'vocal')
+        self.assertEqual(t['automation'], next(x for x in r['tracks'] if x['id'] == 'vocal')['automation'])
+        names = [f.name for f in vo.track.fx]
+        air, mic = names.index('air'), names.index('mic')
+        comp = next(i for i, f in enumerate(vo.track.fx) if f.type == 'compressor')
+        self.assertLess(comp, air)                                   # the level after the compressor
+        self.assertLess(mic, comp)                                   # the proximity where the microphone is
+        auto = {a['target']: a['points'] for a in t['automation']}
+        lvl = auto[f'fx.{air}.gain']
+        self.assertIn(f'fx.{mic}.peak1.gain', auto)
+        self.assertNotIn(f'fx.{mic}.output', auto)
+        self.assertTrue(any(k.startswith('send.') for k in auto))   # a touch more room
+        self.assertEqual(len(vo.mic_pulls), 2)
+        for p in vo.mic_pulls:
+            inside = [v for b, v, *_ in lvl if p['beat'] - 1e-6 <= b <= p['end_beat'] + 1e-6]
+            self.assertAlmostEqual(min(inside), p['db'], delta=0.3)  # down by the pull at the vowel's end ...
+            self.assertAlmostEqual(inside[0], 0.0, delta=0.05)       # ... from the bloomed onset at full level
+            mid = (p['beat'] + p['end_beat']) / 2
+            vm = min((abs(b - mid), v) for b, v, *_ in lvl)[1]
+            self.assertGreater(vm, p['db'] / 2)                      # shaped: less than half way at half time
+            self.assertIsNotNone(p['coda'])
+            self.assertGreater(p['coda_vs_vowel_db'], -3.0)          # the consonant keeps its level
+        # only on the long notes: nothing moves outside the pulls
+        spans = [(p['beat'], p['end_beat'] + 1.5) for p in vo.mic_pulls]
+        self.assertTrue(all(abs(v) < 1e-9 or any(a - 1e-6 <= b <= e for a, e in spans) for b, v, *_ in lvl))
+        self.assertFalse([f for f in singer.diction(s) if f['code'] == 'coda_buried'])
+        self.assertTrue(any('mic pull' in x for x in singer.report_lines(s, self.tmp / 'missing.json')))
+        self.assertIn('mic pulls 2', ' '.join(singer.log_lines(s)))
+
+    def test_doubles_inherit(self):
+        s = _song()
+        s._singer_dir = self.tmp
+        vo = singer.sing(s, LINE, TEXT, at=0, seed=4, style='pop', mic_pull=True)
+        self.assertTrue(singer.double(vo).mic)
+        vo2 = singer.sing(s, LINE, TEXT, at=0, seed=4, style='jazz', mic_pull=False, track_id='v2')
+        self.assertEqual(singer.harmony(vo2).mic, {})
+        # a harmony pulls back with the lead: the same notes, the same depth
+        vo3 = singer.sing(s, LINE, TEXT, at=0, seed=4, style='ballad', track_id='v3')
+        h = singer.harmony(vo3, steps=-2, key='C major', track_id='v3_harm')
+        self.assertTrue(vo3.mic)
+        self.assertEqual(h.mic, vo3.mic)
+
+
+# two phrases of the same melody: a held peak (C5, 1.2 s at 100 bpm) inside, a held phrase end (G4)
+XLINE = Clip([(0, 1, 'E4', 80), (1, 0.5, 'G4', 80), (1.5, 0.5, 'A4', 80), (2, 2, 'C5', 96), (4, 0.5, 'B4', 84),
+              (4.5, 0.5, 'A4', 80), (5, 2, 'G4', 76)], length=8)
+XTEXT = 'Hold on to night, we were young.'
+
+
+def _xsong(bars=8):
+    s = Song('Night Young', tempo=100, key='C major')
+    s.section('a', bars=bars)
+    return s
+
+
+class SingerExpression(_Env):
+    """back_phrase, ornament (on repeats), messa_di_voce, emphasis - the four expression techniques."""
+
+    def _compiled(self, s):
+        calls = []
+        with mock.patch.object(vb, 'run', _fake_run(calls)), mock.patch.object(vb, 'runner_ok', lambda: (True, '')):
+            return s.compile()
+
+    def test_back_phrase_lays_back_and_lands(self):
+        s = _xsong()
+        s._singer_dir = self.tmp
+        vo = singer.sing(s, XLINE, XTEXT, at=0, seed=3, style='jazz', back_phrase={'chance': 1.0}, ornament=False,
+                         messa_di_voce=False)
+        bp = vo.expression['back_phrase']
+        self.assertEqual(len(bp), 1)
+        st = [n.start for n in vo.notes]
+        d = st[0] - 0.0
+        self.assertTrue(0.12 - 1e-6 <= d <= 0.25 + 1e-6)                         # late by 1/8 .. 1/4 beat
+        self.assertAlmostEqual(st[4], 4.0)                                        # caught up on the bar line
+        self.assertEqual(st[5:], [4.5, 5.0])                                      # after it as written
+        offs = [a - b for a, b in zip(st[:4], [0, 1, 1.5, 2])]
+        self.assertTrue(all(x >= y - 1e-9 for x, y in zip(offs, offs[1:])))      # decreasing: the middle compressed
+        self.assertTrue(all(o > 0 for o in offs))                                 # never early in a calm style
+        self.assertTrue(80 <= bp[0]['ms'] <= 155)                                 # ms at 100 bpm
+        self.assertIn('back_phrase', {n for _, n, _ in vo.moves})
+        # a harmony follows the lead's phrasing note for note
+        h = singer.harmony(vo, steps=2, key='C major')
+        self.assertEqual([round(n.start, 6) for n in h.notes], [round(x, 6) for x in st])
+        self.assertTrue(h.expression['follow'])
+        # pop: off by default; asked for, it may push ahead (early) - a calm style never does
+        pop = singer.sing(s, XLINE, XTEXT, at=16, seed=3, track_id='p')
+        self.assertEqual(pop.notes[0].start, 16.0)
+        early = singer.sing(s, XLINE, XTEXT, at=24, seed=3, track_id='p2', back_phrase={'chance': 1.0, 'early': 1.0})
+        self.assertLess(early.notes[0].start, 24.0)
+        with self.assertRaises(singer.SingerError):
+            singer.sing(s, XLINE, XTEXT, at=0, style='ballad', track_id='b', back_phrase={'early': 0.5})
+        with self.assertRaises(singer.SingerError):
+            singer.sing(s, XLINE, XTEXT, at=0, style='jazz', track_id='b2', back_phrase={'late_ms': 3})
+
+    def test_ornaments_only_on_repeats_and_words_stay(self):
+        s = _xsong(16)
+        s._singer_dir = self.tmp
+        mem = singer.Memory()
+        kw = dict(style='jazz', memory=mem, back_phrase=False, messa_di_voce=False,
+                  ornament={'amount': 1.0, 'every': 0.5, 'same_every': 0})
+        first = singer.sing(s, XLINE, XTEXT, at=0, seed=5, **kw)
+        self.assertEqual(first.expression['statement'], 0)
+        self.assertEqual(first.expression['ornaments'], [])                       # the first statement plain
+        self.assertEqual(len(first.notes), 7)
+        again = singer.sing(s, XLINE, XTEXT, at=32, seed=5, track_id='v2', **kw)
+        self.assertEqual(again.expression['statement'], 1)
+        orn = again.expression['ornaments']
+        self.assertTrue(orn)
+        self.assertTrue(all(o['kind'] in singer.ORNAMENT_KINDS for o in orn))
+        self.assertEqual(len(mem.used), len(orn))
+        # the words stay: the same syllables in the same order, the ornaments are melisma notes of their syllable
+        syl = [(n.syl.word, n.syl.nucleus) for n in again.notes if n.kind == 'syllable']
+        self.assertEqual(syl, [(n.syl.word, n.syl.nucleus) for n in first.notes])
+        self.assertTrue(all(n.kind in ('syllable', 'melisma') for n in again.notes))
+        self.assertGreater(len(again.notes), 7 - 1 + sum(1 for o in orn if o['kind'] == 'blue'))
+        self.assertEqual(sum(1 for n in again.notes if n.word_end), sum(1 for n in first.notes if n.word_end))
+        ends = [n.start + n.dur for n in again.notes]
+        self.assertAlmostEqual(max(ends), 32 + 7.0)                               # the line still ends where written
+        self.assertTrue(all(b.start >= a.start for a, b in zip(again.notes, again.notes[1:])))
+        # renders: the timeline holds every ornament note
+        spec = singer._phrase_spec(again, again.phrases[0])
+        job = singer._dur_job(spec)
+        tl = singer._timeline(spec, singer._cons_lengths(job, [6.0] * len(job['phonemes']), spec), vb.get('hanami'))
+        self.assertEqual(sum(tl['durations']), tl['frames'])
+        # off: none; a double sings the same ornaments, a harmony none
+        off = singer.sing(s, XLINE, XTEXT, at=32, seed=5, track_id='v3', style='jazz', ornament=False,
+                          back_phrase=False)
+        self.assertEqual(off.expression['ornaments'], [])
+        d = singer.double(again)
+        self.assertEqual([n.pitch for n in d.notes], [n.pitch for n in again.notes])
+        self.assertEqual(singer.harmony(again, steps=2, key='C major').expression['ornaments'], [])
+
+    def test_messa_on_peaks_mic_pull_on_ends(self):
+        s = _xsong()
+        s._singer_dir = self.tmp
+        vo = singer.sing(s, XLINE, XTEXT, at=0, seed=2, style='ballad', back_phrase=False, ornament=False,
+                         messa_di_voce={'chance': 1.0})
+        self.assertEqual(len(vo.expression['messa']), 1)
+        self.assertIn('messa', vo.plan[3])                                        # the held peak C5 ...
+        self.assertNotIn(3, vo.mic)                                               # ... never pulled back
+        self.assertIn(6, vo.mic)                                                  # the phrase-end hold is
+        self.assertNotIn('messa', vo.plan[6])
+        self.assertNotIn('swell', vo.plan[3])
+        m = vo.plan[3]['messa']
+        self.assertTrue(m['lo'] < 0 < m['peak'] and m['end'] < 0)
+        spec = singer._phrase_spec(vo, vo.phrases[0])
+        job = singer._dur_job(spec)
+        tl = singer._timeline(spec, singer._cons_lengths(job, [6.0] * len(job['phonemes']), spec), vb.get('hanami'))
+        core = tl['mix'].get('Root')
+        self.assertIsInstance(core, list)                                        # sung soft + core at the swell's top
+        self.assertGreater(max(core), 0.15)
+        self.assertAlmostEqual(min(core), 0.0)
+        heroes.hero(vo.track, family='vocal')
+        r = self._compiled(s)
+        t = next(x for x in r['tracks'] if x['id'] == 'vocal')
+        air = [f.name for f in vo.track.fx].index('air')
+        lvl = next(a['points'] for a in t['automation'] if a['target'] == f'fx.{air}.gain')
+        post = [p for p in vo.expression['post'] if p['kind'] == 'messa']
+        self.assertEqual(len(post), 1)
+        inside = [v for b, v, *_ in lvl if post[0]['beat'] - 1e-6 <= b <= post[0]['end_beat'] + 1e-6]
+        self.assertAlmostEqual(max(inside), m['peak'], delta=0.2)                 # swells after the compressor
+        self.assertLess(min(inside), 0.0)
+        self.assertTrue(vo.mic_pulls)                                             # the mic pull still written
+        self.assertFalse([f for f in singer.diction(s) if f['severity'] == 'warn'])
+        self.assertTrue(any('messa' in x for x in singer.expression_lines(s)))
+
+    def test_emphasis_markup_and_intimate(self):
+        s = _xsong()
+        s._singer_dir = self.tmp
+        text = 'Hold on to *night*, (( we were young. ))'
+        vo = singer.sing(s, XLINE, text, at=0, seed=2, style='jazz', back_phrase=False, ornament=False,
+                         messa_di_voce=False)
+        self.assertEqual(vo.plan[3]['emph']['kind'], 'emph')
+        self.assertTrue(all(vo.plan[i]['emph']['kind'] == 'intimate' for i in (4, 5, 6)))
+        self.assertEqual([e['word'] for e in vo.expression['emphasis']], ['night', 'we', 'were', 'young'])
+        spec = singer._phrase_spec(vo, vo.phrases[0])
+        job = singer._dur_job(spec)
+        tl = singer._timeline(spec, singer._cons_lengths(job, [6.0] * len(job['phonemes']), spec), vb.get('hanami'))
+        n_tok = next(t for t in tl['tokens'] if t[0] == 'n' and t[2] <= tl['vowels'][3] + 1e-6
+                     and t[1] >= tl['vowels'][2])
+        f = int((n_tok[1] + n_tok[2]) / 2 / singer.FR - tl['offset_s'] / singer.FR)
+        self.assertGreater(tl['gain'][f], 1.0)                                    # the crisper onset of 'night'
+        heroes.hero(vo.track, family='vocal')
+        r = self._compiled(s)
+        kinds = [p['kind'] for p in vo.expression['post']]
+        self.assertEqual(sorted(kinds), ['emphasis', 'intimate'])
+        t = next(x for x in r['tracks'] if x['id'] == 'vocal')
+        air = [f.name for f in vo.track.fx].index('air')
+        lvl = next(a['points'] for a in t['automation'] if a['target'] == f'fx.{air}.gain')
+        em = next(p for p in vo.expression['post'] if p['kind'] == 'emphasis')
+        self.assertTrue(any(v >= 1.4 for b, v, *_ in lvl if em['beat'] <= b <= em['end_beat']))
+        it = next(p for p in vo.expression['post'] if p['kind'] == 'intimate')
+        self.assertTrue(any(v <= -1.9 for b, v, *_ in lvl if it['beat'] <= b <= it['end_beat']))
+        self.assertFalse([f for f in singer.diction(s) if f['severity'] == 'warn'])  # the codas still sung
+        # emphasis=False: the markup is ignored - the same takes (cache keys) as the plain words
+        a = singer.sing(s, XLINE, text, at=0, seed=2, style='jazz', track_id='a', emphasis=False,
+                        back_phrase=False, ornament=False, messa_di_voce=False)
+        b = singer.sing(s, XLINE, XTEXT, at=0, seed=2, style='jazz', track_id='b',
+                        back_phrase=False, ornament=False, messa_di_voce=False)
+        self.assertEqual([singer._key(singer._phrase_spec(a, ph)) for ph in a.phrases],
+                         [singer._key(singer._phrase_spec(b, ph)) for ph in b.phrases])
+        # auto: the title words ('Night Young')
+        au = singer.sing(s, XLINE, XTEXT, at=0, seed=2, style='jazz', track_id='au', emphasis='auto',
+                         back_phrase=False, ornament=False, messa_di_voce=False)
+        self.assertEqual(len(au.expression['emphasis']), 1)                      # at most one per phrase
+        self.assertIn(au.expression['emphasis'][0]['word'], ('night', 'young'))
+        self.assertTrue(au.expression['emphasis'][0]['auto'])
+
+    def test_all_off_sings_as_before(self):
+        s = _xsong()
+        s._singer_dir = self.tmp
+        off = dict(back_phrase=False, ornament=False, messa_di_voce=False, emphasis=False)
+        vo = singer.sing(s, XLINE, 'Hold on to *night*, we were young.', at=0, seed=2, style='jazz', **off)
+        self.assertEqual([(n.start, n.dur, n.pitch) for n in vo.notes],
+                         [(n.start, n.dur, n.pitch) for n in XLINE])
+        self.assertFalse(any(k in p for p in vo.plan.values() for k in ('emph', 'messa', 'blue')))
+        self.assertEqual(singer.expression_lines(s), [])
+        pop = singer.sing(s, XLINE, XTEXT, at=0, seed=2, track_id='pop')       # pop: none of them by default
+        self.assertFalse(pop.expression['back_phrase'] or pop.expression['ornaments'] or pop.expression['messa'])
+
+    def test_markup_in_the_lyrics(self):
+        toks = lyrics.parse('Hold on to *night*, (( we were young. ))')
+        self.assertEqual([(x.text, x.emph) for x in toks],
+                         [('Hold', ''), ('on', ''), ('to', ''), ('night', 'emph'), ('we', 'intimate'),
+                          ('were', 'intimate'), ('young', 'intimate')])
+        self.assertEqual(toks[3].mark, ',')                                      # the phrase mark survives the markup
+        glued = lyrics.parse('((Let you be,)) *two words* (maybe) now')
+        self.assertEqual([x.emph for x in glued], ['intimate'] * 3 + ['emph'] * 2 + ['', ''])
+        sung = lyrics.align(XLINE, 'Hold on to *night*, ((we were young.))')
+        self.assertEqual([x.emph for x in sung], ['', '', '', 'emph', 'intimate', 'intimate', 'intimate'])
+        plain = lyrics.align(XLINE, XTEXT)
+        self.assertEqual([(a.syllable.word, a.syllable.phonemes, a.word_end, a.mark) for a in sung],
+                         [(b.syllable.word, b.syllable.phonemes, b.word_end, b.mark) for b in plain])
+        # the lyricist's checks read the same words with or without the markup
+        self.assertEqual(lyrics.check(XLINE, 'Hold on to *night*, ((we were young.))'), lyrics.check(XLINE, XTEXT))
+        for bad in ('(( never closed', 'closed )) only', 'an *open star', '(( a (( b )) c ))'):
+            with self.assertRaises(lyrics.LyricsError):
+                lyrics.parse(bad)
+
+    def test_lean_gesture(self):
+        from agentsound import gesture
+        g = gesture.lean(8.0, 2.0, 100, air=1.5, shelf=1.5, ms=60.0, name='emphasis')
+        self.assertEqual(g.name, 'emphasis')
+        self.assertEqual(sorted(s.lane for s in g.shapes), ['air', 'shelf'])     # only the lanes asked for
+        air = next(s for s in g.shapes if s.lane == 'air')
+        self.assertEqual([round(v, 3) for _, v in air.keys], [0.0, 1.5, 1.5, 0.0])
+        self.assertEqual((air.keys[1][0], air.keys[2][0]), (8.0, 10.0))      # the plateau covers the whole span
+        self.assertAlmostEqual(8.0 - air.keys[0][0], 0.1)                      # 60 ms at 100 bpm, before it
+
+    def test_codas_keep_their_length_off_the_grid(self):
+        """A back-phrased / ornamented phrase puts notes off the frame grid: no word-final consonant may lose a frame
+        to the rounding (it would warn coda_short)."""
+        bank = vb.get('hanami')
+        for seed in range(1, 9):
+            s = _xsong()
+            s._singer_dir = self.tmp
+            vo = singer.sing(s, XLINE, 'Hold on to night, we want young.', at=0, seed=seed, style='jazz',
+                             back_phrase={'chance': 1.0}, ornament=False, messa_di_voce=False)
+            for ph in vo.phrases:
+                spec = singer._phrase_spec(vo, ph)
+                job = singer._dur_job(spec)
+                tl = singer._timeline(spec, singer._cons_lengths(job, [6.0] * len(job['phonemes']), spec), bank)
+                self.assertEqual(sum(tl['durations']), tl['frames'])
+                for c in tl['diction']:
+                    if c['cls'] != 'release':
+                        self.assertGreaterEqual(c['ms'], singer.DICTION[c['cls']][3] * 1000 - 1e-6, (seed, c))
+
+
 class VocalEars(unittest.TestCase):
     def test_check(self):
         rep = {'nodes': [
@@ -495,6 +875,189 @@ class VocalEars(unittest.TestCase):
         rep['nodes'][1]['mixSharePct']['presence'] = 12.0
         rep['sections'][0]['active'][0]['rmsDb'] = -26.0
         self.assertEqual(singer.check(rep), [])
+
+    def test_wetness_from_the_send_shares(self):
+        # a plate fed by the vocal and a pad at equal power: half of it is the vocal's (-3 dB); the echo only by the
+        # vocal, sounding a quarter of the song (its song-long energy -6 dB)
+        rep = {'nodes': [{'id': 'vocal', 'lufs': -20.0, 'activePct': 100.0},
+                         {'id': 'pad', 'lufs': -20.0, 'activePct': 100.0},
+                         {'id': 'plate', 'lufs': -30.0, 'activePct': 100.0, 'role': 'return', 'returnKind': 'reverb'},
+                         {'id': 'echo', 'lufs': -30.0, 'activePct': 25.0, 'role': 'return', 'returnKind': 'delay'}]}
+        render = {'tracks': [{'id': 'vocal', 'sends': {'plate': -12.0, 'echo': {'db': -20.0, 'tap': 'pre:air'}}},
+                             {'id': 'pad', 'sends': {'plate': -12.0}}], 'buses': []}
+        w = singer.wetness(rep, render, ['vocal', 'pad', 'missing'])
+        self.assertEqual(w['vocal']['returnsLu'], {'plate': -13.0, 'echo': -16.0})
+        self.assertEqual(w['vocal']['wetLu'], -11.2)
+        self.assertEqual(w['pad'], {'wetLu': -13.0, 'returnsLu': {'plate': -13.0}})
+        self.assertNotIn('missing', w)
+
+    def test_check_where_the_voice_sings_by_genre(self):
+        # 30 % of the song's presence band, all of it in the verse; the instrumental solo holds the rest: in the
+        # sections she sings she owns 60 % - no intelligibility warning. Rock allows the voice in the band.
+        sec = lambda n, a, b, db: {'name': n, 'startSec': a, 'endSec': b, 'rmsDb': db, 'bandsPct': {'presence': 20.0}}
+        rep = {'reference': {'profile': 'pop'}, 'warnings': [],
+               'sections': [sec('verse', 0, 10, -20.0), sec('solo', 10, 20, -20.0)],
+               'nodes': [{'id': 'vocal', 'mixSharePct': {'presence': 30.0}, 'bandsPct': {'presence': 10.0},
+                          'sections': [{'section': 'verse', 'rmsDb': -22.0}, {'section': 'solo', 'rmsDb': -90.0}]}]}
+        self.assertEqual(singer.check(rep), [])
+        rep['nodes'][0]['mixSharePct']['presence'] = 16.0                  # 32 % where she sings
+        self.assertEqual({f['code'] for f in singer.check(rep)}, {'vocal_intelligibility'})
+        rep['reference']['profile'] = 'rock'                               # rock: >= 30 %
+        self.assertEqual(singer.check(rep), [])
+
+    def test_wordless_and_backing_parts_are_not_judged(self):
+        from types import SimpleNamespace as NS
+        part = lambda text: NS(lyrics_text=text)
+        self.assertTrue(singer.wordless(part('whoa, oh - oh, hey!')))
+        self.assertFalse(singer.wordless(part('hold on, hey')))
+        song = NS(tracks={
+            'vocal': NS(id='vocal', _singer={'parts': [part('hold on to the night')]}),
+            'gang': NS(id='gang', _singer={'parts': [part('whoa oh'), part('hey!')]}),
+            'vocal_dbl1': NS(id='vocal_dbl1', _singer={'parts': [part('hold on to the night')]}),
+            'vocal_prism2': NS(id='vocal_prism2', _singer={'parts': [part('hold on')]})})
+        self.assertEqual(singer.lead_tracks(song), ['vocal'])
+
+
+class VocalFx(_Env):
+    """The processed-voice effects: pitch correction (sing(tune=)), the prism / harmoniser of re-sung takes
+    (singer.prism) and the talk box's mouth (singer.mouth + speech.talkbox)."""
+
+    def test_tune_curve_hard_steps_and_soft_keeps_some_vibrato(self):
+        import math
+        fr = singer.FR
+        m = []
+        for f in range(200):              # C4, a 150 ms glide up a fifth, G4; a 30 ct vibrato all along
+            t = f * fr
+            b = 60 if t < 0.5 else 67 if t > 0.65 else 60 + 7 * (t - 0.5) / 0.15
+            m.append(b + 0.3 * math.sin(2 * math.pi * 5.5 * t))
+        major = [0, 2, 4, 5, 7, 9, 11]
+        hard = singer.tune_curve(m, {'pcs': major, 'retune_ms': 0.0, 'hold': 0.06})
+        self.assertEqual(sorted(set(hard)), [60, 62, 64, 65, 67])         # stair steps through the scale, no vibrato
+        steps = [i for i in range(1, len(hard)) if hard[i] != hard[i - 1]]
+        self.assertEqual(len(steps), 4)                                      # one flip per scale step, no chatter
+        soft = singer.tune_curve(m, {'pcs': major, 'retune_ms': 40.0, 'hold': 0.15})
+        span = max(soft[100:]) - min(soft[100:])
+        self.assertTrue(0.1 < span < 0.6 - 0.05)                             # some of the vibrato survives
+        self.assertAlmostEqual(sum(soft[150:]) / 50, 67.0, delta=0.08)       # centred on the note
+        # pentatonic: F (65) is not in C major pentatonic -> E or G
+        pent = singer.tune_curve([65.1] * 5, {'pcs': [0, 2, 4, 7, 9], 'retune_ms': 0.0, 'hold': 0.0})
+        self.assertIn(pent[0], (64, 67))
+        # a consonant's 2-frame pitch dip on a held G is no 23 ms blip onto F; a real note change stays on time
+        dip = [67.0] * 10 + [65.4, 65.6] + [67.0] * 10 + [69.0] * 10
+        out = singer.tune_curve(dip, dict(singer.TUNE['hard'], pcs=major))
+        self.assertEqual(out, [67.0] * 22 + [69.0] * 10)
+
+    def test_sing_tune_options_spec_and_inheritance(self):
+        s = _song()
+        s._singer_dir = self.tmp
+        plain = singer.sing(s, LINE, TEXT, at=0, seed=2)
+        self.assertIsNone(plain.tune)
+        self.assertNotIn('tune', singer._phrase_spec(plain, plain.phrases[0]))   # untuned takes keep their cache keys
+        vo = singer.sing(s, LINE, TEXT, at=0, seed=2, tune='hard', track_id='vocal_t')
+        self.assertEqual(vo.tune['mode'], 'hard')
+        self.assertEqual(vo.tune['retune_ms'], 0.0)
+        self.assertEqual(vo.tune['pcs'], [0, 2, 4, 5, 7, 9, 11])                  # the song's key (C major)
+        self.assertNotEqual(singer._key(singer._phrase_spec(vo, vo.phrases[0])),
+                            singer._key(singer._phrase_spec(plain, plain.phrases[0])))
+        so = singer.sing(s, LINE, TEXT, at=0, tune='soft', retune_ms=25, scale='notes', track_id='vocal_s')
+        self.assertEqual(so.tune['retune_ms'], 25.0)
+        self.assertEqual(so.tune['pcs'], [0, 4, 7, 9])                            # the line's own pitch classes
+        mp = singer.sing(s, LINE, TEXT, at=0, tune={'mode': 'hard', 'scale': 'minor_pentatonic'}, key='A minor',
+                         track_id='vocal_p')
+        self.assertEqual(mp.tune['pcs'], [0, 2, 4, 7, 9])                         # A C D E G
+        d = singer.double(vo, pan=-0.5)
+        self.assertEqual(d.tune, vo.tune)                                         # doubles inherit the correction
+        with self.assertRaises(singer.SingerError):
+            singer.sing(s, LINE, TEXT, at=0, tune='robot', track_id='vocal_x')
+        with self.assertRaises(singer.SingerError):
+            singer.sing(s, LINE, TEXT, at=0, retune_ms=10, track_id='vocal_y')
+
+    def test_tuned_take_gets_the_corrected_f0(self):
+        s = _song()
+        s._singer_dir = self.tmp
+        vo = singer.sing(s, LINE, TEXT, at=0, seed=4, tune='hard', pitch='player')
+        calls, jobs = [], []
+        fake = _fake_run(calls)
+
+        def run(bank, js, **kw):
+            jobs.extend(js)
+            return fake(bank, js, **kw)
+        with mock.patch.object(vb, 'run', run), mock.patch.object(vb, 'runner_ok', lambda: (True, '')):
+            s.compile()
+        import math
+        for j in (j for j in jobs if j['op'] == 'sing'):
+            midi = [69 + 12 * math.log2(f / 440.0) for f in j['f0']]
+            self.assertTrue(all(abs(m - round(m)) < 1e-3 for m in midi))         # every frame on a semitone ...
+            self.assertTrue(all(round(m) % 12 in (0, 2, 4, 5, 7, 9, 11) for m in midi))   # ... of C major
+        meta = json.loads(Path(vo.rendered[0]['path']).with_suffix('.json').read_text(encoding='utf-8'))
+        self.assertIn('midi_sung', meta['timeline'])                             # the curve before the correction
+
+    def test_prism_voices_on_chord_tones(self):
+        s = _song()
+        s._singer_dir = self.tmp
+        vo = singer.sing(s, LINE, TEXT, at=0, seed=4)
+        h = s.harmony('C Am F G', at=0)
+        pr = singer.prism(vo, h)
+        self.assertEqual(len(pr.voices), 4)
+        self.assertEqual(sum(1 for L in pr.pitches if sum(L) / len(L) < 72), 3)  # 3 below the lead, 1 above
+        src = vo.src
+        for L in pr.pitches:
+            self.assertEqual(len(L), len(src))
+            for (st, _, lead, _), p in zip(src, L):
+                c = h.at(st)
+                self.assertIn(p % 12, set(c.pcs))                                 # a chord tone of the harmony there
+                self.assertGreaterEqual(abs(p - lead), 2)                          # no unison / second on the lead
+                self.assertTrue(53 <= p <= 81)                                     # Hanami's range F3-A5
+        # each voice is a real take: its own track, take, pan, formant; all on the bus 'vocal_prism'
+        self.assertEqual(len({v.take for v in pr.voices}), 4)
+        self.assertEqual(len({v.track.pan for v in pr.voices}), 4)
+        self.assertTrue(max(v.track.pan for v in pr.voices) > 0 > min(v.track.pan for v in pr.voices))
+        self.assertTrue(all(v.track.output == 'vocal_prism' for v in pr.voices))
+        self.assertIsNone(pr.voices[0].tune)                                      # choir-of-one: natural pitch
+        z = singer.prism(vo, h, preset='prismizer')
+        self.assertEqual(len(z.voices), 5)                                        # 4 + the octave under
+        self.assertTrue(all(abs(p - q) == 12 for (_, _, p, _), q in zip(src, z.pitches[-1])))
+        lo = singer.prism(singer.sing(s, LINE.transpose(5), TEXT, at=0, track_id='vocal_hi'), h, preset='prismizer')
+        self.assertEqual(lo.pitches[-1], [n.pitch - 12 for n in LINE.transpose(5)])     # the whole line under
+        self.assertTrue(all(v.tune and v.tune['mode'] == 'hard' for v in z.voices))
+        self.assertTrue(max(abs(v.formant) for v in z.voices) > 0.8)
+        # voice leading: no voice jumps more than a fifth between two notes of the same chord
+        for L in pr.pitches:
+            for (a, _, _, _), (b, _, _, _), p, q in zip(src, src[1:], L, L[1:]):
+                if h.symbol_at(a) == h.symbol_at(b):
+                    self.assertLessEqual(abs(p - q), 7)
+        # the prism voices are backing: the vocal checks do not take them for the lead
+        self.assertRegex('vocal_prism3', singer._BACKING)
+
+    def test_mouth_is_flat_and_talkbox_keys_the_guitar(self):
+        from agentsound import speech
+        from agentsound.patches import inst
+        s = _song()
+        s._singer_dir = self.tmp
+        m = singer.mouth(s, LINE, TEXT, at=0, voice='hanami')
+        self.assertEqual({n.pitch for n in m.notes}, {53 + 5})                      # one low pitch
+        self.assertNotIn('vibrato', {name for _, name, _ in m.moves})
+        self.assertNotIn('scoop', {name for _, name, _ in m.moves})
+        self.assertEqual(m.pitch_mode, 'player')
+        gtr = s.track('talkbox', 'sampled/lead_guitar')
+        types = [f.type for f in gtr.fx]
+        self.assertEqual(types[:2], ['amp', 'convolver'])
+        speech.talkbox(gtr, m)
+        types = [f.type for f in gtr.fx]
+        self.assertEqual(types[:2], ['amp', 'vocoder'])                              # the horn replaces the cabinet
+        self.assertNotIn('convolver', types)
+        v = gtr.fx[1]
+        self.assertEqual(v.sidechain, 'talkbox_mouth')
+        self.assertEqual(v.params['mode'], 'lpc')
+        self.assertTrue(m.track.mute)
+        speech.talkbox(gtr, m, shift=-3)                                             # again: re-keyed, updated
+        self.assertEqual([f.type for f in gtr.fx].count('vocoder'), 1)
+        self.assertEqual(gtr.fx[1].params['shift'], -3)
+        syn = s.track('syn', inst.va(osc1__wave='saw'), fx=[speech.FX('eq', {'hp.freq': 100})])
+        speech.talkbox(syn, m.track, mute=False)
+        self.assertEqual(syn.fx[0].type, 'vocoder')                                  # a synth: first in the chain
+        with self.assertRaises(speech.SpeechError):
+            speech.talkbox(m.track, m)
 
 
 class Credits(_Env):

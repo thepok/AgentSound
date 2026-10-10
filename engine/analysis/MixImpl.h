@@ -79,6 +79,7 @@ struct ImageInfo {
 struct MixImpl {
     // configuration
     double sampleRate{48000.0}, bpm{120.0}, startBeat{0.0};
+    double endBeat{std::numeric_limits<double>::infinity()};   // where a preview's notes stop (setStartBeat)
     // song time (MixAnalyzer::setTimeGrid): a changing tempo (`mapped`) and bars other than 4/4 (`metered`)
     TempoMap tempo;
     MeterMap meter;

@@ -16,6 +16,7 @@ namespace as::analysis {
 inline double correlation(double ll, double rr, double lr) {
     if (ll <= 0.0 && rr <= 0.0) return 1.0;
     if (ll <= 0.0 || rr <= 0.0) return 0.0;
+    if (std::min(ll, rr) < 1e-9 * std::max(ll, rr)) return 0.0;   // one-sided (a hard pan's -90 dB residue): no image
     return std::clamp(lr / std::sqrt(ll * rr), -1.0, 1.0);
 }
 

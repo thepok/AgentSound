@@ -276,6 +276,7 @@ class Instrument:
                 info = {**info, 'hammers': spec['hammers']}
             if spec.get('velcurve'):
                 zones = _sfz.apply_velcurve(zones, spec['velcurve'])
+            zones = _sfz.apply_zone(zones, spec.get('zone'))
             self.params['samples'] = zones
             for k, v in (info.get('params') or {}).items():   # what the import sets (live 'dynamics' ...); given params win
                 self.params.setdefault(k, v)
@@ -852,7 +853,8 @@ class _InstFactory(_Factory):
 
     def sfz(self, path, *, articulation=None, cc: dict | None = None, mics: dict | None = None, strict: bool = False,
             params: dict | None = None, lazy: bool = False, dyn_cc='auto', keyswitches: str = 'live',
-            keymap: dict | None = None, hammers: float | None = None, velcurve=None, **kw) -> Instrument:
+            keymap: dict | None = None, hammers: float | None = None, velcurve=None, zone: dict | None = None,
+            **kw) -> Instrument:
         """A sampled instrument from an .sfz file (the format of most free multisample libraries) on the 'sampler':
             inst.sfz('samples/salamander-grand/SalamanderGrandPianoV3.sfz', pedal=0)
             inst.sfz('samples/vpo-scripts-standard/Strings/1st-violin-SEC-KS-C2.sfz', articulation='staccato')
@@ -872,7 +874,10 @@ class _InstFactory(_Factory):
         0.5-0.8 = a warm jazz grand);
         velcurve: [(velocity, gain), ...] one velocity -> amplitude curve for every velocity-layer zone, replacing the file's
         amp_velcurve / amp_veltrack (a pack whose layers ramp to full level at the top of each layer plays louder
-        at velocity 96 than at 103: sfz.even_velcurve() builds a smooth, monotonic curve from measured layer levels).
+        at velocity 96 than at 103: sfz.even_velcurve() builds a smooth, monotonic curve from measured layer levels);
+        zone: {zone param: value} set on every attack zone, over the file's own (python -m agentsound sfz FILE --json
+        shows them): zone={'release': 0.4} shortens a release the file fixes (the track's release= only reaches
+        zones without one), {'attack': 0.25, 'velAttack': -0.25} a flatter velocity -> attack curve.
         strict=True raises on opcodes the engine can't do (default: one compile warning lists them). Other keywords are sampler params: level, pedal, expression (automatable), transpose, polyphony
         (128 here), attack / decay / sustain / release (only for zones without their own ampeg_*: SFZ defaults here),
         velsens, width, cutoff ... Paths: 'samples/<pack>/...' ($AGENTSOUND_SAMPLES or assets/samples), './x.sfz' next to
@@ -897,6 +902,9 @@ class _InstFactory(_Factory):
         if velcurve is not None:
             from ..sfz import check_velcurve
             spec['velcurve'] = check_velcurve(velcurve)
+        if zone:
+            from ..sfz import check_zone
+            spec['zone'] = check_zone(zone, 'inst.sfz')
         if lazy:
             if not isinstance(spec['path'], str) or not spec['path'].strip():
                 raise ComposeError(f"inst.sfz: the path must be a non-empty string, got {path!r}")

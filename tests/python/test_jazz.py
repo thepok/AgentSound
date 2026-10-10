@@ -576,7 +576,7 @@ class MelodyHelpers(unittest.TestCase):
             jazz.paraphrase(self.MEL, anticipate=2)                  # validated even if never used
         kinds = set()
         for seed in range(8):
-            enc = jazz.paraphrase(Clip([(0, 1.5, 'C4', 90), (2, 2, 'E4', 90)], length=4), seed=seed, anticipate=0,
+            enc = jazz.paraphrase(Clip([(0, 1.5, 'C5', 90), (2, 2, 'E4', 90)], length=4), seed=seed, anticipate=0,
                                   delay=0, embellish=1.0, key='C major')
             kinds.add(len(enc))
             ends = sorted((n.start, n.start + n.dur) for n in enc)
@@ -584,6 +584,10 @@ class MelodyHelpers(unittest.TestCase):
                 self.assertLessEqual(a1, b0 + 1e-6, 'pickups never overlap the note before them')
             self.assertEqual(max(enc, key=lambda n: n.start).pitch, note('E4'))
         self.assertEqual(kinds, {3, 4})           # a chromatic pickup (Eb) or an enclosure (F Eb) before the E
+        # an enclosure never goes over the melody's top note (it would steal the peak): the E as the top - pickups only
+        tops = {len(jazz.paraphrase(Clip([(0, 1.5, 'C4', 90), (2, 2, 'E4', 90)], length=4), seed=seed, anticipate=0,
+                                    delay=0, embellish=1.0, key='C major')) for seed in range(8)}
+        self.assertEqual(tops, {3})
 
     def test_solo_line(self):
         k = Key('Bb major')

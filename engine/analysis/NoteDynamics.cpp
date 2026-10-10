@@ -175,6 +175,22 @@ bool leadIntentName(const std::string& id) {
            melodyInstrumentName(id);
 }
 
+// Re-sung backing parts of a vocal (singer.double / harmony / prism: <id>_dbl1, <id>_harm2, <id>_prism3): never a lead.
+bool backingName(const std::string& id) { return idNamed(id, {}, {"_dbl", "_harm", "_prism"}); }
+// Sustained chords (a pad / bed whatever its id: a preset's supersaw bed named 'lead'): most events 3+ notes,
+// the median event at least 1.5 beats long.
+bool sustainedChords(const std::vector<Event>& ev) {
+    if (ev.size() < 4) return false;
+    int chords = 0;
+    std::vector<double> d;
+    for (const Event& e : ev) {
+        chords += e.notes >= 3;
+        d.push_back(e.durBeats);
+    }
+    std::nth_element(d.begin(), d.begin() + static_cast<std::ptrdiff_t>(d.size() / 2), d.end());
+    return 2 * chords > static_cast<int>(ev.size()) && d[d.size() / 2] >= 1.5;
+}
+
 // Notes on a fixed fast grid: 8ths / 16ths (also swung: the pairs are even), >= 70 % of the steps; or a fast
 // figure of short notes (85 %+ of the steps 8ths or faster, median note <= 0.3 beats: an arpeggio with rests).
 bool pulsePart(const std::vector<Event>& ev) {
@@ -347,7 +363,9 @@ std::vector<json> assessDynamics(MixImpl& m, std::vector<DynamicsFinding>& findi
             kind[i] = k;
             reason[i] = why;
         };
-        if (evenName(n.id)) set("even", "arp / sequence id: even by design");
+        if (backingName(n.id)) set("backing", "a double / harmony / prism of a vocal");
+        else if (evenName(n.id)) set("even", "arp / sequence id: even by design");
+        else if (leadNamed && sustainedChords(evs[i])) set("bed", "named lead, plays sustained chords: a bed");
         else if (!leadNamed && pulsePart(evs[i])) set("even", "8th/16th pulse or arpeggio figure");
         else if (n.role == Role::Bass) set("bass", "role bass");
         else if (n.role == Role::Bed && !leadNamed) set("bed", "role bed (sustained notes)");

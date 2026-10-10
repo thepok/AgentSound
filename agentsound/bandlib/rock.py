@@ -20,7 +20,7 @@ from __future__ import annotations
 import copy
 
 from .. import bands, library
-from ..bands import Band
+from ..bands import Band, master_chain  # noqa: F401 - master_chain: pop / jazz import it from here
 from ..patches import FX, Instrument, fx, inst
 from ..patches import fx as _fx
 from .. import patches as _patches
@@ -259,18 +259,6 @@ class Builder:
         return self.band.bus(name, b)
 
 
-def master_chain(band: Band, *effects) -> bool:
-    """Set the song's master chain to `effects` - only when it has none yet: a song that set its own master (or a
-    second preset on the same song) keeps the first chain instead of stacking two limiters. band.info['master'] says
-    which happened ('set' / 'kept')."""
-    if band.song.master.fx:
-        band.info['master'] = 'kept'
-        return False
-    band.song.master.add(*effects)
-    band.info['master'] = 'set'
-    return True
-
-
 def lib_patch(name: str, **params):
     """A library patch without its default sends (the preset sets its own), params to its instrument."""
     p = _patches.get(name)
@@ -428,6 +416,11 @@ def ROOM_CRUSH():
                          name='room_crush')
 
 
+KIT_GAIN = 4.0
+"""dB rock_band's kit gets at the drum bus's input (its balance in the band) - not on the drums track, whose peaks
+must keep headroom (node_hot); the kit's sends carry it too. KIT_GAINS: the same per rock preset."""
+KIT_GAINS = {'rock_band': KIT_GAIN, 'indie_band': 1.5, 'power_ballad': 3.5}
+
 ROOM_CROSSFEED = 0.5
 """rock_band's band room (the clean return of the drum-room IR): each side fed into the other before the 2-channel
 IR, so a hard-panned rhythm guitar gets a room on both sides that still leans to its own."""
@@ -493,12 +486,15 @@ def rock_band(song, *, without=(), sounds=None, ids=None, keys: str = 'organ', g
     echo = b.bus('echo', [fx.delay(mode='pingpong', balanced='off', time=0.75, feedback=0.28, mix=1.0,
                                    highcut=4200, lowcut=300, wow=0.15, duck=0.35),
                           _eq(hp__freq=250, lp__freq=6000)])
-    drum_bus = b.bus('drum_bus', DRUM_BUS())
-    b.track('drums', lambda: rock_kit(kit), output=drum_bus, trim=4.0,
+    # gain staging: the kit's +4 dB sit at the drum bus's input, not on the track - a transient kit (crest ~21 dB)
+    # peaked at +0.7 dBFS on its own fader (+4.1 at arena levels: node_hot); the bus hears the same level as before,
+    # the sends make up the 4 dB they no longer get from the fader
+    drum_bus = b.bus('drum_bus', [_fx.utility(gain=KIT_GAIN, name='input')] + DRUM_BUS())
+    b.track('drums', lambda: rock_kit(kit), output=drum_bus, trim=0.0,
             fx=[_eq(low__freq=70, low__gain=1.5, peak1__freq=420, peak1__gain=-2.0, peak1__q=1.0,
                     peak2__freq=150, peak2__gain=-2.5, peak2__q=1.0, peak3__freq=4500, peak3__gain=1.0, peak3__q=0.8),
                 PUNCH()],
-            sends={drum_room: -5, plate: -20}, humanize=(5, 8, 3))
+            sends={drum_room: -5 + KIT_GAIN, plate: -20 + KIT_GAIN}, humanize=(5, 8, 3))
     # the bass: picked Growlybass into an SVT-style rig (sampled_guitars.bass_rig: the tube amp growls in the mids,
     # the time-aligned DI under it carries the lows and the pick) - the old tube saturator at mix 0.55 left the DI
     # nearly clean (centroid 383 vs the DI's 371 Hz); the rig: 553 Hz, +2.4 / +3.8 dB at 0.6-1.2 / 1.2-2.5 kHz
@@ -615,14 +611,16 @@ def indie_band(song, *, without=(), sounds=None, ids=None, keys: str = 'wurli', 
     slap = b.bus('slap', [fx.delay(mode='mono', sync='off', timems=110, feedback=0.12, mix=1.0,
                                    highcut=3800, lowcut=300, wow=0.2),
                           _eq(hp__freq=250)])
+    kg = KIT_GAINS['indie_band']             # the kit's balance at the drum bus input (rock_band's KIT_GAIN)
     drum_bus = b.bus('drum_bus', [
+        _fx.utility(gain=kg, name='input'),
         fx.compressor(threshold=-22, ratio=3, attack=15, release=100, knee=6, mix=0.4, automakeup='on', keyhp=60),
         fx.saturator(mode='tape', drive=4, mix=0.5),
         _eq(hp__freq=30, peak1__freq=400, peak1__gain=-1.5, high__freq=10000, high__gain=1.5)])
-    b.track('drums', lambda: rock_kit(kit), output=drum_bus, trim=1.5,
+    b.track('drums', lambda: rock_kit(kit), output=drum_bus, trim=0.0,
             fx=[_eq(low__freq=60, low__gain=-2.0, peak1__freq=450, peak1__gain=-2.0, peak3__freq=5000,
                     peak3__gain=1.0)],
-            sends={room: -6, plate: -22}, humanize=(6, 9, 4))
+            sends={room: -6 + kg, plate: -22 + kg}, humanize=(6, 9, 4))
     b.track('bass', lambda: rock_bass('indie_band', 'round'), trim=-3.0,
             fx=[_eq(hp__freq=32, low__freq=70, low__gain=2.5, peak1__freq=220, peak1__gain=-2.0, peak2__freq=1100,
                     peak2__gain=2.0),
@@ -722,7 +720,9 @@ def power_ballad(song, *, without=(), sounds=None, ids=None, kit: str = 'big_rus
     echo = b.bus('echo', [fx.delay(mode='pingpong', balanced='off', time=1.0, feedback=0.32, mix=1.0,
                                    highcut=4000, lowcut=300, wow=0.2, duck=0.4),
                           _eq(hp__freq=250, lp__freq=6000)])
+    kg = KIT_GAINS['power_ballad']           # the kit's balance at the drum bus input (rock_band's KIT_GAIN)
     drum_bus = b.bus('drum_bus', [
+        _fx.utility(gain=kg, name='input'),
         fx.compressor(threshold=-22, ratio=4, attack=20, release=150, knee=6, mix=0.45, automakeup='on', keyhp=60),
         fx.saturator(mode='tape', drive=3, mix=0.5),
         _eq(hp__freq=30, peak1__freq=400, peak1__gain=-2.0, high__freq=10000, high__gain=1.0)])
@@ -744,10 +744,10 @@ def power_ballad(song, *, without=(), sounds=None, ids=None, kit: str = 'big_rus
     b.track('pad', lambda: lib_patch('synthwave/juno_pad'), trim=-8.0,
             fx=[_eq(hp__freq=200, peak1__freq=400, peak1__gain=-2.0)],
             sends={hall: -8})
-    b.track('drums', lambda: rock_kit(kit), output=drum_bus, trim=3.5,
+    b.track('drums', lambda: rock_kit(kit), output=drum_bus, trim=0.0,
             fx=[_eq(low__freq=70, low__gain=2.0, peak1__freq=420, peak1__gain=-2.5, peak3__freq=5000,
                     peak3__gain=1.0, high__freq=9000, high__gain=1.5)],
-            sends={room: -6, plate: -12}, humanize=(5, 7, 53))
+            sends={room: -6 + kg, plate: -12 + kg}, humanize=(5, 7, 53))
     b.track('bass', lambda: rock_bass('power_ballad', 'finger'), trim=-1.0,
             fx=[_eq(hp__freq=32, low__freq=60, low__gain=-2.0, peak1__freq=240, peak1__gain=-2.0,
                     peak2__freq=800, peak2__gain=1.5, peak3__freq=110, peak3__gain=1.5, peak3__q=1.0),

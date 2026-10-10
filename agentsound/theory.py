@@ -73,6 +73,45 @@ def note_name(midi: int, flats: bool = False) -> str:
     return (FLATS if flats else SHARPS)[m % 12] + str(m // 12 - 1)
 
 
+_LETTERS = 'CDEFGAB'
+_STEPS_ABOVE = (0, 1, 1, 2, 2, 3, 3, 4, 5, 5, 6, 6)
+"""Letters above a note for each semitone distance: the scale degrees of a key, the chromatic ones as b2 b3 #4 b6 b7."""
+
+
+def spell_above(ref: str, semis: int, steps: int | None = None) -> str:
+    """The name of the pitch class `semis` semitones above the note name `ref`, `steps` letters up (default
+    _STEPS_ABOVE: a key's degrees, chromatic ones as bII bIII #IV bVI bVII): the enharmonic spelling follows the key /
+    the chord - spell_above('Gb', 5) = 'Cb' (the IV of Gb, not B), spell_above('Eb', 1) = 'Fb' (the Neapolitan),
+    spell_above('Fb', 4, 2) = 'Ab' (its third). A double sharp / flat falls back to the plain name (the Neapolitan of
+    Gb is 'G', not Abb)."""
+    m = _PC_RE.match(str(ref).strip())
+    if not m:
+        raise ComposeError(f"spell_above: {ref!r} is no note name (e.g. 'Eb', 'F#')")
+    target = (pc(ref) + int(semis)) % 12
+    st = _STEPS_ABOVE[int(semis) % 12] if steps is None else int(steps)
+    letter = _LETTERS[(_LETTERS.index(m.group(1).upper()) + st) % 7]
+    acc = (target - _LETTER_PC[letter] + 6) % 12 - 6
+    if acc == 0:
+        return letter
+    if abs(acc) == 1:
+        return letter + ('#' if acc > 0 else 'b')
+    return (SHARPS if acc > 0 else FLATS)[target]
+
+
+def spell_note(midi: int, ref: str, steps: int | None = None) -> str:
+    """A MIDI note's name spelled from `ref` (a key's tonic or the root of the chord it sounds over: spell_above's
+    degree letters, or `steps` letters up) with its octave: spell_note(66, 'D') = 'F#4' (the 3rd of D7, not Gb4),
+    spell_note(70, 'D') = 'Bb4' (bVI of D), spell_note(71, 'Gb') = 'Cb5' (B4's pitch: the octave follows the letter),
+    spell_note(63, 'A', 4) = 'Eb4' (the b5 of Am7b5)."""
+    name = spell_above(ref, (int(midi) - pc(ref)) % 12, steps)
+    octave = (int(midi) - pc(name)) // 12 - 1
+    if name[0] == 'C' and name.endswith('b'):                 # Cb sounds a semitone under its letter's octave
+        octave += 1
+    elif name[0] == 'B' and name.endswith('#'):               # B# sounds a semitone over it
+        octave -= 1
+    return f"{name}{octave}"
+
+
 def hz(midi: float) -> float:
     """Frequency of a (fractional) MIDI note, A4 = 440 Hz."""
     return 440.0 * 2.0 ** ((float(midi) - 69.0) / 12.0)
@@ -773,6 +812,35 @@ def available_tensions(ch, resolve_minor: bool = False) -> frozenset[int]:
     return frozenset(out | {x % 12 for x in c.intervals if x >= 12})
 
 
+CLASHES = ('nat11', 'maj3_minor', 'maj7_dom', 'min3_major')
+"""The strong-beat / long-note clashes clash() names: a natural 11 over a major-3rd chord (dominant, maj7, maj7#11,
+6), a major 3rd over a minor-3rd chord (minor, m7b5, dim), a major 7th over a dominant, a minor 3rd over a major
+chord (on a dominant it is the #9: fine)."""
+
+
+def clash(ch, pitch) -> str | None:
+    """The CLASHES rule a pitch breaks over a chord (a note on beat 1 / 3 or longer than half a beat, a note held into
+    the chord), or None. A sus chord takes its 4th; a written tension (7#9, maj7#11) is never a clash."""
+    c = Chord.parse(ch)
+    iv = {x % 12 for x in c.intervals}
+    x = (int(pitch) - c.root) % 12
+    if x in iv:
+        return None
+    k = chord_kind(c)
+    if k == 'sus':
+        return None
+    major = 4 in iv
+    if x == 5 and major:
+        return 'nat11'
+    if x == 4 and 3 in iv:
+        return 'maj3_minor'
+    if x == 11 and k == 'dom':
+        return 'maj7_dom'
+    if x == 3 and major and k != 'dom':
+        return 'min3_major'
+    return None
+
+
 def _slots(c: Chord, resolve_minor: bool = False) -> dict[str, int | None]:
     """Intervals (0..11) of the four rootless slots of a chord: '3' (3rd / sus 4th), '5' (5th, or on dominants the
     13th / its alteration), '7' (7th / 6th), '9' (9th / its alteration; root or 11 on m7b5, root on dim7). Tensions
@@ -1402,10 +1470,11 @@ class Key:
         root = pitches[0]
         ivs = tuple(sorted(p - root for p in pitches))
         r = (self.tonic + root) % 12
+        rn = spell_above(self.tonic_name, root, s0 % 7) if len(sc) == 7 else self.spell(r)
         sym = _name_intervals(ivs)
-        ch = Chord.parse(self.spell(r) + sym) if sym is not None else None
+        ch = Chord.parse(rn + sym) if sym is not None else None
         if ch is None or set(ch.intervals) != set(ivs):
-            return Chord(r, ivs, None, '?', self.spell(r), None)
+            return Chord(r, ivs, None, '?', rn, None)
         return ch
 
     def chord(self, numeral) -> Chord:
@@ -1455,13 +1524,15 @@ class Key:
         else:
             base = 'm' if num.islower() else ''
         try:
-            ch = Chord.parse(self.spell(root, acc) + base + q)
+            # the root spelled by its degree (the letter deg - 1 above the tonic's): Cb as the IV of Gb, Fb as the
+            # bII of Eb
+            ch = Chord.parse(spell_above(self.tonic_name, (root - self.tonic) % 12, deg - 1) + base + q)
             # A diminished / half-diminished chord on a plain 7th degree is the leading-tone chord:
             # vii° / vii°7 / viiø7 in A minor (or dorian, mixolydian) = G#, not the subtonic G.
             if (deg == 7 and not acc and (self.heptatonic[6] == 10)
                     and 3 in ch.intervals and 6 in ch.intervals and 7 not in ch.intervals):
                 root = (root + 1) % 12
-                ch = Chord.parse(self.spell(root, '#') + base + q)
+                ch = Chord.parse(spell_above(self.tonic_name, (root - self.tonic) % 12, 6) + base + q)
             return ch
         except ComposeError:
             raise ComposeError(f"can't parse roman numeral {numeral!r} (in {self.name}): suffix {rest!r} "

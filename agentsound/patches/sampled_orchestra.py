@@ -30,7 +30,7 @@ Orchestra 2 (choir_oh) is CC-BY-SA 4.0 (credit required). Version: see VERSION.
 
 from pathlib import Path
 
-from . import Patch, _levelling, fx, inst, register
+from . import Patch, _levelling, fx, inst, register, sampled
 
 VERSION = 1
 
@@ -581,6 +581,7 @@ _add(Patch(
 # --------------------------------------------------------------------------------------------- choirs
 
 _CHOIR_DYN = dict(dynamics=0.6, dynrange=18, dyntone=0.5, polyphony=128)
+_VPO_SPEAK = dict(_CHOIR_DYN, zone=sampled.CHOIR_SPEAK)   # the VPO choirs speak sooner at low velocity (sampled.py)
 _CHOIR = ('Live dynamics: \'dynamics\' 0..1 (default 0.6) moves the level (18 dB) and the brightness of the held '
           'chords - automate it for swells (0.2 -> 0.8 over two bars) and fades; velocity sets the attack level.')
 _SEAMS = ('Notes held longer than ~2 s pass faint loop seams that the analysis may flag as medium clicks when the '
@@ -589,7 +590,7 @@ _SEAMS = ('Notes held longer than ~2 s pass faint loop seams that the analysis m
 
 _reg(Patch(
     'sampled/choir_mixed',
-    instrument=_one('samples/vpo-scripts-standard/Vocals/choir-MIXED-sustain.sfz', level=0.5, **_CHOIR_DYN),
+    instrument=_one('samples/vpo-scripts-standard/Vocals/choir-MIXED-sustain.sfz', level=0.5, **_VPO_SPEAK),
     fx=[_eq(110)],
     sends={'hall': -6},
     notes='v1. Mixed choir (sopranos, altos, tenors, basses) singing "ah": the Sonatina Symphonic Orchestra chorus '
@@ -602,7 +603,7 @@ _reg(Patch(
 
 _reg(Patch(
     'sampled/choir_male',
-    instrument=_one('samples/vpo-scripts-standard/Vocals/choir-MALE-sustain.sfz', level=2.0, **_CHOIR_DYN),
+    instrument=_one('samples/vpo-scripts-standard/Vocals/choir-MALE-sustain.sfz', level=2.0, **_VPO_SPEAK),
     fx=[_eq(80)],
     sends={'hall': -6},
     notes='v1. Male choir (tenors and basses) "ah", ' + _VPO_C + ' Range G2-F#4: dark, monastic, epic low choir - '

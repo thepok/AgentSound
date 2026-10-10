@@ -1,433 +1,382 @@
 # TODO: open findings
 
-Collected from the agents' reports (the reviews, études, heroes, players, mixer/mastering and the epic's A&R).
-Each entry says where it came from, with numbers where we have them. Remove an entry in the same commit that fixes
-it. Add new findings here instead of losing them in a report.
+Grouped by the tool that owns the fix. Each entry says where it came from, with numbers where we have them. Remove an
+entry in the same commit that fixes it; add new findings here instead of losing them in a report. Fixes follow the
+user's rule: KISS - a preset / patch / chain / default / data table before new code, the shared tool before song code.
 
-## High: the sound and playing the user will hear
+## Endless generators (`agentsound.endless`)
 
-- **Mixer: pick the lead per section.** On `ashes-and-chandeliers` (a multi-part piece), `mixer.auto` chose the oboes
-  as the lead and would have cut the finale's melody by 6.5 dB. It needs a per-section lead
-  (`lead={section: [ids]}`) and better inference (the melodic part that carries the theme in each section, not the
-  loudest melodic role). Also inside a section: matryoshka's minor section hands the voice from a solo cello (4 bars)
-  to the piano (4 bars); mix reads 'bed too loud -0.5 dB' for the whole section although the piano is 7 dB over the
-  cello in its own bars (per-bar RMS). `unbowed` (a symphonic movement): `mix` took the three solo tracks (clarinet /
-  horn / oboe, 3 short sections) as the lead and judged none of the 15 other sections ("no lead plays in half its
-  bars"); the theme moves between violins I, the flutes / oboes doubling it and the fugato's entering voice - mixed
-  by hand from per-section stem levels (songs/unbowed/MIX.md). The MIX dict has no `roles` key (strict), so the CLI cannot be told either.
-  Partly done: a track with `track.feature(section)` is now the lead of that section (`mixer.features(song)`: a bass
-  or piano solo is judged against the soloist - jane-street-bossa); a general per-section `lead=` is still open.
-- **Choir samples speak slowly at low velocity - the patches.** The attack slows as velocity drops, so a soft answer
-  took about 0.4 s to be heard. `orch.Choir` handles it by default now (the speaking velocity + the written level on
-  an expression / dynamics lane, early starts), but a choir track played directly (`track.play`, `orch.perform` on the
-  film orchestra's 'choir' role) still speaks late: the choir patches (`sampled/choir*`, fairlight) could start a few
-  ms into the sample and flatten the velocity -> attack curve by default, and the hornist / arranger docs should
-  point to `orch.Choir`.
-- **Piano damper / soundboard model.** Found by the Gymnopédie étude: decay inside a bar is 15.3 dB against 11.6 in
-  the reference. We need a two-stage string decay and pedal coupling between notes. Half pedal and `sympathetic`
-  exist, but they are not a physical model.
-- **Soft piano notes lack a bright attack.** Attack vs sustain brightness is 1.18× for ours and 1.37× for the
-  reference (Gymnopédie).
-- **Melody-aware dynamics and rubato.** `touch()` shapes one arc per phrase and never accents single notes: 7.7 dB vs
-  9.0 in the Gymnopédie reference. Rubato does not linger on phrase peaks, and there is no bar-wise "take time here"
-  tool: the Nocturne's bar-length variation is 0.075 vs the reference's 0.13.
-- **Trills are too even.** Unevenness is 0.19 for ours vs 0.47 in the Nocturne reference.
-- **Hero sax velocity response through its chain.** 0.35 dB per 10 velocity steps after the compressor (1.2 dB
-  before it). The hornist's accents compensate; the patch itself should not flatten velocity so much.
-- **Tutti tone of the epic finale is mid-heavy.** Mids are +4.2 / +7.6 dB vs the film reference in finale / summit.
-  The theme lives there, so voicing and EQ need a better answer than cutting the tune.
-- **Epic Part III solo** is only 0.2 LU louder than anthem2. The energy peak inside Part III is weak.
-- **The ballad piano in the epic has no air** (soft-hammer grand, almost nothing above 7 kHz). A brighter ballad
-  variant, or `hammers` tuned per register, would fix it.
-- **Guitar tone, after the v2 heavy hero (songs/kestrel-bay/TONE.md):**
-  - Not yet heard: the tube `amp` + neck-pickup tone was judged by numbers (harmonics, bands, sustain, dynamics,
-    `compare` vs Sweet Child O' Mine) - A/B `songs/kestrel-bay/out/tone_ab/` by ear before more guitar songs.
-  - Pick attack vs picking dynamics: a sampler filter envelope that opens the neck filter at every pick (2 octaves,
-    100 ms) made every onset equally bright and took the velocity part of the note dynamics 1.9 -> 0.0 dB, so the hero
-    has none. A velocity-scaled `filterEnv` depth (SFZ `fileg_vel2depth`) would give a bright pick that still follows
-    the picking.
-  - The FSBS DI is a bridge pickup only: the key-tracked low-pass emulates a neck pickup, but G4 and D5 (DI samples
-    whose 2nd harmonic is +2.5 / +2.9 dB over the fundamental) still come out of the amp with h2 near h1. A real neck
-    pickup DI set, or a pickup-position comb per note, would be better.
-  - The `rock` analysis profile's balance curve is darker in the mids than a real guitar-solo record: with the hero
-    1-2 dB over the band, kestrel-bay's solos read `balance_mid_high` +4.0..+4.5 dB / `balance_presence_high` ~+4 dB
-    (limit +4) while against Sweet Child O' Mine's solo the same mix is within +-1.5 dB from 0.8 to 6 kHz.
-    Re-derive the profile from guitar-led records.
-- **The rock pass (the-drummer-speaks, songs/the-drummer-speaks/ROCK.md): verify by ear.** Judged by numbers against
-  Sweet Child O' Mine's band sections only (the A/B clips in `songs/the-drummer-speaks/out/rock_ab/`):
-  - Snare punch in the dense choruses: 7-8 dB over its surroundings vs 10-12 in the record (the kick improved 11.6 ->
-    15 dB, ref 21). Neither the kit's slow-attack compressor, a 2 dB snare-keyed duck of the wall (dropped: no
-    measurable effect, a ghost key track) nor the master's limiting moved it; the open power chords + octave ring
-    under every hit. Try: a snare-only transient path (the kit split: a snare track with its own compressor / plate),
-    shorter chorus chords (the riff player's 'drive' grip in the chorus), or less wall level in the hooks.
-  - The wall is much wider than the record at 250-500 Hz (45-54 % vs 9-20 %; L/R correlation 0.3-0.4 there): two
-    different guitars + `guitarist.double`'s tuning drift. The user asked for a wide wall; check the low-mid width and
-    mono by ear (mono sum 0.9 dB quieter, mono_compat ok).
-  - The rhythm guitars' note dynamics come only from the articulation: through the driven amps velocity moves the level
-    ~0 dB (flat_dynamics info). A harder pick on a real amp is brighter and a little louder: velocity zones like the
-    heroes', or a velocity -> amp input / bright cap lane, would give the wall picking dynamics.
-  - The mixer tags `gtr_r` as a 'low' part in the-drummer-speaks (its verse riff is palm-muted single notes on E2) and
-    trims it with the bass; role inference should keep a guitar a guitar (patch / track name).
-  - Every other song on the rock presets / guitar patches (ashes-and-chandeliers, kestrel-bay, lamplight-avenue,
-    `_demo_soloist`, `songs/_bands/*`) now plays through the tube amp, the calibrated Big Rusty, the new drum bus and the
-    bass rig - not re-rendered (one-song iteration); re-check their mixes when they are touched.
-  - `songs/_bands/rock_band` (the preset demo) now warns: the intro riff's kick + bass unison (separation -3.3 dB:
-    they hit together - the new check measures it) and flat dynamics on its gtr_r / band lead (velocities 89-117 /
-    90-113 through driven amps). Give the demo velocity arcs (or use the riff player) and decide whether a locked
-    kick + bass unison should stay a warning.
-  - No bass cabinet IR is installed: `bass_rig` rolls the amp + DI off with an eq ('cab' 4.5 kHz). An 8x10 / 4x10 IR
-    would be more real (fetch one into the manifest).
-- **Guitar solos (kestrel-bay, fretwork / soloist): verify by ear.** Everything was judged by numbers and images
-  (stem pitch tracks: vibrato 5.7 Hz 0..+50 ct up from the note, the dive B5 -> B4 in 1.3 s, the pinch's partial 6
-  at 2 kHz; lead note dynamics 5.4 dB). Untested by ear: whether the bend overshoot (4 + 3 x amount ct) and the
-  up-only vibrato read as a player or as wobble, whether the 'harmonic' feedback bloom sounds like amp feedback or
-  like a filter sweep (a real feedback note also locks / detunes slightly and keeps growing; ours holds the note's
-  peak level, falling 1.5 dB/s), and the pinch squeal's level through the zones.
-- **Soloist move choice is nearly fixed by energy / density.** Seeds barely change which move a slot gets (kestrel-bay
-  outro: seeds 22-28 all chose motif / slides / chug / sweep-or-tremolo / scream); variety across a song comes from
-  the shared budget's `played` penalty (0.35 per use) and per-solo `weights`. More moves per role (climax: only
-  scream / feedback / dive / pinch / double_stop / tremolo / trill) and a seeded spread in the scoring would give two
-  solos more different shapes.
+- **Endless generators: next genres** (feat/endless: `agentsound/endless`, `python -m agentsound endless`). Built:
+  `jazz-piano` (solo, default) and `jazz-trio` - a genre is a `Genre` data spec + the shared composer / players.
+  Next as specs (+ a player hook where the plan cannot express it): a bossa band (`bands.make('bossa')`: nylon
+  guitar comping, the sax on the head), a jazz ballad with the tenor (`jazz_ballad`, hornist on the head), synthwave
+  (sections + heroes; the pop form `verse` and the new-age
+  harmony exist now - add its sections + heroes as a 'perform' kind). Open findings of
+  the first runs: (1) The loudness varies by
+  feel (bossa ~2 dB louder: a per-feel `master` offset; waltz / ballad land -15.5..-16.5): a measured auto-trim (one
+  quick render of the head, then the drive) would make an endless stream level. (2) The user's verdict on the sound
+  ("schrill und hart") led to the `solo_piano` preset (presence +1.2..+2.3 dB vs the profile, the loud solo notes'
+  2-5 kHz 4-5 dB lower); still to hear whether it now reads smooth enough. (3) Render speed 3.4-5x real time on this
+  machine: `--play` stays ahead, but a bossa (dense left hand) is the slowest. (4) The stereo grand leans by
+  register: with solo_piano's pan -0.35 the demo tunes (seeds 105 / 100 / 106) measure L/R -0.1 / +0.6 / -0.5 dB, its
+  demo (a lower ballad) +1.3; a measured counter-pan per tune (the mixer's `seat` idea) instead
+  of the fixed pan. The 'end' masking warning piano/comp is the two hands of one piano (benign).
+- **Endless piano in general (feat/endless-piano, fix/endless-piano-followups) - open points**: `new-age-piano` /
+  `classical-piano` / `endless piano --style`. (1) Not yet heard by the user: the demos re-rendered with the
+  follow-ups (same seeds: new-age 21 / 13 / 31, nocturnes 3 / 6, the waltz 8, jazz 49 / 47; the worktree's
+  `songs/_endless_piano/out/<style>/`, clicks 0; one overview per style in `out/overview/`). (2) Done in the
+  follow-ups: the feel's body on both hands (`genres` feel 'body'), the waltz's strains twice (~2:57) with 8 3/4
+  figures, key-aware chord spelling (`theory.spell_above`), the jazz piece's highest note in its planned peak (56/56
+  tunes, was 38/56). (3) The nocturne gate is tight: seed 3 failed flat_dynamics (4.0-4.4 dB per phrase under 4.5)
+  already on master; its touch is now (40, 104) (5.1 dB) - deeper touch arcs on the quiet sections would be the real
+  fix (the 'flat_dynamics' info on 2-5 phrases per new-age / classical piece: A1, A3, coda). (4) The waltz's left
+  hand still mostly oom-pah-pah (the 'rest' figure under every breath); its loudness range 10.3 LU (new-age 16-17).
+  (5) A block-chord jazz solo's top note repeats (climax_single false) - fine for chords, or lift only the last.
+  (6) The run log names the climax with sharps ('A#5' in Gb): theory.note_name has no key. (7) The jazz solo against
+  the quieter written head: its top velocity over the head rose (vel +12 -> +20, solo_vel2 16 -> 26; round 1's
+  'velocity plateau' tell) - watch it in the next blind round.
+- **Endless lofi-piano (feat/endless-lofi) - open points**: `endless piano --style lofi` (genre spec + the
+  `lofi_piano` band preset + drummer style 'lofi' + `pianist.FIGURES` lofi_*). (1) Not yet heard by the user: the demos
+  `songs/_endless_piano/out/lofi/` (study seed 7 with the kit, rain seed 21 piano only, late-night seed 35 soft kit; seeds 33 / 34 were rerolled by the arc and breath checks).
+  (2) The kick and the left hand share 60-250 Hz: the report keeps a 'masking' warn (comp ~70 % / drums ~35 % of the
+  bass band) although the kick ducks the left hand 4 dB and the kit is thinned below 150 Hz - a lower kit / a higher
+  left-hand bass (`pianist.figure(bass_lo=)` per genre) would clear it; listen first whether it is a problem at all.
+  (3) The vinyl bed uses SampleRadar loops (royalty-free, no redistribution: the credits flag them); a CC0 surface
+  noise would make the demos shareable. (4) The Osiris piano's layers differ per key (C5's loud layer +8 dB over its
+  soft one at the change, C4 / G4 even after `LOFI['velcurve']`): a per-key layer trim (`inst.sfz(keymap / zone)`)
+  would even the melody. (5) The lo-fi mix reads 'mid' -7..-11 dB under the 'piano' balance (by design dull); an
+  analysis profile for lo-fi would judge it against its own reference.
+- **Endless piano follow-ups (fix/endless-piano-followups) - songs to re-render**: the body's breath settles over the
+  rise into the phrase peak (humanize.gesture; was the first beat), `jazz.paraphrase` never encloses over the
+  melody's top note, the soloist's block-chord stage owns the range top when an arc has no climax. Render JSON changed
+  (every song compiled before / after; samples from the main checkout): `_endless_jazz_piano`, `lanterns-on-carmine`,
+  `letters-to-the-morning`, `minetta-lane-waltz`, `perry-street-rain`, `pro-piano-blues`, `pro-piano-bossa`,
+  `pro-piano-latenight`, `pro-piano-waltz`, the four `pro2-piano-*`; the sung songs on the jazz presets surely too
+  (not compiled: `jane-street-bossa`, `nowhere-to-be`, `when-the-year-turns-gold`). Chord symbols spelled by the key
+  (Key.chord / Key.triad) change names only, not pitches.
+- **Blind test round 6** (`songs/_blind`; the r6 renders of the 4 tunes in `songs/_endless_jazz_piano/out/r6` and the
+  re-rendered `songs/pro-piano-*/out`, `songs/pro2-piano-waltz/out`, `pro2-piano-blues/out` were made in the
+  fix/endless-r5 worktree - copy them into the checkout that runs `make_packets.py` (ID_SEED 'blind-jazz-piano-v6',
+  the pro2 waltz / blues in place of the pro ones; not run)). Left after the round-5 fixes (ROUNDS.md "After round
+  5"): solo phrases holding a hook-cell development only 0.16 -> 0.19 by `composer.developed` (rhythm x1/x2/x0.5 +
+  contour; the arranger's anticipations / ornaments break exact rhythms - a looser measure, or the judges' reading,
+  decides whether more is needed); bars of 85 %+ chord tones 0.19 -> 0.34 (motif lines snap strong notes to chord
+  tones); the smallest A range 11.1 (18 % of the tunes under an octave: a calm A1 sits low against the G4 floor -
+  a lower floor made the climax climbs leap); the solo's top velocity over the head +4.5 -> +8.6, density 1.08 ->
+  1.01; one 14-semitone leap at a call / response seam (seed 111, wraps 0.04); the head's 8th lines still lean ~+7 on
+  the beat (fills soft into the melody, the phrase goal excepted from the step cap); `test_the_round_3_tells` allows
+  vel_onoff < 6 (6 tunes; 24-tune mean 3.6). Round 4's open points that stay: a 'shout' plan's 2 loud bars can be one
+  long note; the set memory makes a set's tunes depend on the tune before (blind tunes rendered one by one); the trio
+  has no trading 4s; a cold-stop tag measures its room tail inaudible; the hand-written latenight / bossa solos keep
+  3-5 strong-beat clashes; the blues left hand (stride / tenths roots) and straight double-time 16ths in swung tunes
+  (both noted by the other judges) untouched.
+- **Endless round-5 fixes (fix/endless-r5) - songs to re-render**: the shared soloist (`motif_line`, `MOTIVIC`, calls
+  developing the stage's cell, `scale(ctx, t)` chord-aware, chromatic approaches only into the beat, the velocity
+  build, phrases 3-12 beats, landing notes before the other hand / the end, the 'early' arc), the piano vocabulary
+  (motif sequences / riffs, the traded line's level), the pianist (a chromatic note never harmonized),
+  `humanize.touch` (`pickup`), `perform._end_clips` (the drawn grip). Render JSON changed (every non-sung song
+  compiled before / after; the sung ones not checked): `_demo_soloist`, `_endless_jazz_piano`,
+  `ashes-and-chandeliers`, `ghosts-of-ocean-drive`, `kestrel-bay`, `lamplight-avenue`, `matryoshka`,
+  `minetta-lane-waltz`, `nocturne-etude`, `perry-street-rain`, the pro-piano songs and the pro2 songs (those
+  re-rendered in the worktree, clicks 0); round 4's `jane-street-bossa` / `nowhere-to-be` still to re-render; songs
+  using `touch` / the soloist with sung parts likely changed too.
 
-- **Sung vocals (feat/singing, `agentsound.singer`): not yet heard by the user.** Everything was judged from
-  spectrograms, the timelines and the report (no listening): diction, buzz and naturalness need an ear. A/B files in
-  `songs/_demo_vocal/out/` (`ab_robotic` vs `ab_singer`, `ab_pitch_model`, `ab_player_pitch`, `ab_tiger`,
-  `vocal_dry`, `vocal_demo`). Open questions for that listen:
-  - `pitch='hybrid'` (the default): the voicebank's pitch model approaches notes from below on its own; the player's
-    scoops are scaled x0.6 on top (`singer.HYBRID_SCOOP`) - they may still stack into a "sliding" voice.
-  - Breaths are the bank's `AP` token at `breath_db` -4 dB (pop): level and colour unverified; a phrase start right
-    after a short gap may sound gasped.
-  - Consonants: lengths are the duration model's predictions x the style's `cons`, squeezed to <= 45 % of the note
-    before (word-final codas keep `singer.DICTION` minimums, onsets 30 ms, a cluster may take up to 60 %); very fast
-    lines can still end under the minimums (`singer.diction()` warns `coda_short`). Hanami's readme: a short `t` / `d`
-    becomes a flap by itself - not checked.
-  - Word-final stops in LEGATO before a consonant-initial word ("night belongs", "hold me") stay unreleased, as in
-    connected English (measured on Hanami: the burst ~29 dB under the vowel; a closure or more lift did not release
-    them reliably). Before a rest they are released (closure + release vowel). If such a word must be crisp, leave a
-    short gap after it (>= 80 ms: the rest path) - or find a model-side fix.
-  - Vocoder buzz / metallic edges on long high notes (the banks' own vocoders) - unknown until heard.
-- **Vocal note dynamics in the report.** The vocal track plays one trigger note per phrase (the takes), so
-  `nodes[].dynamics` reads "too few notes" and `flat_dynamics` never judges a sung line. The sung notes (one per
-  syllable, with their velocities) should be handed to the analysis (e.g. as the node's analysis notes).
-- **Vocal expression lanes.** The two banks have no energy / breathiness / tension embeddings (no `dsvariance`); the
-  singer blends the voice modes (soft / power) per frame instead. Banks with a variance model are not driven yet
-  (the runner has no `variance` op), and the vibrato does not follow the air like the hornist's.
-- **`build --section` and vocals.** A phrase whose take starts before the rendered section is not heard (one-shot
-  triggers); render from the phrase start (`--from-beat`).
-- **Licences of the voices.** Hanami's voicebank allows commercial use, but its bundled AI❤dolGAN vocoder is
-  CC BY-NC-SA 4.0: whether rendered output is covered is unclear - the build warns "non-commercial voice". TIGER is
-  non-commercial outright. A commercially clear voice (another bank with an open vocoder, e.g. one using the openvpi
-  NSF-HiFiGAN) would need its own approval.
-- **SoulX-Singer (zero-shot, Apache-2.0) not evaluated yet** as a third A/B option; only with a licensed prompt
-  (`voicebank.check_prompt`: a Hanami render), never SoulX's bundled prompts or a dataset without synthesis consent.
-  Prepared: `agentsound/voicebank_runner/soulx_runner.py` (WSL, score control, torchaudio-free loading) and
-  `songs/_demo_vocal/soulx_ab.py` (prompt = one Hanami take + metadata from the singer's timeline; target = the
-  demo score) + the `soulx` variant of the demo. Blocked 2026-10-01: the host's C: drive (which holds the WSL disk)
-  ran full during the 2.7 GB weight download (a torch venv of ~7 GB had been added before); the venv and the
-  partial weights were removed again. Needs ~10 GB free on C: (or the WSL disk moved) - then: venv (torch 2.9.1,
-  transformers 4.41.2, accelerate, omegaconf, soundfile, scipy, librosa, numpy<2), model.pt only (not the SVC model,
-  not the 6.4 GB SoulX-Singer-Preprocess pack: our own metadata replaces it), `python songs/_demo_vocal/soulx_ab.py`,
-  `make_ab.py soulx`.
+- **Blind round 6 balance (fix/endless-r6) - songs to re-render, round 7, and what is left** (ROUNDS.md "After round
+  6"): the solo's phrasing / breath / line shape (`soloist.PHRASES` / `BREATH` / `CONTRAST` / `RUNS`, `MOTIVIC`,
+  `piano_vocab._line_on`, the resolution), the form's level (`genres._JAZZ_DYN`, touches), the climax
+  (`perform.CLIMAX`), heads (register, `hook_seq`, contours), reharm colours, the left hand (`lh_plan`,
+  `pianist.LH_RESTRIKE`), the ending (`perform.END_ROLL`, nothing after the chord), a clip's last note plain,
+  ornaments under the ceiling, `theory.spell_note` + the packets' spelling. Render JSON changed (every song compiled
+  before / after; samples from the main checkout): `_demo_soloist`, `_endless_jazz_piano`, `ashes-and-chandeliers`,
+  `ghosts-of-ocean-drive`, `kestrel-bay`, `lamplight-avenue`, `matryoshka`, `minetta-lane-waltz`, the four
+  `pro-piano-*` and the four `pro2-piano-*`; not compiled (no voicebank in the worktree): `_demo_vocal`,
+  `_demo_vocal_fx`, `_demo_vocal_rock`, `catch-fire`, `expensive-habits`, `jane-street-bossa`, `nowhere-to-be`,
+  `one-more-round`, `when-the-year-turns-gold`; `unbowed` fails on its own. Only the 4 blind tunes re-rendered
+  (`songs/_endless_jazz_piano/out/r8`, clicks 0). Round 7: `make_packets.py` (r8, 'blind-jazz-piano-v8') stops on
+  the pro2 waltz / latenight / bossa until they are re-rendered (their piano note counts moved by 1-2: the shared
+  ending / ornament changes). Left: beats on chord tones 0.92 (pro2 0.69-0.81) - the lean now keeps the run's
+  direction and rarely applies, a passing tone on the beat would be the lever; leaps of 5+ 16 % (pro2 3-7 %: the
+  hook cells' own leaps inside `motif_line`); phrases 11 beats on average (pro2 12-46: the call / response slots
+  still cut a long phrase in two); the head's touch 64 / register 77 under the references' 68-75 / 78-79; the r8 waltz
+  keeps 2 silent solo bars in its 64-bar chorus; the trading-4s shape has no climax stage (its peak is raised by
+  `_peak_solo`); the ballad blues' head breathes at only 1 of 6 phrase ends (r8 002).
+- **Piano breath (fix/piano-breath) - songs to re-render, and what is left**: the user on r6 003: "sounds like an
+  endless monotone line of notes" (ROUNDS.md "After the r6 listening"). Changed: `soloist.BREATH` / `CONTRAST`, the
+  deleted empty-bar pickups / landing notes / left-hand re-strikes / section-boundary pickups, `pianist.STYLES` fill /
+  embellish / quick rates, head voicings on arrivals, left-hand answers, `humanize.touch(levels=)`,
+  `perform.phrase_levels`, `genres.PHRASE_ENDS` ('breath'). Render JSON changed (every song compiled before / after,
+  samples from the main checkout): `_demo_soloist`, `_endless_jazz_piano`, `ashes-and-chandeliers`,
+  `ghosts-of-ocean-drive`, `kestrel-bay`, `lamplight-avenue`, `matryoshka`, `minetta-lane-waltz`, `perry-street-rain`,
+  the four `pro-piano-*` and the four `pro2-piano-*` (their written lines go through `pianist.arrange`); not compiled
+  (no voicebank in the worktree; they use the pianist / touch): `_demo_vocal`, `_demo_vocal_fx`, `_demo_vocal_rock`,
+  `catch-fire`, `expensive-habits`, `jane-street-bossa`, `nowhere-to-be`, `one-more-round`,
+  `when-the-year-turns-gold`; `unbowed` fails on its own. None re-rendered except the A/B and the 4 r6 tunes
+  (`songs/_endless_jazz_piano/out/breath`). Open: (1) the head's DENSITY is one level per 2-bar unit (7-8 attacks in
+  every unit of r6 003): sparse statements need the composer's cells drawn by the unit's level (long notes in a calm
+  phrase) - the next lever, after the user hears the A/B; (2) the double-time burst got short (16th bars per tune
+  1.04 -> 0.25) and the solo's last chorus is the loudest in 0.88 of the tunes (was 0.96); (3) the solo's top velocity
+  over the head +8.6 -> +11 at density 0.95 (round 1's plateau pattern); (4) the pro references are as continuous
+  (right hand quiet a beat+ 15-38 % of the time): a human-played reference (a transcription's note density / rest
+  statistics) would be the real target for `composer.breath`.
+- **Piano body (feat/body-model) - songs to re-render, and what is left**: the user after the breath A/B ("I imagine a
+  player gently moving his body"). `track.humanize(body=, lead=)` (`humanize.BODIES` calm / lyrical / swing: Todd's
+  phrase arc coupling tempo and velocity, Friberg-Sundberg ritardandi into phrase / section ends, leap delays, breaths,
+  bar sway, the left hand following the right) replaces the random jitter on the jazz presets' piano / comp tracks
+  (`jazz.Feel.body`); the soloist and `romantic.Score.perform` mark their phrases; melody_rubato's free jitter and
+  agogic leap delay are off under a body. Render JSON changed (compiled before / after; samples from the main
+  checkout): `_endless_jazz_piano`, `lanterns-on-carmine`, `letters-to-the-morning`, `minetta-lane-waltz`,
+  `perry-street-rain`, the four `pro-piano-*` and the four `pro2-piano-*`; sung songs on the jazz presets surely too
+  (the baseline copy could not compile them): `jane-street-bossa`, `nowhere-to-be` (bossa), `when-the-year-turns-gold`
+  (jazz_ballad). Only the A/Bs re-rendered (`songs/_endless_jazz_piano/out/body`, `songs/letters-to-the-morning/out/
+  body_{before,after}.mp3`). Open: (1) the user's verdict on the A/B (then tune the profiles: arc size, the swing
+  section-end lay-back); (2) the fitted ritardando q is noisy on the shallow swing ends (one section end per tune
+  qualifies) - a reference recording's phrase ends would calibrate rit_w / q; (3) a body for the other players
+  (bassist / hornist / guitarist have their own timing - one shared band body would let the band breathe together);
+  (4) letters-to-the-morning's right hand has float velocities (x 0.78 in song.py), so test_notation's round trip
+  fails on it (it did before this change too) - round them in the song.
+- **Requests of the pro2 composer (2026-10-09)** - done: `pianist.arrange(written=True)` (no anticipations / delays /
+  fills / quick ornaments), phrase-level touch (`humanize.touch(levels=)`, through `jazz.chorus` touch dicts),
+  `perform.end_clips` public; an ornament-type switch exists already (`ornaments={}` or chosen weights for the long
+  notes, `quick=0` for the short ones; `embellish=0` only stops the long-note ones). Open: (1) voice a WRITTEN
+  anticipation (a note an 8th before the change, held over it) with the chord it leads into (arrange voices only its
+  own anticipations that way); (2) shell / rootless voicings instead of bare roots under climaxes in the solo-piano
+  left hand; (3) a wider default bossa bass velocity range (`_PIANO_FEELS['bossa']['bass_vel']` (46, 70)) and a guard
+  against doubled roots where the tenths left hand and the bossa line meet.
 
-## Medium: tools, engine and library
+## Mixer (`agentsound.mixer`)
 
-- **Signal-chain order review (fix/chain-order): verify by ear, and what it left open.** Judged by numbers and
-  level-matched A/B clips only (`songs/<slug>/out/chain_ab/`: kestrel-bay solo + bed stems, the-drummer-speaks chorus /
-  verse + the rooms alone, chrome-leviathan chorus + the leads / stab alone, ghosts-of-ocean-drive sax solo, unbowed
-  t1 hall). Open:
-  - The orchestra hall's crossfeed (0.5) made the Musikverein return mid-heavy (its two IR channels are alike):
-    `HALL_WIDTH` +0.3 gives most of the side back (not on the church IR: it went 257 % wide); whether the hall now
-    sounds around the listener or just narrower needs an ear. The trims were measured on two demos: the hall returns
-    of ashes-and-chandeliers (-0.8 LUFS) and film_orchestra (-0.5) came out a little lower. The library's 2-channel returns (`bus/ir_concert_hall`, `ir_salon`, `ir_church`, `ir_opera`,
-    `ir_hall_large`, `ir_drum_room`) and the jazz salon still have no crossfeed (solo piano / jazz songs untouched).
-  - rock_band's clean band room (crossfeed 0.5, +2.5 dB, measured on one song) is narrower than the shared crushed
-    room was (width 82 -> 69 % on the-drummer-speaks): listen to the rooms-only clip before more rock songs.
-  - The hero synths (`hero/synth`, `hero/piano_synth`) keep a doubling layer (halo micro-shift / the piano layer's
-    chorus) before their compressor / tape: allowed in `chain_order.ALLOW`; the clean fix is the doubler after the
-    chain stages (a layer-level 'post' fx) - it changes measured heroes, so not done in the review.
-  - A pre-fader / pre-insert key does not follow the key's fader: only the hero wrapper moves the thresholds with
-    it (`HeroInfo.key_fx`); `s.sidechain(..., tap=...)` by hand needs its threshold set for the hotter signal. A
-    `tap`-aware threshold helper (or a ducker 'keyGain' param) would make that automatic.
-  - Patch sends cannot carry a tap (only node sends: `sends={bus: (dB, tap)}`); a patch-level parallel bus send
-    would need it.
-  - `bands.master_chain` lives in bandlib/rock.py (rock, pop and jazz use it); the synthwave presets replace the
-    master (`master.use`) and the orchestra checks for a limiter itself - one shared guard in agentsound/bands.py.
+- **A lead change inside a section** (matryoshka's minor section: a solo cello 4 bars, then the piano 4 bars, read as
+  one section): the per-section lead (MIX `lead`, inference) works per section, not per bar.
+- **Levels** are unweighted bar RMS plus one whole-song K offset per part, not per-section LUFS; `auto()` lowers the
+  master input by 0.5-0.8 LU and only logs it.
+- **Stereo stems see a balance pan**: a stereo sample set that leans (the SSO choir by pitch range: lux-perpetua's
+  tenor +2.3 dB left at pan +0.14) needs a counter-pan; a `seat` helper (width + a pan that measures the lean) or
+  centred choir zones in the patch.
+- `fx.width` 1.5 on a duck-carved bed goes out of phase (expensive-habits: corr -0.23); no mixer move for a narrow
+  chorus.
 
-- **Vocal jazz needs a piano that answers the voice** (songs/jane-street-bossa, the first sung jazz song). Under
-  the voice the piano comps with `jazz.comp(answer=line)`, but its short answers in the voice's rests (an echo of
-  the hook, a run into the next phrase) were written by hand per part (`FILL_*` notation at the gap positions) and
-  harmonized through `jazz.chorus` with `fill=0`. A `pianist.answers(vocal_line, prog, bpm=, register=, density=)`
-  (fills sized to every rest >= 1 beat, ending before the voice re-enters, never above the voice while it sings)
-  would make it a building block. Also: `jazz.chorus(comp=...)` on a band without a `comp` track (the `bossa`
-  preset) fails on `None.play` - place the comping on the piano or raise a clear error.
-- **Dry vocals: open points** (fix/dry-vocals: the vocal hero's dry space per genre, the calm `jazz` / `ballad` singing
-  styles, `songs/_demo_vocal/wetness.py`). (1) The wetness measure is a script (numpy), not part of the report: the
-  engine's report could give every sung track its own returns-vs-dry LU and post-phrase tail (the user's rule "judge
-  the wet/dry balance on every sung song"). (2) The other songs with sung vocals (_demo_vocal, _demo_vocal_rock) now
-  render with the dry defaults; their old A/B mp3s (make_ab.py, grit_ab.py, grit_rock_ab.py) were made with the wet
-  chain - re-run them before the next listening round. (3) The coda measure of grit_ab.py / grit_rock_ab.py placed
-  every word-final consonant `offset_s` (~0.3-0.6 s) too early (the take timeline counts from the first note, not
-  from the file start) - fixed; hero_vocal.GRIT_MEASURED's coda_db / out_t_db need a re-run. (4) jane-street-bossa's
-  melody is leapy for a calm jazz vocal: the A line has 9 leaps of a 4th+ in 25 intervals (8 of them a 5th or more,
-  the hook's sixth F4-D5 in every phrase), a mean interval of 4.4 semitones (B / C 3.0-3.1), ~3 notes per bar, 58 %
-  of them eighths, up to G5 - the calm singing helps, a stepwise rewrite of the A phrases would calm it further.
-  (5) The calm styles' `note dynamics` read 14.8 dB (audio onsets) vs 15.7 before: the gain lane is narrower, the
-  soft mode varies the level itself. (6) Calm round (calm_ab.py): jane-street-bossa now sounds in G major
-  (TRANSPOSE = -3, CALM_A) - the A&R / mix / master notes (AR.md, MIX.md, MASTER.md) were made in Bb: the sub reads
-  +3.8 dB over the jazz profile (was +2.3) with the bass a minor third lower, re-run the A&R. The B and C melodies
-  are still dense (eighth-note syllables) - the sparse A (FEW_A, new shorter words) is an option the user has not
-  heard yet. `singer.SOFT_MAKEUP_DB` is measured for Hanami only (-0.7 dB); TIGER's soft mode needs its number.
-  The singer has no register-dependent make-up: a part sung a minor third lower reads ~2 dB softer (raw) - the song
-  sets `makeup_db` by hand (TRANSPOSE_MAKEUP_DB).
-- **Diction warnings flicker between takes**: a nasal coda in legato gets exactly the warn length (35 ms vs "< 35 ms"
-  for a nasal) - 'on' read 46 ms in take 0 and 35 ms in take 1 of the same line. The singer's legato minimum for
-  nasals should sit a few ms over the ear's threshold.
-- **Section renders report silent notes after the section end**: `build --section head` warned silent_notes on every
-  track for notes in the bar after the section (bars 41-43 of a 9-40 section) - the full render has none.
-- **`s.arc(within=)` steps need a hold point**: a `(beat, dB, 'smooth')` mark ramps from the previous point over the
-  whole span; a step at a part boundary needs `(beat - 0.5, old)` written before it. `within` could take step marks.
-- **`bands.make('bossa', without=('guitar', ...))`** keeps the piano at pan -0.5 (placed opposite a guitar): the trio
-  leaned 1.8 dB left until the song moved it to -0.25.
-- **No jazz reference in `assets/refrences/`**: the straight-jazz songs are judged against the profile only (a Beegie
-  Adair trio track, the user's model, and a vocal jazz track would make `compare` useful).
-- **Vocal grit: open points** (feat/vocal-grit, `hero(..., grit=)`, songs/_demo_vocal/grit_ab.py). (1) The
-  parallel buses are calibrated on Hanami: TIGER's crunch lands -0.5 LU (vocal) - per-voice calibration or a measured
-  auto-trim would close it. (2) The megaphone's level follows the source spectrum (Hanami -0.3 LU, a synthetic vowel
-  in the test -2.4 LU) and its mix is +0.5 LU (less crest into the master limiter, more into the plate): a plate send
-  offset for the insert grits may help. (3) TIGER style 'rock' renders 'and' /n/ (legato) 35 ms against the 35 ms
-  warn length (`coda_short`, clean and crunch alike - not the grit). (4) The user disliked every variant over the
-  soft pop demo band (recipes/HUMAN_FEEDBACK.md "Vocals"); the rock re-test (songs/_demo_vocal_rock, 'Exit Nine' over
-  The Drummer Speaks' rock_band, `grit_rock_ab.py` -> `out/grit_rock_ab/`) waits for the user's ear. (5) Grit raises
-  the vowels' 2-8 kHz band, so a word-final nasal / stop reads several dB lower against its vowel than in the clean
-  render (the coda itself is untouched on the clean path) - worst on crunch.
+## Mastering (`agentsound.mastering`)
 
-- **Compact song code, phase 2: genre packages on top of the notation** (phase 1 = `agentsound.notation` + the
-  foundation helpers; migrated with byte-identical render JSON: ashes-and-chandeliers 993 -> 870 lines,
-  perry-street-rain 439 -> 391, midnight-interstate 515 -> 464; the jazz package is done - song.form / ending /
-  track.feature, jazz.chorus, walking_bass / brushes(straight=True), romantic.score: perry-street-rain -> 238,
-  minetta-lane-waltz 442 -> 261, lanterns-on-carmine 326 -> 223, nocturne-etude 446 -> 190, gymnopedie-etude
-  177 -> 153, _demo_jazz 169 -> 130, lamplight-avenue 544 -> 472). The survey found the rest of the length in
-  re-implemented section logic. Each package must stay expressive (defaults overridable, raw Clips keep working) and
-  prove itself the same way (a song migrated with an identical render JSON). The orchestra package is done
-  (`voicing.Harmony`, `figures`, `orch.Score` / `Choir` / `bed`, `voicing.fugue`, `s.arc`; byte-identical: unbowed
-  953 -> 598, lux-perpetua 759 -> 513 (+ score.py 233 -> 193), ashes-and-chandeliers 870 -> 711). What is left of
-  those three is note data, comments and the songs' own decisions; unbowed / lux keep `follow=False` (their written
-  re-attacks) - switching them to `follow=True` is a musical change to judge by ear. The pop / synthwave package is
-  done (`agentsound.sections`: `s.section(prog=)`, `track.chords / arp / bassline / plan / rise / lane / levels`,
-  `s.transitions`, `speech.voice` + `Words.robot`, `art.perform(preset=)`, `art.throws(spans=)`, `pianist.Player` /
-  `top_leads` / `arrange(doubles=)`, `bassist.Player`, `s.beat_at`, `s.breath(cut=)`; byte-identical: chrome-leviathan
-  569 -> 482, children-of-neon 565 -> 493, skyline-heartbeat 521 -> 429, midnight-interstate 464 -> 380,
-  ghosts-of-ocean-drive 481 -> 390, polaroid-summer 454 -> 380, orbital-station 433 -> 419, matryoshka 408 -> 341,
-  `_demo_lush` 89 -> 79, `_demo_vocoder` 80 -> 73; `_template` shows the idiom). What it left as written, each a
-  musical change to judge by ear before adopting the library's way:
-  - children-of-neon's sustain pedal lifts only at every 4th chord change (its `pedal()` helper reads
-    `Harmony.items` - chord lengths in beats - and multiplies by 4 again); `pianist.pedal(prog, at, lift=0.12,
-    early=0.06)` is the per-chord pedal it meant.
-  - ghosts-of-ocean-drive: the solo's swelling strings and pre 2's pluck arp play bars 4-8 of their progression a bar
-    late (`P.slice(16, 32)` at bar 5; the arp runs a bar into chorus 2 until the breath clears it) - `bars=4` in a
-    section plan would put them on their chords.
-  - orbital-station's `arp_line` (close position with the root folded into G2-F#3, accents truncated with `int()`):
-    `patterns.arp(pattern=, accent=)` voice-leads in a register and rounds the accent (+1 velocity on some notes); a
-    root-position voicing for `arp()` would let the song use it.
-  - The filter lanes of chrome-leviathan / midnight-interstate and the masters' gainDb / width lanes stay explicit
-    point lists (as section lanes they read no shorter: their jumps sit on beats that already carry a point);
-    skyline-heartbeat's lead vibrato (a pitch-bend LFO whose depth follows the long notes) and the songs' scoops with a
-    lead-in point (`(t - 0.05, 0)`) are their own shapes (`jazz.scoop` starts on the note).
-  - A section key change applied to every pitched part (`s.modulate(final, +2)`) was not added: the songs write the
-    transposed progression (`P_chorus.transpose(2)`) with its own registers and `transpose=` their lines - voicing a
-    transposed progression in the same register is not the same as transposing the voiced chords, and speech /
-    fx-hit samplers must not move.
-  Open:
-  - *orchestra, leftovers*: a harp arpeggio figure (ashes' masque harp), staggered choir entries that climb by scale
-    steps (ashes' ascent: `voicing.imitation` places cells, not a held note climbing bar by bar), the lux storm's
-    interleaved 16ths (violins I / II from one velocity stream - a two-voice `storm16` that takes a velocity function),
-    and the nocturne's own dynamics map (romantic marks) onto `orch.Score`-style marks.
-  - Migrate the other songs' note data to the notation (chrome-leviathan: `line` / `mel`; the tuple tables
-    elsewhere) - the round trip test already proves every one of their notes is expressible.
-- **Notation follow-ups** (phase 1): a Line's extras (gestures, peaks, voices) survive shift / transpose / octave /
-  velocity / with_length but not the other Clip transforms (they return plain Clips: the gestures of
-  `line.legato()` are gone - re-parse or keep the Line); gesture lanes written by `track.play(line)` merge with other
-  writers of `instrument.pitchbend` on the track (the per-track lane registry above would sum them); ornaments need
-  `bpm=` at parse time (`notes(expand=False)` now lists them unexpanded in `line.ornaments` - romantic.score realizes
-  them - but track.play does not realize them at play time like the gestures; graces `g:` are always expanded);
-  `format()` writes absolute pitch names only (no degrees / relative octaves) and splits no notes at bar lines (a
-  long note across a bar leaves that bar line out); triplets written in notation count exactly while older code
-  added 1/3 in floats (positions differ by ~1e-16 - the render JSON rounds to 6 decimals, so nothing audible).
+- `apply()` only estimates the loudness change inside the song
+  chain; the plan overestimates the gain of limiter drive on an already limited mix (expensive-habits).
+- **The limiter saturates around -9 LUFS on a dense club drop** (one-more-round, EDM branch): past ~10 dB of drive the
+  output loudness follows the release, not the gain (drop at 50 ms: gain 11 -> -9.3, gain 20 -> -9.2 LUFS; release 25 ms
+  -> -8.9; a hard-clip saturator before it or -4 dB on the bass changed < 0.2 LU). master/edm uses 30 ms; a real -7
+  LUFS club master needs a clipper stage that cuts the crest (output crest stays ~9 dB) or a multiband limiter.
 
-- **Guitar lead lanes (fretwork):**
-  - Everything on one lead track must go through ONE `fretwork.render` (one automation lane per target; points of two
-    writers in the same window would interleave). `guitarist.lead(gestures=False)` automation on a track the soloist /
-    fretwork also plays clashes on `instrument.pitchbend`. A per-track lane registry that sums additive lanes from
-    every player at compile would lift it.
-  - The hero guitars are mono legato stacks: a unison / oblique bend's held string plays on a twin track
-    (`fretwork.twin_track`, a second instance of the stack). `bendfollow` (the sampler's per-note bend latch) only
-    helps polyphonic guitars (`sampled/hero_guitar_clean`).
-  - Palm mute on the hero is emulated (the voices' low-pass, the 'mute' lane; no installed pack has DI palm-mute
-    samples - the rhythm guitars' `sampled_guitars.PALM` is measured against real amped chugs): its DI zones load only the 'open'
-    articulation. Add the FSBS 'palm mute' / 'dead note' keyswitches to the hero zones (hero_guitar.play would have to
-    copy each keyswitch note into every velocity zone - a stack routes a note to one zone by velocity).
-  - The wah goes ahead of the amp in every zone of a hero stack (5-6 instances); a stack-level pre-split insert would be
-    cheaper. The pick scrape / finger squeak are synthetic (va noise through an amp); a sampled string-noise pack would
-    be more real.
-  - The sampler's `harmonic` follows `key + tune` as the note's fundamental: zones with a pitch keytrack other than
-    100 % or a detuned root would isolate the wrong partial.
-- **Jazz package follow-ups** (phase 2, jazz):
-  - lamplight-avenue still hand-wires what the library has, because adopting it would change the sound (render JSON):
-    the hero sax chain + carve + sidechains (`hero(sax, family='sax', bed=[...])`), the drum grids per section
-    (`drummer.arrange`), `pedal_points()` (pianist.pedal / bandlib.jazz.pedal add a release at the end), the guitar's
-    'b' / 'v' marks (notation `^bend` / `^vib` are sampled gestures, not the 3-point bend). Try them by ear on the
-    song, then migrate.
-  - `jazz.chorus` plays piano / comping / bass / brushes; the horn (horn_line per part, with its own phrasing across
-    parts) and per-part extras (bass fills, piano fills in the horn's gaps, bombs) stay hand-placed around it.
-    lanterns-on-carmine's skip notes alternate swing / triplet by the seed's parity (`skip_grid=jazz.each(...)`).
-  - `song.form` names sections with tokens: a section name with a space ('piano A1' in _demo_jazz) needs
-    `s.section`; a part used by two sections is one Progression object (fine: progressions are immutable).
-  - `romantic.score`: the left hand is its own entry grammar (accompany entries per slot), not notation; `Score.touch`
-    / `rubato` cover the gymnopedie's loops, but its left hand (bass on 1, the chord on 2, rolled with a shared rng)
-    and the pedal every bar are still song code - a `perform(style='satie')` would need to reproduce that rng order.
-- **Section renders report silent notes after the section end** (`build --section solo`: bass / piano / pad / drums
-  notes at the first bars after the section, "made no sound") - the preview stops before them; the report should skip
-  notes that start after the rendered span.
-- **power_ballad's echo bus idles under a hero lead** (the hero has its own echo): reverb_inaudible on kestrel-bay
-  until the clean guitar / piano were sent to it.
-- **Mixer:**
-  - The `children-of-neon` validation was never re-rendered after the -5.5 dB bed window and verse-relaxed limits.
-  - The vocoder track `robot` is tagged as bass.
-  - Levels are unweighted bar RMS plus one whole-song K offset per part, not per-section LUFS.
-  - `auto()` lowers the master input by 0.5-0.8 LU and only logs it.
-  - **A group lead.** A choir split into voice tracks (`lux-perpetua`) is measured as one voice against the
-    SUMMED orchestra groups. With `--lead choir_s ...` it proposed cutting every section by 5-7 dB, an a-cappella
-    mix. The mix engineer measured it by hand: dry stems, the choir summed vs the instruments in its register.
-    `lead=` should take a group, and so should the per-section lead above.
-  - **Stereo stems see a balance pan.** A track's `pan` on a stereo sample set is a balance, so a set that leans
-    needs a counter-pan. The SSO mixed chorus leans by pitch range: the soprano notes right, the tenors / basses
-    left. In `lux-perpetua` the tenor sat +2.3 dB LEFT at pan +0.14. Seating S A T B took pans -0.7 / -0.33 / +0.6
-    / +0.65 at width 0.8 and cost 0.5-2.1 dB of pan law. Options: a `seat` helper (a width + a pan that measure
-    the lean), or re-levelled / centred choir zones in the patch.
-- **Mastering:**
-  - The post-pass is not bit-transparent above ~19 kHz.
-  - `mastering.apply()` only estimates the loudness change inside the song chain.
-- **Dynamics ear role inference:** in `children-of-neon`, the preset's supersaw bed (track id `lead`) is flagged
-  `flat_dynamics` although it is a bed. Beds named "lead" by a preset should not count as leads, and the stack is
-  judged by its first layer only.
-- **Stack / layers:**
-  - Legato glide is lost inside a crossfade zone.
-  - Articulation marks are not supported on a stack.
-  - Muted layers still render and load their samples.
-  - Layers' own patch sends are dropped.
-  - Delayed notes restart at the preview start.
-  - Only the pedal is delayed with a delayed layer.
-  - `layered/piano_strings`, `piano_pad` and `piano_organ` peak at +0.6 to +0.8 dBFS on the track.
-- **Drummer:**
-  - No 6/8 or 12/8 feel (looked at in the rock pass, not cheap: the drummer's beat patterns are 16th grids in 4/4 -
-    the 'shuffle' style only swings them, triplet fills exist; a 12/8 ballad / 6/8 groove needs a triplet grid for the
-    patterns, hands and solo vocabulary, and the bassist's / guitarist's patterns with it).
-  - Cymbal chokes and the live hi-hat work on the `sampled/big_rusty_kit` / `unruly_kit` / `mf_natural` layouts only
-    (their choke keys; `Kit.live_hat` = the SFZ CC4 imported live). The band presets' `rock_kit()` copies tom 47 over
-    the Big Rusty crash choke (50), so `ending='choke'` has nothing to grab there; kits without choke samples need a
-    silent choke zone (`*silence` + `offBy` on the cymbal zones: a kits.py helper) - and both silent-notes ears would
-    then report those strokes as silent (they must learn that a choke-only key is meant to be silent).
-  - The hands' physics run move by move (`drummer.perform()`) or slot by slot (`soloist.solo()` with
-    `drummer.vocabulary()`): a rebound or an up-stroke across a boundary is not modelled, and `check()` / the limb
-    resolver do not see two neighbouring soloist slots together (a stroke at a slot's very end and one at the next
-    slot's start could collide). A vocabulary `place()` that re-runs `_resolve` over the whole solo would close it.
-  - The soloist's statement / answer / develop phrases all open with the motif as the call (by design of the arc):
-    in a 34-bar drum solo the riff's rhythm is heard ~10 times. Fine as an identity, but a drum vocabulary could
-    offer its own 'call' moves (the motif orchestrated, fragmented on the toms) so the calls vary more
-    (`the-drummer-speaks`).
-  - `restrike` (the sampler's re-strike damping) is off by default and set only in `the-drummer-speaks`
-    (`restrike=6`); the drum patches and the band presets do not use it yet (validate on one song before changing
-    the patches).
-  - The pop Chart kit's hat foot is the closed-hat sample.
-  - An intro (energy 0.38) and a `groove` section read the same drum level.
-  - The `songs/_bands` demos are not ported to the drummer.
-- **Silent notes in the songs** (found by the silent notes ear): `ashes-and-chandeliers` `choir_f` plays 41 notes
-  under G4 on `sampled/choir` (the VPO female choir has samples G4-C6 only; the patch notes said F3-A5), `choir_m` 4
-  on G4 (G2-F#4), `tuba` 1 on C1, `gtr3` 1 on E6; `polaroid-summer` `choir` 37 notes under G4; `orbital-station` 14
-  tambourines on the TR-808 kit (no tambourine: map one from the pack's 80s Digital / Chart kit).
-- **Silent notes ear, gaps.** The compile-time check (`agentsound/silent_notes.py`) knows sampler zones, the drum
-  machine and stack layers, not SoundFont key ranges (sf2 drum kits lack keys too) nor `{'dir': ...}` samplers; the
-  render-time ear cannot hear a silent note that starts together with a sounding one on the same track (a crash on the
-  kick), so those stay unseen for sf2 tracks. Reading sf2 preset key ranges in Python (or asking the engine) would close it.
-- **Synthwave references disagree.** Sunset says "too dark", Deckard's Dream "too bright", Nightcall "too wide".
-  Per-style reference choice should be documented in `recipes/synthwave.md`.
-- **Bassist:** the `funk_band` demo has a remaining drums/bass masking warning.
-- **Synth heroes:**
-  - They are darker than the references in lean mixes (presence -2.2 dB vs Nightcall).
-  - Hooks below C5 need a low-mid dip on the bed.
-  - `hero/darksynth_lead` needs +4.6 dB of patch gain.
-- **Hero piano:**
-  - Listen to the Dimension-D and tape flutter for detune / seasick shimmer.
-  - Its left hand shares the bassist's octave in a band.
-- **Tempo:** millisecond timing in the drummer and hornist assumes a constant tempo.
-- **Making-of film (`agentsound/makingof`), from the first pilot (ashes-and-chandeliers):**
-  - The players do not log their moves with absolute beats: `capture.py` recovers the placement by patching
-    `Track.play` (identity, the placing method's frame, else note matching). A `journal` of placements in the players
-    themselves would be exact and simpler.
-  - "Before" clips need the judged commit in AR.md (`Judged: ... @ <sha>`) and a version that still builds with
-    today's library; there is no per-section old render yet (the whole judged song renders once, ~12 min).
-  - Breeze narration is ~8-10x slower than real time on this GPU (a 3-minute voice-over takes ~30 min the first
-    time; cached after). German is not attempted (Breeze speaks English and Chinese well).
-  - Stems are post-fader and dry of the shared reverbs, so a soloed group in "meet the tracks" sounds drier than in
-    the mix.
-- **One keyswitch per section track.** A role that plays two articulations at the same moment (the violas' staccato
-  8ths under a marcato tutti stab, the basses' pizzicato under a sustained doubling) gets one of them ("notes at beat
-  X ask for different articulations"): 44 collisions in `unbowed`. Options: a second track per role for the
-  doublings (`violins1_div`), or the compiler splitting colliding articulations onto a twin sampler.
-- **The conductor's arc as a mixer move.** `s.arc(rides, within=)` (unbowed) is the helper now; a `MIX['arc'] =
-  {section: dB}` key would make it a logged mixer move (`mix --auto` could propose it from the per-section LUFS and
-  the profile's LRA window), and the pop package's lanes should extend `s.arc` rather than add a second ride.
-- **unbowed's intro: two passages sit two beats after their chords.** `H(sc.INTRO[3:9], t0 + 8)` places the rows that
-  start at beat 6 of the table (G7/F, Cm/Eb, Fm, G7 ...) at beat 8 under the violins' cell (Fm under its B4), and
-  `winds(H(sc.INTRO[11:15], t0 + 26))` the rows from beat 24 (the rest, Db, Fm/Ab, Ab7) at 26 - the Ab7 then runs into
-  the G pedal at 32 while the strings play Fm/Ab / Ab7 on time. Kept as written for the byte-identical migration
-  (found while moving the tables onto `voicing.Harmony`, whose slices keep their own position: `H(sc.INTRO, t0)[3:9]`
-  sounds with the table). Listen before changing it.
-- **A zone's release wins over the track's `release`.** The VPO choir's `ampeg_release=1.25` joins short syllables
-  into one vowel pad (lux-perpetua's Dies irae: re-attack depth 6-8 dB per written note), and `inst.sfz(...,
-  release=)` cannot shorten it (only zones without their own ampeg_* take the param). lux-perpetua parts the
-  syllables with an `expression` gate after each note (falls to 0.4 in 50 ms, opens on the next attack: 22-25 dB).
-  A per-track release scale / override on the sampler would let a choir or a sustain section speak short.
-- **No basset horns.** Mozart's Requiem needs them; the SSO clarinets stand in, kept in their low register.
+## Heroes (`agentsound.heroes`, patches/hero*)
 
-## Low: samples, housekeeping, docs
+- **Guitar**: a velocity-scaled `filterEnv` depth (SFZ `fileg_vel2depth`) for a bright pick that follows the picking
+  (the per-pick filter envelope took the hero's velocity dynamics 1.9 -> 0.0 dB); the FSBS DI is a bridge pickup (a
+  neck-pickup DI set or a per-note pickup comb); the `rock` profile's balance curve is darker in the mids than a
+  guitar-solo record (kestrel-bay solos +4 dB mid/presence vs the profile, +-1.5 dB vs Sweet Child O' Mine): re-derive.
+- **Sax**: the hero chain flattens velocity (0.35 dB per 10 steps after the compressor; the jazz / ballad voicing is
+  2:1 now) - the pop voicing still relies on the hornist's accents.
+- **Synth heroes** are darker than the references in lean mixes (presence -2.2 dB vs Nightcall); hooks below C5 need a
+  low-mid dip on the bed; `hero/darksynth_lead` needs +4.6 dB of patch gain; their doubling layer (halo micro-shift,
+  the piano layer's chorus) sits before the compressor / tape (`chain_order.ALLOW`) - the clean fix is a layer-level
+  'post' fx.
+- **Hero piano**: its left hand shares the bassist's octave in a band.
+- A pre-fader / pre-insert key does not follow the key's fader (only the hero wrapper moves the thresholds:
+  `HeroInfo.key_fx`): a `tap`-aware threshold for `s.sidechain(..., tap=)` by hand; patch sends cannot carry a tap.
 
-- **sampled/choir_mixed loop seams on long held notes.** matryoshka's coda holds "ah" notes of 6-16 beats: 7-10
-  low clicks per render in the choir stem (worst -45 dBFS, 18 dB over its surroundings; masked in the mix, clicks 0),
-  although the patch notes say "clean loops". Re-articulating every 2 bars did not remove them.
-- **hornist Performance.place(level=) is a target name, not a level.** Playing one performance of a bowed line
-  quieter than the next (a counter-line under the piano) needs a hand-written gainDb lane on the track; a dB offset per
-  performance would keep it in the player (matryoshka, minor section).
+## Players (pianist, hornist, soloist, drummer, bassist)
 
-- **Samples:**
-  - YDP grand has no SFZ variant (only SF2).
-  - The Iowa alto sax and double bass files are multi-note runs and need slicing.
-  - Compare `karoryfer-bigcat-cello` with `sampled/solo_cello`.
-  - SSO crotales (octave mapping) and SSO string harmonics (loops click) are unusable as they are.
-  - `choir_f` has 2 loop seams (masked clicks in the epic).
-  - `sampled/choir_oh` (NBO) has samples D2-C#5 only (the patch note said "C3-C6"; corrected): everything above
-    C#5 is the top sample stretched. `film_orchestra(choir='oh')` still gives the role a sweet range of C3-A5.
-  - `sampled/choir_male`: a held D3 at a phrase end, exposed under a solo trombone, clicked in the mix (medium, a
-    loop seam; `lux-perpetua` v1-v5).
-  - A 4-beat fermata chord (~9 s) at 48 BPM passes loop seams in `choir_mixed` (S, B), the SSO trumpets and violins
-    II: 11 masked clicks in `lux-perpetua`.
-  - The orchestral basses have 5 masked clicks.
-- **`test_sf2` speed check** (20× realtime) fails under heavy parallel load (18×). Make it load-aware or relative.
-- **Docs:**
-  - `catalog --markdown` mentions `docs/CATALOG.md`, which does not exist.
-  - `.gitignore` excepts a nonexistent `assets/samples/README.md`.
-  - `CLAUDE.md` still repeats the workflow that README.md now covers.
-- **Disk:** C: is ~99 % full. Agents' scratch renders must go to D: (git-ignored folders in their worktrees).
-  Periodically clean `%TEMP%\claude\...\scratchpad` and stale worktrees (`git worktree prune`).
+- **Soloist / pianist tells fixed (fix/soloist-tells) - songs to re-render** (not re-rendered: their render JSON
+  changes, checked by compiling every song before / after): `_demo_soloist`, `_endless_jazz_piano`,
+  `ashes-and-chandeliers`, `ghosts-of-ocean-drive`, `jane-street-bossa`, `kestrel-bay`, `lamplight-avenue`,
+  `matryoshka`, `minetta-lane-waltz`, `nowhere-to-be`, `perry-street-rain`, `pro-piano-blues`, `pro-piano-bossa`,
+  `pro-piano-latenight`, `pro-piano-waltz`, `when-the-year-turns-gold` (pianist.arrange; not compiled here: its
+  DiffSinger runner), `one-more-round` (pianist.arrange, merged from master after the check); any untracked song
+  using `soloist.solo` / `pianist.arrange` / `jazz.chorus` too. Open: the solo's densest third is +20 % over the head
+  after the breath fix (the blind test's composed solos +40-70 %). (Silent solo bars are breaths now - see "Piano
+  breath".)
+- **Player details from blind test round 2 (fix/endless-composer-r2) - songs to re-render**: the waltz left hand
+  keeps the pulse (`LH_METERS` 3/4 'pulse': a chord of two bars+ struck on every downbeat), no left-hand push whose
+  bass rubs a half step against the chord still sounding (`pianist._bass_clash`), no ornament on a note held into a
+  chord it clashes with (`_rings_clear`), the swing groove moves a rolled chord as a whole (`humanize.groove`), the
+  soloist's lines with rarer triplets, landing lengths on the 8th grid (`soloist.held`) and a varied displacement of
+  the quoted motif. Render JSON changed (every song compiled before / after): `_endless_jazz_piano`, `kestrel-bay`,
+  `lanterns-on-carmine`, `minetta-lane-waltz`, `perry-street-rain`, `pro-piano-blues`, `pro-piano-latenight`,
+  `pro-piano-waltz` (the three pro pieces re-rendered in that branch's worktree for blind round 3); not compiled
+  (no voicebank in the worktree; they use the pianist / a swing groove): `_demo_vocal_fx`, `catch-fire`,
+  `expensive-habits`, `jane-street-bossa`, `nowhere-to-be`, `one-more-round`, `when-the-year-turns-gold`.
+
+- **Player fixes from blind test round 3 (fix/player-r3) - songs to re-render**: `humanize.touch` (contour, not beat;
+  neighbour cap, jitter), the soloist's line rules (chords, unisons, breaths, the run ramp), the pianist's grace
+  figures / fill lift / FAST runs / `LH_SHELL` texture and pushes. Render JSON changed (every song compiled before /
+  after, samples + voices from the main checkout): `_demo_soloist`, `_demo_vocal`, `_demo_vocal_fx`,
+  `_demo_vocal_rock`, `_endless_jazz_piano`, `ashes-and-chandeliers`, `catch-fire`, `expensive-habits`,
+  `ghosts-of-ocean-drive`, `gymnopedie-etude`, `jane-street-bossa`, `kestrel-bay`, `lamplight-avenue`,
+  `lux-perpetua`, `matryoshka`, `minetta-lane-waltz`, `nocturne-etude`, `nowhere-to-be`, `one-more-round`,
+  `perry-street-rain`, `the-drummer-speaks`, `when-the-year-turns-gold`, and the four `pro-piano-*` (re-rendered in
+  the branch's worktree, clicks 0, no warnings); not compiled: `unbowed` (fails on its own).
+
+- **Piano realism** (Gymnopedie / Nocturne études): no damper / soundboard model (decay inside a bar 15.3 dB vs 11.6
+  in the reference: two-stage decay, pedal coupling); soft notes lack a bright attack (1.18x vs 1.37x); `touch()`
+  never accents single notes (7.7 vs 9.0 dB) and rubato does not linger on peaks (bar-length variation 0.075 vs 0.13);
+  trills are too even (0.19 vs 0.47).
+- **pianist.answers(vocal_line, prog, ...)**: fills sized to the voice's rests (jane-street-bossa wrote them by hand);
+  `jazz.chorus(comp=...)` on a band without a `comp` track (bossa) fails on `None.play`.
+- **Soloist** move choice is nearly fixed by energy / density (kestrel-bay: seeds 22-28 chose the same moves): more
+  moves per role and a seeded spread in the scoring.
+- **Drummer**: no 6/8 / 12/8 feel (16th grids in 4/4; needs triplet grids for patterns, hands, the bassist and the
+  guitarist); cymbal chokes: SoundFont kits and the drum machine have none (`ending='choke'` lets the hit ring;
+  inst.kit and the sampled/ SFZ kits have them); the hands' physics run move by move (a stroke
+  at a slot's end and the next slot's start can collide: re-run `_resolve` over a whole solo); the soloist's calls all
+  open with the motif (the-drummer-speaks: ~10 times in 34 bars); the pop
+  Chart kit's hat foot is the closed hat; an intro (energy 0.38) and a `groove` section read the same level; the
+  `songs/_bands` demos are not ported to the drummer.
+- **hornist**: `Performance.place(level=)` is a target name, not a dB offset (matryoshka needed a gainDb lane).
+- **Tempo**: millisecond timing in the drummer and hornist assumes a constant tempo.
+- **One keyswitch per section track**: two articulations at once on a role (violas' staccato under a marcato stab)
+  collide - 44 in unbowed; a `_div` twin track per role or the compiler splitting onto a twin sampler.
+
+## Singer / vocals (`agentsound.singer`; vocal FX on feat/vocal-fx - the next batch after that merge)
+
+- **Mic pull**: every long phrase end is pulled (chance `end` 1.0: may read as a habit); no coda-vs-band measure (with the pull the final consonants
+  ended 14-17 dB under the band and passed) - and no pull-back for a deadpan voice; the report reads the trigger
+  notes, not the pulled vowels.
+- **Expression**: an emphasised word before a rest has nothing to lengthen; `*word*` is uneven (nothing on "cheap",
+  +2.7..3.7 dB on "time"); the intimate line reads -0.8 dB (planned -2); a run on a phrase-end hold shortens it under
+  the mic pull's `min_s`.
+- **Diction**: word-final stops before a consonant-initial word stay unreleased in legato (a gap >= 80 ms releases them).
+- `build --section`: a phrase whose take starts before the section is not heard (one-shot triggers).
+- No register-dependent make-up (a part a minor third lower reads ~2 dB softer: `makeup_db` by hand);
+  `SOFT_MAKEUP_DB` is measured for Hanami only; the banks have no variance model (energy / breathiness) and the
+  vibrato does not follow the air like the hornist's.
+- **vocal_buried uses unweighted RMS**: in an EDM drop the kick + sub read 4-6 dB RMS over the vocal while the mixer
+  (K-weighted) says the bass is 5-11 dB too QUIET against it (one-more-round drop2: vocal -22.0 RMS vs bass -16.3;
+  the mixer wanted bass +7). Compare by loudness or leave the low-end roles out of the check.
+- **Talk box velocities**: the LPC talk box + the guitar's amp + compressor flatten the picking (0.0 dB per 10 velocity
+  steps, also with the mouth singing the line's velocities - singer.mouth vel=False now); one-more-round writes an
+  'accent' utility lane from the notes by hand - fold that into speech.talkbox (a lane from the carrier's notes at
+  compile).
+- **Chops**: a chop note longer than its slice is cut (no loop / freeze of the vowel for held chops); slices are
+  syllable / word / phrase only (no 'vowel only' unit for the pitched 'oh' pads of future bass).
+
+## Bands / presets (`agentsound.bands`, bandlib)
+
+- **soul_ballad**: the Rhodes / upright masking is gone (SOUL_DIP + REGISTER Bb3-C5); the demo's low mids read +4.5 dB
+  (limit +4), 62 % of it the tenor's - a lowmid dip in the shared sax chain would touch every jazz preset.
+- `songs/_bands/rock_band` warns: the intro riff's kick + bass unison (separation -3.3 dB) and flat dynamics on gtr_r /
+  lead (velocities 89-117 through driven amps); decide whether a locked kick + bass unison stays a warning.
+- The rhythm guitars' note dynamics come only from the articulation (velocity -> level ~0 dB through the driven
+  amps): velocity zones or a velocity -> amp input lane.
+- power_ballad's echo bus idles under a hero lead (reverb_inaudible on kestrel-bay until the clean guitar / piano sent
+  to it); the retrowave kit and master are dull in full choruses (raising hats does not fix the air); the funk_band
+  demo keeps a drums / bass masking warning.
+- The orchestra hall's crossfeed and rock_band's clean room were set by numbers (width 82 -> 69 % on
+  the-drummer-speaks); the library's 2-channel IR returns have no crossfeed.
+- **EDM presets**: only melodic_house is tuned on a song (one-more-round); house / techno / big_room / future_bass are
+  set from the recipe (songs/_bands/house builds every STYLE) - calibrate their pump / trims / master drive on a demo
+  each and fill bandlib/edm.py TUNED. The house demo itself reports flat_dynamics on piano-house chords (1.8 dB through
+  the chords compressor) and loudness_low.
+
+## Analysis / checks (engine/analysis, silent_notes, the report)
+
+- **Silent-notes ear gaps**: the compile-time check does not know `{'dir': ...}` samplers or sf2 layers inside a
+  stack; the render-time ear cannot hear a silent note that starts with a sounding one on the same
+  track (a crash on the kick).
+- **Dynamics role inference**: a stack is judged by its first layer only.
+- `hero_vocal.GRIT_MEASURED`'s coda numbers need a re-run after the offset fix; the build's vocal wetness
+  (`singer.wetness`) is an estimate from the send shares (exact: `songs/_demo_vocal/wetness.py`).
+
+- **Processed-voice effects (feat/vocal-fx, songs/_demo_vocal_fx): open ends.**
+  - Pitch correction lives on the singer's curve only (`sing(tune=)`): there is no engine effect that tunes ARBITRARY
+    monophonic audio (a recorded / sampled vocal, a speech track, a lead synth's audio). It would need a pitch
+    tracker (YIN) + a formant-preserving shifter (PSOLA / a phase vocoder with an envelope) in C++ - not cheap.
+  - The talk box speaks from the instrument's harmonics: a guitar line in the upper register (E5 and up) shapes badly
+    (measured: F1 / F2 band balance follows the mouth with r 0.21 an octave up vs 0.55 at B3-G4); the LPC vocoder
+    has no formant-sharpness control (its lag window is a fixed constant) - an engine `resonance` / bandwidth param
+    could give the throatier, more nasal talk-box peak; the guitar patches' compressor after the vocoder eats ~4 dB of
+    its output (`TALKBOX` output +6 dB nets about +2.6 dB).
+- `low_end_wide` (mixer) fires on breakdowns without bass or kick (one-more-round: correlation 0.31 / 0.65 below 150
+  Hz from reverb / pad residue at a very low level): an energy floor for the low-end mono check.
+
+## Engine: stack / layers
+
+- `layered/piano_strings`, `piano_pad`, `piano_organ` peak at +0.6 to
+  +0.8 dBFS on the track.
+
+## Kits / samples (assets, patches)
+
+- Not re-rendered after a library change - listen when they are touched: every VPO choir song (`sampled.CHOIR_SPEAK`:
+  the soft notes speak sooner - ashes-and-chandeliers, lux-perpetua, unbowed, polaroid-summer, matryoshka,
+  film_orchestra, the voice hero), the songs on the rock presets / guitar patches (the tube amp, Big Rusty, the drum
+  bus and bass rig: ashes-and-chandeliers, kestrel-bay, lamplight-avenue, `_demo_soloist`, `songs/_bands/*`), the
+  synthwave songs on `synthwave/octave_bass` (4 ms filter attack), every song on a sampled drum patch (re-strike
+  damping 6 dB on by default, inst.kit's cymbal choke keys).
+- Loop seams: `sampled/choir_mixed` on long held notes (matryoshka's coda: 7-10 masked clicks, -45 dBFS),
+  `choir_f` (2), `sampled/choir_male` (a held D3 in lux-perpetua), SSO trumpets / violins II on a 9 s fermata
+  (lux-perpetua: 11 masked), the orchestral basses (5 masked). SSO crotales (octave mapping) and string harmonics
+  (loops click) are unusable as they are.
+- Ranges: `sampled/choir` (VPO female) has samples G4-C6 only (ashes' `choir_f` 41 notes under G4, polaroid-summer's
+  `choir` 37), `sampled/choir_oh` D2-C#5 (above is stretched; `film_orchestra(choir='oh')` still gives C3-A5),
+  orbital-station plays 14 tambourines on the TR-808 kit (none: map one from 80s Digital / Chart).
+- Missing: a bass cabinet IR (`bass_rig` rolls off with an eq), a real neck-pickup guitar DI, palm-mute / dead-note DI
+  samples for the hero zones (`sampled_guitars.PALM` is an emulation), a sampled string-noise pack (pick scrape /
+  squeak are synthetic), basset horns (Mozart's Requiem: the SSO clarinets stand in). YDP grand has no SFZ variant;
+  the Iowa alto sax and double bass files are multi-note runs (need slicing); compare `karoryfer-bigcat-cello` with
+  `sampled/solo_cello`.
+- The guitar hero's wah goes ahead of the amp in every zone of a stack (5-6 instances): a stack-level pre-split
+  insert; the sampler's `harmonic` assumes 100 % pitch keytrack and an in-tune root.
+
+## Notation / songs
+
+- **Library adoption that changes a song's sound** (listen before migrating): nowhere-to-be onto `soul_ballad` (its
+  own Rhodes chain instead of the grand's, no trims), the multi-part pieces declaring MIX `lead` per section (unbowed,
+  ashes-and-chandeliers, lux-perpetua), lux-perpetua's syllable gate vs `inst.sfz(zone={'release': ...})`,
+  unbowed / lux `follow=True`, lamplight-avenue onto `hero()` / `drummer.arrange` / `pianist.pedal`, children-of-neon's
+  pedal (every 4th chord change; `pianist.pedal` is the per-chord one), ghosts-of-ocean-drive's solo strings / pre-2
+  arp a bar late (`bars=4` in a plan), orbital-station's `arp_line` (`patterns.arp` voice-leads differently).
+- **Notation**: a Line's extras survive shift / transpose / octave / velocity / with_length only; one automation lane
+  per target per track (gesture lanes, `fretwork.render` and `guitarist.lead(gestures=)` on `instrument.pitchbend`
+  interleave - a per-track lane registry that sums additive lanes would fix both); ornaments need `bpm=` at parse
+  time; `format()` writes absolute names only and does not split notes at bar lines; `s.arc(within=)` steps need a
+  hold point (`(beat - 0.5, old)` before a step).
+- **Songs**: the epic (ashes-and-chandeliers): the finale / summit tutti +4.2 / +7.6 dB mids vs the film reference,
+  Part III's solo only 0.2 LU over anthem2, the ballad piano without air (> 7 kHz); unbowed's intro places two
+  harmony passages two beats late (kept for the byte-identical migration); jane-street-bossa's A&R notes were made in
+  Bb (it sounds in G now) and its A line is leapy (9 leaps of a 4th+ in 25 intervals).
+
+## Making-of film (`agentsound.makingof`)
+
+- "before" clips need the judged commit in AR.md and a version that builds with today's
+  library; Breeze narration is ~8-10x slower than real time (cached after); stems are post-fader and dry of the shared
+  reverbs (a soloed group sounds drier than in the mix).
+
+## Docs / housekeeping
+
+- Disk: C: is ~99 % full - scratch renders go to D: (git-ignored folders in the worktrees); clean
+  `%TEMP%\claude\...\scratchpad` and stale worktrees (`git worktree prune`) now and then.
 
 ## Waiting on the user
 
-- **Beegie Adair reference.** Her site's previews are streaming-only (403), so a bought or saved track in
-  `assets/refrences/` would let us calibrate the jazz trio preset.
-- **Before publishing any song:** licenses. The 224XL IRs are unclear, jRhodes3d is CC-BY-NC, the Kalthallen /
-  Overdriven / SampleRadar packs are no-redistribution, and CC-BY credits are printed in `credits.txt`.
+- **Jazz references**: a Beegie Adair trio track (her site's previews are streaming-only) and a vocal jazz track in
+  `assets/refrences/` would make `compare` useful for the jazz presets.
+- **Before publishing any song: licenses.** The 224XL IRs are unclear, jRhodes3d is CC-BY-NC, the Kalthallen /
+  Overdriven / SampleRadar packs are no-redistribution, CC-BY credits are printed in `credits.txt`; Hanami's bundled
+  vocoder is CC BY-NC-SA and TIGER is non-commercial (a commercially clear voice needs its own approval).
 
 ## Parked (by decision)
 
+- Not worth it (batch 3): the synthwave references disagree (Sunset too dark, Deckard's Dream too bright, Nightcall too
+  wide: already measured, pick per style); SoulX-Singer A/B (prepared in `songs/_demo_vocal/soulx_ab.py`, blocked by
+  disk on C:); the master post-pass above 19 kHz; the stack's minor gaps (glide in crossfades, muted layers render);
+  prism's per-phrase level match; a players' journal for the making-of; the genre-package leftovers.
+
 - The other five synthwave songs' `-piano` passes (branches `song/<slug>-piano`) were stopped. System work is
   validated on one reference song (`children-of-neon`), and more songs come once the system is polished.
+
+- **Songbook ballad with strings: open findings from songs/when-the-year-turns-gold** (jazz_ballad + four SSO / VPO
+  string sections + Hanami `ballad`, 62 BPM; done: `lead='vocal'` - both vocal ballads migrated, balance unchanged -,
+  the held-note / fermata warning, `mix`'s voice vs band line, the slow ballad vibrato). (2) `symphony_orchestra`
+  sections behind a close voice needed +9 dB, the harp +12 dB (at +8 'nearly inaudible', at +16 too loud): an
+  `orchestra behind a band` level option. (3) A rubato verse without a bass has no left hand: `jazz.comp(voicing=
+  'rootless')` alone is thin - a `pianist.accompany(prog, answer=line, roots=True)` would replace the hand-written
+  `VERSE_LH`. (4) The mixer's jazz window for brushes (-16..-13 under the lead) flags a deliberate "stirs only" ballad
+  (`drums_too_quiet` at -17.7): a `ballad` sub-profile or a per-song target override. (5) The mic pull's depth does not
+  grow with a note's length. (7) VPO/SSO violins II sustain: 2 masked sample discontinuities (-37 / -43 dBFS, bars
+  55 / 57, likely a loop point of one zone). (8) `out/lyrics.txt` is still a hand copy (generate it from the `sing()`
+  calls, markup stripped). The jazz_trio / soul_ballad rows of `jazz.VOCAL_LEAD` are estimates (no song yet).

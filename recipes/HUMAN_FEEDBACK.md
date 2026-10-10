@@ -213,6 +213,21 @@ Add new feedback here (date, song, the user's words, the rule) whenever the user
   after a melisma and at a phrase end - placed at the END of the word's last note, before the breath, never dropped
   or swallowed by the release / de-esser.
 
+- **2026-10-02, jane-street-bossa singer-expression A/B (back-phrasing, ornaments on repeats, messa di voce, word
+  emphasis / intimate lines):** "ja, alle vier zusammen - das ist deutlich menschlicher geworden, super". Keep all
+  four on for jazz / ballad vocals (ornaments sparse, more toward the end); they are what makes the voice human.
+- **2026-10-02, nowhere-to-be, mic pull-back on long held words** (the user's own idea: "das Mikro langsam immer
+  weiter wegnehmen"): "ja schoen, das hat sich gelohnt". Keep `mic_pull` on for jazz/ballad vocals; real singer /
+  mic technique moves are worth building.
+- **2026-10-02, nowhere-to-be (smooth jazz, Hanami):** "die Stimme im Vergleich zum Rest zu laut" and "was ist das
+  fuer ein merkwuerdiges Lead-Instrument?" - the tenor sax went through hero(family='sax'), which added a 'shift'
+  micro-pitch double (a chorused, synthetic sheen) and an octave layer. Rules: a sung lead sits IN the band, not on
+  top of it (check the vocal vs band balance by ear-level numbers; err quieter); a solo horn in jazz/ballads is one
+  natural instrument - hero(..., double=False, octave=False) - no doublers on acoustic solo instruments.
+- **2026-10-02, nowhere-to-be:** "sie singt manchmal lange gehaltene Worte - da dann das Mikro quasi langsam immer
+  weiter wegnehmen, damit es leiser wird". Rule: a long held word does not stay at full level - the singer slowly
+  pulls back from the mic after the onset (a few dB quieter by its end, less proximity bass, a touch more room) and
+  leans back in for the final consonant. The singer does it by default in jazz / ballad (`mic_pull`, singer.MIC_PULL).
 - **2026-10-01, jane-street-bossa:** "im Jazz-Song ist die Stimme viel zu aufgeregt, sollte ruhiger sein". Rule: jazz
   and ballad vocals are calm and intimate - soft voice mode as the base, few and small scoops into notes, slow
   shallow vibrato only on long notes, no falls/doits, small dynamic swings, smooth legato, relaxed timing.
@@ -259,6 +274,48 @@ Add new feedback here (date, song, the user's words, the rule) whenever the user
   emotion or topic; give every song 2-3 short, punchy, quotable lines with attitude (original - the quoted line only
   shows the tone). Not a 100 % rule ("manchmal muss man auch etwas direkter sein, aber halt nicht immer"): mostly
   circled, a few deliberate direct lines. roles/lyricist.md carries it.
+
+- **2026-10-09, processed-voice FX demo (hard/soft auto-tune, choir-of-one, prismizer, talk box):** "cool voice
+  stuff, mir fällts leider schwer die qualität ein zu schätzen. aber es verändert es und hat sicher kreative nutzen,
+  gerade die guitarre lol". Rule: the effects are creative tools, not a default; the talk-box guitar was the favourite.
+  The user cannot grade effect quality from an A/B alone, so judge it in a real song context (e.g. EDM / funk) and
+  use the measurements (tune step, prism level match, talk-box vowel correlation) as the quality gate.
+
+- **2026-10-09, when-the-year-turns-gold:** "bei dem song sänger 15% leiser bitte" - even after the mix engineer's
+  -1.5 dB the voice was still too loud (second time after nowhere-to-be). Rule: in vocal jazz / ballads the voice sits
+  INSIDE the band; start the vocal ~3 dB lower than the mixer's lead target suggests.
+
+- **2026-10-09, endless jazz piano (arc demos + set):** "es klingt ein bischen schrill und hart, hätte es gerne etwas
+  smoother, nicht von den noten her sondern vom sound". Rule: the solo jazz piano sound must be warm and smooth: no
+  hard 2-5 kHz edge on loud notes / climaxes, a gentle limiter, a softer touch-to-brightness curve, enough room.
+  Measured (seed 106, the trio preset without bass / drums): the loud solo frames' 2-5 kHz only 4.9 dB under their
+  200-500 Hz (Chopin's Nocturne op. 9/2: 13.3 dB, Satie: 26 dB), presence +4.9 dB vs the 'piano' profile with the
+  master eq still lifting 3.8 kHz; the limiter was NOT it (<= 2 dB of gain reduction); the room send was -13 dB all
+  song (s.ending's room ramp held its first value from bar 1, the spec's +6 dB never sounded: dry_mix). Fix: the
+  `solo_piano` preset (hammers 1.0, a split de-esser at 2.5 kHz as a dynamic presence cut, a 3.3 kHz dip, an air
+  shelf, no presence on the master, no wow) and s.ending keeping the track's send: loud solo 2-5 kHz 9.4-11.7 dB
+  under the body, presence +1.2..+2.3, air as before, reverb -10.3..-11.1 LU.
+
+- **2026-10-09, endless jazz piano r6 ("A Bridge for Grove", after 5 blind-test rounds at chance level):** "sounds
+  like an endless monotone line of notes :/". The notation judges cannot hear this - the agent-written references
+  have the same density (8-9 attacks per bar, median gap ~0.1 beat), so the blind test only proves "as good as our
+  references", not "good". Rules from earlier rounds made it worse: "never a silent bar", "an empty bar gets a
+  pickup", fills/ornaments in every gap. Rule: a jazz pianist BREATHES - real silence between phrases (half a bar to
+  two bars), density that rises and falls per phrase and section, sustained notes that ring, register and dynamic
+  contrast between phrases; the ear is the final judge, the blind test only a filter.
+
+- **2026-10-09, breath A/B (A Bridge for Grove):** "b sounds better" (the version with real rests, fewer fills,
+  per-phrase dynamics). The user: listening to it, they imagine a player gently moving their body while playing, and
+  that is easier the better the music is. Rule: playing must suggest a body - phrase arcs like an arm's movement,
+  breaths, tempo that slows like a physical motion coming to rest; timing and dynamics follow one gesture per phrase.
+
+- **2026-10-09, letters-to-the-morning (new-age solo piano, "River Flows in You" style):** "new song is nice" - and
+  the wish to generalise the endless jazz-piano loop to endless PIANO in general (this style included). Later: "it was
+  fantastic ... getting harder to hear it's slop". The reference for solo piano quality: a hand-written singable
+  melody with rests at phrase ends, a left hand that changes its figure per section and holds still under the
+  melody's breaths, one climax, a dark warm grand (2-5 kHz 10 dB under the body), loudness range ~16 LU.
+  The user: "the jazz should be more like that too" - singable heads, a left hand that changes per section and
+  rests under the melody's breaths, a much wider dynamic range than the jazz tunes' 6-8 LU, the warm dark grand.
 
 ## Clicks and parameter changes
 
