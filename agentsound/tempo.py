@@ -14,6 +14,7 @@ the render JSON gets a "meter" list so the report numbers the song's real bars. 
 
 from __future__ import annotations
 
+import bisect
 import math
 import random
 import re
@@ -29,6 +30,9 @@ CHORD = 0.25        # beats after a fermata's beat whose onsets still belong to 
 MIN_BPM, MAX_BPM = 10.0, 600.0     # what the compose layer accepts for a tempo
 PHRASES = ('arch', 'wave', 'lean', 'breath', 'free')
 LILT_MAX = 0.3      # beats a lilted beat may arrive early / late (a pulse, not a new rhythm)
+LILT_RHO = 0.6      # a lilt's jitter is correlated from beat to beat (AR(1)): human timing fluctuations are
+                    # long-range correlated, not white (Hennig et al. 2011) - white per-beat delays read as a
+                    # sawtooth tempo; same spread of the beats, ~40 % less beat-to-beat IOI noise
 
 
 def _num(x, what: str, lo: float | None = None, hi: float | None = None) -> float:
@@ -202,6 +206,7 @@ class TempoMap:
             if math.isfinite(s[1]):
                 t = self._seg_seconds(s, s[1])
         self._segs = segs
+        self._starts = [x[0] for x in segs]          # (non-decreasing: _seg bisects them)
 
     @property
     def constant(self) -> bool:
@@ -233,13 +238,10 @@ class TempoMap:
         return t0 + 120.0 * L / (math.pi * math.sqrt(p0 * p1)) * math.atan(math.sqrt(p1 / p0) * math.tan(0.5 * math.pi * u))
 
     def _seg(self, beat: float):
-        s = self._segs[0]
-        for seg in self._segs:
-            if seg[0] <= beat:
-                s = seg
-            else:
-                break
-        return s
+        """The last segment starting at or before the beat (the first one before every start): a bisection - a
+        performed piece has a segment per rubato phrase, and the players ask thousands of times per song."""
+        i = bisect.bisect_right(self._starts, beat)
+        return self._segs[i - 1] if i else self._segs[0]
 
     def bpm_at(self, beat: float) -> float:
         """Tempo at a beat (from a 'step' point on: its new tempo)."""
@@ -406,7 +408,18 @@ def _emit(pieces) -> list[list]:
     return out
 
 
-def _shape(phrase: str, u: float) -> float:
+def _shaped(u: float, peak: float, close: float) -> float:
+    """A phrase with its own shape: forward to +1 at `peak` (0..1 through the phrase), then broadening to -close at
+    its end (close = the final lengthening's share of the depth: 0 = the phrase just settles, 2 = a deep breath)."""
+    if u <= peak:
+        return math.sin(0.5 * math.pi * u / peak)
+    x = (u - peak) / (1.0 - peak)
+    return 0.5 * (1.0 + close) * math.cos(math.pi * x) + 0.5 * (1.0 - close)
+
+
+def _shape(phrase, u: float) -> float:
+    if isinstance(phrase, tuple):               # ('shaped', peak, close, mean): zero mean (the span keeps its time)
+        return _shaped(u, phrase[1], phrase[2]) - phrase[3]
     if phrase == 'arch':
         return math.sin(2.0 * math.pi * u)      # moves forward into the phrase, broadens towards its end
     if phrase == 'wave':

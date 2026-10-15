@@ -91,10 +91,6 @@ def _length(h) -> float:
     return float(getattr(h, 'length', 0.0) or max((s + d for s, d, _ in _chords(h)), default=0.0))
 
 
-def _bpb(h, kw) -> float:
-    return float(kw.pop('beats_per_bar', None) or getattr(h, 'beats_per_bar', 4.0) or 4.0)
-
-
 def _vel(v) -> int:
     return max(1, min(127, int(round(v))))
 

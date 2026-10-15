@@ -406,14 +406,32 @@ class Format(unittest.TestCase):
                      'the sample library is not installed (songs need it to build)')
 class EverySong(unittest.TestCase):
     """The expressiveness guard: every track of every song - its placed notes (with articulation / glide marks)
-    and its compiled notes - goes through format() and back unchanged."""
+    and its compiled notes - goes through format() and back unchanged. By default a spread sample of SAMPLE songs
+    plus every song with uncommitted changes (compiling all songs takes ~30 min); AGENTSOUND_FULL_TESTS=1
+    (`tests/run.py --full`) checks all of them."""
 
     SKIP = {'kestrel-bay', 'afterglow-express', 'last-table-on-hudson', 'last-train-blue-hour'}
+    SAMPLE = 6
+
+    def pick(self, songs):
+        if os.environ.get('AGENTSOUND_FULL_TESTS') == '1':
+            return songs
+        import subprocess
+        try:
+            out = subprocess.run(['git', 'status', '--porcelain', '--', 'songs'], cwd=REPO, capture_output=True,
+                                 text=True, timeout=30).stdout
+        except (OSError, subprocess.SubprocessError):
+            out = ''
+        changed = {line[3:].split('/')[1] for line in out.splitlines() if line[3:].startswith('songs/')
+                   and line[3:].count('/') >= 1}
+        step = max(1, len(songs) // self.SAMPLE)
+        return [d for i, d in enumerate(songs) if i % step == 0 or d.name in changed]
 
     def test_round_trip(self):
         from agentsound import cli
         songs = sorted(p.parent for p in (REPO / 'songs').glob('*/song.py') if p.parent.name not in self.SKIP)
         self.assertGreater(len(songs), 15)
+        full, songs = len(songs), self.pick(songs)
         clips = 0
         for d in songs:
             for m in [m for m in sys.modules if m in ('score', 'film', 'measure', 'satie_score')]:
@@ -430,7 +448,7 @@ class EverySong(unittest.TestCase):
                     back = notes(text, length=c.length)
                     self.assertEqual(key(back), key(c), f"{d.name}/{t.id} ({label}) does not round-trip")
                     clips += 1
-        self.assertGreater(clips, 300)
+        self.assertGreater(clips, 300 if len(songs) == full else 20)
 
 
 class Helpers(unittest.TestCase):

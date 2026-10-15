@@ -20,6 +20,11 @@ class ComposeError(ValueError):
     """Anything wrong in a song definition. The message says what is wrong and how to fix it."""
 
 
+class PackMissingError(ComposeError):
+    """A band would play substitutes for missing sample packs (Song.compile; agentsound.library.want): an install
+    problem, not a bad seed - loops that reroll on a ComposeError (endless, learn export) re-raise it."""
+
+
 # --------------------------------------------------------------------------------------- notes
 
 _LETTER_PC = {'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11}

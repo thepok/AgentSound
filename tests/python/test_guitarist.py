@@ -628,5 +628,202 @@ class TestLead(unittest.TestCase):
             g.lead(line(V_LINE), bpm=120, moves={'tap': 1.0})
 
 
+# the noise map of sampled/acoustic_guitar (sampled_guitars.NOISES) without needing its samples
+NOISES = {'fret': 'fret noise', 'muted': 'muted', 'chuck': 18, 'chuck_up': 19, 'thump': 21}
+
+
+def strokes(clip, bpm=96):
+    """Strummed strokes (pitched, unmarked notes within 90 ms, each onset < 18 ms after the last): (direction,
+    strings, spread ms, first onset)."""
+    ns = sorted([n for n in clip if n.pitch >= 28 and getattr(n, 'art', None) is None], key=lambda n: n.start)
+    cl = []
+    for n in ns:
+        if cl and (n.start - cl[-1][-1].start) * 60000 / bpm < 18 and (n.start - cl[-1][0].start) * 60000 / bpm < 90:
+            cl[-1].append(n)
+        else:
+            cl.append([n])
+    return [('D' if c[0].pitch < c[-1].pitch else 'U', len(c), (c[-1].start - c[0].start) * 60000 / bpm, c[0].start)
+            for c in cl if len(c) >= 2]
+
+
+class TestHandFeel(unittest.TestCase):
+    """The player's feel (HANDS / HandFeel): drawn spreads, partial strokes, late ups, drift, chucks and finger noises
+    from the sound's recordings, thumb / finger dynamics, a pattern that is not a loop - and the plain hand
+    untouched."""
+
+    def test_profiles(self):
+        self.assertIsNone(g.hand_feel(None))
+        self.assertIsNone(g.hand_feel('plain'))
+        self.assertIsInstance(g.hand_feel('acoustic'), g.HandFeel)
+        self.assertEqual(g.hand_feel(g.HANDS['fingerstyle']).name, 'fingerstyle')
+        with self.assertRaises(ComposeError):
+            g.hand_feel('sloppy')
+        with self.assertRaises(ComposeError):
+            g.strum_pattern(PROG, 96, hand='acoustic', noises={'squeal': 1}, length=8)
+        self.assertEqual(g.STYLES['songwriter']['hand'], 'acoustic')
+        self.assertEqual(g.STYLES['fingerstyle']['hand'], 'fingerstyle')
+        self.assertNotIn('hand', g.STYLES['rock'])          # the old styles keep the plain hand
+
+    def test_plain_unchanged_by_the_feel_plumbing(self):
+        a = g.arrange(PROG, bpm=110, style='folk', section='chorus', seed=3, length=16)
+        b = g.arrange(PROG, bpm=110, style='folk', section='chorus', seed=3, length=16, hand='plain')
+        self.assertEqual(list(a.clip), list(b.clip))
+        c = g.arrange(PROG, bpm=110, style='folk', section='chorus', seed=3, length=16, hand='acoustic')
+        self.assertNotEqual(list(a.clip), list(c.clip))
+
+    def test_strokes_vary(self):
+        """Spreads drawn per stroke (not one fixed spread), up-strokes of different string counts, downs that
+        sometimes miss the low strings; the plain hand's ups all take the same strings."""
+        clip = g.strum_pattern('G D Em C', 96, pattern='pop', hand='acoustic', seed=4, length=64)
+        st = strokes(clip)
+        downs = [s for s in st if s[0] == 'D']
+        ups = [s for s in st if s[0] == 'U']
+        self.assertGreater(statistics.pstdev([s[2] for s in downs]), 3.0)
+        self.assertGreaterEqual(len({s[1] for s in ups}), 3)
+        self.assertGreaterEqual(len({s[1] for s in downs}), 2)
+        self.assertLess(statistics.mean(s[2] for s in ups), statistics.mean(s[2] for s in downs))
+        plain = strokes(g.strum_pattern('G D Em C', 96, pattern='pop', seed=4, length=64))
+        self.assertEqual(len({s[1] for s in plain if s[0] == 'U'}), 1)
+
+    def test_spread_follows_tempo_and_force(self):
+        ctx = g._Ctx(80, __import__('random').Random(1), {}, spread=(16, 30), feel=g.HANDS['acoustic'])
+        slow = statistics.mean(ctx.spread_ms(0.56, False) for _ in range(400))
+        ctx.b = 160
+        fast = statistics.mean(ctx.spread_ms(0.56, False) for _ in range(400))
+        acc = statistics.mean(ctx.spread_ms(1.0, False) for _ in range(400))
+        self.assertGreater(slow, fast * 1.15)
+        self.assertGreater(fast, acc)
+
+    def test_time_drifts_and_ups_land_late(self):
+        clip = g.strum_pattern('G C', 96, pattern='eighths', hand='acoustic', seed=2, length=64)
+        st = strokes(clip)
+        dev = [(s[3] - round(s[3] * 2) / 2) * 60000 / 96 for s in st]
+        up_dev = [d for s, d in zip(st, dev) if s[0] == 'U']
+        dn_dev = [d for s, d in zip(st, dev) if s[0] == 'D']
+        self.assertGreater(statistics.mean(up_dev), statistics.mean(dn_dev))
+        self.assertTrue(all(abs(d) < 45 for d in dev))
+        # the drift is slow: neighbouring down-strokes' deviations correlate (white noise would not)
+        dn = [d for s, d in zip(st, dev) if s[0] == 'D']
+        a, b = dn[:-1], dn[1:]
+        ma, mb = statistics.mean(a), statistics.mean(b)
+        cov = sum((x - ma) * (y - mb) for x, y in zip(a, b)) / len(a)
+        self.assertGreater(cov / (statistics.pstdev(a) * statistics.pstdev(b)), 0.2)
+
+    def test_chucks_from_the_recordings(self):
+        clip = g.strum_pattern('G D', 96, pattern='chuck', hand='acoustic', noises=NOISES, seed=1, length=16)
+        chucks = [n for n in clip if n.pitch in (18, 19)]
+        self.assertEqual(len(chucks), 8)                     # beats 2 and 4 of 4 bars
+        self.assertTrue(all(abs((n.start + 0.02) % 2 - 1) < 0.06 for n in chucks))
+        # the strings are damped at the chuck: nothing pitched rings across it
+        for c in chucks:
+            ringing = [n for n in clip if n.pitch >= 28 and n.start < c.start - 0.02 < n.start + n.dur - 0.05]
+            self.assertEqual(ringing, [], c)
+        none = g.strum_pattern('G D', 96, pattern='chuck', hand='acoustic', noises=False, seed=1, length=16)
+        self.assertFalse(any(n.pitch < 28 for n in none))
+
+    def test_finger_noises_at_changes(self):
+        """A finger leaving a ringing fretted string at a change: a 'fret noise' note at that string's pitch, just
+        before the change, at most one per fret_every beats; a position shift: the leave and the landing."""
+        n_fret = 0
+        for seed in range(12):
+            r = g._rhythm('G D Em C', 96, pattern='pop', feel='acoustic', noises=NOISES, seed=seed, length=32)
+            fr = sorted([n for n in r['notes'] if n[4] == 'fret noise'])
+            n_fret += len(fr)
+            changes = {round(t, 6): (old, new) for t, old, new, _ in r['hand'].changes}
+            for s, d, p, v, a in fr:
+                ch = min(changes, key=lambda t: abs(t - s))
+                self.assertLess(ch - s, 0.2)
+                self.assertGreater(ch - s, -0.1)
+                self.assertTrue(any(p == q for q in changes[ch][0].pitches if q is not None) or
+                                any(p == q for q in changes[ch][1].pitches if q is not None))
+                self.assertLess(v, 80)
+        self.assertGreater(n_fret, 12)
+        self.assertFalse(any(n[4] == 'fret noise' for n in g._rhythm('G D Em C', 96, pattern='pop', feel='acoustic',
+                                                                      noises=False, seed=1, length=32)['notes']))
+
+    def test_shift_noise(self):
+        import random
+        feel = g.HandFeel('test', fret_noise=0.0, shift=1.0, shift_every=0.0)
+        old, new = g.shape('G', 'open'), g.shape('D', 'barre', near=10)
+        self.assertGreaterEqual(abs(new.pos - old.pos), 3)
+        ctx = g._Ctx(96, random.Random(3), {}, feel=feel, noises=NOISES)
+        hand = g._Hand(96)
+        g._stroke(hand, old, 0.0, vel=90, rng=random.Random(1))
+        hand.change(4.0, old, new, lift=0.03)
+        g._finger_noises(hand, ctx)
+        fr = sorted(n for n in hand.notes() if n[4] == 'fret noise')
+        self.assertEqual(len(fr), 2)                          # the finger leaving, then landing
+        self.assertTrue(0.03 < fr[1][0] - fr[0][0] < 0.08)
+        self.assertIn(fr[0][2], old.pitches)
+        self.assertIn(fr[1][2], new.pitches)
+        self.assertLess(fr[1][3], fr[0][3])
+
+    def test_fingerstyle(self):
+        clip = g.travis('C Am F G', 76, hand='fingerstyle', seed=3, length=32)
+        bass = [n for n in clip if n.pitch < 52 and abs(n.start - round(n.start)) < 0.05]
+        top = [n for n in clip if n.pitch >= 60]
+        self.assertGreater(statistics.mean(n.vel for n in bass), statistics.mean(n.vel for n in top))
+        # not a loop: the bars' (offset, pitch) sets differ somewhere
+        bars = {}
+        for n in clip:
+            bars.setdefault(int(n.start // 4) % 4, []).append(n)
+        sig = lambda b: tuple(sorted((round(n.start % 4 * 2), n.pitch) for n in b))  # noqa: E731
+        first = [n for n in clip if n.start < 16]
+        second = [g_ for g_ in clip if 16 <= g_.start < 32]
+        self.assertNotEqual(sig(first), sig([n._replace(start=n.start - 16) for n in second]))
+        # pinches: the finger lands after the thumb, a few ms
+        same = g.travis('C', 76, hand='fingerstyle', seed=5, length=16)
+        thumbs = {round(n.start): n for n in same if n.pitch < 52 and abs(n.start - round(n.start)) < 0.03}
+        lag = [n.start - thumbs[round(n.start)].start for n in same
+               if n.pitch >= 60 and round(n.start) in thumbs and abs(n.start - round(n.start)) < 0.06]
+        self.assertTrue(lag and statistics.mean(lag) > 0)
+
+    def test_arrange_styles(self):
+        a = g.arrange('G D Em C', bpm=96, style='songwriter', section='verse', noises=NOISES, seed=7, length=32)
+        self.assertEqual(a.technique, 'chuck')
+        self.assertGreater(sum(1 for n in a.clip if n.pitch in (18, 19)), 6)
+        self.assertGreaterEqual(a.count('noise'), 1)
+        f = g.arrange('C Am F G', bpm=76, style='fingerstyle', section='verse', seed=7, length=32)
+        self.assertEqual(f.technique, 'travis')
+        # deterministic by seed; a take is the same decisions, other noise
+        a2 = g.arrange('G D Em C', bpm=96, style='songwriter', section='verse', noises=NOISES, seed=7, length=32)
+        self.assertEqual(list(a.clip), list(a2.clip))
+        self.assertNotEqual(list(a.take(2).clip), list(a.clip))
+
+    def test_noise_map_from_the_patch(self):
+        from agentsound.patches import sampled_guitars
+        m = g._noises('sampled/acoustic_guitar')
+        self.assertEqual(m, sampled_guitars.NOISES['sampled/acoustic_guitar'])
+        self.assertIsNone(g._noises('sampled/steel_guitar'))
+        self.assertTrue(set(m) <= set(g._NOISE_ROLES))
+        c = g.chuck('G', 96, sound='sampled/acoustic_guitar')
+        self.assertEqual([n.pitch for n in c], [m['chuck']])
+
+
+    def test_chord_melody(self):
+        """arrange(melody=): the tune on top of the picked pattern - every melody note sounds, nothing of the
+        pattern starts at or above it while it sounds, close steps are sometimes slurred (softer), deterministic."""
+        mel = Clip([(0, 1, 'B4', 90), (1, 1, 'C5', 84), (2, 2, 'E5', 100), (4, 0.5, 'D5', 86), (4.5, 0.5, 'C5', 80),
+                    (5, 1, 'B4', 84), (6, 2, 'A4', 78), (8, 4, 'G4', 88), (12, 2, 'B4', 92)])
+        tune = {(m.pitch, round(m.start, 1)) for m in mel}
+        for tech in ('arpeggio', 'travis', 'arp16'):
+            a = g.arrange('Em Am C B7', bpm=84, key='E minor', style='fingerstyle', technique=tech,
+                          section='verse', melody=mel, seed=4, length=16, slur=0.5)
+            for m in mel:
+                hit = [n for n in a.clip if n.pitch == m.pitch and abs(n.start - m.start) < 0.06]
+                self.assertTrue(hit, f"{tech}: melody {m} missing")
+                over = [n for n in a.clip if m.start - 0.02 <= n.start < m.start + m.dur - 0.05
+                        and n.pitch >= m.pitch and (n.pitch, round(n.start, 1)) not in tune]
+                self.assertFalse(over, f"{tech}: the pattern above the melody {m}: {over}")
+            b = g.arrange('Em Am C B7', bpm=84, key='E minor', style='fingerstyle', technique=tech,
+                          section='verse', melody=mel, seed=4, length=16, slur=0.5)
+            self.assertEqual(list(a.clip), list(b.clip))
+        # slurs: only between close steps right after a short note (here D5 -> C5 -> B4), played softer
+        slurs = [m for m in a.moves if m[2] == 'move' and m[3] in ('hammer_on', 'pull_off')]
+        self.assertLessEqual(len(slurs), 2)
+        none = g.arrange('Em Am C B7', bpm=84, key='E minor', style='fingerstyle', section='verse', melody=mel,
+                         seed=4, length=16, slur=0.0)
+        self.assertFalse([m for m in none.moves if m[2] == 'move'])
+
 if __name__ == '__main__':
     unittest.main()

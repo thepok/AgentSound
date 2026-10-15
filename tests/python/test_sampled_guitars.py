@@ -24,7 +24,7 @@ from agentsound.patches import sampled_guitars as guitars  # noqa: E402
 from agentsound.song import dumps  # noqa: E402
 from agentsound.theory import ComposeError  # noqa: E402
 
-NAMES = ('steel_guitar', 'concert_guitar', 'archtop_guitar', 'jazz_guitar', 'clean_guitar', 'dist_guitar',
+NAMES = ('acoustic_guitar', 'steel_guitar', 'concert_guitar', 'archtop_guitar', 'jazz_guitar', 'clean_guitar', 'dist_guitar',
          'fuzz_guitar', 'gretsch_guitar', 'hofner_guitar', 'rock_guitar', 'crunch_guitar', 'metal_guitar',
          'blues_guitar', 'jangle_guitar', 'lead_guitar', 'archtop_electric', 'metal_rhythm', 'metal_lead',
          'finger_bass', 'rock_bass', 'round_bass', 'slap_bass', 'flatwound_bass', 'picked_bass', 'hollow_bass',
@@ -40,7 +40,7 @@ ARTS = {'rock_guitar': ['open', 'palm mute', 'dead note'], 'gretsch_guitar': ['t
                                                                         'behind the bridge'],
         'electric_upright': ['pizz', 'arco'], 'bass_vi': ['picked', 'muted', 'fingered', 'roundwound'],
         'sneaky_bass': ['pluck', 'ghost', 'mute', 'fingering noise'], 'metal_rhythm': ['open', 'palm mute'],
-        'archtop_guitar': ['open', 'muted']}
+        'archtop_guitar': ['open', 'muted'], 'acoustic_guitar': ['open', 'muted', 'fret noise']}
 
 
 def _packs(p) -> set:
@@ -270,6 +270,43 @@ class MultiOptions(unittest.TestCase):
         for bad in ([[60, 0], [50, 3]], [[60, 99]], 'x', [[60]]):
             with self.subTest(bad=bad), self.assertRaises(ComposeError):
                 inst.sfz_multi({'a': {'path': str(self.path), 'keygain': bad}})
+
+    def test_keypan(self):
+        ins = inst.sfz_multi({'a': {'path': str(self.path), 'keypan': [[45, -0.4], [69, 0.4]]}})
+        by_root = {z['root']: z.get('pan', 0.0) for z in ins.params['samples'] if z.get('trigger') != 'release'}
+        self.assertEqual(by_root, {45: -0.4, 69: 0.4})
+        for bad in ([[60, 0], [50, 0.3]], [[60, 1.5]], [[60]]):
+            with self.subTest(bad=bad), self.assertRaises(ComposeError):
+                inst.sfz_multi({'a': {'path': str(self.path), 'keypan': bad}})
+
+    def test_releases_as_notes(self):
+        """releases='only': just the release-triggered zones, played by notes (a finger-off noise the player places);
+        the default keeps the file as it is."""
+        ins = inst.sfz_multi({'open': str(self.path), 'fret noise': {'path': str(self.path), 'releases': 'only'}})
+        zones = ins.params['samples']
+        noise = [z for z in zones if z['swLast'] == 1]
+        self.assertEqual(len(noise), 1)
+        self.assertNotIn('trigger', noise[0])
+        self.assertTrue(noise[0]['file'].endswith('rel.wav'))
+        self.assertEqual(sum(1 for z in zones if z['swLast'] == 0 and z.get('trigger') == 'release'), 1)
+        for bad in ('all', True):
+            with self.subTest(bad=bad), self.assertRaises(ComposeError):
+                inst.sfz_multi({'a': {'path': str(self.path), 'releases': bad}})
+        none = self.dir / 'none.sfz'
+        none.write_text('<region> sample=lo.wav lokey=40 hikey=56 pitch_keycenter=45\n', encoding='utf-8')
+        with self.assertRaises(ComposeError):
+            inst.sfz_multi({'a': {'path': str(none), 'releases': 'only'}})
+
+    def test_acoustic_noise_map(self):
+        """sampled/acoustic_guitar's NOISES name its own articulations and the mute keys below the guitar's range."""
+        m = guitars.NOISES['sampled/acoustic_guitar']
+        p = patches.get('sampled/acoustic_guitar')
+        progs = p.instrument.lazy['programs']
+        self.assertIn(m['fret'], progs)
+        self.assertIn(m['muted'], progs)
+        self.assertEqual(progs[m['fret']]['releases'], 'only')
+        keys = [m['chuck'], m['chuck_up'], m['brush'], m['thump'], *m['strings'], *m['knock']]
+        self.assertTrue(all(12 <= k <= 27 for k in keys))
 
 
 if __name__ == '__main__':

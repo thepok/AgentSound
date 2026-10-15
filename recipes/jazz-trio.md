@@ -196,7 +196,7 @@ b.bass.automate('gainDb', [(0, 0), (bass_solo.start, 1.5, 'smooth'), (head_out.s
 
 | preset | roles | sounds (fallback: GeneralUser GS) | space |
 |---|---|---|---|
-| `jazz_trio` | piano, comp, bass, drums | Salamander Grand SFZ (release samples), Meatbass pizz, Swirly brush kit | salon IR (0.8 s), master -14.5 LUFS |
+| `jazz_trio` | piano, comp, bass, drums | Salamander Grand SFZ (release samples), Meatbass pizz, Swirly brush kit; `voicing='smooth'` (the endless jazz-trio): solo_piano's grand (hammers 1.0, the split de-esser, a 3.3 kHz dip) over the trio (`jazz.SMOOTH_TRIO`) | salon IR (0.8 s), master -14.5 LUFS; smooth: every send +1-2.5 dB, the piano on the 1.9 s plate (-12.5, 28 ms pre-delay), no presence lift on the master |
 | `jazz_quartet` | + sax | + MTG tenor (legato player, live dynamics, own vibrato); comping ducks 1.5 dB under it | salon + 224XL plate |
 | `jazz_ballad` | piano, comp, bass, drums, sax | pedalled Salamander, Swirly stirs per beat, `bass='pizz'` or `'arco'` (Meatbass arco, legato) | 224XL chamber + rich plate |
 | `solo_piano` | piano, comp (one grand, two hands) | Salamander voiced smooth (hammers 1.0, a split de-esser at 2.5 kHz on the loudest notes, air shelf); the endless jazz-piano sound | salon IR + plate, gentle master ('piano' profile) |

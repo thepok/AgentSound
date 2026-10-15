@@ -84,8 +84,12 @@ them into time.
       {"track": "drums", "kind": "no_sound", "pitches": [49], "count": 17, "beats": [32, 96],
        "message": "'drums': 17 notes on crash (49) reach no sample in this kit ..."}
     ],
-    "audioOnsets": ["vocal"]                    // optional, written by the compiler: tracks whose notes trigger whole
+    "audioOnsets": ["vocal"],                   // optional, written by the compiler: tracks whose notes trigger whole
                                                 // phrases (a singer's takes) - note dynamics from the audio's onsets
+    "packFallbacks": [                          // optional, written by the compiler ($AGENTSOUND_PACK_FALLBACK=1 only):
+      {"pack": "salamander-grand",              // band substitutes for missing sample packs
+       "instead": "GeneralUser GS Grand Piano (fallback)", "message": "sample pack 'salamander-grand' is not installed: ..."}
+    ]
   }
 }
 ```
@@ -95,6 +99,12 @@ them into time.
 - **Notes**: sample-accurate. A note starts at `startBeat` and is released at `startBeat + durationBeats`
   (release tail is the instrument's business). Overlapping notes of the same pitch are separate voices.
   Notes may start anywhere in `[0, lengthBeats)`; ending after `lengthBeats` is allowed (released in the tail).
+  An optional fifth field holds per-note params: `[0, 2, 64, 90, {"string": 2}]` (`articulation.note_params` /
+  `track.note(..., params=)`). An instrument declares the names it takes (its note ParamSpecs) and gets them with the
+  note-on as a fixed-size `NoteExpression` (engine/core/NoteExpression.h: up to 16 slots, names up to 31 characters,
+  copied at parse time, no allocation on dispatch). Strict: unknown names, wrong types and out-of-range values are
+  errors; an instrument without note params accepts only `{}`. No instrument declares any yet: the sampler's `string`
+  / `transition` arrive with docs/SAMPLE_REALISM_PLAN.md levers 5 and 6.
 - **Signal flow**: track instrument → track fx chain → gain → pan → (sends, post-fader) → output.
   Buses sum their inputs, then fx → gain → pan → sends → output. `master` sums everything routed to it,
   runs its fx chain and gain; output is the mix. Routing must be acyclic (a bus may not feed itself
@@ -297,6 +307,9 @@ docs/COMPOSE_API.md "SFZ instruments"):
   previous one fades in 30 ms). `legatotime`, `legatooffset` and `glide` are latched at each transition.
 - `vibrato` (cents) / `vibratorate` (Hz): an instrument vibrato on every voice; its phase restarts with a note after
   a rest and runs on through legato transitions (preview-stable from the next such note).
+- `flutter` (dB RMS) / `flutterpitch` (cents RMS) / `flutterrate` (Hz): living sustain - band-limited RANDOM amplitude
+  and pitch micro-modulation per note (its own deterministic stream per note and track, so a section never moves in
+  lockstep), faded in after the attack (30 ms + 150 ms), continued through legato transitions; 0 = bit-transparent.
 - Keyswitch notes (keys in the keyswitch set, raw pitch before `transpose`) only select the articulation and never
   sound; the Python compiler inserts them at the start of notes marked with an articulation, held until the next
   switch (so a `--section` preview starting inside it selects it too).
@@ -578,7 +591,13 @@ allows 50 % and `film` 45 % (cellos, basses and timpani in the hall are its warm
   vocal track of `agentsound.singer` (one one-shot note per sung phrase at velocity 127; the dynamics are inside the
   takes). Their note dynamics (`nodes[].dynamics`) are measured from the audio's own onsets (`onsets: "audio"`), so
   the triggers' single velocity never reads as `flat_dynamics`.
-- **Strict**: `analysis` must be an object with only `profile` / `loudness` / `silentNotes` / `audioOnsets`; an
+- `packFallbacks`: sample packs a band preset wanted but found missing and what it played instead (`pack`, `instead`,
+  `message`; agentsound.library.want). `Song.compile()` raises on them (`PackMissingError`, naming
+  `python -m agentsound samples fetch ID` / `AGENTSOUND_SAMPLES`) unless `$AGENTSOUND_PACK_FALLBACK=1`; then they land
+  here and the report raises each as an error-level `pack_fallback` warning (ranked first among the errors): the
+  render is not the sound the song was written for.
+- **Strict**: `analysis` must be an object with only `profile` / `loudness` / `silentNotes` / `audioOnsets` /
+  `registration` / `packFallbacks`; a `packFallbacks` entry with an unknown key or an empty `pack` is an error; an
   unknown profile name is an error listing the profiles; `loudness` must be two numbers; a `silentNotes` entry with an
   unknown key, a track id that is no track, another kind or a pitch outside 0..127 is an error; `audioOnsets` must be
   an array of track ids.
@@ -674,6 +693,21 @@ else the loudest monophonic line), `other` (arps, keys, plucks), `fx` (a few lon
   the washy limit, echo as a line, tail markers), the SPACE strip, and each node's role in the stereo field
   (amber: a centred part to widen).
 
+## Realism probes (`report.nodes[].realism`)
+
+Played or triggered? Per pitched track (not drums), from its notes, on its own audio (engine/analysis/Realism.h); each
+probe appears only when its material occurs. Best measured on the audition probe materials (`python -m agentsound
+audition PATCH --notes repeat|sweep|legato|sustain|pedal`), then on song stems; A/B a sampler param with `audition
+--ab PARAM=V` or `build --set TRACK.instrument.PARAM=V`.
+
+| field | measures |
+|---|---|
+| `repeatSim` `{pairs, sim, wave}` | the same key again within 1 s at a velocity within +-6: `sim` = correlation of the two notes' first 80 ms (1/3-octave bands x 10 ms frames, dB), `wave` = their waveforms' correlation (best lag +-1 ms). 1.0 = the same recording again (a machine gun). Measured on `repeat`: FreePats nylon 1.0 / 1.0, Shinyguitar (5 random) 0.99 / 0.84, Fiedler concert guitar (7 RR) 0.84 / 0.27. |
+| `layerStep` `{key, notes, maxLevelDb, medianLevelDb, maxBrightDb, medianBrightDb}` | a key at 8+ velocities (`sweep`): steps between neighbouring velocities in level and brightness (energy share above 2.5 kHz, dB); a step far above the median is a velocity-layer seam (Splendid concert grand: 18 dB brightness at velocity 40 -> 44). |
+| `sustainFlux` `{notes, rmsSdDb, centroidSdCents, periodicity, periodMs}` | notes held 0.8 s+ with no other onset: from 150 ms in, 10 ms frames minus a 300 ms moving average - level and centroid standard deviation, and the strongest autocorrelation peak (50 ms - 1 s) of either: near 1 = a loop repeating at `periodMs`. |
+| `tailDecay` `{notes, firstDbPerSec, laterDbPerSec}` | onsets ringing 2.6 s+ before the next: the decay 0.1-0.6 s after the onset vs 0.6-2.6 s (dB/s). |
+| `transitionDip` `{transitions, dipDb, pitchMs}` | monophonic legato transitions: the deepest level dip around the new onset (-10..+150 ms vs the 40 ms before) and when the new pitch takes over (normalised autocorrelation at the new vs the old period; octaves skipped). |
+
 ## Note dynamics (`report.nodes[].dynamics`)
 
 "Are all the lead notes equally loud?" Every track (not buses, drums or fx one-shots) is measured note by note from
@@ -765,7 +799,9 @@ its own rendered audio:
   level rises 3+ dB over the 10 ms just before it, above -100 dBFS): a note that adds **nothing** to what was
   sounding is silent under `thresholdDb` = `max(median - 40 dB, min(-60 dBFS, median - 30 dB))`, median = the
   track's median event level (`medianDb`): 40 dB under its typical note, or under -60 dBFS when that is 30+ dB under
-  it (a whole track that quiet is `silent_node` / `inaudible`, not this); a note **with an attack** does sound and
+  it (a whole track that quiet is `silent_node` / `inaudible`, not this; a track whose RMS stays under -50 dBFS but whose
+  transients peak above -40 dBFS - crackle, clicks - is heard and not silent, and with a crest >= 30 dB and peaks less than
+  12 dB under the loudest part it is `spiky_track`: the ear hears pops by their peaks, so it sounds too loud); a note **with an attack** does sound and
   is flagged only 40 dB under the median ("too quiet to be heard"). **Excused** (`excused`, `excusedBy`, never
   warned): a silent event while an automation lane has closed the level - gainDb / level / gain / output lanes 30+ dB
   under their maximum, expression / volume / dynamics under 10 % of it, a cutoff 4+ octaves under its maximum and

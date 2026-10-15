@@ -65,7 +65,7 @@ class Registration(unittest.TestCase):
                 self.assertTrue(p.instrument.lazy, 'library patches read their samples lazily')
                 self.assertEqual(_pack_of(p.instrument.lazy), pack)
                 self.assertIn('Measured -18.0 LUFS', p.notes)
-                self.assertTrue(p.notes.startswith('v1.'))
+                self.assertRegex(p.notes, r'^v\d+\.')
                 self.assertLessEqual(set(p.sends), {'hall', 'plate', 'echo', 'gated'})
                 self.assertIn(p.audition.get('notes'), ('chord', 'stab', 'arp', 'phrase'))
 

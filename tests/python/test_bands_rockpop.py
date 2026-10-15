@@ -1,6 +1,7 @@
 """Rock and pop band presets (agentsound/bandlib/rock.py, pop.py): every preset builds and compiles, its roles,
 buses, master chain and analysis profile are set, the articulation / kit helpers work, overrides and fallbacks behave.
 Presets whose required sample packs are missing are skipped (python -m agentsound samples)."""
+import os
 import sys
 import tempfile
 import unittest
@@ -132,7 +133,7 @@ class TestPresetsBuild(unittest.TestCase):
                 s.compile()
 
     def test_missing_required_pack_names_the_fetch(self):
-        with tempfile.TemporaryDirectory() as empty, mock.patch.object(library, 'SAMPLES', Path(empty)):
+        with tempfile.TemporaryDirectory() as empty, mock.patch.object(library, 'SAMPLES', Path(empty)),                 mock.patch.dict(os.environ, {library.FALLBACK_ENV: '1'}):      # the fallbacks opted in
             with self.assertRaisesRegex(ComposeError, 'samples fetch freepats-fsbs-direct'):
                 bands.make('rock_band', _song()[0])
             # the roles that need no pack still build: the guitars left out

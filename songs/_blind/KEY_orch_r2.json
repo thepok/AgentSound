@@ -1,0 +1,34 @@
+{
+ "BUCS": {
+  "source": "generated",
+  "path": "songs/_endless_orchestra/out/r2/004-theme-from-autumn"
+ },
+ "ENVB": {
+  "source": "composed",
+  "path": "songs/pro-orch-longing"
+ },
+ "JUUD": {
+  "source": "generated",
+  "path": "songs/_endless_orchestra/out/r2/003-the-wide-stars"
+ },
+ "LPVE": {
+  "source": "composed",
+  "path": "songs/pro-orch-hopeful"
+ },
+ "SXVB": {
+  "source": "composed",
+  "path": "songs/pro-orch-epic"
+ },
+ "TACN": {
+  "source": "generated",
+  "path": "songs/_endless_orchestra/out/r2/001-toward-home"
+ },
+ "WWRU": {
+  "source": "composed",
+  "path": "songs/pro-orch-night"
+ },
+ "ZGGU": {
+  "source": "generated",
+  "path": "songs/_endless_orchestra/out/r2/002-wings-of-the-morning"
+ }
+}

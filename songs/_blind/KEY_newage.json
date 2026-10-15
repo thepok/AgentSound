@@ -1,0 +1,34 @@
+{
+ "BWVH": {
+  "source": "composed",
+  "path": "songs/pro-newage-longing"
+ },
+ "GYXJ": {
+  "source": "generated",
+  "path": "songs/_endless_piano/out/na_r12/new-age/005-rivers-to-the-evening"
+ },
+ "JKGG": {
+  "source": "composed",
+  "path": "songs/pro-newage-skylight"
+ },
+ "KMJA": {
+  "source": "generated",
+  "path": "songs/_endless_piano/out/na_r12/new-age/002-before-spring"
+ },
+ "SPQY": {
+  "source": "generated",
+  "path": "songs/_endless_piano/out/na_r12/new-age/007-petals-to-autumn"
+ },
+ "WHDY": {
+  "source": "generated",
+  "path": "songs/_endless_piano/out/na_r12/new-age/004-rivers-in-the-tide"
+ },
+ "YKQE": {
+  "source": "composed",
+  "path": "songs/letters-to-the-morning"
+ },
+ "YRWW": {
+  "source": "composed",
+  "path": "songs/pro-newage-homecoming"
+ }
+}

@@ -14,7 +14,8 @@ copies of it):
 
 A candidate is a dict: t (beats from `base`), cls (a budget class), name, score (higher = better placed: a phrase end,
 the top of the line, a long note), optional slot (hashables: one candidate per slot - one move per note) and phrase
-(a phrase number, for phrase_gap). Rules per class: at most one per every[cls] beats (0 / missing = never), two of the
+(a phrase number, for phrase_gap). Rules per class: at most one per every[cls] beats (0 = disabled by default,
+zero='unlimited' = no class spacing; missing classes are always disabled), two of the
 same name at least same_every beats apart (classes in `same`), a minimum score (min_score: the FAST tricks only at
 structural moments), never within phrase_gap phrases of another one of the class, and a saved moment (save()) counts
 as taken for the classes in `save_cls` outside the span being decided. Deterministic: ties go to the earlier beat.
@@ -31,11 +32,15 @@ _EPS = 1e-6
 
 class Budget:
     """A ledger of booked tricks with spacing rules. every: {class: beats}; same_every: beats between two of one
-    name (classes in `same`); min_score: {class: score}; phrase_gap: {class: phrases} (1 = never in neighbouring
+    name (classes in `same`); zero: 'disabled' (default) or 'unlimited' (0 removes class spacing, other rules apply);
+    min_score: {class: score}; phrase_gap: {class: phrases} (1 = never in neighbouring
     phrases); save_cls: the classes a saved moment blocks. .events: [(beat, class, name, phrase)], .saved: [beat]."""
 
     def __init__(self, every: dict | None = None, *, same_every: float = 0.0, same=('fast',), min_score=None,
-                 phrase_gap=None, save_cls=('fast',), events=None, saved=None):
+                 phrase_gap=None, save_cls=('fast',), events=None, saved=None, zero: str = 'disabled'):
+        if zero not in ('disabled', 'unlimited'):
+            raise ComposeError(f"budget zero must be 'disabled' or 'unlimited', got {zero!r}")
+        self.zero = zero
         self.every = {str(k): float(v) for k, v in (every or {}).items()}
         for k, v in self.every.items():
             if v < 0:
@@ -60,7 +65,7 @@ class Budget:
         """Would a `cls` trick named `name` fit at song beat `at`? span=(a, b): the beats being decided (a saved
         moment inside it is this call's to spend)."""
         gap = self.every.get(cls, 0.0)
-        if gap <= 0:
+        if cls not in self.every or (gap <= 0 and self.zero == 'disabled'):
             return False
         if score is not None and score < self.min_score.get(cls, -float('inf')):
             return False

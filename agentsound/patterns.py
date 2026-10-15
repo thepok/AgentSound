@@ -70,6 +70,22 @@ def seed_int(seed) -> int:
     return zlib.crc32(str(seed).encode('utf-8'))
 
 
+def weighted_choice(rng: random.Random, weights: dict, *, multipliers=None):
+    """Choose in table order, scaling positive base weights with multipliers.
+    Empty eligible tables return None without a draw; otherwise use one draw and an inclusive boundary.
+    """
+    multipliers = multipliers or {}
+    items = [(k, w * multipliers.get(k, 1.0)) for k, w in weights.items() if w > 0]
+    if not items:
+        return None
+    x = rng.random() * sum(w for _, w in items)
+    for k, w in items:
+        x -= w
+        if x <= 0:
+            return k
+    return items[-1][0]
+
+
 def _vel(v) -> int:
     return max(1, min(127, int(round(v))))
 

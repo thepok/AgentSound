@@ -307,6 +307,39 @@ std::vector<AnalysisProfile> makeProfiles() {
     pn.widthMinPct = 12.0;           // a piano recorded from the hall reads 19-36 % above 150 Hz
     v.push_back(pn);
 
+    // Church organ (bands.church_organ, agentsound.organist, the endless 'organ' genre): the classical thresholds with
+    // the organ's own balance and space. PROVISIONAL curve: no commercial organ recording measured yet - it is the
+    // median band balance of the Lars Palo pipe recordings (real pipes recorded in the church, spaced pair) played
+    // through the preset in the organist's textures (flutes / principal chorus / plenum with mixture and reeds, the
+    // pedal's 16' every time), read against 'classical': the 16' pedal fills 30-100 Hz (sub +6..+9 dB over an
+    // orchestra: a fault there, the foundation here), the flues' fundamentals carry 125-500 Hz, the top depends on the
+    // registration (flutes dark, a mixture / reed plenum bright) - wide tolerances on the top. The pipes carry the
+    // church in their own recording, so the convolution return can sit lower than an orchestra's hall (wet -18..-3).
+    AnalysisProfile og = c;
+    og.name = "organ";
+    og.description = "pipe organ in a church: the 16' pedal's foundation (sub 30-100 Hz), the flue chorus in the low mids, "
+                     "a top that follows the registration, a long ring (-24..-14 LUFS, LRA 4-22)";
+    og.psdOffsetDb = {{25, -6.0},   {31.5, -3.0},  {40, -1.0},   {50, 0.0},    {63, 0.5},    {80, 0.5},
+                      {100, 0.5},   {125, 1.0},    {160, 1.5},   {250, 2.5},   {315, 3.0},   {630, 3.0},
+                      {1000, 2.0},  {1250, 1.0},   {1600, 0.0},  {2000, -1.0}, {2500, -2.0}, {3150, -3.5},
+                      {4000, -5.0}, {5000, -6.5},  {6300, -8.5}, {8000, -10.5}, {10000, -12.5}, {12500, -14.5},
+                      {16000, -17.0}};
+    og.lufsMin = -24.0;
+    og.lufsMax = -14.0;
+    og.bandHighDb = {Lim(9.0), Lim(6.0), Lim(6.0), Lim(6.0), Lim(6.5), Lim(7.0), Lim(9.0)};  // presence: a trumpet stop alone reads +5.4
+    og.bandLowDb = {Lim(-12.0), Lim(-8.0), none, Lim(-8.0), none, none, none};
+    og.dullDb = -14.0;            // a flute registration in a stone church is dark
+    og.tiltToleranceDbPerOct = 3.0;
+    og.plrMinDb = 10.0;
+    og.wetMinLu = -18.0;          // the recorded pipes carry the church already
+    og.wetMaxLu = -3.0;
+    og.washyLu = -1.0;
+    og.tailMinDb = -32.0;         // a 3-4 s church
+    og.returnLowMaxPct = 60.0;    // the pedal in the church is its weight
+    og.widthMinPct = 8.0;         // one instrument, front and centre
+    og.judgeBassDynamics = false; // the pedal has no touch dynamics either
+    v.push_back(og);
+
     AnalysisProfile p = d;
     p.name = "pop";
     p.description = "modern pop / dance-pop: strong 40-60 Hz kick and bass, clean low mids, bright controlled top, wide, "

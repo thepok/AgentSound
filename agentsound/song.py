@@ -39,7 +39,7 @@ from .humanize import humanize as _apply_humanize
 from .modulation import Mod
 from .patches import FX, Instrument, Patch, _ref
 from .patterns import Clip, Note, as_clip, drum, seed_int
-from .theory import ComposeError, Key, Progression
+from .theory import ComposeError, Key, PackMissingError, Progression
 
 _ID_RE = re.compile(r'^[a-z0-9_-]{1,48}$')
 _TARGET_RE = re.compile(r'^(gainDb|pan|instrument\.[A-Za-z0-9_.]+|fx\.[A-Za-z0-9_]+\.[A-Za-z0-9_.]+|send\.[a-z0-9_-]+'
@@ -476,11 +476,16 @@ class Track(_Node):
                                   for k in range(int(math.ceil((end - start) / c.length - 1e-9)))], until=end)
         return self
 
-    def note(self, pitch, at, dur: float = 1.0, vel: int = 100, art=None):
+    def note(self, pitch, at, dur: float = 1.0, vel: int = 100, art=None, *, params: dict | None = None):
         """Add one note (pitch as MIDI, 'A4' or drum name) at a beat or Section; art= an articulation mark
-        (articulation.py: 'staccato', ... -> a keyswitch at compile)."""
+        (articulation.py: 'staccato', ... -> a keyswitch at compile); params= per-note params for instruments that take
+        them (articulation.note_params: the render JSON's fifth note field)."""
         c = Clip([(0.0, dur, pitch, vel)], length=dur)
-        return self.play(c if art is None else _art.articulate(c, art), at)
+        if art is not None:
+            c = _art.articulate(c, art)
+        if params:
+            c = _art.note_params(c, params)
+        return self.play(c, at)
 
     def clear(self, start=0.0, end=None, pitches=None, *, cut: bool = False):
         """Remove notes starting in [start, end) (a Section as start means its whole span). cut=True also ends the
@@ -720,6 +725,7 @@ class Song:
         self.bit_depth = 24
         self.warnings: list[str] = []
         self.advice: list[str] = []            # warnings of the players (drummer: missing kit pieces), kept by compile()
+        self.pack_fallbacks: dict[str, list[str]] = {}   # missing pack -> substitutes a band chose (library.want)
         self._length: float | None = None
         self._ghosts: dict[str, tuple[str, tuple[int, ...]]] = {}
         self._tempo_plan = _tempo.TempoPlan()
@@ -924,17 +930,26 @@ class Song:
         self._tempo_plan.fermatas.append((b, h, sec, ln))
         return self
 
-    def rubato(self, span, depth: float = 0.04, phrase: str = 'arch', seed=None) -> 'Song':
+    def rubato(self, span, depth: float = 0.04, phrase: str = 'arch', seed=None, *, peak: float | None = None,
+               close: float = 1.0) -> 'Song':
         """Let the tempo breathe across `span` (a Section or (start, end)): +-depth (0.04 = 4 %) around the tempo,
         shaped like a phrase - 'arch' moves forward into the phrase and broadens towards its end, 'wave' breathes
         twice, 'lean' holds back first then moves on, 'breath' moves on gently through the first 60 % and broadens
         into the last 40 % (the singer's phrase: measured on a concert recording of a slow piano piece), 'free' only
         wanders - plus a seeded, smooth irregularity
         (seed=None: from the song seed). The span keeps its length (time taken is given back) and meets the
-        tempo around it seamlessly. Ballads, classical phrases, rubato piano: depth 0.02-0.06."""
+        tempo around it seamlessly. Ballads, classical phrases, rubato piano: depth 0.02-0.06.
+        peak= (0.2..0.85) instead of a named shape: forward into the phrase up to `peak` (its share of the span),
+        then broadening into the end, `close` (0..2) x the depth there - the
+        phrase's own arch and final lengthening (romantic.PHRASE_TEMPO draws them per phrase)."""
         s, e = self._span(span, 'rubato')
         d = _num(depth, 'rubato depth', 0.0, 0.25)
-        if phrase not in _tempo.PHRASES:
+        if peak is not None:
+            pk = _num(peak, 'rubato peak', 0.2, 0.85)
+            cl = _num(close, 'rubato close', 0.0, 2.0)
+            mean = sum(_tempo._shaped((k + 0.5) / 400, pk, cl) for k in range(400)) / 400
+            phrase = ('shaped', pk, cl, mean)
+        elif phrase not in _tempo.PHRASES:
             raise ComposeError(f"rubato phrase must be one of {', '.join(_tempo.PHRASES)}, got {phrase!r}")
         for a, b, *_ in self._tempo_plan.rubatos:
             if s < b - 1e-9 and e > a + 1e-9:
@@ -949,7 +964,8 @@ class Song:
         beats = {beat number (1-based quarter beats of the bar): delay in beats} - {2: 0.06}: beat 2 arrives 6 % of
         a beat late (the lingering chord of a slow 3/4 - measured +0.066 beats on a concert recording of Satie's
         Gymnopedie No. 1), {2: -0.06}: early (the Viennese waltz's anticipated 2nd beat); jitter = a seeded random
-        extra delay per beat (standard deviation in beats: 0.02-0.05 is a pianist's breathing pulse; the recording
+        extra delay per beat, correlated from beat to beat (tempo.LILT_RHO: a drifting pulse, not a sawtooth)
+        (standard deviation in beats: 0.02-0.05 is a pianist's breathing pulse; the recording
         read +-0.08 on beat 2 and +-0.14 on beat 3). The whole tempo moves (all tracks, both hands together), unlike
         humanize(), which moves single notes apart. Stacks with rubato / ramps / fermatas (they multiply);
         lilt spans may not overlap each other. Delays are clamped to +-0.3 beats."""
@@ -969,6 +985,7 @@ class Song:
         grid = self.meter_grid()
         rng = random.Random(seed_int(f"{self.seed}:lilt:{s:g}") if seed is None else seed_int(seed))
         bars, bar = [], math.ceil(grid.bar_at(s) - 1e-9)
+        z, rho = 0.0, _tempo.LILT_RHO
         while True:
             b0 = grid.bar_start(bar)
             b1 = grid.bar_start(bar + 1)
@@ -980,7 +997,9 @@ class Song:
                 raise ComposeError(f"lilt beats {sorted(spec)}: the bar at beat {b0:g} has only {inner + 1} beats")
             delays = []
             for k in range(2, inner + 2):
-                d = spec.get(k, 0.0) + (max(-3.0, min(3.0, rng.gauss(0.0, 1.0))) * jit if jit else 0.0)
+                if jit:             # correlated from beat to beat (tempo.LILT_RHO), unit variance
+                    z = rho * z + math.sqrt(1.0 - rho * rho) * max(-3.0, min(3.0, rng.gauss(0.0, 1.0)))
+                d = spec.get(k, 0.0) + (z * jit if jit else 0.0)
                 delays.append(max(-_tempo.LILT_MAX, min(_tempo.LILT_MAX, d)))
             bars.append((b0, L, delays))
             bar += 1
@@ -1505,6 +1524,21 @@ class Song:
         for msg in chain_order.master_findings(self.master):
             self.warnings.append(f"chain order: {msg}")
 
+    def _pack_fallbacks(self) -> list[dict]:
+        """The band substitutes for missing sample packs (library.want): a ComposeError naming the packs and the
+        install command - or, with $AGENTSOUND_PACK_FALLBACK=1, a warning and the render's analysis.packFallbacks."""
+        if not self.pack_fallbacks:
+            return []
+        from . import library
+        msg = library.fallback_message(self.pack_fallbacks)
+        if not library.fallback_allowed():
+            raise PackMissingError(msg)
+        self.warnings.append(msg)
+        return [{'pack': p, 'instead': ', '.join(subs) or 'its fallback sound',
+                 'message': f"sample pack {p!r} is not installed: {', '.join(subs) or 'a fallback sound'} plays instead "
+                            f"(python -m agentsound samples fetch {p}, or set AGENTSOUND_SAMPLES)"}
+                for p, subs in sorted(self.pack_fallbacks.items())]
+
     # --- compile
     def compile(self) -> dict:
         """Validate everything and return the render dict (docs/RENDER_FORMAT.md). Raises ComposeError
@@ -1513,6 +1547,7 @@ class Song:
         self._motions = {}                                  # the bodies' gestures (humanize body=), per compile
         for fn in self._compile_hooks:
             fn(self)
+        fallbacks = self._pack_fallbacks()
         self._auto_gate_keys()
         self._order_warnings()
         L = self.length
@@ -1547,6 +1582,9 @@ class Song:
                                        _silent.instrument_info(t.instrument)):
                     silent.append(f)
                     self.warnings.append(f"silent notes: {f['message']}")
+            over = (getattr(self, 'instrument_sets', None) or {}).get(t.id)
+            if over:   # build / audition --set: before the pruning (layers='blend' and rrborrow load more zones)
+                d['instrument'] = {**d['instrument'], 'params': {**d['instrument'].get('params', {}), **over}}
             d['instrument'] = self._prune_zones(t.id, d['instrument'], d['notes'], switches=switches)
             self._sfz_warnings(t)
             out_tracks.append(self._order(d, t))
@@ -1586,11 +1624,25 @@ class Song:
         extra: dict = {}
         if silent:   # report-only (never changes the audio): the engine repeats them as 'silent_notes' warnings
             extra['analysis'] = {'silentNotes': silent}
+        if fallbacks:   # $AGENTSOUND_PACK_FALLBACK=1: the engine reports them as error-level 'pack_fallback' warnings
+            extra.setdefault('analysis', {})['packFallbacks'] = fallbacks
         # a singer's vocal track: one trigger note per sung phrase, the dynamics inside the takes - the report hears
         # its note dynamics from the audio's onsets (analysis.audioOnsets), not from the triggers' one velocity
         sung = [t.id for t in self.tracks.values() if getattr(t, '_singer', None) and not t.mute and notes[t.id]]
         if sung:
             extra.setdefault('analysis', {})['audioOnsets'] = sung
+        # an organ's tracks (bands.church_organ, organist): no touch dynamics - the report judges their registration /
+        # swell over the sections instead of note dynamics per phrase (analysis.registration)
+        # (any inst.organ track counts, a hand-built registration too - songs/toccata-tenebrae's 'pedal_solo')
+        def organ(t):
+            i = getattr(t, 'instrument', None)
+            spec = getattr(i, 'lazy', None)
+            return (isinstance(spec, dict) and spec.get('kind') == 'organ') or \
+                'organ' in (getattr(i, 'info', None) or {})
+        reg = [t.id for t in self.tracks.values()
+               if (getattr(t, '_registration', False) or organ(t)) and not t.mute and notes[t.id]]
+        if reg:
+            extra.setdefault('analysis', {})['registration'] = reg
         return {
             'format': 'agentsound.render',
             'version': 1,
@@ -1610,8 +1662,8 @@ class Song:
 
     def _prune_zones(self, tid: str, inst: dict, notes: list, quiet: bool = False, switches=None) -> dict:
         """Sampler zone lists keep only the zones a note of this track can trigger (key after the 'transpose' param,
-        velocity - any velocity with layers='dynamics' -, the keyswitch articulations the track uses; release zones
-        too): big sample libraries load only what the song plays. `switches`: (keyswitch keys, the keys the track
+        +-2 keys with rrborrow, velocity - any velocity with layers='dynamics' / 'blend' -, the keyswitch articulations
+        the track uses; release zones too): big sample libraries load only what the song plays. `switches`: (keyswitch keys, the keys the track
         selects) from _performance(). A stack prunes each sampler layer with the notes that reach it (its key and
         velocity range, transpose, velocity curve)."""
         if inst.get('type') == 'stack':
@@ -1622,14 +1674,17 @@ class Song:
         tr = inst['params'].get('transpose', 0)
         tr = int(tr) if isinstance(tr, (int, float)) and not isinstance(tr, bool) else 0
         sw_keys, used = switches if switches else (set(), None)
-        any_vel = inst['params'].get('layers') == 'dynamics'
+        # layers='dynamics' / 'blend' start any (a neighbouring) velocity layer; rrborrow plays a repeat on the sample
+        # of a key up to 2 semitones away (the engine's kRrBorrowReach)
+        any_vel = inst['params'].get('layers') in ('dynamics', 'blend')
+        reach = 2 if (inst['params'].get('rrborrow') or 0) > 0 else 0
         vels: dict[int, set[int]] = {}
         for n in notes:
             if int(n[2]) in sw_keys:
                 continue   # keyswitch notes never sound
-            k = int(n[2]) + tr
-            if 0 <= k <= 127:
-                vels.setdefault(k, set()).add(int(n[3]))
+            for k in range(int(n[2]) + tr - reach, int(n[2]) + tr + reach + 1):
+                if 0 <= k <= 127:
+                    vels.setdefault(k, set()).add(int(n[3]))
 
         def selected(z: dict) -> bool:
             if used is None:
@@ -1910,13 +1965,14 @@ class Song:
         """(the track's notes as written - sorted, after the groove; as played - groove, body / humanize): two
         aligned lists, note i of one is note i of the other."""
         c = Clip._raw(t._notes, L)
-        marked = any(_art.articulation_of(n) is not None or _art.glide_of(n) for n in c)
+        marked = any(_art.articulation_of(n) is not None or _art.glide_of(n) or _art.params_of(n) for n in c)
         notes = list(c)
         if t._groove is not None:
             drums = t.instrument.type == 'drums'
             if marked:   # note by note (a groove moves each note on its own), so the marks stay on their notes
                 notes = [_art._mark(_grooved(Clip._raw([n], L), t._groove, bpm, drums)[0],
-                                    art=_art.articulation_of(n), gl=_art.glide_of(n)) for n in c]
+                                    art=_art.articulation_of(n), gl=_art.glide_of(n),
+                                    params=getattr(n, 'nparams', None)) for n in c]
             else:
                 notes = _grooved(c, t._groove, bpm, drums)
         written = notes
@@ -1956,7 +2012,8 @@ class Song:
             if not 0 <= n.pitch <= 127 or not 1 <= n.vel <= 127:
                 raise ComposeError(f"{where}: pitch must be 0..127 and velocity 1..127")
             start = min(max(n.start, 0.0), L - 1e-4)  # groove/humanize shifts at the song edges
-            out.append(([_r6(start), max(_r6(n.dur), 1e-6), int(n.pitch), int(n.vel)],
+            q = _art.params_of(n)   # per-note params: the optional fifth field (articulation.note_params)
+            out.append(([_r6(start), max(_r6(n.dur), 1e-6), int(n.pitch), int(n.vel)] + ([q] if q else []),
                         (_art.articulation_of(n), _art.glide_of(n))))
         out.sort(key=lambda x: (x[0][0], x[0][2], x[0][1]))
         if marks is not None and marked:

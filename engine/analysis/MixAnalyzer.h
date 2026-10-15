@@ -49,6 +49,7 @@
 //                  contrastDb, channel, image; global.clicks / global.clicksMasked
 //                  count all of them (in the mix / only in single parts; the list keeps the worst 40)
 //   images[]       {file, shows}: the PNGs of writeImages()
+//   findings[]     {code, metric, value, limit, node, section, severity, message}; base verdicts + scoped warnings
 //   warnings[]     {severity error|warn|info, code, message, sections?, nodes?}, most important first
 //   suggestions[]  concrete fixes phrased in render-format terms
 //   reference      the analysis profile used (name, description) and its targets: band shares, tilt,
@@ -121,6 +122,7 @@ struct NodeRouting {
     };
     std::vector<KnownSilent> knownSilent;
     bool audioOnsets{false};   // analysis.audioOnsets: its notes trigger whole phrases - note dynamics from the audio
+    bool registration{false};  // analysis.registration: no touch dynamics (an organ) - judged by registration / swell
 };
 
 struct SongSpec;
@@ -190,5 +192,9 @@ private:
 // and id/name first inside entries). Prefer this over json::dump(indent), which puts every number of
 // the timeline on its own line and sorts the summary and warnings to the bottom.
 std::string formatReport(const json& report);
+
+// Base audio verdicts. Fixed delivery overrides: truePeakMaxDbtp, loudness, loudnessToleranceLu.
+// Reuses report.findings for non-delivery judgments; old/partial reports are evaluated from metrics.
+json evaluateReport(const json& report, const json& policy = json::object());
 
 }  // namespace as

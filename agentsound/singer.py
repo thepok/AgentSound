@@ -87,13 +87,16 @@ __all__ = ['STYLES', 'MOVES', 'FORMAT', 'DICTION', 'MIC_PULL', 'TUNE', 'PRISM', 
            'double', 'harmony', 'prism', 'mouth', 'chops', 'Chops', 'CHOP', 'chops_lines', 'tune_curve', 'render',
            'phrase_notes', 'check', 'diction', 'report_lines', 'log_lines', 'mic_lines', 'SingerError']
 
-FORMAT = 4                      # bump when the rendering below changes (new cache keys)
+FORMAT = 5                      # bump when the rendering below changes (new cache keys)
 MOVES = ('consonants', 'hold', 'diction', 'glide', 'scoop', 'vibrato', 'fall', 'doit', 'release', 'swell',
          'messa_di_voce', 'taper', 'accents', 'breath', 'colour', 'timing', 'drift', 'link', 'mic_pull')
 
 _CLASS = {**{p: 'stop' for p in ('p', 'b', 't', 'd', 'k', 'g')}, 'ch': 'affricate', 'jh': 'affricate',
           **{p: 'sibilant' for p in ('s', 'z', 'sh', 'zh')}, **{p: 'fricative' for p in ('f', 'v', 'th', 'dh', 'hh')},
-          **{p: 'nasal' for p in ('m', 'n', 'ng')}, 'l': 'liquid', 'r': 'liquid', 'w': 'glide', 'y': 'glide'}
+          **{p: 'nasal' for p in ('m', 'n', 'ng')}, 'l': 'liquid', 'r': 'liquid', 'w': 'glide', 'y': 'glide',
+          # German symbols (lyrics.DE_CONSONANTS)
+          'q': 'stop', 'ts': 'affricate', 'pf': 'affricate', 'cc': 'fricative', 'x': 'fricative', 'l1': 'liquid',
+          'rh': 'liquid'}
 DICTION = {
     # class: (min s before a rest, min s in legato, max s before a rest, warn below s, lift dB rest, lift dB legato)
     'stop':      (0.060, 0.045, 0.090, 0.040, 6.0, 3.0),
@@ -1370,7 +1373,7 @@ def _timeline(spec: dict, cons: list, bank) -> dict:
         j = i - 1                                # the giver: the vowel before the cluster (or a longer consonant in it)
         while need > 0 and j >= 0 and toks[j][0] not in ('SP', 'AP'):
             have = bounds[j + 1] - bounds[j]
-            vowel = toks[j][0] in _lyr.VOWELS
+            vowel = toks[j][0] in _lyr.SUNG_VOWELS
             keep = 4 if vowel else math.ceil(DICTION[_cls(toks[j][0])][3] / FR - 1e-6)
             if have - need >= keep:
                 for k in range(j + 1, i + 1):
@@ -2449,7 +2452,7 @@ def _onset_start(toks, V: float, nucleus: str | None = None) -> tuple[float, int
     if j is None:
         return V, None
     a0, i = toks[j][1], j
-    while i > 0 and toks[i - 1][0] not in ('SP', 'AP') and toks[i - 1][0] not in _lyr.VOWELS:
+    while i > 0 and toks[i - 1][0] not in ('SP', 'AP') and toks[i - 1][0] not in _lyr.SUNG_VOWELS:
         i -= 1
         a0 = toks[i][1]
     return a0, j
@@ -2696,11 +2699,6 @@ def _follow_mic(lead: Vocal, part: Vocal) -> None:
         if j is not None and at is not None:
             out[j] = dict(p, at=at)
     part.mic = out
-
-
-def _clip_of(vo: Vocal) -> Clip:
-    base = vo.notes[0].start if vo.notes else 0.0
-    return Clip([(n.start - base, n.dur, n.pitch, n.vel) for n in vo.notes])
 
 
 def _resing(vo: Vocal, *, take, formant, offset_ms, track_id, pan, gain_db, overrides, steps: int = 0,
@@ -3215,7 +3213,7 @@ def _slice_span(sl: dict, toks: list, spec: dict, vowels: list) -> tuple[float, 
         return best
 
     def cons(p: str) -> bool:
-        return p not in ('SP', 'AP') and p not in _lyr.VOWELS
+        return p not in ('SP', 'AP') and p not in _lyr.SUNG_VOWELS
     g0, g1 = sl['groups']
     a = nucleus(g0)
     for _ in range(len(groups[g0]['on'])):

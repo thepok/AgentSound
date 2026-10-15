@@ -118,14 +118,6 @@ POP = {
 }
 
 
-def _ballad_chain():
-    return heroes.chain(BALLAD)
-
-
-def _pop_chain():
-    return heroes.chain(POP)
-
-
 # the piano heroes' mix rules for heroes.hero() (carve() below keeps the old static-dip form)
 _PIANO_MIX = {'duck': 2.5, 'duck_threshold': -45.0, 'duck_attack': 15.0, 'duck_hold': 40.0, 'duck_release': 400.0,
               'carve_db': 2.0, 'carve_freq': 2500.0, 'carve_q': 0.9, 'ride_db': 1.0, 'dip_db': -2.0,

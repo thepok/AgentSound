@@ -11,7 +11,7 @@ makes a sampled instrument sound "keyboard-like". This module keeps measured per
 
 calibrate() measures a patch and rewrites its entries (a maintainer tool: needs numpy and the built engine):
 
-    python -m agentsound.patches._levelling sampled_orchestra [patch ...]     (the module's CALIBRATION specs)
+    python -m agentsound.patches._levelling sampled_orchestra|sampled_sections [patch ...]   (the module's CALIBRATION)
 
 Per articulation (keyswitch program), in three steps:
   1. round robins of one note -> their mean level (the samples' K-weighted level: the body 0.25-2.5 s of a sustained
@@ -517,7 +517,7 @@ if __name__ == '__main__':
     import sys
     if len(sys.argv) < 2:
         raise SystemExit('usage: python -m agentsound.patches._levelling MODULE [patch ...]   '
-                         '(MODULE: sampled_orchestra)')
+                         '(MODULE: sampled_orchestra, sampled_sections)')
     mod = importlib.import_module(f'agentsound.patches.{sys.argv[1]}')
     canon = importlib.import_module('agentsound.patches._levelling')   # the module the patches' hooks read (its cache)
     canon.calibrate(sys.argv[2:] or list(mod.CALIBRATION), mod.LEVEL_TABLE, mod.CALIBRATION)

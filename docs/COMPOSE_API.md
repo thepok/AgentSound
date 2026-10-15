@@ -119,7 +119,7 @@ or `patches.get('synthwave/supersaw_lead').but(cutoff=2500)`.
 | `s.harmony(spec_or_table, at=0, *, key=None)` | a `voicing.Harmony` from a progression string or a voicing table `[(dur, chord, top, bass[, {voice: pitch}])]`, placed at `at` (its methods then work in song beats) |
 | `s.arc(rides, *, within=None, glide=0.5, default=0.0, curve='smooth', name='arc')` | the conductor's arc: a gain ride per section `{name: dB}` on a utility first in the master chain (soft passages up, early fortissimos under the climax) - `within={name: [(beat, dB[, curve])]}` adds points inside a section; the written dynamics stay. Minimal and generic: genre packages extend it (lanes) rather than duplicate it |
 | `s.export(stems=True, bit_depth=24)` | render options (CLI `--stems` also works) |
-| `s.compile()` -> dict, `s.save(path)`, `s.describe()`, `s.warnings` | validation: unique ids, routing targets exist, no cycles (outputs, sends and sidechains), notes inside the song, automation targets resolvable and strictly increasing; **silent notes** (`agentsound.silent_notes`): every note of a sampler / kit / sfz / stack / drum-machine track that reaches no sample zone (a kit without that piece, a key outside the multisample's range, a velocity or keyswitch articulation without zones), no drum piece or only muted stack layers is a "silent notes: ..." warning (GM names / note names, bar:beat, the fix) (an sf2 track: its preset's key ranges, read from the font: a GM kit without that piece) and goes to the render JSON's `analysis.silentNotes` (the report's `silent_notes` warnings, next to what the render measured: docs/RENDER_FORMAT.md "Silent notes") |
+| `s.compile()` -> dict, `s.save(path)`, `s.describe()`, `s.warnings` | validation: unique ids, routing targets exist, no cycles (outputs, sends and sidechains), notes inside the song, automation targets resolvable and strictly increasing; **silent notes** (`agentsound.silent_notes`): every note of a sampler / kit / sfz / stack / drum-machine track that reaches no sample zone (a kit without that piece, a key outside the multisample's range, a velocity or keyswitch articulation without zones), no drum piece or only muted stack layers is a "silent notes: ..." warning (GM names / note names, bar:beat, the fix) (an sf2 track: its preset's key ranges, read from the font: a GM kit without that piece) and goes to the render JSON's `analysis.silentNotes` (the report's `silent_notes` warnings, next to what the render measured: docs/RENDER_FORMAT.md "Silent notes"); **pack fallbacks**: a band preset that played a substitute for a missing sample pack (recorded by `library.want()` on `s.pack_fallbacks`) makes compile raise `PackMissingError` (packs, substitutes, `python -m agentsound samples fetch ID` / `AGENTSOUND_SAMPLES`) unless `$AGENTSOUND_PACK_FALLBACK=1` (then a warning and the report's error-level `pack_fallback`) |
 
 `sound` for a track: a `Patch`, a patch name, `inst.va(...)`/`inst.dx7('E.PIANO 1')`/`inst.drums(kit='linn')`
 or `{'type': ..., 'params': {...}}`. `pre=` fx come first, then the patch fx, then `fx=`; `gain_db` adds to the patch
@@ -206,7 +206,7 @@ s.accelerando(build, to=1.1)                                    # push into the 
 | `s.ritardando(span, to=0.8, bpm=None, curve='smooth', a_tempo=True)` | slow down across the span to `to` x the tempo there (or to `bpm`); `a_tempo=True` returns to the old tempo at the span end (rit. ... a tempo) - after the held chord when a `fermata` sits on the span end, never when no note starts after the chord there (a final chord stays slow); a ramp starting right at the span end continues from the slowed tempo, a `set_tempo` there wins. `False` always stays slow |
 | `s.accelerando(span, to=1.15, bpm=None, curve='smooth', a_tempo=False)` | speed up; keeps the new tempo unless `a_tempo=True` (then as for ritardando) |
 | `s.fermata(at, hold=1.5, seconds=None, length=None)` | the chord at `at` rings `hold` extra beats (at the tempo there) or `seconds` longer, then the music goes on. The stretched span runs to the next note onset after the chord (notes within 1/4 beat of `at` - strums, rolls - belong to the chord), else to the end of the chord - but never into the next fermata while nothing after the chord is placed yet (a song that asks `tempo_at` while writing its parts); `length=` sets it exactly. Everything inside waits (arpeggios under a fermata slow down too: end them on the chord) |
-| `s.rubato(span, depth=0.04, phrase='arch', seed=None)` | phrase-shaped breathing of +-depth around the tempo: `'arch'` moves forward into the phrase and broadens towards its end, `'wave'` breathes twice, `'lean'` holds back then moves on, `'breath'` moves on through the first 60 % and broadens into the last 40 % (a sung phrase: the reference recording of the Gymnopedie etude read phrase middles +2.5 %, last bars -3.5 %), `'free'` only wanders; plus a seeded smooth irregularity. The span keeps its length (time taken is given back) and joins the tempo around it without a jump |
+| `s.rubato(span, depth=0.04, phrase='arch', seed=None, *, peak=None, close=1.0)` | phrase-shaped breathing of +-depth around the tempo: `'arch'` moves forward into the phrase and broadens towards its end, `'wave'` breathes twice, `'lean'` holds back then moves on, `'breath'` moves on through the first 60 % and broadens into the last 40 % (a sung phrase: the reference recording of the Gymnopedie etude read phrase middles +2.5 %, last bars -3.5 %), `'free'` only wanders; plus a seeded smooth irregularity. The span keeps its length (time taken is given back) and joins the tempo around it without a jump. `peak=` (0.2-0.85) instead of a shape name: forward into the phrase up to that share of it, then broadening to `close` (0-2) x the depth at its end - the phrase's own arch (`romantic.PHRASE_TEMPO` draws them per phrase) |
 | `s.lilt(span, beats={2: 0.06}, jitter=0.0, seed=None)` | beat-level agogics in every whole bar of the span: inner beat k arrives `beats[k]` beats late (negative: early), plus a seeded random `jitter` (standard deviation in beats) per beat; the downbeats stay on the tempo map (each bar gives its time back). The whole tempo moves - both hands, every track together - where `humanize` moves single notes apart. A slow 3/4 whose chord on 2 lingers: `{2: 0.06}` (a concert recording of Satie's Gymnopedie No. 1: +0.066 beats, +-0.08 / +-0.14 on beats 2 / 3); a Viennese waltz: `{2: -0.08}`; a pianist's unmetronomic pulse: `jitter=0.02-0.05`. Stacks with rubato, ramps and fermatas; delays within +-0.3 beats |
 | `s.tempo_at(beat)`, `s.seconds(beat)`, `s.tempo_map()`, `s.tempo_points()` | the BPM at a beat, the song time of a beat (exactly as the engine renders it), the map, the render JSON points |
 
@@ -232,6 +232,7 @@ section that starts inside a bar of the meter before it gets a short bar first) 
 
 ```python
 inst.va(cutoff=1800, unison=5, osc1__wave='saw')   # '__' in a keyword becomes '.': osc1.wave
+inst.wavetable('formant', osc1__position=0.3)      # wavetable synth (the va engine + morphing tables), see Wavetable synth
 inst.dx7('E.PIANO 1')                               # DX7 ROM voice by name (install the ROMs: assets/dx7/README.md)
 inst.drums(kit='synthwave')                         # GM map: 36 kick 38 snare 39 clap 42 hat 46 open hat ...
 inst.sf2('Grand Piano')                             # SoundFont preset (GeneralUser GS: full GM/GS set), see Samples
@@ -258,7 +259,8 @@ whose `mix` blends the time-aligned DI under the amp (the DI carries the lows an
 
 The Python layer passes params through; the engine validates them strictly (`python -m agentsound params va`).
 `sidechain` and `name` are the only reserved FX keywords (`name` labels an effect for automation).
-The va's `mods` param is the one structured param: a list of modulation routes (see VA modulation matrix).
+The va's (and the wavetable's) `mods` param is the one structured param: a list of modulation routes (see VA
+modulation matrix).
 
 **Patch**(`name, instrument=None, fx=(), gain_db=0, pan=0, sends=None, notes=''`): a named sound. Copies:
 `.but(**params)` (instrument params; on fx-only patches the first effect), `.but_fx(index|type|name, **params)` (one
@@ -423,7 +425,8 @@ classical: no ride). The mixer treats a hero track as the lead (`mixer.infer_rol
 
 | preset (family) | default source | chain (key values) | space | mix: duck / carve / ride / dips | gain |
 |---|---|---|---|---|---|
-| `sax` | Weresax alto + 2 MTG alto takes (-10 / -10.5 dB, +9 / -8 ct, 17 / 26 ms) + muted MTG tenor -12 st | -2.5 dB 650 Hz, -4 dB 1.3 kHz; 3:1 -31 dB 25 ms; tube 9 dB; +2 dB 3 kHz, +3 dB 8 kHz; exciter | hero_plate -14, hall -16, echo -24 -> -5 | 2.5 / 4 @ 2.5 kHz / +2 / -2 | -2.6 |
+| `sax` (v2, THE hero sax in every genre: the late-70s record sax, the user's pick 2026-10-15) | Weresax alto, dynamic mic (cc 120 = 127), breath trace (cc 122 = 16, its noise zone 2-pole 3 kHz LP), velcurve 1.7, width 0.3, one take (`double='takes'` / `octave='muted'`: the clean hero's MTG takes / tenor); a track on `sampled/alto_sax` gets this source | -2.5 dB 650 Hz, -4 dB 1.3 kHz; 4:1 -33 dB 20 ms / 120 ms; tube 9 dB 45 %; +2 dB 3 kHz, +3 dB 8 kHz; exciter; tube 7 dB (full); tape 15 ips drive 6; tremolo 10 Hz 0.25 autopan (smooth-random rate +-3 Hz / depth +-0.1 at 0.3 Hz) | hero_plate_70s (plate_80s, 3.6 s, damping 12 kHz) -14, hall -16, echo -24 -> -5 | 2.5 / 4 @ 2.5 kHz / +2 / -2 | -2.9 |
+| `sax_clean` (opt-out: the v1 hero sax = `layered/hero_sax`) | Weresax alto (dynamic mic, no breath) + 2 MTG alto takes (-10 / -10.5 dB, +9 / -8 ct, 17 / 26 ms) + muted MTG tenor -12 st | -2.5 dB 650 Hz, -4 dB 1.3 kHz; 3:1 -31 dB 25 ms; tube 9 dB; +2 dB 3 kHz, +3 dB 8 kHz; exciter (jazz / ballad: the soft voicing - one take, 2:1, no tube / exciter) | hero_plate -14, hall -16, echo -24 -> -5 | 2.5 / 4 @ 2.5 kHz / +2 / -2 | -2.6 |
 | `piano` (`piano_pop`, `piano_strings`) | Salamander key split (hammers 0.5 / 0.15; + VPO strings -14 dB 70 ms) | -3 dB 280 Hz, +2.5 dB 2 kHz, +3 dB 10 kHz; catch 3:1 5 ms; glue rms 2:1 30 ms; tape; width 1.2; Dimension-D | plate -7, hall -16, echo -60 -> -3 | 2.5 / 2 @ 2.5 kHz / +1 / -2 | 2.2 (3.2, 2.6) |
 | `guitar` (`guitar_clean`, `guitar_heavy`) | FSBS Strat DI (rolled-back pickup) in 5 velocity zones through the tube `amp` as a cranked Plexi lead channel (2 stages, TS push, master 6) / 4x12 (clean: one sampler + the tube amp's blues voicing + 1x12; heavy v2: a neck-pickup DI in 4 zones through the engine's tube `amp` (3 stages, TS push, mid 7, presence 8) + 4x12 IR, + amped lead double -7 dB; its eq only hp 80 / lp 7.5 kHz, tape without drive) | hp 90, -1 dB 260 Hz, lp 7.5 kHz; tape without drive; microshift 7 ct; own dotted-8th echo | hall -12, plate -18; throws on fx.echo.mix | 2.5 / 2.5 @ 2 kHz / +1 / -2 | -4.5 (-9.4, -3.8) |
 | `synth` (`darksynth`) | two-saw voice + square octave -9 dB (G#4 up) + supersaw halo -10 dB (dark: sync lead + driven saw octave) | -3 dB 420 Hz, -4.5 dB 3.6 kHz, +2.5 dB 9.5 kHz; rms 2:1 25 ms; tape; Juno I; microshift 9 ct (dark: tube 8 dB first) | plate -12, hall -14, echo -11 -> -4 | 2.5 / 2 @ 1.8 kHz / +1 / -2 | 1.9 (4.6) |
@@ -444,7 +447,7 @@ logic are shared; frequencies, amounts, sources, sends and mix depths are per pr
 
 **Levels and dynamics**: every `hero/<preset>` lands at -18.0 LUFS on its audition phrase (like the library); around
 another sound the gain is the preset's `user_gain_db` (measured on a typical other sound) - audition it. The chains
-keep the dynamics ear quiet: <= 3:1 with 15-30 ms attacks; the new families measured on a velocity ladder (40 -> 127,
+keep the dynamics ear quiet: <= 3:1 with 15-30 ms attacks (the sax hero: 4:1, the record sound the user picked); the new families measured on a velocity ladder (40 -> 127,
 one note) 1.6-1.7 dB per 10 velocity steps (the raw samplers 2.2-2.5), the guitar hero 1.9, piano 2.4, synth 2.2; the
 sax hero is squeezed hard on purpose (0.3 dB per 10 on isolated notes: its phrase dynamics are the velocity arcs'
 timbre, the rides and the air stage). Play them with velocity arcs (`hero.play` = `humanize.touch` in the preset's
@@ -455,7 +458,7 @@ songs that use them render byte-identical JSON): `layered/hero_sax`, `sampled/he
 `layered/hero_piano_strings`, `layered/hero_guitar`, `sampled/hero_guitar_clean`, `layered/hero_guitar_heavy`,
 `hero/synth_lead`, `hero/synth_piano`, `hero/darksynth_lead` - each is the preset's build without the air stage;
 `hero/<preset>` is the same sound + `air` (sample-identical at 0 dB). Their helpers still work: `hero_piano.carve`,
-`hero_guitar.play` / `.lead`, `hero_synth.perform`, `HERO_SAX`, `articulation.throws`.
+`hero_guitar.play` / `.lead`, `hero_synth.perform`, `HERO_SAX_CLEAN` (the data of `layered/hero_sax`; `HERO_SAX` is the v2 `hero/sax`), `articulation.throws`.
 
 ## Samples (SoundFonts and WAV files)
 
@@ -605,7 +608,11 @@ velcurve=None, zone=None, **params)`:
 * `zone={param: value}`: set on every attack zone over the file's own envelope / filter (release zones keep theirs;
   not the mapping, keyswitches or gain): `zone={'release': 0.4}` shortens a release the file fixes (the `release`
   param only reaches zones without one), `{'attack': 0.25, 'velAttack': -0.25}` a flatter velocity -> attack curve
-  (the library's VPO choirs: `sampled.CHOIR_SPEAK`). The zone fields: `python -m agentsound sfz FILE --json`.
+  (the library's VPO choirs: `sampled.CHOIR_SPEAK`). A `{'<file glob>': {param: value}}` entry sets params only on
+  the zones whose file name matches (any trigger; a generator by its name): `zone={'*noise': {'filter': 'lpf_2p'}}`
+  = a steeper filter on the Weresax wind-noise layer (`sampled.WERESAX_ZONE`). The zone fields: `python -m agentsound
+  sfz FILE --json`. SFZ generators: `*sine` full scale, `*noise` uniform +-0.25 (-16.8 dBFS RMS, as sfizz) - the
+  Weresax breath layer (`cc={122: N}`, "Noise Level") is a trace at 16 (`sampled.WERESAX_CC`).
 * `**params`: sampler params (`level`, `pedal`, `expression`, `width`, `cutoff`, `velsens`, `transpose`, `tune`,
   `polyphony` (128 here), `attack decay sustain release` for zones without their own `ampeg_*`).
 
@@ -646,7 +653,10 @@ keyswitch=0, default=None, cc=None, mics=None, dyn_cc='auto', **params)`**: one 
 per-articulation programs (VSCO 2, SSO and VPO ship them separately); articulation i gets keyswitch key
 `keyswitch` + i (0 = C-1 upwards, below any played note), `default` (else the first) plays unmarked notes, groups /
 `off_by` are renumbered per program; a program dict takes `path`, `articulation` (of a keyswitch program), `cc`,
-`mics`, `gain`. `sfz.load_multi(...)` returns the zones and info.
+`mics`, `gain`, `zone` (per-zone overrides), `keygain` / `keypan` ([[key, dB | pan], ...] interpolated over the
+root key: level and stereo position per key - a guitar's low strings left, high right), `releases='only'` (only the
+program's release-trigger zones, played as ordinary notes: a pack's fret / release noises as their own playable
+articulation). `sfz.load_multi(...)` returns the zones and info.
 
 **sampled/ patches** (`agentsound/patches/sampled.py`, each -18 LUFS on its audition material, lazy: the .sfz is
 read when a song renders it, a missing pack is an error only then): keys `sampled/grand_piano` (Salamander, 16
@@ -660,8 +670,27 @@ Orchestra) `sampled/strings` `sampled/strings_staccato` `sampled/strings_pizz` `
 `sampled/trombones` `sampled/harp` `sampled/timpani` `sampled/choir`; played (v2, "Realistic performance")
 `sampled/solo_violin` `sampled/solo_cello` `sampled/violin_section` `sampled/viola_section` `sampled/cello_section`
 `sampled/bass_section` (keyswitched sustain / spiccato / pizzicato / tremolo, live dynamics, legato soloists), and
-`sampled/tenor_sax` / `sampled/alto_sax` are legato players since v2. Each patch's notes give the key map, range,
+`sampled/tenor_sax` / `sampled/alto_sax` are legato players since v2. The acoustic guitar `sampled/acoustic_guitar`
+(Karoryfer Shinyguitar, CC0: the archtop's MIC programs, 4 velocity layers x 4 round robins, voiced open and warm -
+body dip at 420 Hz / 1.25 kHz, sparkle shelf; articulations open / muted (cc110) / 'fret noise' (the release noises
+as notes); keys 12-27 are the recorded noises: muted single strings, muted strums down / up, a brush, a palm thud,
+body knocks - `sampled_guitars.NOISES` maps them for the guitarist; strums want `gain_db` -5..-7). Each patch's notes give the key map, range,
 useful `cc=` tweaks and the license (rhodes and vibraphone are CC-BY-NC).
+
+**Symphonic sections, one per track** (`agentsound/patches/sampled_sections.py`; `songs/_demo_orch_sections`): the
+five string sections `sampled/violins_1` `sampled/violins_2` `sampled/violas` `sampled/celli` `sampled/double_basses`
+(Virtual Playing Orchestra re-looped sustain / staccato / pizzicato / tremolo + Sonatina marcato / col legno on one
+'dynamics' lane; each seated - pan, width, mono lows for celli and basses - like the `symphony_orchestra` band), the
+woodwinds a2 / a3 `sampled/flutes` `sampled/oboes` `sampled/clarinets` `sampled/bassoons` (Sonatina sections), and
+muted brass a3 `sampled/horns_muted` `sampled/trumpets_muted`: three players built from the VSCO solo mute recordings
+(`sampled_sections.a3(path)`: each player on the recording of a neighbouring note, retuned, 0 / 23 / 41 ms late, a few
+cents apart and seated apart - different recordings, so no comb filtering). Write a 5-part string texture on five
+tracks (`clip.articulate('pizzicato' | 'tremolo' | 'staccato' | 'marcato' | 'col legno')`, automate
+`instrument.dynamics` for swells); in a band preset swap a role's sound with `sounds={'violas': 'sampled/violas'}`.
+The chamber-size VSCO desks stay `sampled/violin_section` ... `sampled/bass_section`; the whole string orchestra on
+one track `sampled/string_section`. Not sampled anywhere yet (free libraries lack them, TODO.md): string con sordino /
+sul ponticello sections, trombone mutes, flutter-tongue, piccolo trumpet / Wagner tuba / cimbasso, recorded legato
+transitions for sections.
 
 ### Kits (`inst.kit`), organs (`inst.organ`) and multisamples (`inst.multisample`)
 
@@ -809,6 +838,16 @@ letter-to-sound rules (a warning names the guess). Syllables by the maximal-onse
 than an unstressed one, a closed vowel - ih, uh - on a long or top note, a run on a closed vowel, G2P guesses);
 `python -m agentsound lyrics "..." [--voice hanami]` prints words -> syllables -> notes. The lyricist role:
 `roles/lyricist.md`.
+
+**German** (Hanami has ~17 min of recorded German): no German dictionary is bundled - the song gives every word's
+phonemes in the voicebank's German symbols (`lyrics.DE_VOWELS`: a ao aw ax ay ee eh eu1 ex ih iy o1 oe oy u1 uh v1
+yy; `lyrics.DE_CONSONANTS`: ... cc (ich) x (ach) rh (uvular r) l1 (clear l) q (glottal stop) ts pf ...; Hanami's
+`Phoneme Chart.pdf` maps them to IPA) and `lyrics.spell(text, lexicon)` writes them out as `word{...}` (markup, phrase
+marks, `-` / `_` pass through; a missing word is an error, never guessed by the English rules). A leading apostrophe
+marks the stressed vowel (`"z 'iy b ax n"`, else the first vowel); `ex` right after a vowel is its off-glide (`wer` =
+`v ee ex`, one syllable); German onsets (sch-t, sch-p, zw, pf-l, kn, rh / l1 clusters) syllabify like English ones;
+the closed vowels are ih uh ax ex yy. Set the glottal stop `q` only where a singer would (a stressed or line-initial
+vowel). `songs/die-faehre-um-sieben` is the worked example (`LEX`).
 
 **sing() options**: `voice` (a voicebank id), `style` (`pop`, `rock`; the calm, intimate `jazz` and `ballad`; any
 STYLES / `STYLE_EXTRAS` key as an override: `vib_ct=35`, `fall=0`, `expr=0.6` ...), `mode` (a fixed voice mode: `'core'` / `'soft'` / `'power'` or a bank speaker such as
@@ -1188,6 +1227,8 @@ picks, in one articulation, at a frozen dynamic. The sampler plays them *played*
 | **articulations** | `clip.articulate('staccato', span=(8, 12))`, `track.note(.., art='pizz')`, `art.auto_articulate(clip, track)` | keyswitch notes inserted at the note start (never sounding), zones by `swLast`; unused articulations are not loaded |
 | **expression** | `art.expression(track, clip, at, shapes)` - `SHAPES`: flat swell cresc dim fp sfz accent, or 'auto'; `follow=` a function beat -> level (a Score's dynamics map) | points on `instrument.dynamics` (a sampler whose dynamics move its level: `art.live_dynamics(track)` - layers='dynamics', `dynrange` > 0 or zones mapped to it) else `instrument.expression`; tied notes continue the line's level; with `follow` a held note whose map level changes inside it follows it (a crescendo under a held chord) |
 | **vibrato** | `art.vibrato(track, clip, at, depth=18, rate=5.2, delay=0.35, grow=0.6)` | `instrument.vibrato` (cents) / `vibratorate` (Hz): delayed per long note, runs on through legato; on a stack track (`layered/hero_sax`) every sampler layer gets it (`instrument.layers.<id>.vibrato`, `art.vibrato_prefixes(track)`) |
+| **living sustain** | sampler params `flutter` (dB RMS), `flutterpitch` (ct RMS), `flutterrate` (Hz, default 11): `patches.get('sampled/alto_sax').but(flutter=0.5, flutterpitch=2)` | band-limited RANDOM shimmer / jitter on every held note (the life a looped sample lacks; not a periodic tremolo): its own stream per note and track, faded in after the attack, continued through legato. Subtle: 0.3-0.6 dB, 1-2 ct; above ~4 ct the high partials chirp (FM spread). No patch has it by default yet (A/B pending). The alternative to A/B against it: `fx.tremolo(rate=10, depth=0.25, stereo=180, ratemod=3, depthmod=0.1, modrate=0.3, modshape='random')` - a fast tremolo whose rate and depth wander slowly (smooth random recommended for winds; part of the `hero/sax` chain since its v2) |
+| **round robins / velocity blend** | sampler params `rrpitch` (ct) `rrtone` (dB) `rrattack` `rrstart` (ms) `rrlevel` (dB) `rrborrow`; `layers='blend'` + `blendwidth`, `veltone`; the per-family values: `from agentsound.patches import realism` - `patches.get('sampled/nylon_guitar').but(**realism.FAMILY['nylon'])`, `.but(**realism.BLEND)` (2-5 layer pianos / guitars), `.but(**realism.VELTONE)` (many-layer pianos) | synthetic round robins for packs with one recording per note: every note its own static tuning / brightness / level / transient, quick repeats now and then on the neighbouring key's sample (only one about as bright, level-matched); `blend` mixes the two velocity layers a velocity lies between in the attack (onset-aligned, settling on the nearer one), `veltone` darkens the bottom of each layer. Each draw is keyed by the note's onset and key (a `--section` render draws the same). Off by default (bit-identical); A/B one with `build --set TRACK.instrument.rrpitch=4` / `audition PATCH --notes repeat --ab rrpitch=4` and read `nodes[].realism` (repeatSim, layerStep) |
 | **echo throws** | `art.throws(track, clip, at, bus=echo, throw=-8, min_rest=0.75, min_dur=0.5)`; written: `art.throws(track, spans=[(position, beats), ...], base=-12, throw=-4, start=0, hold=False)` | `send.<bus>` rises from the track's static send to `throw` dB on the held last note of every phrase and falls back before the next phrase: the echo answers in the gaps instead of smearing the line; with `spans` the send jumps to `throw` for each span (a lane of marks: `hold=True` writes each jump as the old value again + the new one) |
 
 ```python
@@ -1212,6 +1253,9 @@ Details:
 * Marks (articulation, glide) live on the notes (a `Note` subclass): `shift`, `transpose`, `velocity`, `gate`,
   `legato`, `humanize`, `swing`, `slice`, `loop` and track grooves keep them; `Clip(...)` / `map` / MIDI effects that
   build new notes drop them. `art.plain(clip)` removes them, `art.articulation_of(n)` / `art.glide_of(n)` read them.
+* Per-note params ride the same way: `art.note_params(clip, {'string': 2}, where=...)` / `track.note(p, at, params=...)`
+  mark notes, `art.params_of(n)` reads them; the render JSON carries them as the note's fifth field for instruments
+  that declare note params (strict; none yet - docs/SAMPLE_REALISM_PLAN.md levers 5 / 6). `format()` refuses them.
 * Articulation names match the instrument's keyswitch labels case-insensitively (exact, then a word / prefix:
   'stac' -> 'Staccato'), or a key number / note name. `art.available(track)` lists them. Unmarked notes play the
   default articulation; notes starting together share one keyswitch (a warning if they ask for different ones).
@@ -1332,10 +1376,17 @@ sc.unison(t1.end, 2, 'C')                             # every section on C in oc
 sc.perform()                                          # every role played (orch.perform), held notes follow the map
 ```
 
+`orch.perform` PLAYS each part by the orchestra's performance rules (`bandlib.ensemble`; each rule with its source
+and range in [ORCHESTRA_RULES.md](ORCHESTRA_RULES.md)). Sections sit a little apart (a seat, the leader's drift,
+their own AR(1) deviation). One dynamics curve runs per phrase, with messa di voce on long notes. Legato overlaps
+by family, bowing and breaths follow budgets, brass entries are tongued and horns bloom, releases are staggered, and
+solo vibrato is delayed and follows the dynamics. `orch.perform(..., style=, rules=)` overrides; `humanize_ms=` a
+number brings back the old triangular jitter, and `short=` beats the old articulation rule.
+
 | call | does |
 |---|---|
-| `orch.Score(song, band, dynamics=None, *, key=None, seed=0, jitter=3, accents=(5, 2), floor=14, phrasing=PHRASING, curve='linear', fold=True, fallback=FALLBACK, follow=True)` | the part buffer. `dynamics`: `{section (name): [(beat, level[, 'step' / 'subito'])]}` or absolute marks (`sc.mark(marks, at=)` adds more); a level is a velocity or a marking (`VEL`: pp 28, p 40, mf 78, f 95, ff 115); between marks a hairpin (`curve`). `sc.level(t)`, `sc.phase(t)` (where t falls in its bar), `sc.vel(t, off=0, accent=True)` (the map + off + the seeded jitter + the downbeat / half-bar accents; consumes the score's random stream in call order) |
-| `sc.add(role, notes, art='sustain', *, off=0, accent=True, dur=1, transpose=0, sf=(), offs=None, phrasing=None, fig=None)` | write a part: velocities from the map (`offs(note)` per note, the role's phrase arc: `humanize.touch` x `phrasing[role]`), `dur` x the lengths (or a function of the note), `sf` beats of sforzandi (+16, marcato), `fig` a figure first. `sc.add(parts_dict, art, off={role: ...}, roles=(...))` writes several roles (a voicing's parts) |
+| `orch.Score(song, band, dynamics=None, *, key=None, seed=0, jitter=3, accents=(5, 2), floor=14, phrasing=PHRASING, curve='linear', fold=True, fallback=FALLBACK, follow=True, style=None, rules=None, balance=True, charge=True)` | the part buffer. `style` ('baroque' terraces, 'classical', 'romantic', 'film'; default the band's) and `rules` (`{table: {key: value}}`) go to every `orch.perform` (docs/ORCHESTRA_RULES.md); `balance` keeps each accompaniment phrase under the melody sounding with it (`ensemble.BALANCE`); `charge` adds the melodic charge on the LINE notes and the harmonic charge from `sc.harmony(h)` (winds / brass / stabs / bed register theirs; `expressive`). `dynamics`: `{section (name): [(beat, level[, 'step' / 'subito'])]}` or absolute marks (`sc.mark(marks, at=)` adds more); a level is a velocity or a marking (`VEL`: pp 28, p 40, mf 78, f 95, ff 115); between marks a hairpin (`curve`). `sc.level(t)`, `sc.phase(t)` (where t falls in its bar), `sc.vel(t, off=0, accent=True)` (the map + off + the seeded jitter + the downbeat / half-bar accents; consumes the score's random stream in call order) |
+| `sc.add(role, notes, art='sustain', *, off=0, accent=True, dur=1, transpose=0, sf=(), offs=None, phrasing=None, fig=None, line=None)` | write a part (`line`: are these notes a melody the accompaniment stays under? None = by the notes: one role, no figure, 4+ notes in a row on 3+ pitches moving at least every 2 beats; voicing dicts are accompaniment): velocities from the map (`offs(note)` per note, the role's phrase arc: `humanize.touch` x `phrasing[role]`), `dur` x the lengths (or a function of the note), `sf` beats of sforzandi (+16, marcato), `fig` a figure first. `sc.add(parts_dict, art, off={role: ...}, roles=(...))` writes several roles (a voicing's parts) |
 | `sc.double(line, {role: shift \| (shift, off[, {options}])}, *, at=None, **common)` | double a line in several sections / octaves with per-section velocity offsets; with `at=` played now (a Clip: `transpose` + `vel_add`, play options like `shapes=`) |
 | `sc.colla_parte(parts, {role: (voice(s), off[, transpose[, {options}]])}, **common)` | the orchestra doubles the voices (violins I on S, the basses on B an octave down ...) |
 | `sc.winds(h, *, off=0, roles=None, second=-3, top_shift=12, tie=True)` | the wind choir: `h` voiced on `WINDS8`, each pair on its section (the second player softer) |
@@ -1498,6 +1549,10 @@ Before writing a helper in a song, use the one that exists (each replaced code f
 | `top_leads()` + a `piano()` / `play_piano()` wrapper + a pedal-point collector; a `bline()` wrapper | `pianist.Player(track, bpm=, doubles=0.75).play(melody, prog, at, lo=, hi=, until=)` + `.pedal()`; `bassist.Player(track, bpm=, style=).play(prog, at, part)` |
 | `next(f for f in t.fx if f.type == ...).params.update(...)`, a `tweak()` helper | `t.fx['compressor'].set(attack=25)` (an index when a type occurs twice: `t.fx[0].set(...)`) |
 | a bisection for "the beat N seconds before X" | `s.beat_at(seconds, before=X)` |
+
+`patterns.weighted_choice(rng, weights, multipliers={previous: 0.3})` chooses a key in table order
+using a shared `random.Random`. Only positive base weights participate; multipliers scale their weights.
+It returns `None` without a draw for an empty eligible table, otherwise consumes one draw (inclusive boundary).
 
 ## Patterns (all return a Clip)
 
@@ -1944,6 +1999,11 @@ value of 1 adds to the target, in the target's unit.
 | `pan` | position | added to `pan`, kept in −1..1 |
 | `fm` | radians | osc2 → osc1 phase-modulation index added to the `fm` param (0..10); needs `osc1.wave='sine'` (osc2 may stay silent: `osc2.level` 0) |
 | `hpf` | octaves | the global high-pass after the voices: only global sources (`lfo(..., mode='global')` without delay/fade, `macro`) |
+| `osc1.position`, `osc2.position` | position | `wavetable` only: added to the table position, kept in 0..1 (the morph) |
+| `osc1.warp`, `osc2.warp` | amount | `wavetable` only: added to `oscN.warp.amount`, kept in 0..1 |
+
+`osc1.pw`, `osc2.pw` and `fm` are `va` only; a route to a target the instrument lacks is an error
+(`vamod.targets_for('wavetable')` lists them).
 
 * **Amounts are parameters**: route *i* is `instrument.mod.<id>.amount` when it has an id, else
   `instrument.mod.<i>.amount` (its position in the list); automate or modulate them like any param (smoothed ~5 ms;
@@ -1963,6 +2023,47 @@ value of 1 adds to the target, in the target's unit.
   `hpf`, `fm` without a sine osc1 and more than 64 routes are errors (Python first, the engine again).
 * Related va params: `noise.stereo` (0..1: independent left/right noise — wide risers and breath),
   `osc2.phase` (osc2's start phase when `osc.retrig` restarts the oscillators), `fm`, `macro1`..`macro8`.
+
+## Wavetable synth (`inst.wavetable`, `wavetable/*` patches)
+
+The engine's `wavetable` instrument is the va's voice engine (voices, glide, drift, unison, drive + ladder / SVF
+filter, amp / filter envelopes, the `mods` matrix, the global hpf) with two **wavetable oscillators** in place of the
+analog ones, plus a sub (`sub.wave` sine / triangle / square / saw) and noise. A table is a stack of single-cycle
+frames; `osc1.position` / `osc2.position` (0..1) scans through them, crossfading neighbouring frames and smoothed per
+sample, so automating or modulating it never clicks.
+
+```python
+w = inst.wavetable('formant', table2='harmonics', osc2__level=0.4, osc2__semi=12, unison=5,
+                   mods=[vamod.lfo('smoothrandom', rate=8, mode='global') >> ('osc1.position', 0.45),   # vowels wander
+                         vamod.env(a=3, d=6, s=0.5) >> ('osc2.position', 0.5)])                         # bloom per chord
+pad = s.track('pad', 'wavetable/warm_pad')
+pad.automate('instrument.osc1.position', ramp(verse.start, chorus.start, 0.36, 0.6))   # triangle -> saw over the verse
+bass = inst.wavetable('basic', osc1__position=0.78, sub__level=0.6, osc1__warp='bend', osc1__warp__amount=0.3)
+tbl = inst.wavetable('./tables/Growl.wav')          # a table file next to the song (Serum / Surge / Vital / WAV frames)
+```
+
+* **Tables** (`osc1.table`, `osc2.table`; the first positional / `table2=` of `inst.wavetable`): built-ins - `basic`
+  (sine -> triangle -> saw -> square at positions 0 / 0.33 / 0.67 / 1), `pwm` (pulse 50 % -> 4 %), `sync` (hard-synced
+  saw, ratio 1 -> 8), `formant` (vowels a e i o u), `harmonics` (a band of partials sweeping up to the 64th), `organ`
+  (8' flute -> full drawbars), `sine` - or a file: **Serum** WAVs (a `clm ` chunk gives the frame size, usually 2048),
+  **Surge** `.wt` files and WAVs with a `srge` chunk, **Vital / Ableton / Bitwig / plain** WAVs of concatenated frames
+  (`osc<N>.framesize`, default auto: 2048 when the length divides, else 4096 / 1024 / 512 / 256 for long files), and
+  **single-cycle** WAVs (AKWF's 600-sample cycles: any file <= 4096 samples that 2048 does not divide is one frame).
+  Relative names are looked up in `$AGENTSOUND_WAVETABLES`, then `assets/wavetables/`; `'./x.wav'` is next to the
+  song. Tables load (and are cached) at render start, never while rendering.
+* **Band-limited**: every frame is FFT-resampled to 2048 samples (up to 1024 harmonics) and stored as one mip level
+  per octave; the oscillator (2x oversampled like the va) reads the level whose partials stay below its Nyquist, with
+  4-point Hermite interpolation - inharmonic (alias / image) energy stays ~70-90 dB down up to note 127.
+* **Warps** (`osc<N>.warp` + `osc<N>.warp.amount`, modulation target `osc<N>.warp`): `sync` (hard sync inside the
+  cycle, ratio 1..8), `bend` (squeezes the cycle towards its start: nasal, brighter), `mirror` (blends in the cycle
+  played forth and back), `fm` (phase modulation by the other oscillator: osc1 by osc2, osc2 by osc1). Warps add
+  partials that are not band-limited (2x oversampling only): use moderate amounts at high notes.
+* **Everything else is the va's**: `unison` / `unison.detune` / `unison.spread` (deterministic phases from the seed),
+  `drift.*`, `filter.*`, `cutoff`, `amp.*`, `fenv.*`, `mode` / `glide`, `macro1..8`, `level`, `pan`
+  (`python -m agentsound params wavetable`). Not here: `osc*.wave`, `osc*.pw`, `osc2.sync`, `fm` (use the warps).
+* **Patches** (built-in tables, -18 LUFS calibrated): `wavetable/warm_pad`, `wavetable/evolving_pad`, `wavetable/pluck`,
+  `wavetable/bass`, `wavetable/lead` (a vocal formant lead with an octave-down body, glide and delayed vibrato - a
+  synth counter-line or solo, never a thin beep). Demo: `songs/_demo_wavetable`.
 
 ## Section plans: pop / synthwave (`agentsound.sections`)
 
@@ -2300,9 +2401,13 @@ tone, o the bass with its octave, c a soft chord, R a rolled held chord, a+b tog
 color / open / quart / ring / half / up / big / sweep / roll / tenths / walk10 (walking 10ths) / nocturne (12 triplet
 8ths) / waltz / waltz2 / barcarolle / waltz_held / waltz_open / waltz_arp / waltz_step / waltz_big (3/4) / still /
 lofi_hold / lofi_push / lofi_two / lofi_skip / lofi_rest (a 7th chord voiced root - 10th - 5th - 7th: held, pushed onto
-the & of 2, on 1 and 3, onto 2 with a restrike on 4, a shell under a breath); where the right hand breathes (no onset in the bar's second half
+the & of 2, on 1 and 3, onto 2 with a restrike on 4, a shell under a breath) / the bloom's wide hands span16 / wave16
+(16ths over two and a half octaves) / trip12 (triplet 8ths) / waltz_span / waltz_wave and the hand-to-hand climbs that
+hold for the right hand to carry on (ring16 / up16 / waltz_hand / waltz_hand16 / waltz_up); where the right hand breathes (no onset in the bar's second half
 and a beat of silence) the `rest` figure ('half': three notes, then the chord rings - the hand holds still with the
-melody). `pianist.figure(chord, fig, at, span, vel=41, bar=4, cap='G4')` one figure, `pianist.broken(prog, bpm,
+melody). `pianist.figure(chord, fig, at, span, vel=41, bar=4, cap='G4', mirror=False)` one figure (`mirror=True`: a
+ladder step above `cap` turns back down the ladder instead of folding an octave down - a wide figure under a raised cap
+turns at the melody), `pianist.broken(prog, bpm,
 figure_=, rest='half', rh=, vel=41)` a whole hand.
 `pedal(prog, at, dry=[(start, end)], lift=0.1, end=None, early=0)`: the harmony pedal lifted for runs and repeated
 notes (the arrangement's `.dry`; ornaments keep it down: legato); up `early` beats before the end.
@@ -2371,13 +2476,14 @@ against a concert recording). Times are beats; figures are timed in REAL time th
 | `accompany(entries, bpm, pattern='bcc', vel=40, bass=1.2, second=0.9, top=1.05, roll_ms=12)` | the left hand from `(start, length, bass, chord[, chord2])` entries: bass + chord + chord in 12/8 (`bc`, `bccccc`, `B..` = a held rolled chord), the bass carrying, the chords soft and slightly rolled, a slow breath per phrase |
 | `lean_on_long(clip, bpm, gain=10)`, `cantabile(clip, bpm, match=0.35, lift=5)`, `decay_db(pitch, s)` | the singing line: long notes get more tone; the note after a long one plays into the decayed level (the legato illusion); ornaments keep their level under their principal |
 | `dynamics(clip, [(beat, 'p'), (beat, 'f'), (beat, 'pp', 'step')])`, `LEVELS` | marks and hairpins as velocity factors (pp 0.55 .. ff 1.3, smooth or subito) |
-| `melody_rubato(rh, anchors, bpm, lean_ms=35, late_ms=6, sync_ms=32, agogic_ms=50, peak_ms=40)` | Chopin's rubato: only the melody moves - leaning ahead / behind inside each anchor span, the downbeat melody spread around the bass (+-sync_ms), held back after leaps and on local summits; order and legato kept; the left hand keeps the tempo map |
-| `pedal_changes(changes, end=, lift_ms=90, bpm=, dry=, flutter=, flutter_ms=280, flutter_to=0)` | legato pedal per harmony (up with the new bass, down lift_ms later), cleared every flutter_ms in chromatic runs / cadenzas (`flutter_to=0.6`: to a half pedal, the bass rings on) |
+| `melody_rubato(rh, anchors, bpm, lean_ms=35, late_ms=6, sync_ms=32, agogic_ms=50, peak_ms=40, lead=None, anticipate=0, anticipate_ms=(25, 55))` | Chopin's rubato: only the melody moves - leaning ahead / behind inside each anchor span, the downbeat melody spread around the bass (+-sync_ms), held back after leaps and on local summits; `lead(beat, vel)` -> ms earlier (the melody lead: Score.perform's velocity artifact against the left hand), `anticipate`: the share of long anchor notes that follow the bass by anticipate_ms (the romantic bass anticipation); order and legato kept; the left hand keeps the tempo map |
+| `pedal_changes(changes, end=, lift_ms=90, bpm=, dry=, flutter=, flutter_ms=280, flutter_to=0, delay_ms=0, half=(), half_to=0.6, vary=0, seed=0)` | legato pedal per harmony (up `delay_ms` after the new bass - 0 = with it -, down lift_ms later), `half` = beats of half changes (the treble cleared, the bass rings on), `vary`: the foot's timing scaled by the tempo and a seeded spread per change; cleared every flutter_ms in chromatic runs / cadenzas (`flutter_to=0.6`: to a half pedal, the bass rings on) |
+| `RULES` = `ASYNC`, `PEDAL`, `CHARGE`, `ARTICULATION`, `PHRASE_TEMPO`, `ACCOMPANIMENT`; `travel_ms(vel)`, `spread(clip, bpm, hand='rh' / 'lh', ends=())`, `melodic_charge(clip, chord_at)`, `harmonic_charge(clip, [(beat, chord)], key, tension=0)`, `articulate(clip, bpm)` | the expression rules Score.perform plays by, one table per rule family (sources and ranges: docs/PIANIST_RULES.md): the melody lead and every chord's spread as the hammers' velocity artifact (the louder note sounds first: `travel_ms`), the occasional bass anticipation, the syncopated pedal's timing + half changes (at a non-chord tone's resolution, over a held bass), melodic / harmonic charge (Director Musices: lean on the 9th, the 7th, the remote chord), repetition / leap articulation and a finger legato that grows with the IOI; the left hand's chords drawn per chord (together or bottom-up, an arpeggiated cadence chord now and then: `spread(hand='lh')`), the broken-chord left hand's dynamics (ACCOMPANIMENT: a drawn swell per phrase, following the melody, swelling into tension chords, the bass / figure balance shifting, a budget under the melody) and every phrase's own tempo arch (PHRASE_TEMPO) |
 | `figure_stats(clip, bpm)` | notes, notes/s, fastest / slowest IOI, ends vs middle, CV - to compare a figure with a recording |
 | `score(rh={bar: notation}, lh={first bar: 'slots ...'}, dyn=[(bar, pos, 'p')], meter='12/8', pickup='1/8', unit='1/8', key=, phrases=[(1, 2), ...])` -> `Score` | a written piano score: the right hand in notation with its ornaments as written (`^tr`, `^tr(lower=-1)`, `^turn(upper=1, lower=-1)`, `{..}:N^fig(even)`, `[..]^roll(60)`, `!` / `?`; read with `notes(expand=False)`), the left hand as `accompany` entries per slot of the meter (`'BASS:CHORD[/CHORD2][@off+len][\|pattern]'`, chord notes joined by `.`, `;` two entries in one slot, `-` no bass; bars separated by ` \| `), dynamics marks, phrases; `.bar(k)` (0 = the pickup), `.events` (`Event`: kind, at, dur, pitches, factor, args, kw), `.in_bar(k)`, `.entries`, `.end` |
-| `Score.perform(s, rh_track, lh_track, pedal=True, touch=, breath=0.3, accompany=, lh_dyn=0.6, rubato=, cap=112, roll_bpm=, anchors='half', pedal_opts=, plain=False)` | the nocturne's measured pipeline: the left hand first (accompany per entry, the dynamics x factor ** lh_dyn), the right hand's touch over its principal notes (a breath at every phrase end), every ornament in real time (the trill lands on the next note), lean_on_long, cantabile, the dynamics, melody_rubato at every half bar, a velocity cap; the pedal with the harmony, cleared in chromatic figures. `plain=True` = the plain tools (the etude's 'before' baseline for an A/B). `figures=[(at, beats, chord symbol, figure)]`: a BROKEN-CHORD left hand instead of the accompany entries (`pianist.FIGURES`, at `figure_vel`=41, a swell per phrase, the dynamics at the gentler slope, the pedal changing with every entry's chord - letters-to-the-morning's hand, the endless new-age / classical one); `inner=0.78`: the right hand's own chords voiced to the top (the notes under the melody softer). Returns {'rh', 'lh', 'pedal', 'figures'} |
+| `Score.perform(s, rh_track, lh_track, pedal=True, touch=, breath=0.3, accompany=, lh_dyn=0.6, rubato=, cap=112, roll_bpm=, anchors='half', pedal_opts=, plain=False)` | the nocturne's measured pipeline: the left hand first (accompany per entry, the dynamics x factor ** lh_dyn), the right hand's touch over its principal notes (a breath at every phrase end), every ornament in real time (the trill lands on the next note), lean_on_long, cantabile, the dynamics, melody_rubato at every half bar, a velocity cap; the pedal with the harmony, cleared in chromatic figures; the expression RULES (`rules={'async': {...}, 'pedal': {...}}` overrides single values; the right hand sits at the left hand's groove lay-back - one player). `plain=True` = the plain tools (the etude's 'before' baseline for an A/B). `figures=[(at, beats, chord symbol, figure[, {figure() options}])]`: a BROKEN-CHORD left hand instead of the accompany entries (`pianist.FIGURES`, at `figure_vel`=41, a swell per phrase, the dynamics at the gentler slope, the pedal changing with every entry's chord - letters-to-the-morning's hand, the endless new-age / classical one); `inner=0.78`: the right hand's own chords voiced to the top (the notes under the melody softer). Returns {'rh', 'lh', 'pedal', 'figures'} |
 | `score(Clip, ...)`, `harmonize(clip, chord_at, voices=1\|2, min_dur=1.0, share=0.6, floor='F4', seed=)` | a Score from COMPOSED notes (notes struck together = a chord; endless tunes); a melody's long notes given a third / sixth below (voices=1) or two chord tones inside the octave below (voices=2: the climax's chords) from `chord_at(beat)` |
-| `Score.rubato(s, depth=, phrase=, shapes=('lean', 'arch'), seed=None / int / 'bar', bars=(first, last), overlap=None)`, `Score.touch(melody, {(a, b): (lo, hi, ...)}, gap=16)`, `Score.phrase_of(bar)` | the phrase loops of a slow piece: `song.rubato` per phrase (two phrases sharing a bar meet `overlap` beats into it), per-phrase `touch` dynamics (a shared bar belongs to the first phrase; returns [(phrase, its start, the shaped notes)]) - songs/gymnopedie-etude |
+| `Score.rubato(s, depth=, phrase='drawn', shapes=('lean', 'arch'), seed=None / int / 'bar', bars=(first, last), overlap=None, table=None)`, `Score.lilt(s, span, beats=, jitter=, seed=)`, `Score.touch(melody, {(a, b): (lo, hi, ...)}, gap=16)`, `Score.phrase_of(bar)` | the phrase loops of a slow piece: `song.rubato` per phrase (two phrases sharing a bar meet `overlap` beats into it; `phrase='drawn'`, the default: every phrase draws its depth, peak and final lengthening from PHRASE_TEMPO by its level - a phrase, a period's cadence, the end; a shape name / `shapes` for a hand-tuned etude), `Score.lilt` = `song.lilt` with the beat delay drawn per phrase (not one fixed delay in every bar), per-phrase `touch` dynamics (a shared bar belongs to the first phrase; returns [(phrase, its start, the shaped notes)]) - songs/gymnopedie-etude |
 
 ```python
 SCORE = rom.score(RH, LH, DYN, meter='12/8', pickup='1/8', key='Eb major', phrases=[(1, 2), (3, 4)])
@@ -2411,7 +2517,7 @@ songs/perry-street-rain, songs/minetta-lane-waltz (3/4), songs/lanterns-on-carmi
 pitch-bend points of a bass slide into a note (the lane jumps a whole step under just before it and slides up).
 
 **Band presets** (finished productions: IR rooms, placement, master, balance measured on demo songs):
-`bands.make('jazz_trio' | 'jazz_quartet' | 'jazz_ballad' | 'bossa' | 'soul_ballad' | 'solo_piano' | 'lofi_piano', s)` (lofi_piano: the endless lofi-piano band - roles piano / comp / drums / vinyl, `jazz.LOFI`, `jazz.lofi_crackle`, see "Endless generators"; solo_piano: one grand for both hands - roles piano / comp - voiced smooth: the Salamander with its hammers fully softened, a split-mode de-esser at 2.5 kHz as a dynamic presence cut on the loudest notes (`jazz.SOLO_PIANO['tame']`), an air shelf, the salon room + a plate, a gentle master without presence lift or wow, 'piano' profile; the endless jazz-piano sound - demo songs/_bands/solo_piano; soul_ballad: a stereo-vibrato Rhodes centred with its own chain, the upright in a two-feel, stirs + a soft cross-stick, faders for slow ballads; the bossa without its guitar puts the piano at -0.25; `lead='vocal'` on jazz_ballad / jazz_trio / bossa / soul_ballad seats a sung lead: the band's faders (ballad / trio: comp +4, piano -2.5; bossa / soul_ballad: piano and bass -2.5, drums and rim -1), the limiter drive (3 / 3 / 3 / 2 dB) and every sung track 3 dB lower (a last utility `lead_seat`, so the hero's bed ducks stay keyed as before) - `jazz.VOCAL_LEAD`, `band.info['lead']`; measured on when-the-year-turns-gold (ballad) and nowhere-to-be (bossa), trio / soul_ballad follow them; `band.info['register']` = the comping register per role (`jazz.REGISTER`: soul_ballad's Rhodes Bb3-C5, out of the upright's 60-250 Hz) for `jazz.comp(register=)`) - `agentsound/bandlib/jazz.py`, recipe
+`bands.make('jazz_trio' | 'jazz_quartet' | 'jazz_ballad' | 'bossa' | 'soul_ballad' | 'solo_piano' | 'lofi_piano', s)` (jazz_trio `voicing='smooth'`: solo_piano's softened grand and de-esser over the trio, the room sends up, the piano on a pre-delayed plate, no master presence lift - `jazz.SMOOTH_TRIO`, the endless jazz-trio sound; lofi_piano: the endless lofi-piano band - roles piano / comp / drums / vinyl, `jazz.LOFI`, `jazz.lofi_crackle`, see "Endless generators"; solo_piano: one grand for both hands - roles piano / comp - voiced smooth: the Salamander with its hammers fully softened, a split-mode de-esser at 2.5 kHz as a dynamic presence cut on the loudest notes (`jazz.SOLO_PIANO['tame']`), an air shelf, the salon room + a plate, a gentle master without presence lift or wow, 'piano' profile; the endless jazz-piano sound - demo songs/_bands/solo_piano; soul_ballad: a stereo-vibrato Rhodes centred with its own chain, the upright in a two-feel, stirs + a soft cross-stick, faders for slow ballads; the bossa without its guitar puts the piano at -0.25; `lead='vocal'` on jazz_ballad / jazz_trio / bossa / soul_ballad seats a sung lead: the band's faders (ballad / trio: comp +4, piano -2.5; bossa / soul_ballad: piano and bass -2.5, drums and rim -1), the limiter drive (3 / 3 / 3 / 2 dB) and every sung track 3 dB lower (a last utility `lead_seat`, so the hero's bed ducks stay keyed as before) - `jazz.VOCAL_LEAD`, `band.info['lead']`; measured on when-the-year-turns-gold (ballad) and nowhere-to-be (bossa), trio / soul_ballad follow them; `band.info['register']` = the comping register per role (`jazz.REGISTER`: soul_ballad's Rhodes Bb3-C5, out of the upright's 60-250 Hz) for `jazz.comp(register=)`) - `agentsound/bandlib/jazz.py`, recipe
 `recipes/jazz-trio.md` "Band presets", demos `songs/_bands/<preset>`; its helpers `agentsound.bandlib.jazz.brushes(band,
 bars, ...)` (jazz.brushes keyed and levelled for the kit a band got: a Swirly stir is ~19 dB under a tap at the same
 velocity), `pedal(tracks, prog, at)` (sustain pedal with the harmony) and `bossa_groove(bars, band)`.
@@ -2515,7 +2621,10 @@ the bass plays with), `.problems` (check()), `.swing` (the 16th swing played, No
   rest / at the end, a walk-up into a change). One gesture at a time: a flashy move never shares a bar with a fill
   (the bar before it, the fill, the bar it lands in - song-wide with a Memory), and an `ending=` owns the last bar
   (no fill, no move there). `memory=bassist.Memory()` + `at=` counts them song-wide
-  (`mem.played(at, 'slide')` books a hand-placed move). Approach notes, passing tones and a funk groove's dead notes
+  (`mem.played(at, 'slide')` books a hand-placed move). `fill_every=0` / `flash_every=0` remove spacing restrictions;
+  `fills={}` / `flash={}` disable those moves. The shared `budget.Budget` defaults to zero disabling a class;
+  bassist uses `zero='unlimited'` (other Budget rules still apply; missing classes stay disabled).
+  Approach notes, passing tones and a funk groove's dead notes
   are the language and not budgeted (`approach=` sets their chance); an approach always leads into the note that
   follows it (a step / a 4th-5th away; into a fill's first note where a fill replaced the change).
 * **Touch** (`touch(clip, lo, hi, beats_per_bar=4, phrase=4, melodic=False, kick=(), changes=(), ghost=(22, 40))`, the
@@ -2593,7 +2702,7 @@ lowest; a slash chord puts its bass there (C/E 032010).
 take=None, technique=None, pattern=None, kind=None, vel=None, fill=None, fills=None, ornaments=None,
 section_end=True, next_chord=None, anticipate=None, open_change=None, swing=None, spice_every=None,
 fill_every=None, tuning='standard', capo=0, fretboard=None, sound=None, articulations=None, memory=None, at=None,
-length=None, into=None, strings=None)`** -> `Arrangement` (`.clip`, `.play(track, at)`, `.take(n)` - the same part played again with new
+length=None, into=None, strings=None, hand=None, noises=None, melody=None, slur=0.12)`** -> `Arrangement` (`.clip`, `.play(track, at)`, `.take(n)` - the same part played again with new
 timing / velocity noise for a double-tracked guitar -, `.moves` [(start, end, kind, name)], `.shapes` [(beat,
 Shape)], `.budget`, `.energy`, `.technique`, `.summary()`, `.count(kind, name)`). The SECTION decides (`section=` a
 Section - name, length, start - or a name; `SECTION_ENERGY`: intro .35, verse .45, pre .62, chorus .85, post .75,
@@ -2612,6 +2721,8 @@ bridge .55, solo .8, break .4, outro .4; `energy=` overrides): the style's techn
 | country | boom_chick (bass note + strum) | strum | strum | let_ring | bass_run | hammer_chord, sus4 |
 | indie | arp16 (jangle) | eighths | eighths | ring | build, choke | hammer_chord |
 | jazz | four (shells, four to the bar) | = | = | = | - | - |
+| songwriter (hand 'acoustic') | let_ring / chuck (D . X u . u X u: a percussive chuck on 2 and 4) | strum | strum | ring | bass_run, build, choke | hammer_chord, sus4 |
+| fingerstyle (hand 'fingerstyle') | arpeggio / travis | travis | travis | let_ring | bass_run | hammer_chord, sus4 |
 
 `TECHNIQUES` (strum, strum16, eighths, downs, ballad_strum, arpeggio, arp16, travis, let_ring, muted8, chug, drive,
 power, scratch, skank, four, boom_chick, ring): patterns with weights, the variant for the last bar of every 4-bar
@@ -2643,6 +2754,42 @@ leans to build / choke / slide, into a quieter one it is rarer and never a build
 let ring) ends in a bass run or just rings on - a choke or a build only into a clearly bigger section (energy + more
 than 0.1). `strings='top5'` (or 'top4'): the downstrokes leave the low strings to the bass (an acoustic in a full
 band) - chord-change ornaments, palm mutes and the fill's strums keep to them too.
+
+**Chord melody** (`melody=` a Clip / Motif / notes, beats from the part's start, velocities as written - shape
+them with `humanize.touch`, the tune 8-15 velocity over the pattern's `vel=`): the classical / fingerstyle solo
+guitar - the picked pattern (arpeggio, Travis, arp16 ...) keeps going and the tune is fretted ON TOP of it: each
+melody note on the highest string the fretting hand reaches from the current grip (the grip's own note when it has
+it, never the bass string), the pattern's notes on that string or above it, or at / above the melody's pitch, left
+out while it sounds, the strings above it damped; a close step (1-2 semitones) on the same string right after a
+short note is slurred with P `slur` (hammer-on / pull-off: softer, the guitar's 'hammer-on' articulation when it has
+one; logged as 'move'). Keep the tune under the sampled range's top (`sampled/concert_guitar`: G5 - above it the
+keys are flageolets). `songs/patio-de-naranjos`:
+
+```python
+mel = touch(notes('r/4 B4/8 E5/8 G5/4 F#5/8 E5/8 | F#5/4 E5/8 D#5/8 E5/2'), 64, 102)
+gtr.arrange(s.prog('Em Em'), bpm=84, key='E minor', style='fingerstyle', technique='arpeggio', pattern='arp_ballad',
+            vel=(32, 56), section=a1, sound=guitar, memory=mem, melody=mel).play(guitar, a1)
+```
+
+**The hand feel** (`hand=` on `arrange` / `strum_pattern` / `arpeggio` / `travis`, else the style's `'hand'`;
+`HANDS`: 'plain' - the older styles, unchanged -, 'acoustic', 'fingerstyle', or a `HandFeel(...)` with your own
+numbers; `hand_feel(name)`). Every rule a drawn distribution or a budget, never a fixed habit: the strum spread is
+drawn per stroke (lognormal, `spread_sigma`) and scales with tempo and force (slower and harder = wider); up-strokes
+are lighter (`up_ratio`), a few ms late (`up_late_ms`) and take a drawn 2-5 of the TOP strings (`up_count`); a
+down sometimes misses the low string (`miss_low`) or only brushes the top three (`brush`); per-string step and
+velocity jitter; timing and loudness drift slowly over bars (Ornstein-Uhlenbeck walks: `drift_ms` / `drift_bars`,
+`dyn_drift` / `dyn_bars`) plus a small per-stroke `timing_ms`; the fretting hand lifts a drawn time before a chord
+change (`lift_ms`, lognormal, capped at 80 ms; sometimes a full damp: `damp`); now and then an up-stroke is skipped
+(`up_skip`) or an up-beat rest grazed (`ghost`). Fingerstyle: the thumb vs the fingers (`thumb`, `fingers` velocity
+weights per string), the fingers a few ms after the thumb in a pinch (`pinch_ms`), a skipped or swapped inner voice
+(`pick_skip`, `pick_swap` - never the melody string, never the same string twice), an added pinch on a beat
+(`pinch_add`). NOISES: with a sound whose patch has a noise map (`sampled_guitars.NOISES`, e.g.
+`sampled/acoustic_guitar`; `noises=` a dict overrides, False switches off) a chuck plays the RECORDED muted strum (down
+/ up) after damping the strings, sometimes with a palm thud (`thump`), and a Budget places fret-release noises when
+ringing strings are lifted (`fret_noise`, `fret_extra`, wound strings likelier, `fret_every` beats apart) and a
+squeak on a position shift of `shift_frets`+ (`shift`, the finger leaving and landing, `shift_every`) - logged as
+'noise' moves. `songs/_demo_acoustic`: the songwriter strum with chucks (`song.py`), a fingerpicked ballad
+(`fingerpick.py`) and the same strum on `sampled/steel_guitar` (`strum_fss.py`) for A/B.
 
 **Lead hand: `lead(melody, prog=None, *, bpm, key=None, style='rock', section=None, energy=None, density=0.5, seed=0,
 touch=True, sound=None, mono=None, articulations=None, moves=None, flash_every=None, spice_every=None,
@@ -2831,7 +2978,20 @@ trombone). All depths x (0.8 + 0.3 x section energy) x `depth` (`SECTION_ENERGY`
 / riff 1.0, solo 0.9, climax 1.15, outro 0.85), varied +-15-25 % (seeded). `FAMILIES`: sax, trumpet, trombone, flute,
 clarinet, strings (vibrato depth / rate / delay, push depth, the pitch lift, tone per dB of air, scoop / fall / doit
 chances, shake / growl, vibrato-air coupling). `STYLES`: hero, pop, ballad, jazz, classical (chances per move and the
-budgets). Any key of either as an override (`push=0.8`, `peak_vib_ct=30`, `mic_every=8`).
+budgets), hero70s (the 70s record sax that goes with `hero/sax`: pop phrasing, `climax=True` by default - a growl may
+land on any held peak, at most one per 8 bars - and `shake=False`; a style may carry `climax` and FAMILIES keys). Any key of either as an override (`push=0.8`, `peak_vib_ct=30`, `mic_every=8`).
+
+**Body sway** (`sway=` - a STYLES key: 1 in hero / pop / ballad / jazz (approved by ear 2026-10-15), 0 in classical; `sway=1` subtle, 2 stronger): a
+real player never stands still in front of the mic. `gesture.sway(start, dur, bpm, db=1.2, prox=1.5, shelf=2,
+room=1.5, pan=0.05, hz=0.22, couple=0.6, contour=, seed=, post=True)` is ONE continuous gesture over the whole clip
+(not budgeted, additive with the discrete mic moves): two smooth seeded noises (three slow sines around `hz`) move the
+DISTANCE (closer = +db on the level - after the compressor with post=True, which would otherwise flatten it to a
+third -, +prox dB of proximity at 300 Hz, drier: -room dB on the reverb sends) and the AXIS (+-shelf dB above 3.2 kHz),
+a third one a small pan drift around the track's pan (the `pan` lane; skipped when the pan is automated elsewhere);
+`gesture.sway_contour(phrases, bpm, peaks=)` couples it to the line (`couple` share): the bell lifts toward the held
+high notes / phrase peak / hook peaks, sinks at each phrase end, drifts back to neutral in the rests, never faster
+than ~0.6 Hz. `FAMILIES` `sway_hz` (sax 0.22, strings 0.15) and `sway_shelf` (the bell's directivity: trumpet 3,
+sax 2.5, flute 1). Smooth (points every 20 ms, < 0.1 dB apart), deterministic by seed.
 
 **Budgets** (song-wide with `memory=`; best-placed first, the rest in `.budget['dropped']` with their substitute):
 `FAST` (shake, growl) one per `fast_every` bars (hero 24, pop / jazz 32, ballad / classical never), structural moments
@@ -3251,7 +3411,55 @@ the head's top by, how loud, climbed into, nothing later as high), `head_centre`
 out's substitutes met by a colour tone), `cell_loop` (one bar repeated literally over changing chords), `lh_bare` /
 `lh_alt` / `lh_jump` (bars of 4+ single left-hand notes, a struck / empty alternation, a jump of 4+ attacks per bar at a
 boundary), `frame_hold` / `frame_hook` (one top pitch over the frame's chords, hook statements there), `scoops`
-(quick 4-attack groups in the head out's last bars).
+(quick 4-attack groups in the head out's last bars). Round 7's (`composer._tells_r7`, ROUNDS.md "After round 7"):
+`lick_near` / `lick_max` (5-note solo licks, as struck, recurring within 4 bars per 32 solo bars; one cell's most
+uses), `run16` / `solo16` (the longest run of solo bars in 16th motion, their share), `head_one` / `head_alt` /
+`bridge_one` (head bars of one attack or none, the longest one-note / busy alternation, the bridge's one-note bars),
+`head_quote` / `open_quote` (6-attack head windows played verbatim in the solo, the hook in the solo's first two
+bars), `vel_pitch` / `climb_step` / `lh_over` (solo steps whose velocity follows the pitch, the biggest velocity step
+of the 4 bars into the top, body bars where the left hand outplays the melody), and with a tune `out_from` /
+`out_reharm` / `tag_intro` (where the head out starts in the form, whether it plays the solo's reharm, the tag on the
+intro's vamp). The players behind them: `soloist.fresh` (a lick ledger over `budget.Budget`: a line drawn again when
+its 5-note cells were played in the last 4 bars - `soloist.LICKS`), `soloist.RUN_TOUCH` (a run's dynamics swell to a
+drawn focus, not the pitch), `solo(..., opening='motif' | 'fragment' | 'line', quotes=N)` (how the solo opens, how many
+literal hook quotes it may play), `pianist.vocabulary(..., sixteenths={'every': bars, 'bars': bars})` (the 16th-line
+budget per feel), and in the endless genre data `genres.OUT_PARTS` / `TAG_FRAMES` / `ENDINGS`, `plan['solo']`
+'opening' / 'quotes' / 'reharm_in', `melody` 'half_cell' / 'pads' / 'bridge_return' / the 'tail' ending,
+`perform.CLIMAX` 'window' (drawn per tune) / 'ladder' and `perform.LH_UNDER`.
+
+**The quality score** (stage 1 of the learned-generator roadmap; TODO "Endless score"): `composer.score(song,
+tune=None, genre=None, metrics=None, table=None, style=None)` -> `{'score': 0-100, 'style', 'mean', 'hard',
+'parts': {metric: (value, sub, weight)}, 'worst': [{'metric', 'value', 'lo', 'hi', 'sub', 'lost'}] (the 5 that cost
+the most points, broken hard rules first), 'missing'}` - from the NOTES alone (no audio, ~1 s per tune).
+`composer.score_metrics(song, tune, style)` measures everything flat: jazz `tells()` (rounds 1-6) + `breath()` +
+`phrase_rests()`; the through-composed styles `piano_tells()` + `breath()`; both the body's coupling
+(`humanize.body_stats` 'heard') and, with a tune, `melody_issues` / `_style_issues` per part (mel_issues /
+mel_style) and `shape()`'s arc (arc_pitch_r / arc_dens_r, hook_head / hook_tag). The right / left hand are the
+'piano' / 'comp' tracks, else 'rh' / 'lh' or 'melody' / 'accomp' (`composer.HANDS`: the etudes). Measurements
+leave the input song unchanged. For explicit names, pass `composer.NoteView(song, melody='lead',
+accompaniment=('left',))` to `tells`, `piano_tells`, `breath` or `phrase_rests`; it caches note tuples, onset
+groups and energies. Jazz energy windows start at the first section; through-composed windows start at beat zero.
+The scoring rule is DATA:
+`genres.SCORES[style]` = {metric: (lo, hi, weight, hard[, unit])} - inside lo..hi a metric scores 1, outside
+1 / (1 + d^2) with d the distance in units (default the range's width); the score is the weighted mean x 100; a
+HARD metric outside its range scales it into 0 .. `SCORE_HARD_CAP` (60) x its sub-score (jazz: octave wraps, a
+verbatim solo bar over another chord, a cell loop, a silent cadence bar, bars no hand strikes, clashes over 5,
+melody issues over 4, an intro / tag copied, an isolated reharm; the piano styles: no melody issues).
+Ranges: jazz = the pro2 references (ROUNDS.md 'After round 6', re-measured) widened to the pro set where no judge
+named it, weights 2 for the round-6/7 tells, 1 older rounds, 0.5 details; new-age = letters-to-the-morning + the
+one-climax rule (recipes/classical.md); classical / lofi PROVISIONAL (no composed reference of the kind - the
+Chopin / Satie etudes are other pieces; ranges from the demos + the recipe). `composer.score_style(song, tune,
+genre)` picks the table (the genre's style; a song with a 'solo' section: jazz, else new-age). What it cannot see:
+the audio, and taste - it rewards closeness to OUR references; the user's ears and the blind judges stay the final
+check. `piano_tells`' climax is now the body's (letters-to-the-morning's G#6 bell in the intro is not its climax).
+Best-of-N (`run.candidates(genre, seed, n, args, log, plan, prev)`): n candidates for one set slot (seeds seed ..
+seed+n-1, the slot's plan - a single tune: the first candidate's mood / feel / key / tempo pinned for the others),
+composed + performed + arc / breath checked + scored WITHOUT rendering, best first; `endless --candidates N` (default
+the genre's `plan['candidates']`, else 8; 1 = one seed at a time as before) renders the best, the next best when the
+audio gate fails; tune.json gets 'score' (score, parts, worst, the candidates' scores / mean / rank) and 'compose'
+(the exact compose arguments). `python -m agentsound score songs/<slug> | OUT/NNN-<title> [--style S] [--all]
+[--json]` prints the score and the worst offenders (`run.load_scored`: a song.py's build() + TUNE, or an endless
+tune composed again from tune.json - without the set's memory of the tune before).
 
 **Performance** (`endless.perform.build`): intro = the frame's vamp (piano alone, rubato, ballad style, soft; the
 riff in time without the left hand), head = `jazz.chorus` (pianist.arrange per part, every part's touch lift, left-hand
@@ -3362,6 +3570,119 @@ song = endless.song(tune)                        # intro A1 A2 B1 inter [A3] bui
 endless.composer.piano_tells(song, tune)         # hook 5, phrase_rests 1.0, lh distinct 7, climax_x 0.77 ...
 plan = endless.composer.mix_plan(['new-age-piano', 'classical-piano', 'jazz-piano'], 6, seed=1)
 ```
+
+### Endless organ (`endless.organ`)
+
+`python -m agentsound endless organ [--mood chorale|trio|toccata|meditation|festive]`. The genre is data
+(`genres.ORGAN`): the composer writes the tune (CELLS `hymn` / `march` / `song` / `aria`, `ORGAN_HARMONY`), then
+`perform.build` hands a `plan['perform'] = 'organ'` tune to `organ.build_organ`: `plan['arrangements'][feel]` lists the
+sections (keys `organ.SECTION_KEYS`: part / frame ('intro', 'tag', 'pedal_point' - a dominant pedal point of `bars`
+before a return, `organ.PEDAL_POINT`), texture, reg {registration: weight}, verse, chance, rit, fermata, flow, pedal,
+solo, swell, figure (1-3), planing, register (a toccata's band, climbing), descant (a last verse's descant), pedal_line
+('theme' / 'bass'), lh ('offbeat' / 'beat'), lift (the reprise an octave up)), each set in a texture (`organ.TEXTURES`: chorale, cantus, trio, toccata,
+meditation, trumpet - their budgets) on a registration (`organ.REGISTRATIONS`: slots manual / solo / acc / pedal ->
+church_organ roles) drawn once per verse (a new verse avoids the last one's stops). Swell lanes `organ.SWELLS`;
+`RING_GAP` seconds of silence before a verse on new stops (only where one manual's stops change for a toccata /
+trumpet tune: `TEXTURES[...]['ring']`), `FERMATA_BEATS` at a chorale's phrase ends, `BLOOM` the church blooming into the
+silences (orch.ring). A tune part heard again is re-harmonized (`organ.VARY`: organ_vocab.harmonize avoid / vary);
+the coda ends V7 - I on the tonic (`FINAL_BARS`, the toccata on a held full chord); `PEDAL_RANGE` keeps the pedal under
+the hands; `TRUMPET_ACC` the trumpet tune's three-note chord rhythms. The song records `song.organ_plan` /
+`organ_piece` / `organ_voices`.
+The score: `composer.score(song, tune)` with style 'organ' (any song the organist played: `score_style`) weighs
+`organ.organ_metrics(song)` - par58, inner_leap, top_leap, cad_kinds, cad_auth, pedal_idle, reg_sets, reg_run_s,
+reg_min, ring_min, legato, gap_ms, time_sd_ms, chord_ms, orn_min, rest_share, onsets_s, textures, dur_min, rep_run,
+bar_copy, end_tonic (hard), top_at, pedal_high - by
+`genres.SCORES['organ']` (measured on the songs/pro-organ-* references; `python -m agentsound score songs/<slug>
+--style organ`).
+
+```python
+from agentsound import endless
+from agentsound.endless import organ
+g = endless.genre('organ')
+tune = endless.compose(g, seed=5, mood='toccata')
+song = endless.song(tune)                        # intro A1 A2 B A3 A1b Bb A3b coda (organ.build_organ)
+[(r['section'], r['texture'], r['reg']) for r in song.organ_plan]
+organ.organ_metrics(song, tune)                  # {'par58': 0.0, 'cad_kinds': 3, 'reg_run_s': 29, ...}
+```
+
+### Endless orchestra (`endless.orchestra`, `bandlib.orchestration`)
+
+`python -m agentsound endless orchestra-film [--mood hopeful|longing|epic|pastoral|night]` (docs/ORCHESTRA_ENDLESS.md
+has the design and the roadmap for the harder genres). The genre (`genres.ORCHESTRA_FILM`) is the new-age composer's
+data with `plan['perform'] = 'orchestra'`, per plan section an `orch` {texture: weight} and `plan['sizes']`
+(chamber / full: the roles), a `size` weight per mood. `orchestra.build_orchestra(tune)` plays the new-age pianist's
+section plan (`perform._piano_plan`) as an `orch.OrchScore` - per section a `Block` (chart, key, dynamics marks, peak)
+of `Line`s with a FUNCTION (`orch.FUNCTIONS`: melody, counter, voice, doubling, harmony, inner, bass, ostinato,
+colour, pedal) - draws each block's texture (`orch.TEXTURES`, `orch.plan_blocks` under `orch.RULES`: one tutti at
+the peak, a light coda, colour / texture changes, the tutti a step louder), writes the lines it needs
+(`orchestra.lines_from_block`: voicing.voice harmony, organ_vocab bass / counterline, figures) and hands them to
+`orch.orchestrate(score, orch.role_table('film_orchestra'), pick)`: per role parts fitted by whole octaves into the
+range / sweet spot, doublings from the placed line, voices on roles that hold them, brass under a line softer
+(`RULES['power_db']`, `orch.ROLE_TRAITS` power). `orchestra.band(song, roles)` is the sound (master chain, gain,
+trims - the references call it too); `orch.Score(..., style='film')` plays the parts. The decisions go through the
+Dice into the Arrangement record (kind 'orchestra': size; per section texture / lead / counter). The score:
+`composer.score` style 'orchestra' (any song with an orch.Score) - the new-age melodic metrics on a two-track
+reduction plus `orch.orchestration_metrics(score)` (range_out hard, sweet_mel, gap_hi, low_thirds, mel_db,
+colour_chg, tutti, coda_thin, roles_bar, roles_sd, dbl_share, dbl_low, o_peak_x, dyn_rng, db_bar_sd, textures),
+ranges from the four songs/pro-orch-* references.
+
+```python
+from agentsound import endless
+from agentsound.bandlib import orchestra as orch
+g = endless.genre('orchestra-film')
+tune = endless.compose(g, seed=104)
+song = endless.song(tune)                        # song.orch_score (blocks, lines), song.orchestration (parts)
+[(b.name, b.texture, b.meta.get('lead')) for b in song.orch_score.blocks]
+song.endless_arrangement.sections['climax']      # {..., 'texture': 'tutti_lyrical', 'lead': 'violins1', ...}
+orch.orchestration_metrics(song.orch_scores[0])  # {'range_out': 0.0, 'dbl_share': 0.7, 'roles_bar': 6.1, ...}
+```
+
+## The organist (`agentsound.organist`, `agentsound.organ_vocab`)
+
+The pipe organ has no touch dynamics: the player shapes TIME and ARTICULATION, the music's dynamics are the
+registration (roles of `bands.church_organ`) and the swell box (`orch.swell`). recipes/organ.md has the registrations
+and idioms.
+
+```python
+from agentsound import Song, bands, organist, organ_vocab as ov
+from agentsound.bandlib import orchestra as orch
+s = Song('Chorale', tempo=66, key='G major', tail=8)
+s.section('verse', bars=8)
+b = bands.church_organ(s, registers=('flute', 'cornet'), without=('soft', 'full', 'pedal_full'))
+slots = ov.harmonize(tune, chart, 'G major', ends=[8, 20])       # a chord per beat, cadences at the phrase ends
+v = ov.satb(slots, tune, 'G major')                               # {'S','A','T','B'}: voice-led, S = the tune
+v = ov.flow(v, slots, 'G major', per_bar=1.2, seed=1)             # passing 8ths, a 4-3 at the cadences
+organist.parallel_motion([(k, v[k]) for k in 'SATB'])             # [] - the counterpoint check
+organist.perform(s, b, [organist.Voice(v['S'], 'cornet', 'S', ornaments={18.0: 'trill'}),
+                        organist.Voice(v['A'], 'flute', 'A', breathe=False),
+                        organist.Voice(v['T'], 'flute', 'T', breathe=False),
+                        organist.Voice(v['B'], 'pedal', 'B')], phrases=[12], seed=3)
+orch.swell(b, [(0, 0.3), (24, 1.0, 'smooth')], roles=['oboe'])   # (a Swell role: soft / oboe / strings / swell_full)
+```
+
+- `organist.Voice(notes, role, name, kind='line'|'chords'|'figure', touch='auto'|TOUCH style, ornaments={index or
+  beat: 'trill'|'mordent'|'prall'|'turn'}, accel=(from, to), breathe=True)`.
+- `organist.perform(song, band, voices, *, body='organ', phrases=(), seams=None, key=None, seed=0, check=True,
+  agogic=True)` - once per song with every voice: the body gesture (`humanize.BODIES['organ']`) every voice follows,
+  agogic downbeats (`AGOGIC`), breaths (`BREATH`), per-hand timing (`HAND`), the cluster jitter (`CLUSTER_MS`),
+  articulation (`TOUCH`, `TOUCH_AUTO`), registration seams (`REGISTRANT`), ornaments (`ORNAMENTS`), one pipe per key
+  (`RESTRIKE_MS`); raises when two roles of one division sound at once (`division_clashes`). Returns {role: notes};
+  records `song.organ_voices`.
+- `organist.articulate(notes, style, bpm_at, rng)`, `touch_of(voice, bpm_at)`, `ring_gaps(song, min_s,
+  changes_only=True)` (silence before a change of stops), `parallel_motion(voices)`.
+- `organ_vocab`: `harmonize(melody, chart, key, meter=, rate=, ends=, colour=, seed=)` -> slots; `slots_from_chart(chart,
+  key, rate=, ends=)`; `satb(slots, melody, key, ranges=, beam=, start=)`; `flow(voices, slots, key, per_bar=,
+  suspensions=, which=, seed=)`; `counterline(context, slots, key, lo=, hi=, motif=MOTIFS key, rest=, hold=, above=,
+  below=, mix=, contrary=, seed=)`; `bass_line(slots, key, lo=, hi=, walk=, octave_leaps=, against=, seed=)`;
+  `toccata(slots, key, figure=TOCCATA_FIGURES key, register=, lh='offbeat'|'beat'|None, lh_register=, seed=)` ->
+  {'rh', 'lh'}; `fugue(subject, key, voices=, order=, pedal=, motif=, episode=, seed=)` -> {'voices', 'length',
+  'entries', 'chart'}; `planing(melody, key, shape=, colours=, lo=)`; `ornament_targets(line, meter, ends=)`;
+  `parallels(prev, cur)`; `diatonic(key)`.
+- `bands.church_organ(song, organ='burea'|'pitea', registers=(...)|'all', tremulant=bool|(roles), without=)`;
+  `band.info['division']`, `['swell']`, `['tremulant']`; `orch.ORGAN_REGISTERS`, `orch.SWELL_BOX`,
+  `orch.swell(band, points, roles=, at=)`.
+- Analysis: organ tracks (`analysis.registration`, set by the compiler for the church_organ roles and any `inst.organ`
+  track) are judged together by their section level spread (3+ dB) or a swell lane; profile `organ`.
 
 ## Mixing (`agentsound.mixer`)
 
@@ -3620,8 +3941,47 @@ window) / `loudness_platform` (vs -14), `normalisation` (what Spotify & co. at -
 this level), `squashed` (PLR under the profile's floor), `lra_small` / `lra_large` (vs the profile's LRA range;
 warn under `dynamic`), `tone_profile` (the broad master eq towards the genre average) / `tone_band` (a band past its
 limit: fix it in the mix) / `tone_reference` (with a compare.json), `mono_low_end`, `mono_compat` (correlation,
-mono-sum loss), `narrow` / `wide`, `no_limiter` (render JSON). Each with a render-format `fix` where one exists;
-`warn` first, then `info`, then `ok`.
+engine severity), `narrow` / `wide`, `no_limiter` (render JSON). Each with a render-format `fix` where one exists;
+`error` first, then `warn`, `info`, and `ok`.
+
+### Audio verdict policies
+
+`report.findings[]` is the engine's base verdict list. Every entry has `code`, `metric`, `value`, `limit`,
+`node`, `section`, `severity`, `message`; empty node/section means global scope. Findings from specialist
+analyses without a scalar threshold use an empty metric and null value/limit. Identity is `(code, node, section)`.
+Finding values retain full precision; `deliveryMetrics` keeps raw true peak/loudness for overrides. Existing
+global and section measurements retain their rounding so mastering calibration stays unchanged.
+`agentsound.verdicts.evaluate(report, policy=...)` uses emitted findings directly without overrides. With an
+override (or a partial/old report), it calls `agentsound verdicts` with `{report, policy}` JSON on stdin.
+Fixed policy keys are `truePeakMaxDbtp`, `loudness: [min, max]`, `loudnessToleranceLu`; unknown keys are errors.
+Partial reports can establish base numeric verdicts; specialist tonal/space findings require emitted warnings.
+Older reports lacking `lowEndEnergyShare` cannot establish an audible low-band problem: reanalyse them.
+
+Named delivery data lives in `verdicts.DELIVERY`: profile tolerance 0.05 LU, streaming target window +/-1 LU,
+and endless exact inclusive genre window (zero tolerance). Mastering platforms still select their own ceiling,
+loudness target/window and the dynamic platform's `lra_low` warning promotion. Consumer code aliases and fixes
+do not change the base verdict. Mixer balance/arc and mastering reference-EQ/normalisation/chain advice remain
+owned by their respective modules.
+
+Changed verdicts when moving consumers to the engine:
+
+| Condition | Result |
+|---|---|
+| Low correlation with <=5% low-band energy, or correlation 0.75..0.8 | No low-end finding (formerly mixer/master warn); global and each audible section are judged |
+| True peak in (-1, -0.9] dBTP at the default ceiling | Info (formerly master ok through -0.95, warn above it); >0 dBTP is error |
+| Absolute DC exactly 0.001 | No finding (formerly master warn); only >0.001 warns |
+| PLR below profile floor | Info (formerly master warn) |
+| Profile loudness 0.05..0.5 LU beyond an edge | Mixer now reports it; endless uses its own exact bounds |
+| Raw loudness outside a genre bound but rounded global loudness inside | Endless now blocks it; delivery overrides use the raw value |
+| Clipping / strongly negative stereo correlation | Master retains engine error severity; correlation below 0.2 remains info |
+| Subsonic share exactly 1% | No finding (formerly master info); above 1% is engine warn |
+| LRA on audio <=30 seconds | No base LRA finding; dynamic promotion applies only to an emitted finding |
+| Tonal / space findings | Master retains engine severity and scope, including per-section findings; no separate master threshold checks |
+| Masked-only clicks | Informational `clicks_masked`, never an endless click blocker |
+
+The engine now emits low-end findings per section even when the global mix also fails, while keeping the existing section phase thresholds (warn below -0.2, info below 0). Clean true peak and loudness keep master `ok`
+notes; redundant clean LRA/mono notes are omitted. Audio, note generation and RNG consumption are unchanged.
+Shared boundary cases are `tests/fixtures/verdicts.json`, consumed by C++ analysis and all three Python consumers.
 
 Validation (scratch copies, whole songs vs whole references, `platform='auto'` / `'streaming'`):
 | | children-of-neon vs The Midnight "Sunset" (synthwave) | lamplight-avenue vs Baker Street 1978 (pop) |
@@ -3636,6 +3996,53 @@ Validation (scratch copies, whole songs vs whole references, `platform='auto'` /
 A master cannot move the tone much (by design): it matches loudness, peaks and width and nudges the balance; the
 spectrum-vs-reference numbers barely move, and limiting itself shifts the loudness-matched spectrum a little (quiet
 sections come up). Big tonal gaps are mix work - `compare` names the tracks.
+
+### The learned ears (`agentsound.ears`)
+
+`python -m agentsound ears` (README section 6: usage, install, the score). `agentsound/ears.py` is stdlib only (the
+JSON plumbing, the score table `REALISM`, the CLI glue); `agentsound/ears_worker.py` runs in the ears venv and is
+never imported by the package (request / response JSON in a temp dir, `<venv python> -I ears_worker.py req resp`).
+Up to `--max-windows` (12) 10 s windows per file, spread evenly, near-silent ones skipped; Audiobox averages its own
+10 s chunks, CLAP P(real) is the softmax over each (real, fake) prompt pair (`ears_worker.PROMPT_PAIRS`), averaged
+over pairs and windows. `report.json` `ears`: `realism`, `aesthetics`, `pReal`, `instrument`, `refCos`, `fad`,
+`sections[{name, realism}]`, `file`.
+
+Calibration (2026-10, 74 files; real references Opus ~160 kbit/s, our renders also scored after an Opus 160k
+round trip: identical within 0.02, so the codec does not explain anything below). Means per group:
+
+| set | n | PQ | PC | CE | CU | pReal | realism |
+|---|---|---|---|---|---|---|---|
+| A real commercial recordings (Satie, Chopin, Kavinsky, Timecop1983, The Midnight, Perturbator, Rafferty, GN'R) | 8 | 7.47 | 5.32 | 7.00 | 7.52 | 0.44 | 43.9 |
+| A our paired songs (gymnopedie / nocturne etudes, midnight-interstate, polaroid-summer, skyline-heartbeat, chrome-leviathan, lamplight-avenue, kestrel-bay) | 8 | 7.66 | 5.01 | 7.10 | 7.71 | 0.52 | 53.4 |
+| B `_demo_acoustic` strum (Shinyguitar) | 1 | 7.61 | 3.07 | 5.74 | 7.23 | 0.57 | 51.3 |
+| B strum_fss (old FSS) | 1 | 8.05 | 3.03 | 7.13 | 7.67 | 0.68 | 69.5 |
+| B fingerpick | 1 | 8.24 | 3.07 | 7.06 | 7.88 | 0.50 | 62.9 |
+| C pro-piano + pro2-piano (composed jazz) | 8 | 7.92 | 3.21 | 7.72 | 7.97 | 0.79 | 77.9 |
+| C pro-newage + letters-to-the-morning | 4 | 8.09 | 3.14 | 7.74 | 8.01 | 0.81 | 82.6 |
+| C endless new-age na_r2 | 8 | 8.05 | 3.09 | 7.74 | 7.96 | 0.80 | 81.1 |
+| C endless jazz (best/) | 2 | 7.92 | 2.85 | 7.33 | 7.85 | 0.79 | 76.7 |
+| C endless lofi rounds lofi / 2 / 3 / 4 / 5 | 3/3/3/2/2 | 5.03 / 5.23 / 5.31 / 5.68 / 5.81 | ~4.9 | 4.38 / 4.84 / 5.04 / 5.33 / 5.87 | 5.84 .. 6.69 | ~0.84 | 34.8 .. 40.3 |
+| D pro-piano-latenight: original / re-render / one velocity / 16th grid + one velocity / bitcrush 6 bit / telephone band | 1 each | 7.91 / 7.91 / 7.70 / 7.84 / 6.66 / 7.62 | 3.02 / 3.02 / 2.69 / 2.61 / 3.10 / 2.73 | 7.67 / 7.67 / 7.15 / 7.13 / 7.14 / 7.49 | 7.95 / 7.95 / 7.77 / 7.80 / 7.30 / 7.75 | 0.77 / 0.77 / 0.65 / 0.65 / 0.37 / 0.69 | 76.5 / 76.5 / 63.4 / 65.5 / 23.5 / 64.5 |
+| D strum: same six | 1 each | 7.61 / 7.61 / 7.42 / 7.53 / 6.55 / 6.47 | 3.07 / 3.07 / 2.91 / 2.97 / 3.03 / 2.85 | 5.74 / 5.74 / 5.42 / 5.09 / 5.10 / 5.83 | 7.23 / 7.23 / 7.06 / 7.15 / 6.64 / 6.63 | 0.57 / 0.57 / 0.50 / 0.46 / 0.39 / 0.50 | 51.3 / 51.3 / 41.9 / 41.8 / 15.8 / 22.1 |
+
+Verdicts per check (what should sort how / what did):
+
+| check | PQ | PC | CE | CU | pReal | realism |
+|---|---|---|---|---|---|---|
+| D degraded < original (8 pairs; re-render = original exactly, so the renders are deterministic) | 8/8 | 7/8 | 7/8 | 8/8 | 8/8 | 8/8 |
+| A real > ours, per style pair | 2/8 | 7/8 | 4/8 | 2/8 | 3/8 | 2/8 |
+| B Shinyguitar strum > FSS strum | no | yes (+0.04) | no | no | no | no |
+| C composed pro > endless new-age (AUC) | 0.30 | 0.64 | 0.41 | 0.68 | 0.42 | 0.29 |
+| C composed pro jazz > endless jazz best (AUC, n = 8 x 2) | 0.69 | 1.00 | 1.00 | 1.00 | 0.44 | 0.75 |
+| C lofi rounds improve 1 -> 5 (no ground truth) | monotone | flat | monotone | monotone | flat | monotone |
+
+So: the score is a damage / mechanical-playing detector for versions of one song, not a "does it sound real"
+detector. The real references lose because they are older, denser, band-limited masters (PC is the one axis that
+favours them: density, not realism; it moves the wrong way under bitcrush, so it stays out). CE separates composed
+from generated jazz but is content, and missed the telephone-band strum, so it is reported, not scored. CLAP
+`refCos` / `fad` vs the Satie + Chopin recordings: endless new-age 0.60 / 0.82 vs composed pieces 0.55 / 0.90 - the
+slow, soft endless tunes are closer in style; with two references (24 windows for a 512-dimensional embedding) FAD
+is a rough number only. Recalibrate (and re-fit `REALISM`) before trusting it for a new kind of question.
 
 
 ## The making-of film (`film.py`, `agentsound.makingof`)

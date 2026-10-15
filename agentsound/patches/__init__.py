@@ -181,9 +181,12 @@ class Instrument:
             self.params['layers'] = layers
         self.info: dict | None = None
         self.lazy: dict | None = None
-        if 'mods' in self.params and type != 'va':
-            raise ComposeError(f"instrument {type!r} has no modulation matrix ('mods' is a 'va' param); modulate its "
-                               f"params from the track instead: track.modulate('instrument.<param>', lfo(...))")
+        if 'mods' in self.params:
+            if type not in _vamod.INSTRUMENTS:
+                raise ComposeError(f"instrument {type!r} has no modulation matrix ('mods' is a 'va' / 'wavetable' "
+                                   f"param); modulate its params from the track instead: "
+                                   f"track.modulate('instrument.<param>', lfo(...))")
+            _vamod.check_targets(self.params['mods'], type, f"instrument {type!r} 'mods'")
 
     def _carry(self, out: 'Instrument') -> 'Instrument':
         out.info = copy.deepcopy(self.info)
@@ -291,9 +294,11 @@ class Instrument:
         """Copy of a va instrument with modulation routes added: a route whose id is already in the matrix
         replaces that one (in place), the others are appended; replace=True drops the old matrix first.
         inst.va(...).with_mods(vamod.lfo('sine', hz=5.5) >> ('pitch', 12, 'vib'))."""
-        if self.type != 'va':
-            raise ComposeError(f"with_mods(): only the 'va' instrument has a modulation matrix, this is {self.type!r}")
+        if self.type not in _vamod.INSTRUMENTS:
+            raise ComposeError(f"with_mods(): only the 'va' and 'wavetable' instruments have a modulation matrix, "
+                               f"this is {self.type!r}")
         new = _vamod.normalize_mods([*routes], f"instrument {self.type!r} with_mods()")
+        _vamod.check_targets(new, self.type, f"instrument {self.type!r} with_mods()")
         params = copy.deepcopy(self.params)
         out = [] if replace else params.get('mods', [])
         for r in new:
@@ -768,6 +773,31 @@ class _InstFactory(_Factory):
             raise ComposeError("inst.stack: give 1..8 layers: inst.stack(layer('sampled/piano_lead'), layer(...), ...)")
         return Instrument('stack', {'layers': builtins.list(layers), **params})
 
+    def wavetable(self, table=None, params: dict | None = None, /, *, table2=None, **kw) -> Instrument:
+        """Wavetable synth (engine 'wavetable': the va's voice engine - unison, filter, envelopes, 'mods' - with two
+        wavetable oscillators):
+            inst.wavetable('formant', osc1__position=0.2, mods=[vamod.env(a=1, d=4, s=0.4) >> ('osc1.position', 0.6)])
+            inst.wavetable('basic', table2='harmonics', osc2__level=0.5, unison=5)
+            inst.wavetable('./tables/Growl.wav')      # a Serum / Surge / Vital / plain WAV table next to the song
+            inst.wavetable('MyPack/Pad.wt')           # a relative name: $AGENTSOUND_WAVETABLES, then assets/wavetables/
+        table / table2 = osc1.table / osc2.table: a built-in (basic pwm sync formant harmonics organ sine) or a .wav / .wt
+        file. Patches: wavetable/* (python -m agentsound patches wavetable/); params: python -m agentsound params wavetable;
+        docs/COMPOSE_API.md "Wavetable synth"."""
+        p = dict(params or {})
+        caller = _caller_file()
+        for key, val in (('osc1.table', table), ('osc2.table', table2)):
+            if val is not None:
+                p[key] = val
+        for key in ('osc1.table', 'osc2.table'):
+            for k in (key, key.replace('.', '__')):
+                v = p.pop(k, None) if k in p else kw.pop(k, None)
+                if v is None:
+                    continue
+                if isinstance(v, os.PathLike) or (isinstance(v, str) and v.lower().endswith(('.wav', '.wt'))):
+                    v = _sample_path(v, caller, f"inst.wavetable({key})")
+                p[key] = v
+        return Instrument('wavetable', p, **kw)
+
     def dx7(self, voice: str | None = None, params: dict | None = None, /, **kw) -> Instrument:
         """DX7 ROM voice by name: inst.dx7('E.PIANO 1')."""
         p = dict(params or {})
@@ -928,8 +958,9 @@ class _InstFactory(_Factory):
         (else the first) plays unmarked notes. A program may be a dict with 'path', 'articulation' (of a keyswitch
         program), 'cc', 'mics', 'gain' (dB, to balance the programs), 'zone' ({zone param: value} set on its attack
         zones: an articulation made from the same samples, e.g. a palm mute = the notes low-passed and damped),
-        'keygain' ([[key, dB], ...] over the zones' root keys: evens out notes recorded at uneven levels).
-        Other keywords as inst.sfz (params: mono, layers, dynamics, level ...). sfz.load_multi() has the details."""
+        'keygain' ([[key, dB], ...] over the zones' root keys: evens out notes recorded at uneven levels),
+        'keypan' ([[key, pan], ...]: a mono-sampled instrument spread like a stereo pair hears it), 'releases': 'only' (just its release-triggered zones, played as notes: finger-off / fret noises a player
+        places). Other keywords as inst.sfz (params: mono, layers, dynamics, level ...). sfz.load_multi() has the details."""
         caller = _caller_file()
         p = dict(_SFZ_DEFAULTS)
         p.update(params or {})
@@ -1166,7 +1197,7 @@ class Patch:
         Only an amount to change: .but(**{'mod.<id>.amount': x})."""
         p = self.copy()
         if p.instrument is None:
-            raise ComposeError(f"patch {self.name!r} is an fx chain; with_mods() needs a 'va' instrument patch")
+            raise ComposeError(f"patch {self.name!r} is an fx chain; with_mods() needs a 'va' / 'wavetable' instrument patch")
         p.instrument = p.instrument.with_mods(*routes, replace=replace)
         return p
 

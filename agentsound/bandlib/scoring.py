@@ -23,6 +23,14 @@ start + its part's offset + a seeded +-`jitter` + the bar's accents (downbeat, h
 (humanize.touch's phrasing, per role: `phrasing`), clamped to floor..127. perform() writes them as each section's
 dynamics lane; with follow=True a note held through a written crescendo / diminuendo follows the map inside it (the
 lane moves while it sounds - a held chord grows with the music instead of staying at its start level).
+
+THE PERFORMANCE RULES (bandlib/ensemble.py, docs/ORCHESTRA_RULES.md) play every part (orch.perform); the Score adds
+the ones that need the whole piece: the BALANCE (a line - a melody written into one role, a doubling, a fugue voice -
+sits at least ensemble.BALANCE['db'] over the chords / figures / pads sounding with it: the accompaniment is pulled
+down, at most max_db) and the shared KTH charge (agentsound.expressive: melodic charge on the lines, harmonic charge
+on everything, from the harmonies the Score was given - winds(), brass(), stabs(), bed() or harmony()). style=
+('baroque': terraced dynamics - every mark a step -, 'classical', 'romantic', 'film') scales the rules and the arcs;
+rules= {table: {key: value}} overrides single values (both passed on to every perform()).
 """
 
 from __future__ import annotations
@@ -30,7 +38,7 @@ from __future__ import annotations
 import random
 
 from .. import articulation as art
-from ..patterns import Clip, as_clip
+from ..patterns import Clip, Note, as_clip
 from ..theory import ComposeError, Key, note as _note
 
 __all__ = ['VEL', 'PHRASING', 'FALLBACK', 'TUTTI_ROLES', 'WINDS8_ROLES', 'UNISON_OCTAVES', 'BED', 'natural_brass',
@@ -89,25 +97,39 @@ class Score:
     """A whole piece's parts for one band (orch.* presets) with one dynamics map - see the module docs.
 
     Score(song, band, dynamics=None, *, key=None, seed=0, jitter=3.0, accents=(5, 2), floor=14, phrasing=PHRASING,
-          curve='linear', fold=True, fallback=FALLBACK, follow=True)"""
+          curve='linear', fold=True, fallback=FALLBACK, follow=True, style=None, rules=None, balance=True,
+          charge=True)"""
 
     def __init__(self, song, band, dynamics=None, *, key=None, seed=0, jitter: float = 3.0, accents=(5, 2),
                  floor: int = 14, phrasing=None, curve: str = 'linear', fold: bool = True, fallback=None,
-                 follow: bool = True):
+                 follow: bool = True, style: str | None = None, rules=None, balance: bool = True,
+                 charge: bool = True):
+        from . import ensemble as ens
         if curve not in ('linear', 'smooth'):
             raise ComposeError(f"Score curve must be 'linear' or 'smooth', got {curve!r}")
         self.song, self.band = song, band
         self.key = Key(key) if key is not None else song.key
         self.rng = random.Random(seed)
         self.jitter, self.accents, self.floor = float(jitter), tuple(accents), int(floor)
-        self.phrasing = dict(PHRASING if phrasing is None else phrasing)
+        self.style = ens.style_of(band, style)
+        ens.merged(rules)                               # validated now, passed on as written
+        self.rules = rules
+        self.balance, self.charge = bool(balance), bool(charge)
+        k = self.style['phrasing'] if phrasing is None else 1.0
+        self.phrasing = {r: v * k for r, v in (PHRASING if phrasing is None else phrasing).items()}
         self.curve, self.fold, self.follow = curve, fold, follow
         self.fallback = dict(FALLBACK if fallback is None else fallback)
         self.parts: dict = {}          # role -> [(start, dur, pitch, vel, articulation)]
+        self.lines: dict = {}          # role -> {(round(start, 4), pitch)} of the notes written as a line (BALANCE)
+        self.harmonies: list = []      # the Harmony objects the score was given (the KTH charge reads them)
         self._marks: list = []
         self._f = None
         if dynamics is not None:
             self.mark(dynamics)
+        # (the song knows its scores: the orchestration metrics read their written parts - orchestration.metrics)
+        if not isinstance(getattr(song, 'orch_scores', None), list):
+            song.orch_scores = []
+        song.orch_scores.append(self)
 
     # ------------------------------------------------------------------------------------------ dynamics
     def mark(self, marks, at=0.0) -> 'Score':
@@ -127,7 +149,7 @@ class Score:
             step = len(p) == 3 and p[2] in ('step', 'subito')
             if len(p) == 3 and not step:
                 raise ComposeError(f"Score dynamics: the third element of {p!r} must be 'step' or 'subito'")
-            self._marks.append((a + p[0], lv, step))
+            self._marks.append((a + p[0], lv, step or self.style['terrace']))   # baroque: terraced dynamics
         self._marks.sort(key=lambda m: (m[0], m[2]))
         from ..romantic import dynamics_factor
         self._f = dynamics_factor(self._marks, self.curve)
@@ -162,15 +184,25 @@ class Score:
         return lambda n: k * (by.get((round(n[0], 4), n[2]), 60) - 60)
 
     # ------------------------------------------------------------------------------------------ writing
+    def harmony(self, h) -> 'Score':
+        """Give the score a harmony (a voicing.Harmony placed in song beats) for the KTH charge: melodic charge on the
+        lines over its chords, harmonic charge into its remote chords (winds() / brass() / stabs() / bed() register
+        theirs). The latest given wins where two overlap."""
+        if h is not None and hasattr(h, 'timeline') and h not in self.harmonies:
+            self.harmonies.append(h)
+        return self
+
     def add(self, role, notes=None, art: str = 'sustain', *, off=0.0, accent: bool = True, dur=1.0, transpose=0,
-            sf=(), offs=None, phrasing=None, fig=None, roles=None) -> 'Score':
+            sf=(), offs=None, phrasing=None, fig=None, roles=None, line=None) -> 'Score':
         """Write notes on a role: (start, dur, pitch[, vel]) tuples or a Clip (song beats). Without a velocity a note
         gets vel(start, off + offs(note), accent) + its phrase arc; `art` its articulation; `dur` x its length (or a
         function of the note); `transpose` semitones; sf: beats of sforzandi (+16, marcato); fig: a figure of
         agentsound.figures played from the notes first ('pulse8', or ('beats', {'every': 2, 'gap': 1.2})).
         A dict {role: notes} writes several roles (a voicing's parts) - all of them, or `roles` in that order; `off`
         / `art` / `transpose` / `dur` / `fig` may then be dicts per role (missing roles: 0 / 'sustain' / 0 / 1 /
-        none)."""
+        none). line: are these notes a LINE (a melody, a doubling, a fugue voice) that the accompaniment sounding
+        with it stays under (BALANCE)? None = by the notes: one role, no figure, at least 4 notes one after the other
+        on 3+ pitches moving at least every 2 beats; a voicing's parts (a dict) are accompaniment."""
         if isinstance(role, dict):
             if isinstance(notes, (str, dict)):           # add(parts, 'staccato', ...): the articulation
                 art, notes = notes, None
@@ -180,7 +212,7 @@ class Score:
             for r in (roles if roles is not None else list(role)):
                 self.add(r, role[r], per(art, r, 'sustain'), off=per(off, r, 0.0), accent=accent,
                          dur=per(dur, r, 1.0), transpose=per(transpose, r, 0), sf=sf, offs=offs, phrasing=phrasing,
-                         fig=fig.get(r) if isinstance(fig, dict) else fig)
+                         fig=fig.get(r) if isinstance(fig, dict) else fig, line=bool(line))
             return self
         if notes is None:
             raise ComposeError(f"Score.add({role!r}): no notes")
@@ -188,9 +220,13 @@ class Score:
             from ..figures import figure
             kind, opts = (fig, {}) if isinstance(fig, str) else (fig[0], dict(fig[1]) if len(fig) > 1 else {})
             notes = figure(notes, kind, **opts)
+            line = False if line is None else line
         if isinstance(notes, Clip):
             notes = [tuple(n) for n in notes]
+        if line is None:
+            line = art in ('sustain', 'legato', 'marcato', 'staccato', 'spiccato') and _is_line(notes)
         buf = self.parts.setdefault(role, [])
+        n0 = len(buf)
         k = self.phrasing.get(role, 0.0) if phrasing is None else phrasing
         arc = self._shape([n for n in notes if len(n) < 4], k)
         sfs = {round(x, 3) for x in sf}
@@ -205,6 +241,8 @@ class Score:
             if round(st, 3) in sfs:
                 v, a = min(127, v + 16), 'marcato'
             buf.append((st, du * (dur(n) if callable(dur) else dur), _P(p) + transpose, v, a))
+        if line:
+            self.lines.setdefault(role, set()).update((round(x[0], 4), x[2]) for x in buf[n0:])
         return self
 
     def sing(self, choir, key, notes, *, off=0.0, dur=1.0, offs=None, accent: bool = True,
@@ -260,13 +298,14 @@ class Score:
         section (WINDS8_ROLES; the second player `second` softer); roles= only those sections. Returns the parts."""
         from ..voicing import WINDS8, Harmony, chorale
         h = h if isinstance(h, Harmony) else Harmony(h)
+        self.harmony(h)
         rows = [(r[0], r[1], None if r[2] is None else _P(r[2]) + top_shift, *r[3:]) for r in h.table]
         p = chorale(rows, h.origin, voices=voices or WINDS8, key=h.key if key is None else key, tie=tie, unison=True)
         mp = mapping or WINDS8_ROLES
         for v, ns in p.items():
             role = mp[v]
             if roles is None or role in roles:
-                self.add(role, ns, art, off=off + (second if v.endswith('2') else 0))
+                self.add(role, ns, art, off=off + (second if v.endswith('2') else 0), line=False)
         return p
 
     def hits(self, parts: dict, times, length: float = 0.8, off: float = 0.0, *, roles=None, sf: bool = False,
@@ -283,7 +322,7 @@ class Score:
                     p = next((n[2] for n in parts.get(v, ()) if n[0] - 1e-6 <= t < n[0] + n[1] - 1e-6), 0) or 0
                     if p:
                         ns.append((t, length, _P(p)))
-            self.add(role, ns, 'marcato' if sf else 'staccato' if length <= 0.6 else 'sustain', off=off)
+            self.add(role, ns, 'marcato' if sf else 'staccato' if length <= 0.6 else 'sustain', off=off, line=False)
         return self
 
     def brass(self, h, times, length: float = 0.8, off: float = 0.0, *, horns: bool = True, trumpets: bool = True,
@@ -295,6 +334,8 @@ class Score:
         dominant. art: default marcato up to a beat, else sustain; roll=True rolls the timpani over the length.
         lead: velocity offsets on the downbeat / the half bar / elsewhere (the downbeat leads)."""
         from ..voicing import Harmony, info
+        if isinstance(h, Harmony):
+            self.harmony(h)
         tp_notes = tuple(naturals or natural_brass(self.key))
         timp = dict(tuning or timpani_tuning(self.key))
         for t in times:
@@ -307,16 +348,16 @@ class Score:
             off_t = off + (lead[0] if ph < 0.02 else lead[1] if abs(ph - 0.5) < 0.02 else lead[2])
             if trumpets:
                 tps = [p for p in tp_notes if p % 12 in ci.pcs][-2:]
-                self.add('trumpets', [(t, length, p) for p in tps], a, off=off_t - 4)
+                self.add('trumpets', [(t, length, p) for p in tps], a, off=off_t - 4, line=False)
             if horns:
                 hs = sorted({p for p in range(horn_range[0], horn_range[1]) if p % 12 in ci.pcs},
                             key=lambda p: abs(p - horn_centre))[:2]
-                self.add('horns', [(t, length, p) for p in hs], a, off=off_t - 2)
+                self.add('horns', [(t, length, p) for p in hs], a, off=off_t - 2, line=False)
             if timpani:
                 pcs = [pc for pc in (ci.root, self.key.tonic, (self.key.tonic + 7) % 12) if pc in timp and pc in ci.pcs]
                 if pcs:
                     self.add('timpani', [(t, length if roll else 0.5, timp[pcs[0]])], 'roll' if roll else 'hit',
-                             off=off_t - 6)
+                             off=off_t - 6, line=False)
         return self
 
     def unison(self, t: float, d: float, pc, off: float = 0.0, *, octaves=None, naturals=None, tuning=None) -> 'Score':
@@ -328,7 +369,7 @@ class Score:
         for role, octs in (octaves or UNISON_OCTAVES).items():
             if role == 'trumpets' and pc not in tp:
                 continue
-            self.add(role, [(t, d, 12 * (o_ + 1) + pc) for o_ in octs], 'marcato', off=off)
+            self.add(role, [(t, d, 12 * (o_ + 1) + pc) for o_ in octs], 'marcato', off=off, line=False)
         if pc in timp:
             self.add('timpani', [(t, d, timp[pc])], 'roll', off=off)
         return self
@@ -340,6 +381,7 @@ class Score:
         - 6), trombones and horns (- 6 more) an octave lower, timpani 'hit' (+4) on timpani(chord) - a pitch, or
         default the tonic when the chord holds it, else the dominant (timpani_tuning). Returns {role: clip}."""
         rows_str, rows_br, rows_lo, rows_t = [], [], [], []
+        self.harmony(h)
         tun = timpani_tuning(self.key)
         for t in beats:
             c = h.at(t)
@@ -404,10 +446,117 @@ class Score:
         return sum(map(ord, role)) + int(self.song.at(at))
 
     def play(self, role: str, clip, at=0.0, **kw) -> Clip:
-        """Play a part now (orch.perform with the score's seed rule): the direct way, no buffer."""
+        """Play a part now (orch.perform with the score's seed rule, style and rules): the direct way, no buffer."""
         from .orchestra import perform
         kw.setdefault('seed', self.seed(role, at))
+        kw.setdefault('style', self.style['name'])
+        kw.setdefault('rules', self.rules)
         return perform(self.band, role, clip, at, **kw)
+
+    def _apply_charge(self) -> None:
+        """The KTH charge (agentsound.expressive) on the buffered velocities: melodic charge on the lines over the
+        harmonies' chords, harmonic charge (into a chord far from its key's tonic) on every note under a harmony."""
+        from .. import expressive as ex
+        spans = []                                       # (start, end, symbol, key, registration order)
+        for i, h in enumerate(self.harmonies):
+            for a, d, sym in h.timeline():
+                if sym is not None:
+                    spans.append((a, a + d, sym, h.key, i))
+        if not spans:
+            return
+
+        def at(t):
+            best = None
+            for a, e, sym, k, i in spans:
+                if a - 1e-6 <= t < e - 1e-6 and (best is None or i > best[2]):
+                    best = (sym, k, i)
+            return best
+        changes, seen = [], set()
+        for a, e, sym, k, i in sorted(spans, key=lambda x: (x[0], x[4])):
+            hit = at(a + 1e-4)
+            if hit is not None and hit[2] == i and round(a, 4) not in seen:
+                seen.add(round(a, 4))
+                changes.append((a, sym, k))
+
+        def chord_at(t):
+            hit = at(t)
+            return None if hit is None else _chord_or_none(hit[0])
+        changes = [(a, c, k) for a, sym, k in changes if (c := _chord_or_none(sym)) is not None]
+        for role, notes in self.parts.items():
+            if not notes or self.band.info.get('kind', {}).get(role, 'sustain') != 'sustain':
+                continue
+            covered = [i for i, n in enumerate(notes) if at(n[0]) is not None]
+            if not covered:
+                continue
+            c = Clip._raw([Note(notes[i][0], max(0.01, notes[i][1]), notes[i][2], notes[i][3]) for i in covered], 0)
+            c = list(ex.harmonic_charge(c, changes, self.key))
+            lines = self.lines.get(role, set())
+            li = [j for j, i in enumerate(covered) if (round(notes[i][0], 4), notes[i][2]) in lines]
+            if li:
+                lc = ex.melodic_charge(Clip._raw([c[j] for j in li], 0), chord_at)
+                for j, n in zip(li, lc):
+                    c[j] = n
+            for j, i in enumerate(covered):
+                st_, du, p, v, a = notes[i]
+                notes[i] = (st_, du, p, c[j].vel, a)
+
+    def _apply_balance(self) -> None:
+        """BALANCE: the sustained accompaniment (not a line; not a short or accented note - staccato, pizzicato,
+        marcato: their loudness is in a brief attack, an accent is meant to stand out) sits at least BALANCE db under
+        the melody sounding with it (on the dynamics lane's dB scale) - the melody: at every onset in the note's
+        span the loudest line note of another role, their median; each accompaniment phrase (BALANCE phrase_gap) is
+        pulled down as a whole by its notes' shortfall at the BALANCE share quantile, at most max_db (its arc kept)."""
+        import bisect
+        from . import ensemble as ens
+        B = ens.merged(self.rules)['balance']
+        spans = []                                       # (start, end, vel, role) of every line note
+        for role, notes in self.parts.items():
+            lines = self.lines.get(role)
+            if lines:
+                spans += [(n[0], n[0] + n[1], n[3], role) for n in notes if (round(n[0], 4), n[2]) in lines]
+        if not spans:
+            return
+        spans.sort()
+        starts = [x[0] for x in spans]
+        longest = max(e - a for a, e, _, _ in spans)
+        skip = ('marcato', 'staccato', 'spiccato', 'pizzicato')
+        for role, notes in self.parts.items():
+            if self.band.info.get('kind', {}).get(role, 'sustain') != 'sustain':
+                continue
+            lines = self.lines.get(role, set())
+            pulls: list = []                             # (start, end, index, pull dB) of the accompaniment notes
+            for i, (st_, du, p, v, a) in enumerate(notes):
+                if a in skip or (round(st_, 4), p) in lines:
+                    continue
+                end = st_ + max(du, 1e-3)
+                k = bisect.bisect_left(starts, end - 1e-6)
+                tops: dict = {}                          # onset in the span -> the loudest line note sounding there
+                for a_, e_, lv, r_ in spans[bisect.bisect_left(starts, st_ - longest - 1e-6):k]:
+                    if r_ == role or e_ <= st_ + 1e-6:
+                        continue
+                    t_ = round(max(a_, st_), 4)
+                    tops[t_] = max(tops.get(t_, 0), lv)
+                if not tops:
+                    continue
+                vs = sorted(tops.values())
+                top = vs[len(vs) // 2]
+                short = B['db'] - (ens.db_of(top / 127.0) - ens.db_of(v / 127.0))
+                pulls.append((st_, end, i, min(max(0.0, short), B['max_db'])))
+            pulls.sort()
+            j = 0
+            while j < len(pulls):                        # one pull per phrase (BALANCE phrase_gap): the arc stays
+                k, end = j + 1, pulls[j][1]
+                while k < len(pulls) and pulls[k][0] - end < B['phrase_gap'] - 1e-6:
+                    end = max(end, pulls[k][1])
+                    k += 1
+                ds = sorted(x[3] for x in pulls[j:k])
+                d = ds[min(len(ds) - 1, int(B['share'] * len(ds)))]
+                if d > 1e-6:
+                    for _, _, i, _ in pulls[j:k]:
+                        st_, du, p, v, a = notes[i]
+                        nv = ens.level_of(ens.db_of(v / 127.0) - d) * 127.0
+                        notes[i] = (st_, du, p, max(self.floor, min(v, int(round(nv)))), a)
+                j = k
 
     def perform(self, roles=None, *, fold=None, fallback=None, follow=None, **kw) -> dict:
         """Play the buffered parts: each role's notes grouped by articulation (one it lacks -> `fallback`), folded
@@ -418,6 +567,10 @@ class Score:
         fb = self.fallback if fallback is None else fallback
         follow = self.follow if follow is None else follow
         info = self.band.info
+        if self.charge:
+            self._apply_charge()
+        if self.balance:
+            self._apply_balance()
         out = {}
         for role, notes in self.parts.items():
             if roles is not None and role not in roles:
@@ -441,10 +594,32 @@ class Score:
             if clip is None:
                 continue
             opts = dict(kw)
+            opts.setdefault('style', self.style['name'])
+            opts.setdefault('rules', self.rules)
             if follow and self._f is not None:
                 opts.setdefault('follow', self.level)
             out[role] = perform(self.band, role, clip, 0, articulations=None, seed=self.seed(role), **opts)
         return out
+
+
+def _is_line(notes) -> bool:
+    """A line: at least 4 notes one after the other (no two sounding together beyond a small overlap) on 3+
+    pitches, moving at least every 2 beats (median)."""
+    ns = sorted((n[0], n[1], _P(n[2])) for n in notes)
+    if len(ns) < 4 or len({n[2] for n in ns}) < 3:
+        return False
+    if any(b[0] < a[0] + 1e-6 or b[0] < a[0] + a[1] - 0.26 for a, b in zip(ns, ns[1:])):
+        return False
+    iois = sorted(b[0] - a[0] for a, b in zip(ns, ns[1:]))
+    return iois[len(iois) // 2] <= 2.0 + 1e-6
+
+
+def _chord_or_none(sym):
+    from ..theory import chord as _chord
+    try:
+        return _chord(sym) if isinstance(sym, str) else sym
+    except ComposeError:
+        return None
 
 
 def _sym_at(harm, t):
@@ -472,6 +647,7 @@ def bed(score, h, at, *, shapes='swell', articulations='auto', roles=None, vel: 
     Returns {role: clip}."""
     if not isinstance(score, Score):
         score = Score(score.song, score)
+    score.harmony(h)
     if not specs:
         names = roles if roles is not None else tuple(BED)
         specs = {r: BED[r] + (vel,) for r in names if r in BED and r in score.band.roles}

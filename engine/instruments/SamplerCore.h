@@ -157,6 +157,24 @@ struct LevelTrack {
 };
 std::shared_ptr<const LevelTrack> levelTrack(const Region& r);
 
+// How far `b` leads `a` (`lead`, seconds; > 0: b's attack comes earlier, delay b by this much to line them up): the
+// lag of the best normalised cross-correlation (`corr`, >= 0) of their first `window` seconds from frames offA / offB,
+// searched within +-maxLag. lead 0 when the rates differ, either is silent or the best correlation is under 0.5 (two
+// takes that are not coherent anyway). Two velocity layers of one key blended together comb-filter by their onset
+// offset (layers='blend'). Allocates and reads the whole window: call it outside process().
+struct Lead {
+    double lead{0.0}, corr{0.0};
+};
+Lead leadOf(const Region& a, double offA, const Region& b, double offB, double window = 0.03, double maxLag = 0.002);
+
+// The colour of a sample's attack (its first `window` seconds from frame `off`): `levelDb` its RMS, `brightDb` the
+// energy of its first difference over its energy (a slope that rises with the brightness, ~+6 dB per octave of the
+// spectral centroid). rrborrow only borrows a neighbour of a similar colour, level-matched. Allocates: outside process().
+struct Colour {
+    double levelDb{-120.0}, brightDb{-120.0};
+};
+Colour attackColour(const Region& r, double off, double window = 0.08);
+
 // Per-voice 2-pole lowpass (Simper TPT state-variable filter): smooth under fast coefficient changes.
 struct Lowpass {
     float ic1{0.0f}, ic2{0.0f};

@@ -480,6 +480,66 @@ LevelTrack computeLevels(const Region& r) {
 
 }  // namespace
 
+namespace {
+
+// mono mix of frames [from, from + n) of a region's sample data (zeros past its end)
+std::vector<double> monoFrames(const Region& r, std::int64_t from, std::int64_t n) {
+    std::vector<double> out(static_cast<std::size_t>(std::max<std::int64_t>(0, n)), 0.0);
+    const Segment& a = *r.a;
+    for (int c = 0; c < r.channels; ++c) {
+        for (std::int64_t i = 0; i < n; ++i) {
+            const std::int64_t f = from + i;
+            if (f < 0 || f >= r.frames) continue;
+            const auto at = static_cast<std::size_t>(f + kGuardA);
+            const double v = a.is16 ? a.s[static_cast<std::size_t>(c)][at] / 32768.0 : a.f[static_cast<std::size_t>(c)][at];
+            out[static_cast<std::size_t>(i)] += v / r.channels;
+        }
+    }
+    return out;
+}
+
+}  // namespace
+
+Lead leadOf(const Region& a, double offA, const Region& b, double offB, double window, double maxLag) {
+    if (!a.a || !b.a || a.rate != b.rate) return {};
+    const auto n = static_cast<std::int64_t>(std::lround(window * a.rate));
+    const auto L = static_cast<std::int64_t>(std::lround(maxLag * a.rate));
+    const auto x = monoFrames(a, static_cast<std::int64_t>(offA) - L, n + 2 * L);   // a with L frames either side
+    const auto y = monoFrames(b, static_cast<std::int64_t>(offB), n);
+    double yy = 0.0;
+    for (const double v : y) yy += v * v;
+    if (!(yy > 1e-12)) return {};
+    double best = -2.0;
+    std::int64_t bestLag = 0;
+    for (std::int64_t lag = -L; lag <= L; ++lag) {   // b[i] against a[i + lag]
+        double xy = 0.0, xx = 0.0;
+        for (std::int64_t i = 0; i < n; ++i) {
+            const double u = x[static_cast<std::size_t>(i + lag + L)];
+            xy += u * y[static_cast<std::size_t>(i)];
+            xx += u * u;
+        }
+        const double c = xx > 1e-12 ? xy / std::sqrt(xx * yy) : -2.0;
+        if (c > best) {
+            best = c;
+            bestLag = lag;
+        }
+    }
+    return {best >= 0.5 ? static_cast<double>(bestLag) / a.rate : 0.0, std::max(0.0, best)};
+}
+
+Colour attackColour(const Region& r, double off, double window) {
+    if (!r.a) return {};
+    const auto n = static_cast<std::int64_t>(std::lround(window * r.rate));
+    const auto x = monoFrames(r, static_cast<std::int64_t>(off), n);
+    double e = 0.0, d = 0.0;
+    for (std::size_t i = 0; i < x.size(); ++i) {
+        e += x[i] * x[i];
+        if (i > 0) d += (x[i] - x[i - 1]) * (x[i] - x[i - 1]);
+    }
+    if (!(e > 1e-12)) return {};
+    return {10.0 * std::log10(e / static_cast<double>(std::max<std::int64_t>(1, n))), 10.0 * std::log10(std::max(d, 1e-30) / e)};
+}
+
 std::shared_ptr<const LevelTrack> levelTrack(const Region& r) {
     struct Entry {
         std::shared_ptr<const Segment> seg;   // keeps the key's data alive

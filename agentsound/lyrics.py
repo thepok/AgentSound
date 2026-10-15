@@ -36,7 +36,8 @@ from pathlib import Path
 
 from .theory import ComposeError
 
-__all__ = ['VOWELS', 'CONSONANTS', 'Syllable', 'Token', 'Sung', 'LyricsError', 'g2p', 'syllabify', 'parse', 'align',
+__all__ = ['VOWELS', 'CONSONANTS', 'DE_VOWELS', 'DE_CONSONANTS', 'SUNG_VOWELS', 'Syllable', 'Token', 'Sung',
+           'LyricsError', 'g2p', 'syllabify', 'parse', 'align', 'spell',
            'check', 'cmudict_path', 'melody_notes', 'vowel_class']
 
 VOWELS = ('aa', 'ae', 'ah', 'ao', 'aw', 'ay', 'eh', 'er', 'ey', 'ih', 'iy', 'ow', 'oy', 'uh', 'uw')
@@ -44,21 +45,43 @@ CONSONANTS = ('b', 'ch', 'd', 'dh', 'f', 'g', 'hh', 'jh', 'k', 'l', 'm', 'n', 'n
               'v', 'w', 'y', 'z', 'zh')
 _PHONES = set(VOWELS) | set(CONSONANTS)
 
+# German, given by hand (word{...}): the DiffSinger multi-language symbols for German (Hanami's phoneme chart) -
+# a (a / a:), ao (open o), aw (au), ax (schwa), ay (ei), ee (long e), eh (short e / ae), eu1 (long oe), ex (the
+# vocalic r of -er), ih / iy (short / long i), o1 (long o), oe (short oe), oy (eu / aeu), u1 / uh (long / short u),
+# v1 / yy (long / short ue); cc (ich-Laut), x (ach-Laut), rh (uvular r), l1 (clear l), q (glottal stop before a
+# vowel-initial word), ts (z), pf. Stress: a leading apostrophe on the vowel ('ee), else the first vowel.
+DE_VOWELS = ('a', 'ao', 'aw', 'ax', 'ay', 'ee', 'eh', 'eu1', 'ex', 'ih', 'iy', 'o1', 'oe', 'oy', 'u1', 'uh', 'v1',
+             'yy')
+DE_CONSONANTS = ('b', 'cc', 'ch', 'd', 'f', 'g', 'hh', 'jh', 'k', 'l1', 'm', 'n', 'ng', 'p', 'pf', 'q', 'rh', 's',
+                 'sh', 't', 'ts', 'v', 'x', 'y', 'z', 'zh')
+SUNG_VOWELS = frozenset(VOWELS) | frozenset(DE_VOWELS)
+"""Every vowel a sung syllable may have as its nucleus (English ARPAbet + the German symbols)."""
+_DE_ONLY = (set(DE_VOWELS) | set(DE_CONSONANTS)) - _PHONES
+_ALL_PHONES = _PHONES | _DE_ONLY
+
 # legal English onsets (maximal onset principle); single consonants except 'ng' are all legal
 _ONSETS2 = {('p', 'l'), ('b', 'l'), ('k', 'l'), ('g', 'l'), ('f', 'l'), ('s', 'l'), ('p', 'r'), ('b', 'r'),
             ('t', 'r'), ('d', 'r'), ('k', 'r'), ('g', 'r'), ('f', 'r'), ('th', 'r'), ('sh', 'r'), ('t', 'w'),
             ('d', 'w'), ('k', 'w'), ('g', 'w'), ('s', 'w'), ('th', 'w'), ('s', 'm'), ('s', 'n'), ('s', 'p'),
             ('s', 't'), ('s', 'k'), ('s', 'f'), ('p', 'y'), ('b', 'y'), ('k', 'y'), ('g', 'y'), ('m', 'y'),
-            ('f', 'y'), ('v', 'y'), ('hh', 'y'), ('hh', 'w'), ('v', 'r'), ('sh', 'w')}
+            ('f', 'y'), ('v', 'y'), ('hh', 'y'), ('hh', 'w'), ('v', 'r'), ('sh', 'w'),
+            # German (rh / l1 clusters, sch- clusters, zw, kn, gn, pfl)
+            ('p', 'rh'), ('b', 'rh'), ('t', 'rh'), ('d', 'rh'), ('k', 'rh'), ('g', 'rh'), ('f', 'rh'), ('sh', 'rh'),
+            ('p', 'l1'), ('b', 'l1'), ('k', 'l1'), ('g', 'l1'), ('f', 'l1'), ('sh', 'l1'), ('pf', 'l1'),
+            ('pf', 'rh'), ('sh', 't'), ('sh', 'p'), ('sh', 'm'), ('sh', 'n'), ('sh', 'v'), ('ts', 'v'), ('k', 'n'),
+            ('g', 'n'), ('k', 'v')}
 _ONSETS3 = {('s', 'p', 'l'), ('s', 'p', 'r'), ('s', 't', 'r'), ('s', 'k', 'r'), ('s', 'k', 'w'), ('s', 'k', 'l'),
-            ('s', 'p', 'y'), ('s', 'k', 'y')}
+            ('s', 'p', 'y'), ('s', 'k', 'y'), ('sh', 't', 'rh'), ('sh', 'p', 'rh'), ('sh', 'p', 'l1')}
 
-_OPEN = {'aa', 'ao', 'ah', 'ow', 'uw', 'ay', 'aw', 'oy', 'ey', 'iy', 'er', 'eh', 'ae'}
-"""Vowels that sing open on long / high notes. The short closed ones ('ih', 'uh') pinch on a long high note."""
+_OPEN = {'aa', 'ao', 'ah', 'ow', 'uw', 'ay', 'aw', 'oy', 'ey', 'iy', 'er', 'eh', 'ae',
+         'a', 'ee', 'eu1', 'o1', 'oe', 'u1', 'v1'}
+"""Vowels that sing open on long / high notes. The short closed ones ('ih', 'uh'; German also the schwa 'ax', the
+-er 'ex' and the short ue 'yy') pinch on a long high note."""
 
 
 def vowel_class(v: str) -> str:
-    """'open' (aa ao ah ow uw ay aw oy ey iy er eh ae: singable on long and high notes) or 'closed' (ih uh)."""
+    """'open' (aa ao ah ow uw ay aw oy ey iy er eh ae; German a ee eu1 o1 oe u1 v1: singable on long and high
+    notes) or 'closed' (ih uh; German ax ex yy)."""
     return 'open' if v in _OPEN else 'closed'
 
 
@@ -67,13 +90,6 @@ class LyricsError(ComposeError):
 
 
 # ------------------------------------------------------------------------------------------- the dictionary
-
-def _voices_dir() -> Path:
-    env = os.environ.get('AGENTSOUND_VOICES')
-    if env:
-        return Path(env)
-    return Path(__file__).resolve().parent.parent / 'assets' / 'voices'
-
 
 BUNDLED_CMUDICT = Path(__file__).resolve().parent.parent / 'third_party' / 'cmudict' / 'cmudict.dict'
 
@@ -107,6 +123,10 @@ def _cmudict() -> dict:
 
 
 def _split_stress(ph: str) -> tuple[str, int | None]:
+    if ph.startswith("'") and ph[1:] in _DE_ONLY | set(DE_VOWELS):     # German: 'ee = the stressed vowel
+        return ph[1:], 1
+    if ph in _DE_ONLY:                                  # a German symbol (o1, u1, l1 ... end in a digit: not stress)
+        return ph, None
     m = re.match(r'^([a-z]+)([012])?$', ph.lower())
     if not m:
         raise LyricsError(f"phoneme {ph!r} is not ARPAbet (like 'ow1', 'hh', 'ah0')")
@@ -232,12 +252,14 @@ def syllabify(phones, word: str = '', source: str = 'cmudict') -> list[Syllable]
     base, stress = [], []
     for p in phones:
         b, s = _split_stress(p)
-        if b not in _PHONES:
-            raise LyricsError(f"{word or 'word'}: unknown English phoneme {p!r} (ARPAbet: {' '.join(VOWELS)} | "
-                              f"{' '.join(CONSONANTS)})")
+        if b not in _ALL_PHONES:
+            raise LyricsError(f"{word or 'word'}: unknown phoneme {p!r} (ARPAbet: {' '.join(VOWELS)} | "
+                              f"{' '.join(CONSONANTS)}; German: {' '.join(DE_VOWELS)} | {' '.join(DE_CONSONANTS)})")
         base.append(b)
         stress.append(s)
-    nuclei = [i for i, b in enumerate(base) if b in VOWELS]
+    # German: the vocalic r 'ex' right after a vowel is its off-glide (wer, der, mir: one syllable), not a nucleus
+    nuclei = [i for i, b in enumerate(base) if b in SUNG_VOWELS
+              and not (b == 'ex' and i > 0 and base[i - 1] in SUNG_VOWELS and base[i - 1] in DE_VOWELS)]
     if not nuclei:
         raise LyricsError(f"{word or 'word'}: no vowel in {' '.join(phones)}")
     if all(stress[i] is None for i in nuclei):           # given by hand without stress: the first vowel
@@ -355,7 +377,7 @@ def _token(raw: str, out: list) -> Token | None:
         return None
     if word in ('-', '_'):
         return Token('melisma' if word == '-' else 'hold', word, mark=mark)
-    word = re.sub(r"[^A-Za-z'\-]", '', word)
+    word = re.sub(r"[^A-Za-zÄÖÜäöüß'\-]", '', word)
     pieces = [x for x in word.split('-') if x] if '-' in word.strip('-') else []
     word = word.replace('-', '')
     if not word and ph is None:
@@ -364,6 +386,31 @@ def _token(raw: str, out: list) -> Token | None:
     if phon is not None and not phon:
         raise LyricsError(f"lyrics token {raw!r}: empty phonemes {{}}")
     return Token('word', word or ''.join(phon), pieces, phon, mark)
+
+
+def spell(text: str, lexicon: dict) -> str:
+    """The lyrics `text` with every word's phonemes from `lexicon` ({word: 'ph ph ...'}, case-insensitive; a German
+    song's own pronouncing list in the DE_VOWELS / DE_CONSONANTS symbols) written out as word{ph ...} - for a language
+    the dictionary does not know. Melisma / hold tokens, phrase marks and the *emphasis* / (( intimate )) markup pass
+    through; a word already given as word{...} is kept. A hand-split word (Fäh-re) is looked up whole (fähre); the
+    syllables come from the phonemes. A word missing from the lexicon is an error (never guessed by English rules)."""
+    lex = {k.lower(): v for k, v in lexicon.items()}
+    out = []
+    for raw in re.findall(r'[^\s{}]*\{[^{}]*\}\S*|\S+', text):
+        if '{' in raw or raw in ('((', '))', '-', '_', '–', '—'):
+            out.append(raw)
+            continue
+        m = re.match(r"^((?:\(\()?\*?)([\"(\[]*)(.*?)([\")\]*,;.!?:]*)$", raw)
+        pre, quote, word, post = m.group(1), m.group(2), m.group(3), m.group(4)
+        key = re.sub(r"[^A-Za-zÄÖÜäöüß']", '', word).lower()
+        if not key:
+            out.append(raw)
+            continue
+        if key not in lex:
+            raise LyricsError(f"lyrics.spell: {word!r} is not in the lexicon - add it: '{key}': '<phonemes>' "
+                              f"(German: {' '.join(DE_VOWELS)} | {' '.join(DE_CONSONANTS)})")
+        out.append(f"{pre}{quote}{word.replace('-', '')}{{{lex[key]}}}{post}")
+    return ' '.join(out)
 
 
 # ------------------------------------------------------------------------------------------------ alignment

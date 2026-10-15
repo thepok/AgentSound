@@ -17,6 +17,8 @@ README.md section 9 has the repo layout and where to add things; section 2 the e
   `python -m agentsound samples fetch ID` installs one (SOURCE.json with the license / attribution, INDEX.json).
   Credit CC-BY packs.
 - `songs/<slug>/song.py` — one song each; renders go to `songs/<slug>/out/` (gitignored).
+- `covers/<slug>/song.py` — private comparison renders of copyrighted music (e.g. a famous line on our sax to
+  compare with the record): gitignored, never committed, synced or published.
 
 Open findings live in `TODO.md` - check it before system work, add new findings there, remove an entry when fixed.
 
@@ -27,6 +29,10 @@ export PATH=/d/compiler/mingw64/bin:$PATH   # e.g.: wherever your MinGW-w64 GCC 
 cmake --preset release && cmake --build --preset release && ctest --preset release
 python tests/run.py   # Python tests in parallel (serial: python -m unittest discover -s tests/python)
 ```
+
+While working, run only the test modules of what you touched (`python tests/run.py endless soloist`, seconds to a
+minute); the full `python tests/run.py` runs once before a merge, `--full` (test_notation over every song, ~30 min)
+only before a public sync.
 
 ## Song workflow (for every user wish)
 
@@ -49,7 +55,9 @@ hat in order, or each role file is one agent's brief. The steps below are the me
    and the images; `python -m agentsound zoom songs/<slug> --at 1:23.4 [--stem <id>]` for any moment). Check the
    loudness arc per section, masking, low end, harshness, stereo, clicks, whether every part is audible and the note
    dynamics. `flat_dynamics` (a lead whose notes are all equally loud: robotic) must be 0; `silent_notes` (notes that
-   reach no sample / piece / layer, or made no audible sound) must be 0 too.
+   reach no sample / piece / layer, or made no audible sound) must be 0 too. When the ears venv is installed,
+   `python -m agentsound ears songs/<slug> [--section]` adds learned realism (Audiobox PQ/CE, CLAP P(real); README
+   section 6 says which signals are trusted) - a second opinion, not a gate.
 5. Compare with a reference when the user names one (or one of the genre is in `assets/refrences/` / `references/`,
    gitignored): `python -m agentsound compare songs/<slug> --ref <audio> [--ref-start --ref-end] [--section]`, LOOK at
    `out/compare/<ref>/compare.png`. Compare like with like (chorus vs chorus). Never copy reference audio into the repo.

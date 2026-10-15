@@ -91,7 +91,7 @@ PLATFORMS: dict[str, Platform] = {
                         "classical / jazz / acoustic: dynamics first - never above the middle of the profile's window "
                         "and at most ~1.5 dB of extra peak limiting; slow limiter release"),
 }
-_ALIASES = {'club': 'loud', 'classical': 'dynamic', 'piano': 'dynamic', 'jazz': 'dynamic', 'acoustic': 'dynamic', 'spotify': 'streaming',
+_ALIASES = {'club': 'loud', 'classical': 'dynamic', 'piano': 'dynamic', 'organ': 'dynamic', 'jazz': 'dynamic', 'acoustic': 'dynamic', 'spotify': 'streaming',
             'youtube': 'streaming', None: 'auto', '': 'auto'}
 # Loudness normalisation of the big services (for check's notes).
 NORMALISATION = (('Spotify / YouTube / Tidal / Amazon', -14.0), ('Apple Music', -16.0))
@@ -1260,6 +1260,8 @@ def _encode_mp3(ff: str | None, wav: Path, mp3: Path, tagged: Path | None) -> st
 
 # ------------------------------------------------------------------------------------------ check
 
+_CHECK_SEVERITIES = {'dynamic': {'lra_low': 'warn'}}
+
 def _finding(code, severity, message, fix=None) -> dict:
     d = {'code': code, 'severity': severity, 'message': message}
     if fix:
@@ -1272,7 +1274,7 @@ def check(report, *, platform=None, profile_window=None, compare=None, render: d
     and render JSON): true peak, clipping, DC, loudness vs the profile window and the platform (with the -14 / -16
     LUFS normalisation notes), PLR, LRA vs the genre's range, tonal balance vs the profile (and vs a reference when
     `compare` - a compare.json dict / path - is given), low-end mono, mono compatibility, width, master limiter.
-    Each finding: {code, severity: warn|info|ok, message, fix?}; warn first."""
+    Base engine verdicts with remedies: {code, metric, value, limit, node, section, severity, message, fix?}; errors first."""
     plat = get_platform(platform)
     if isinstance(report, (str, Path)):
         p = Path(report)
@@ -1291,53 +1293,62 @@ def check(report, *, platform=None, profile_window=None, compare=None, render: d
         compare = _load_json(Path(compare))
     g = rep.get('global') or {}
     refinfo = rep.get('reference') or {}
-    meas = rep.get('measures') or {}
     prof = refinfo.get('profile', 'default')
     out: list[dict] = []
     lufs = g.get('lufsIntegrated')
     tp = g.get('truePeakDbtp')
     tp_max = plat.tp
 
-    # true peak / clipping / DC
-    if isinstance(tp, (int, float)):
-        if tp > tp_max + 0.05:
-            out.append(_finding('true_peak', 'warn',
-                                f"true peak {tp:+.2f} dBTP is over {tp_max:g} dBTP: mp3/AAC/Opus encoding adds inter-sample "
-                                f"overs (up to ~1 dB) and players clip them",
-                                {'target': 'master limiter', 'params': {'ceiling': round(tp_max - 0.2, 1)}}))
-        else:
-            out.append(_finding('true_peak', 'ok', f"true peak {tp:+.2f} dBTP (<= {tp_max:g})"))
-    clipped = g.get('clippedSamples') or 0
-    if clipped:
-        out.append(_finding('clipping', 'warn', f"{clipped} clipped samples: something runs into 0 dBFS after or without "
-                                                 f"the limiter", {'target': 'master', 'fx': 'limiter last, ceiling -1.2'}))
-    dc = [abs(float(x)) for x in (g.get('dcOffset') or []) if isinstance(x, (int, float))]
-    if dc and max(dc) >= 0.001:
-        out.append(_finding('dc_offset', 'warn', f"DC offset {max(dc):.4f} (>= -60 dBFS) wastes headroom and thumps at cuts",
-                            {'type': 'eq', 'params': {'hp.freq': 20}}))
-    sub = g.get('subsonicPct')
-    if isinstance(sub, (int, float)) and sub >= 1.0:
-        out.append(_finding('subsonic', 'info', f"{sub:.1f} % of the energy below 20 Hz: inaudible rumble eating headroom",
-                            {'type': 'eq', 'params': {'hp.freq': 20}}))
-
-    # loudness vs the window and the platforms
-    win = list(profile_window) if profile_window else (refinfo.get('lufsTarget') if isinstance(refinfo.get('lufsTarget'), list)
-                                                        else None)
+    from .verdicts import DELIVERY, evaluate
+    win = list(profile_window) if profile_window else refinfo.get('lufsTarget')
     if plat.window:
         win = list(plat.window)
+    policy = dict(DELIVERY['profile'], truePeakMaxDbtp=plat.tp)
+    if isinstance(plat.lufs, (int, float)):
+        policy.update(DELIVERY['streaming'], loudness=[plat.lufs, plat.lufs])
+    elif win:
+        policy['loudness'] = win
+    aliases = {'loudness_low': 'loudness_platform' if isinstance(plat.lufs, (int, float)) else 'loudness_window',
+               'loudness_high': 'loudness_platform' if isinstance(plat.lufs, (int, float)) else 'loudness_window',
+               'low_end_not_mono': 'mono_low_end', 'phase': 'mono_compat', 'very_wide': 'mono_compat',
+               'lra_low': 'lra_small', 'lra_high': 'lra_large',
+               'narrow_mix': 'narrow', 'over_wide': 'wide'}
+    fixes = {'true_peak': {'target': 'master limiter', 'params': {'ceiling': round(tp_max - 0.2, 1)}},
+             'clipping': {'target': 'master', 'fx': 'limiter last, ceiling -1.2'},
+             'dc_offset': {'type': 'eq', 'params': {'hp.freq': 20}},
+             'subsonic': {'type': 'eq', 'params': {'hp.freq': 20}},
+             'low_end_not_mono': {'type': 'width', 'params': {'monobass': 120}},
+             'phase': {'type': 'width', 'params': {'width': 0.85}},
+             'lra_low': {'target': 'master limiter', 'gainDbChange': -2.0}}
+    selected = set(fixes) | set(aliases) | {'squashed', 'lra_high'}
+    findings = evaluate(rep, policy=policy)
+    for f in findings:
+        code = f['code']
+        if code not in selected and not code.startswith('balance_'):
+            continue
+        item = dict(f, code=aliases.get(code, 'tone_band' if code.startswith('balance_') else code))
+        if code in fixes:
+            item['fix'] = fixes[code]
+        if code in ('loudness_low', 'loudness_high', 'squashed'):
+            delta = (plat.lufs - f['value'] if isinstance(plat.lufs, (int, float)) and code != 'squashed'
+                     else f['limit'] - f['value'])
+            if code == 'squashed':
+                delta = -delta
+            elif not isinstance(plat.lufs, (int, float)):
+                delta += 0.5 if delta > 0 else -0.5
+            item['fix'] = {'target': 'master limiter', 'gainDbChange': round(delta, 1)}
+        if code == 'over_wide':
+            space = rep.get('space') or {}
+            wa, tw = space.get('widthAbove150HzPct'), (space.get('targets') or {}).get('widthAbove150HzPct')
+            if isinstance(wa, (int, float)) and wa > 0 and tw:
+                item['fix'] = {'type': 'width', 'params': {'width': round(max(0.85, math.sqrt(tw[1] * 0.95 / wa)), 2)}}
+        item['severity'] = _CHECK_SEVERITIES.get(plat.name, {}).get(code, f['severity'])
+        out.append(item)
+    if isinstance(tp, (int, float)) and not any(f['code'] == 'true_peak' for f in findings):
+        out.append(_finding('true_peak', 'ok', f"true peak {tp:+.2f} dBTP (<= {tp_max:g})"))
     if isinstance(lufs, (int, float)):
-        if isinstance(plat.lufs, (int, float)) and abs(lufs - plat.lufs) > 1.0:
-            out.append(_finding('loudness_platform', 'warn',
-                                f"{lufs:.1f} LUFS-I vs the {plat.name} target {plat.lufs:g} LUFS ({lufs - plat.lufs:+.1f} LU)",
-                                {'target': 'master limiter', 'gainDbChange': round(plat.lufs - lufs, 1)}))
-        elif win and not win[0] - 0.05 <= lufs <= win[1] + 0.05:
-            d = win[0] - lufs if lufs < win[0] else win[1] - lufs
-            out.append(_finding('loudness_window', 'warn',
-                                f"{lufs:.1f} LUFS-I is outside the {'platform' if plat.window else prof} window "
-                                f"{win[0]:g}..{win[1]:g} LUFS ({'quieter' if d > 0 else 'louder'} by {abs(d):.1f} LU)",
-                                {'target': 'master limiter', 'gainDbChange': round(d + (0.5 if d > 0 else -0.5), 1)}))
-        else:
-            out.append(_finding('loudness', 'ok', f"{lufs:.1f} LUFS-I" + (f" inside {win[0]:g}..{win[1]:g}" if win else '')))
+        if not any(f['code'].startswith('loudness_') for f in findings):
+            out.append(_finding('loudness', 'ok', f"{lufs:.1f} LUFS-I"))
         notes = []
         for who, level in NORMALISATION:
             d = level - lufs
@@ -1351,28 +1362,6 @@ def check(report, *, platform=None, profile_window=None, compare=None, render: d
         else:
             tail = '. At the streaming reference level: played as it is'
         out.append(_finding('normalisation', 'info', "loudness normalisation: " + '; '.join(notes) + tail))
-
-    # PLR / LRA
-    plr = g.get('plr')
-    plr_min = refinfo.get('plrMinDb')
-    if isinstance(plr, (int, float)) and isinstance(plr_min, (int, float)) and plr < plr_min:
-        out.append(_finding('squashed', 'warn', f"PLR {plr:.1f} dB < {plr_min:g} ({prof}): the limiter squashes the peaks",
-                            {'target': 'master limiter', 'gainDbChange': round(plr - plr_min, 1)}))
-    lra = g.get('loudnessRange')
-    rng = refinfo.get('lraRangeLu')
-    if isinstance(lra, (int, float)) and isinstance(rng, list) and len(rng) == 2:
-        if lra < rng[0]:
-            out.append(_finding('lra_small', 'warn' if plat.name == 'dynamic' else 'info',
-                                f"loudness range {lra:.1f} LU < {rng[0]:g} ({prof}): the song barely breathes - quieter "
-                                f"verses / breakdowns in the arrangement, less bus compression, less limiter drive",
-                                {'target': 'master limiter', 'gainDbChange': -2.0}))
-        elif lra > rng[1]:
-            out.append(_finding('lra_large', 'info',
-                                f"loudness range {lra:.1f} LU > {rng[1]:g} ({prof}): quiet passages drop out in a car or on "
-                                f"earbuds - lift them (arrangement, gainDb automation) or glue the music bus "
-                                f"(compressor 2:1, slow attack)"))
-        else:
-            out.append(_finding('lra', 'ok', f"loudness range {lra:.1f} LU inside {rng[0]:g}..{rng[1]:g}"))
 
     # tone vs the profile (broad moves only: what a master can fix)
     to = g.get('thirdOctave') or {}
@@ -1388,14 +1377,6 @@ def check(report, *, platform=None, profile_window=None, compare=None, render: d
                                 f"towards the genre average (report bandsVsRefDb {g.get('bandsVsRefDb')}); a bigger "
                                 f"imbalance belongs in the mix (the parts that carry the band)",
                                 {'type': 'eq', 'params': eq}))
-    lims = refinfo.get('bandLimitsDb') or {}
-    for band, v in (g.get('bandsVsRefDb') or {}).items():
-        lim = lims.get(band) or {}
-        if isinstance(v, (int, float)) and ((lim.get('high') is not None and v > lim['high']) or
-                                            (lim.get('low') is not None and v < lim['low'])):
-            out.append(_finding('tone_band', 'warn',
-                                f"{band} {v:+.1f} dB vs the {prof} balance (limits {lim.get('low', '-')}/{lim.get('high', '-')}): "
-                                f"too big for a master eq (+-3 dB) alone - fix it in the mix"))
     if isinstance(compare, dict) and compare.get('spectrum'):
         sp = compare['spectrum']
         hz = sp['hz']
@@ -1408,41 +1389,12 @@ def check(report, *, platform=None, profile_window=None, compare=None, render: d
                                 f"vs the reference ({(compare.get('reference') or {}).get('label')}): {describe_eq(eq)} "
                                 f"(mastering.match fits and applies it)", {'type': 'eq', 'params': eq}))
 
-    # stereo / mono compatibility
-    lowc = g.get('lowEndCorrelation')
-    if isinstance(lowc, (int, float)) and lowc < 0.8:
-        out.append(_finding('mono_low_end', 'warn', f"low-end correlation {lowc:.2f} < 0.8: the bass / kick are not mono - "
-                                                    f"they lose level in mono and on club systems",
-                            {'type': 'width', 'params': {'monobass': 120}}))
-    corr = g.get('stereoCorrelation')
-    width = g.get('widthPct')
-    if isinstance(corr, (int, float)):
-        loss = 10 * math.log10(1 + max(0.0, width or 0.0) / 100.0) if isinstance(width, (int, float)) else None
-        tail = f" (mono sum ~{loss:.1f} dB quieter)" if loss is not None else ''
-        if corr < 0.0:
-            out.append(_finding('mono_compat', 'warn', f"L/R correlation {corr:.2f} < 0: parts cancel in mono{tail}",
-                                {'type': 'width', 'params': {'width': 0.85}}))
-        elif corr < 0.2:
-            out.append(_finding('mono_compat', 'info', f"L/R correlation {corr:.2f}: very wide - check mono{tail}"))
-        else:
-            out.append(_finding('mono_compat', 'ok', f"L/R correlation {corr:.2f}{tail}"))
-    tw = ((rep.get('space') or {}).get('targets') or {}).get('widthAbove150HzPct')
-    wa = (rep.get('space') or {}).get('widthAbove150HzPct', _cmp._num(meas, 'stereo', 'above150Hz', 'widthPct'))
-    if isinstance(tw, list) and len(tw) == 2 and isinstance(wa, (int, float)):
-        if wa < tw[0]:
-            out.append(_finding('narrow', 'info', f"width above 150 Hz {wa:.0f} % < {tw[0]:g} % ({prof}): a master width "
-                                                  f"x{min(1.25, math.sqrt(tw[0] * 1.1 / max(wa, 0.5))):.2f} helps a little; "
-                                                  f"the real fix is wider parts (space.opportunities)"))
-        elif wa > tw[1]:
-            out.append(_finding('wide', 'info', f"width above 150 Hz {wa:.0f} % > {tw[1]:g} % ({prof})",
-                                {'type': 'width', 'params': {'width': round(max(0.85, math.sqrt(tw[1] * 0.95 / wa)), 2)}}))
-
     # the master chain itself
     if isinstance(render, dict) and render.get('master') is not None:
         if _cmp._limiter_gain(render) is None:
             out.append(_finding('no_limiter', 'warn', "the master chain has no limiter: nothing keeps the true peak under "
                                                       f"{tp_max:g} dBTP", {'type': 'limiter', 'params': {'ceiling': -1.2}}))
-    order = {'warn': 0, 'info': 1, 'ok': 2}
+    order = {'error': 0, 'warn': 1, 'info': 2, 'ok': 3}
     out.sort(key=lambda f: order.get(f['severity'], 3))
     return out
 

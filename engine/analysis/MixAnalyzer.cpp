@@ -11,11 +11,109 @@
 #include <cstdio>
 #include <filesystem>
 #include <optional>
+#include <map>
 #include <set>
 #include <stdexcept>
 #include <tuple>
 
 namespace as {
+
+
+json evaluateReport(const json& report, const json& policy) {
+    if (!report.is_object() || !policy.is_object()) throw std::invalid_argument("verdicts needs report/policy objects");
+    for (const auto& x : policy.items()) {
+        if (x.key() == "loudness") {
+            if (!x.value().is_array() || x.value().size() != 2 || !x.value()[0].is_number() ||
+                !x.value()[1].is_number() || !std::isfinite(x.value()[0].get<double>()) || !std::isfinite(x.value()[1].get<double>()) ||
+                x.value()[0].get<double>() > x.value()[1].get<double>())
+                throw std::invalid_argument("verdict loudness must be [min, max], min <= max");
+        } else if (x.key() != "truePeakMaxDbtp" && x.key() != "loudnessToleranceLu")
+            throw std::invalid_argument("unknown verdict policy key: " + x.key());
+        else if (!x.value().is_number() || !std::isfinite(x.value().get<double>()) ||
+                 (x.key() == "loudnessToleranceLu" && x.value().get<double>() < 0))
+            throw std::invalid_argument("invalid verdict policy value: " + x.key());
+    }
+    json out = json::array();
+    auto add = [&](std::string code, std::string metric, json value, json limit, std::string severity,
+                   std::string node = "", std::string section = "", std::string message = "") {
+        for (const auto& f : out)
+            if (f["code"] == code && f["node"] == node && f["section"] == section) return;
+        if (message.empty()) message = code + ": " + metric + " " + value.dump() + " (limit " + limit.dump() + ")";
+        out.push_back({{"code", code}, {"metric", metric}, {"value", value}, {"limit", limit},
+                       {"node", node}, {"section", section}, {"severity", severity}, {"message", message}});
+    };
+    json g = report.value("global", json::object());
+    g.update(report.value("deliveryMetrics", json::object()));
+    const json ref = report.value("reference", json::object());
+    const bool cached = report.contains("findings");
+    if (cached) for (const auto& f : report.at("findings")) {
+        const std::string c = f.at("code");
+        if (c != "true_peak" && c != "loudness_low" && c != "loudness_high" && c != "loudness_missing") out.push_back(f);
+    }
+    auto number = [](const json& obj, const char* key, double fallback) {
+        return obj.contains(key) && obj[key].is_number() ? obj[key].get<double>() : fallback;
+    };
+    const double lufs = number(g, "lufsIntegrated", -1000), tp = number(g, "truePeakDbtp", -1000);
+    const double ceiling = policy.value("truePeakMaxDbtp", -1.0);
+    if (tp > ceiling) add("true_peak", "truePeakDbtp", tp, ceiling, tp > 0 ? "error" : tp <= ceiling + 0.1 ? "info" : "warn");
+    const json window = policy.value("loudness", ref.value("lufsTarget", json::array()));
+    const double tolerance = policy.value("loudnessToleranceLu", 0.05);
+    if (window.size() == 2 && (lufs > -70 || lufs == -1000 || policy.contains("loudness"))) {
+        if (lufs == -1000) add("loudness_missing", "lufsIntegrated", nullptr, window, "warn");
+        else if (lufs < window[0].get<double>() - tolerance)
+            add("loudness_low", "lufsIntegrated", lufs, window[0], "warn");
+        else if (lufs > window[1].get<double>() + tolerance)
+            add("loudness_high", "lufsIntegrated", lufs, window[1], "warn");
+    }
+    if (cached) return out;
+    auto high = [&](const char* code, const char* key, double limit, const char* severity = "warn") {
+        const double v = number(g, key, -1000);
+        if (v > limit) add(code, key, v, limit, severity);
+    };
+    high("clipping", "clippedSamples", 0, "error");
+
+    high("subsonic", "subsonicPct", 1);
+    double dc = 0;
+    for (const auto& v : g.value("dcOffset", json::array())) if (v.is_number()) dc = std::max(dc, std::fabs(v.get<double>()));
+    if (dc > 0.001) add("dc_offset", "dcOffset", dc, 0.001, "warn");
+    const double plr = number(g, "plr", 1000), plrMin = number(ref, "plrMinDb", -1000);
+    if (lufs > -70 && plr < plrMin) add("squashed", "plr", plr, plrMin, "info");
+    const json range = ref.value("lraRangeLu", json::array());
+    const double lra = number(g, "loudnessRange", -1000);
+    if (range.size() == 2 && lra != -1000 && number(g, "durationSec", 31) > 30) {
+        if (lra < range[0].get<double>()) add("lra_low", "loudnessRange", lra, range[0], "info");
+        else if (lra > range[1].get<double>()) add("lra_high", "loudnessRange", lra, range[1], "info");
+    }
+    auto stereo = [&](const json& obj, std::string section = "") {
+        const double low = number(obj, "lowEndCorrelation", 1), share = number(obj, "lowEndEnergyShare", 0);
+        if (share > 0.05 && low < 0.75) add("low_end_not_mono", "lowEndCorrelation", low,
+                                         {{"correlation", 0.75}, {"energyShare", 0.05}}, "warn", "", section);
+        const double corr = number(obj, section.empty() ? "stereoCorrelation" : "correlation", 1);
+        if (corr < (section.empty() ? 0 : -0.2))
+            add("phase", "stereoCorrelation", corr, section.empty() ? 0 : -0.2, section.empty() && corr < -0.2 ? "error" : "warn", "", section);
+        else if (corr < (section.empty() ? 0.2 : 0)) add("very_wide", "stereoCorrelation", corr, 0.2, "info", "", section);
+    };
+    stereo(g);
+    for (const auto& sec : report.value("sections", json::array()))
+        if (!sec.value("implicit", false) && number(sec, "rmsDb", 0) >= -60) stereo(sec, sec.value("name", ""));
+    // Findings owned by other engine analyses keep their identity and scope.
+    for (const auto& w : report.value("warnings", json::array())) {
+        const json nodes = w.value("nodes", json::array({""})), sections = w.value("sections", json::array({""}));
+        for (const auto& n : nodes) for (const auto& sec : sections)
+            add(w.value("code", "") == "clicks" && number(g, "clicks", 0) == 0 ? "clicks_masked" : w.value("code", ""),
+                "", nullptr, nullptr, w.value("severity", "info"), n, sec, w.value("message", ""));
+    }
+    high("clicks", "clicks", 0, "warn");
+    for (const auto& n : report.value("nodes", json::array())) {
+        const std::string id = n.value("id", "");
+        const json d = n.value("dynamics", json::object()), sil = n.value("silentNotes", json::object());
+        if (d.value("flat", false) && d.value("kind", "") == "lead")
+            add("flat_dynamics", "dynamics.flat", true, false, "warn", id);
+        const int count = sil.value("silent", 0) + sil.value("compileSilent", 0);
+        if (count > 0) add("silent_notes", "silentNotes", count, 0, "warn", id);
+    }
+    return out;
+}
 
 namespace analysis {
 
@@ -185,8 +283,8 @@ bool looksLikeKick(const std::string& id) {
 
 // Order of warnings with the same severity: what an agent should fix first.
 int warningRank(const std::string& code) {
-    static const char* kOrder[] = {"no_audio", "non_finite", "clipping", "clicks", "silent_notes", "true_peak", "loudness", "phase", "low_end_not_mono",
-                                   "dry_mix", "washy", "narrow_mix", "over_wide", "thin_bed", "masking", "flat_dynamics", "reverb_inaudible", "balance_",
+    static const char* kOrder[] = {"no_audio", "non_finite", "pack_fallback", "clipping", "clicks", "silent_notes", "true_peak", "loudness", "phase", "low_end_not_mono",
+                                   "dry_mix", "washy", "narrow_mix", "over_wide", "thin_bed", "masking", "spiky_track", "flat_dynamics", "reverb_inaudible", "balance_",
                                    "subsonic", "inaudible", "silent_section", "section_out_of_range", "lr_balance", "dc_offset", "dull",
                                    "tilt", "squashed", "mono", "very_wide", "lra_", "level_jump", "silent_node", "node_hot"};
     for (std::size_t i = 0; i < std::size(kOrder); ++i)
@@ -547,7 +645,7 @@ void ReportBuilder::measureMix() {
 
 json ReportBuilder::globalJson() {
     json g;
-    g["durationSec"] = r2(m_.durationSec);
+    g["durationSec"] = m_.durationSec;
     g["sampleRate"] = static_cast<int>(std::lround(sr_));
     g["bpm"] = m_.bpm;
     if (m_.mapped || m_.metered) {
@@ -572,23 +670,24 @@ json ReportBuilder::globalJson() {
         }
         g["meter"] = meters;
     }
-    g["lufsIntegrated"] = r1(m_.lufsI);
-    g["loudnessRange"] = r1(m_.lra);
+    g["lufsIntegrated"] = m_.lufsI;
+    g["loudnessRange"] = m_.lra;
     g["shortTermMax"] = r1(stMax_);
     g["momentaryMax"] = r1(mMax_);
-    g["truePeakDbtp"] = r2(m_.truePeakDb);
+    g["truePeakDbtp"] = m_.truePeakDb;
     g["samplePeakDb"] = r1(m_.samplePeakDb);
-    g["plr"] = r1(m_.truePeakDb - m_.lufsI);
+    g["plr"] = m_.truePeakDb - m_.lufsI;
     const double rms = mixAgg_.rmsDb();
     g["rmsDb"] = r1(rms);
     g["crestDb"] = r1(m_.samplePeakDb - rms);
     g["clippedSamples"] = clipped_;
     if (firstClipSec_ >= 0) g["firstClipSec"] = r2(firstClipSec_);
-    g["dcOffset"] = {std::round(dcL_ * 1e6) / 1e6 + 0.0, std::round(dcR_ * 1e6) / 1e6 + 0.0};
-    g["stereoCorrelation"] = r2(mixAgg_.corr());
+    g["dcOffset"] = {dcL_, dcR_};
+    g["stereoCorrelation"] = mixAgg_.corr();
     g["widthPct"] = r1(mixAgg_.width());
     g["balanceLrDb"] = r1(lrBalanceDb(mixAgg_.ll, mixAgg_.rr));
-    g["lowEndCorrelation"] = r2(mixAgg_.lowCorr());
+    g["lowEndCorrelation"] = mixAgg_.lowCorr();
+    g["lowEndEnergyShare"] = mixAgg_.lowShare();
     g["clicks"] = m_.clicksInMix;          // totals; report.clicks lists at most kMaxClicksReported
     g["clicksMasked"] = m_.clicksMasked;
     m_.stMax = stMax_;
@@ -608,7 +707,7 @@ json ReportBuilder::globalJson() {
     g["bandsDb"] = bandObject(db);
     g["bandsVsRefDb"] = bandObject(vsRef_.data());
     const double all = mixAgg_.energy();
-    g["subsonicPct"] = r2(all > 0 ? 100.0 * mixAgg_.band[kInfraSlot] / all : 0.0);
+    g["subsonicPct"] = all > 0 ? 100.0 * mixAgg_.band[kInfraSlot] / all : 0.0;
     g["spectralTiltDbPerOct"] = r2(tilt_);
     g["referenceTiltDbPerOct"] = r2(refTilt_);
     g["centroidHz"] = ri(m_.mix->centroidHz());
@@ -681,10 +780,11 @@ json ReportBuilder::sectionsJson() {
         for (std::size_t t = t0; inside(t); ++t) stMax = std::max(stMax, static_cast<double>(m_.shortTerm[t]));
         j["shortTermMax"] = r1(stMax);
         j["peakDb"] = r1(dbFromAmplitude(a.peak));
-        j["rmsDb"] = r1(a.rmsDb());
-        j["correlation"] = r2(a.corr());
+        j["rmsDb"] = a.rmsDb();
+        j["correlation"] = a.corr();
         j["widthPct"] = r1(a.width());
-        j["lowEndCorrelation"] = r2(a.lowCorr());
+        j["lowEndCorrelation"] = a.lowCorr();
+        j["lowEndEnergyShare"] = a.lowShare();
         double pct[kNumBands], vs[kNumBands];
         for (int b = 0; b < kNumBands; ++b) pct[b] = a.bandPct(b);
         balanceVsReference(a.band, m_.refShare, vs);
@@ -888,7 +988,10 @@ void ReportBuilder::checkMasking() {
         // Sharing the top octaves (hats + shaker, cymbal layers) is normal and rarely masks: info only.
         const bool lowBand = band <= 1, topBand = band >= 5;
         const bool ducked = lowBand && minSep >= 3.0;
-        const int sev = topBand ? 2 : lowBand ? (ducked ? 2 : 1) : (maxCo >= 0.6 ? 1 : 2);
+        // two registrations of one organ (analysis.registration) blend by design - the plenum's manual over its
+        // pedal, a solo stop over its accompaniment: info only
+        const bool organ = m_.nodes[key.a].routing.registration && m_.nodes[key.b].routing.registration;
+        const int sev = organ ? 2 : topBand ? 2 : lowBand ? (ducked ? 2 : 1) : (maxCo >= 0.6 ? 1 : 2);
         std::string msg = fmt("'%s' and '%s' both carry %s of the %s band (%s) %s (up to %.0f%% / %.0f%%, ", A.c_str(), B.c_str(),
                               lowBand ? "the bulk (>25% each, >70% together)" : ">35%", kBandNames[band], kBandRanges[band],
                               where.c_str(), 100 * sa, 100 * sb);
@@ -899,6 +1002,7 @@ void ReportBuilder::checkMasking() {
                                           : ": they overlap in time (little or no ducking between them).")
                        : maxCo < 0.6 ? ": they partly alternate in time, so masking is moderate."
                        : topBand ? ": usually fine for hats/cymbals, but check that both stay distinct." : ": they mask each other.";
+        if (organ) msg += " (two registrations of one organ: they blend by design)";
         warn(sev, "masking", msg, implicitOnly ? std::vector<std::string>{} : secNames, {A, B});
 
         const int domA = m_.nodes[key.a].dominantBand, domB = m_.nodes[key.b].dominantBand;
@@ -941,7 +1045,22 @@ void ReportBuilder::checkMasking() {
         }
     }
 
-    // Nearly inaudible and silent tracks.
+    // Nearly inaudible and silent tracks - judged like the ear: a sparse track (clicks, pops, crackle) is heard by
+    // the peaks of its short transients, not by its RMS (which the rare hits barely move).
+    double loudestPeak = kDbFloor;
+    for (const auto& node : m_.nodes)
+        if (!node.isBus) loudestPeak = std::max(loudestPeak, node.peakDb);
+    for (std::size_t n = 0; n < m_.nodes.size(); ++n) {
+        const NodeData& nd = m_.nodes[n];
+        if (nd.isBus || nd.rmsDb <= kDbFloor) continue;
+        const double crest = nd.peakDb - nd.rmsDb, under = loudestPeak - nd.peakDb;
+        if (crest >= 30.0 && under < 12.0 && under > 0.0)
+            warn(1, "spiky_track", fmt("'%s' is sparse transients (crest %.0f dB) whose peaks reach %.1f dBFS, only %.0f dB under the "
+                                       "loudest part: the ear hears clicks / pops / crackle by their peaks, not their RMS, so it "
+                                       "sounds far louder than its level suggests. Lower its gainDb so the peaks sit >= 12 dB under "
+                                       "the music, or tame them ({\"type\": \"limiter\"}).", nd.id.c_str(), crest, nd.peakDb, under),
+                 {}, {nd.id});
+    }
     for (std::size_t n = 0; n < m_.nodes.size(); ++n) {
         if (m_.nodes[n].isBus) continue;
         bool plays = false;
@@ -961,8 +1080,10 @@ void ReportBuilder::checkMasking() {
             if (best > maxShare) { maxShare = best; loudestSec = m_.sections[s].name; }
         }
         const std::string& id = m_.nodes[n].id;
-        if (!plays) {
-            warn(2, "silent_node", fmt("'%s' never rises above -50 dBFS RMS in any section (muted, empty or far too quiet).", id.c_str()),
+        if (!plays && m_.nodes[n].peakDb > -40.0) {
+            // quiet on average but its transients are heard: a deliberate faint texture, not a silent track
+        } else if (!plays) {
+            warn(2, "silent_node", fmt("'%s' never rises above -50 dBFS RMS in any section nor peaks above -40 dBFS (muted, empty or far too quiet).", id.c_str()),
                  {}, {id});
         } else if (maxShare < 0.01) {
             warn(1, "inaudible", fmt("'%s' is nearly inaudible: it never contributes more than %.1f%% of the energy of any band in "
@@ -1048,12 +1169,7 @@ void ReportBuilder::checkBalance() {
         warn(2, "tilt", fmt("Overall spectral tilt is %.1f dB/oct vs %.1f for the '%s' reference (tolerance +-%.1f): the mix is %s "
                             "overall.", tilt_, refTilt_, P.name.c_str(), P.tiltToleranceDbPerOct,
                             tilt_ < refTilt_ ? "darker/bass-heavier" : "brighter/thinner"));
-    const double all = mixAgg_.energy();
-    if (all > 0 && mixAgg_.band[kInfraSlot] / all > 0.01) {
-        warn(1, "subsonic", fmt("%.1f%% of the energy is below 20 Hz (rumble/DC): wasted headroom.", 100.0 * mixAgg_.band[kInfraSlot] / all));
-        suggest("High-pass the master or the offending tracks at 20-30 Hz to remove subsonic energy "
-                "({\"type\": \"eq\", \"params\": {\"hp.freq\": 25}}).");
-    }
+
 }
 
 void ReportBuilder::checkSectionsAndStereo() {
@@ -1062,57 +1178,6 @@ void ReportBuilder::checkSectionsAndStereo() {
         warn(0, "no_audio", m_.mixL.empty() ? "No mix audio was fed to the analyser." : "The mix is silent (integrated loudness below -70 LUFS).");
     if (m_.mix->nonFiniteSamples() > 0)
         warn(0, "non_finite", fmt("The mix contains %lld non-finite samples (NaN/Inf).", static_cast<long long>(m_.mix->nonFiniteSamples())));
-    if (clipped_ > 0) {
-        warn(0, "clipping", fmt("%lld samples clip (|x| >= 1.0), first at %s: they will distort in every player.",
-                                static_cast<long long>(clipped_), fmtTime(firstClipSec_).c_str()));
-        suggest("Put {\"type\": \"limiter\", \"params\": {\"ceiling\": -1.0}} last in the master fx, or lower master gainDb "
-                "until clippedSamples is 0.");
-    }
-    if (m_.truePeakDb > -1.0 && mixAgg_.energy() > 0) {
-        // Within 0.1 dB of the limit is limiter/meter tolerance (a -1.0 ceiling can read -0.97 here): info only.
-        const bool marginal = m_.truePeakDb <= -0.9;
-        const double ceiling = std::min(-1.0, -1.2 - (m_.truePeakDb + 1.0));
-        warn(m_.truePeakDb > 0.0 ? 0 : marginal ? 2 : 1, "true_peak",
-             marginal ? fmt("True peak %+.2f dBTP is marginally above -1.0 dBTP (within limiter tolerance).", m_.truePeakDb)
-                      : fmt("True peak %+.2f dBTP is above -1.0 dBTP: inter-sample overs will distort after MP3/AAC encoding.",
-                            m_.truePeakDb));
-        suggest(fmt("Set the master limiter's \"ceiling\" to %.1f (it is true-peak aware) so truePeakDbtp stays <= -1.0.", ceiling));
-    }
-    const AnalysisProfile& P = *m_.profile;
-    if (mixAgg_.energy() > 0 && m_.lufsI > -70.0) {
-        const double mid = 0.5 * (m_.lufsMin + m_.lufsMax);
-        const std::string whose = m_.loudnessOverride ? std::string("render JSON analysis.loudness")
-                                                      : "'" + P.name + "' profile";
-        // inside when it reads inside at the printed 0.1 LU (agentsound.mastering.check uses the same 0.05 LU rule)
-        if (m_.lufsI < m_.lufsMin - 0.05) {
-            warn(1, "loudness_low", fmt("Integrated loudness %.1f LUFS is %.1f LU below the target %.0f..%.0f LUFS (%s; sample peak "
-                                        "%.1f dBFS).", m_.lufsI, m_.lufsMin - m_.lufsI, m_.lufsMin, m_.lufsMax, whose.c_str(),
-                                        m_.samplePeakDb));
-            suggest(fmt("Raise the master limiter's input \"gain\" by about %.1f dB to land near %.0f LUFS (add {\"type\": \"limiter\", "
-                        "\"params\": {\"ceiling\": -1.0}} last in the master fx if there is none).", mid - m_.lufsI, mid));
-        } else if (m_.lufsI > m_.lufsMax + 0.05) {
-            warn(1, "loudness_high", fmt("Integrated loudness %.1f LUFS is %.1f LU above the target %.0f..%.0f LUFS (%s): streaming "
-                                         "services will turn it down and the limiting costs punch (PLR %.1f dB).",
-                                         m_.lufsI, m_.lufsI - m_.lufsMax, m_.lufsMin, m_.lufsMax, whose.c_str(), m_.truePeakDb - m_.lufsI));
-            suggest(fmt("Lower the master limiter's input \"gain\" by about %.1f dB to land near %.0f LUFS.", m_.lufsI - mid, mid));
-        }
-    }
-    if (m_.durationSec > 30.0 && mixAgg_.energy() > 0) {
-        if (m_.lra < P.lraMinLu)
-            warn(2, "lra_low", fmt("Loudness range is only %.1f LU (the '%s' profile expects %.1f..%.0f): sections barely differ in "
-                                   "level (flat arrangement or heavy compression). Quieter verses/breakdowns make choruses hit harder.",
-                                   m_.lra, P.name.c_str(), P.lraMinLu, P.lraMaxLu));
-        else if (m_.lra > P.lraMaxLu)
-            warn(2, "lra_high", fmt("Loudness range is %.1f LU (the '%s' profile expects %.1f..%.0f): very dynamic; quiet parts may "
-                                    "get lost on small speakers.", m_.lra, P.name.c_str(), P.lraMinLu, P.lraMaxLu));
-    }
-    if (std::fabs(dcL_) > 0.001 || std::fabs(dcR_) > 0.001) {
-        warn(1, "dc_offset", fmt("DC offset L %.4f / R %.4f: wastes headroom and causes clicks at edits.", dcL_, dcR_));
-        suggest("High-pass the master at 20 Hz to remove the DC offset ({\"type\": \"eq\", \"params\": {\"hp.freq\": 20}}).");
-    }
-    if (mixAgg_.energy() > 0 && m_.lufsI > -70.0 && m_.truePeakDb - m_.lufsI < P.plrMinDb)
-        warn(2, "squashed", fmt("Peak-to-loudness ratio is only %.1f dB (the '%s' profile expects >= %.0f dB): heavily limited, "
-                                "transients and punch are flattened.", m_.truePeakDb - m_.lufsI, P.name.c_str(), P.plrMinDb));
     if (mixAgg_.ll > 0 && mixAgg_.rr > 0) {
         const double bal = 10.0 * std::log10(mixAgg_.ll / mixAgg_.rr);
         if (std::fabs(bal) > 1.5) {
@@ -1123,29 +1188,14 @@ void ReportBuilder::checkSectionsAndStereo() {
         }
     }
 
-    // Stereo image.
-    const bool lowSmeared = mixAgg_.lowShare() > 0.05 && mixAgg_.lowCorr() < 0.75;
+    // Essentially mono is distinct from phase / low-end verdicts.
     if (mixAgg_.energy() > 0) {
         const double c = mixAgg_.corr(), w = mixAgg_.width();
-        if (c < -0.2) {
-            warn(0, "phase", fmt("Stereo correlation is %.2f: L and R are largely out of phase; the mix collapses in mono.", c));
-            suggest("Find the phasey source (nodes[].correlation < 0): reduce its stereo width ({\"type\": \"width\", \"params\": "
-                    "{\"width\": 0.7}}), Haas delays or chorus width.");
-        } else if (c < 0.0) {
-            warn(1, "phase", fmt("Stereo correlation is %.2f (< 0): very wide and partly out of phase; check mono compatibility.", c));
-        } else if (c < 0.2) {
-            warn(2, "very_wide", fmt("Stereo correlation is %.2f: a very wide, loosely correlated image; check mono compatibility.", c));
-        } else if (c > 0.97 && w < 2.0 &&  // narrow_mix (space) says it with the fixes
+        if (c > 0.97 && w < 2.0 &&  // narrow_mix (space) says it with the fixes
                    std::find(m_.space.global.issues.begin(), m_.space.global.issues.end(), "narrow") == m_.space.global.issues.end()) {
             warn(2, "mono", fmt("The mix is essentially mono (correlation %.2f, width %.1f%%).", c, w));
             suggest("Add stereo interest: pan secondary parts (arps, hats, pads) left/right, chorus or {\"type\": \"width\", "
                     "\"params\": {\"width\": 1.4}} on pads, sends to a stereo reverb bus.");
-        }
-        if (lowSmeared) {
-            warn(1, "low_end_not_mono", fmt("The low end (< 150 Hz) has correlation %.2f: bass energy is spread in stereo and will "
-                                            "partially cancel in mono / on club systems.", mixAgg_.lowCorr()));
-            suggest("Keep the low end mono: add {\"type\": \"width\", \"params\": {\"monobass\": 120}} on the master (or the bass "
-                    "bus), pan kick/bass centre, avoid stereo chorus/unison spread on the bass.");
         }
     }
 
@@ -1164,13 +1214,6 @@ void ReportBuilder::checkSectionsAndStereo() {
             warn(1, "silent_section", fmt("Section '%s' is (nearly) silent: RMS %.1f dBFS.", sec.name.c_str(), a.rmsDb()), {sec.name});
             continue;
         }
-        if (a.corr() < -0.2)
-            warn(1, "phase", fmt("Section '%s' has stereo correlation %.2f: phasey, collapses in mono.", sec.name.c_str(), a.corr()), {sec.name});
-        else if (a.corr() < 0.0)
-            warn(2, "very_wide", fmt("Section '%s' has stereo correlation %.2f: very wide/uncorrelated, borderline phasey; check mono "
-                                     "compatibility.", sec.name.c_str(), a.corr()), {sec.name});
-        if (a.lowShare() > 0.05 && a.lowCorr() < 0.75 && !lowSmeared)
-            warn(1, "low_end_not_mono", fmt("Section '%s': low end (< 150 Hz) correlation %.2f; keep the bass mono.", sec.name.c_str(), a.lowCorr()), {sec.name});
     }
     // Level jumps between consecutive sections.
     for (std::size_t s = 1; s < m_.sections.size(); ++s) {
@@ -1312,6 +1355,13 @@ json ReportBuilder::build() {
     const std::vector<json> dyn = assessDynamics(m_, dynFindings, dynSuggestions);
     for (std::size_t n = 0; n < m_.nodes.size() && n < dyn.size(); ++n)
         if (!dyn[n].is_null()) report["nodes"][n]["dynamics"] = dyn[n];
+    // Realism probes (analysis/Realism.h): played vs triggered, per pitched part.
+    for (std::size_t n = 0; n < m_.nodes.size(); ++n) {
+        const NodeData& nd = m_.nodes[n];
+        if (!nd.realism || nd.role == Role::Drums) continue;
+        const json r = nd.realism->report(nd.env.get());
+        if (!r.empty()) report["nodes"][n]["realism"] = r;
+    }
     // Silent notes: notes of a track with no audible sound (and the compiler's analysis.silentNotes).
     std::vector<DynamicsFinding> silentFindings;
     std::vector<std::string> silentSuggestions;
@@ -1331,6 +1381,11 @@ json ReportBuilder::build() {
     for (const auto& sgg : dynSuggestions) suggest(sgg);
     for (auto& f : silentFindings) warn(f.severity, std::move(f.code), std::move(f.message), std::move(f.sections), std::move(f.nodes));
     for (const auto& sgg : silentSuggestions) suggest(sgg);
+    // The compiler's band substitutes for missing sample packs ($AGENTSOUND_PACK_FALLBACK=1): not the song as written.
+    for (const auto& msg : m_.packFallbacks) warn(0, "pack_fallback", msg);
+    if (!m_.packFallbacks.empty())
+        suggest("Install the missing sample packs (python -m agentsound samples fetch ID, or set AGENTSOUND_SAMPLES) "
+                "and render again: the substitutes are not the sound the song was written for.");
 
     const AnalysisProfile& P = *m_.profile;
     json ref;
@@ -1363,6 +1418,24 @@ json ReportBuilder::build() {
     ref["judgeBassDynamics"] = P.judgeBassDynamics;
     report["reference"] = ref;
 
+    report["warnings"] = json::array();
+    report["findings"] = evaluateReport(report);
+    const std::map<std::string, std::string> remedies = {
+        {"true_peak", "Lower the master limiter ceiling to leave encoding headroom."},
+        {"dc_offset", "High-pass the master at 20 Hz."}, {"subsonic", "High-pass the master at 20-30 Hz."},
+        {"low_end_not_mono", "Keep bass and kick centred; use master width monobass 120."},
+        {"loudness_low", "Raise the master limiter input gain towards the loudness target."},
+        {"loudness_high", "Lower the master limiter input gain towards the loudness target."},
+        {"clipping", "Put a limiter last on the master, ceiling -1.2 dBTP."}};
+    for (const auto& f : report["findings"]) {
+        if (f["code"] == "flat_dynamics" || f["code"] == "silent_notes" || f["code"] == "clicks") continue;
+        std::vector<std::string> nodes, sections;
+        if (f["node"] != "") nodes.push_back(f["node"]);
+        if (f["section"] != "") sections.push_back(f["section"]);
+        if (const auto fix = remedies.find(f["code"].get<std::string>()); fix != remedies.end()) suggest(fix->second);
+        const std::string sev = f["severity"];
+        warn(sev == "error" ? 0 : sev == "warn" ? 1 : 2, f["code"], f["message"], sections, nodes);
+    }
     std::stable_sort(warnings_.begin(), warnings_.end(), [](const Warning& a, const Warning& b) {
         return std::make_pair(a.severity, warningRank(a.code)) < std::make_pair(b.severity, warningRank(b.code));
     });
@@ -1382,6 +1455,18 @@ json ReportBuilder::build() {
         (w.severity == 0 ? m_.errors : w.severity == 1 ? m_.warnings : m_.infos)++;
     }
     report["warnings"] = warns;
+    report.erase("findings");
+    report["findings"] = evaluateReport(report);
+    // Existing public measurements stay rounded: mastering calibration must not change.
+    report["deliveryMetrics"] = {{"lufsIntegrated", m_.lufsI}, {"truePeakDbtp", m_.truePeakDb}};
+    for (const auto* key : {"lufsIntegrated", "loudnessRange", "plr"}) report["global"][key] = r1(report["global"][key]);
+    for (const auto* key : {"truePeakDbtp", "stereoCorrelation", "lowEndCorrelation", "subsonicPct", "durationSec"})
+        report["global"][key] = r2(report["global"][key]);
+    report["global"]["dcOffset"] = {std::round(dcL_ * 1e6) / 1e6 + 0.0, std::round(dcR_ * 1e6) / 1e6 + 0.0};
+    for (auto& sec : report["sections"]) {
+        sec["rmsDb"] = r1(sec["rmsDb"]);
+        for (const auto* key : {"correlation", "lowEndCorrelation"}) sec[key] = r2(sec[key]);
+    }
     report["suggestions"] = suggestions_;
 
     // One-line digest for a quick read.
@@ -1437,7 +1522,7 @@ json ReportBuilder::build() {
         {"sharePct", "node energy relative to the summed energy of all tracks in that section"},
         {"widthPct", "side/mid energy ratio in % (0 = mono, 100 = as much side as mid)"},
         {"correlation", "L/R correlation: +1 mono, 0 wide/uncorrelated, < 0 phasey"},
-        {"lowEndCorrelation", "L/R correlation below 150 Hz, should stay > 0.8"},
+        {"lowEndCorrelation", "L/R correlation below 150 Hz: flagged < 0.75 when lowEndEnergyShare > 0.05"},
         {"thirdOctave", "long-term 1/3-octave spectrum minus the profile's reference curve, mean-aligned (+ = bump, - = dip)"},
         {"barsRmsDb", "node RMS per bar, same bars as timeline.rows"},
         {"bpm", "global.bpm = the tempo at the song start; with a tempo map global.bpmRange = [slowest, fastest] in the render, "
@@ -1463,6 +1548,16 @@ json ReportBuilder::build() {
                   "long they stay within 40 dB of it"},
         {"role", "what the space assessment treats a node as: drums, bass, bed, lead, other, fx (one-shots), return (bus fed by "
                  "sends; returnKind reverb/delay/gated/width/other), group (bus fed by outputs)"},
+        {"realism", "nodes[].realism: realism probes of a pitched track (docs/SAMPLE_REALISM_PLAN.md), each only when its material "
+                    "occurs. repeatSim: the same key again within 1 s (velocity +-6) - sim = correlation of the two notes' first "
+                    "80 ms (1/3-octave x 10 ms envelope, dB), wave = their waveforms' correlation (best lag +-1 ms); 1.0 = the same "
+                    "recording again (a machine gun), a real round-robin pack reads lower. layerStep: a key at 8+ velocities (the "
+                    "audition sweep) - the largest vs the median step between neighbouring velocities in level and brightness (energy "
+                    "above 2.5 kHz, dB): velocity-layer seams. sustainFlux: notes held 0.8 s+ alone - after the attack, 10 ms frames "
+                    "minus a 300 ms moving average: level sd (dB), centroid sd (cents) and periodicity (autocorrelation peak 50 ms-1 "
+                    "s, periodMs: its lag; near 1 = a loop repeating). tailDecay: notes ringing 2.6 s+ alone - decay 0.1-0.6 s after "
+                    "the onset vs 0.6-2.6 s (dB/s). transitionDip: monophonic legato transitions - the deepest level dip around the "
+                    "new onset (dB vs the 40 ms before) and pitchMs, when the new pitch takes over"},
         {"dynamics", "nodes[].dynamics: note-level dynamics of a track - every note onset (render JSON notes, chord notes within "
                      "30 ms as one; without notes: level rises in the audio) measured as its mean level over the first 30-100 ms; "
                      "spreadDb = 10-90 % spread of those levels over the song, levelDb = [p10, p90], sections[] per section; per "
@@ -1473,8 +1568,11 @@ json ReportBuilder::build() {
                      "- e.g. hornist's breath after the compressor); flatPhrases = phrases under thresholdDb "
                      "(reference.noteSpreadMinDb); velocity = what the notes were given; kind = lead / melodic (judged; bass too "
                      "when reference.judgeBassDynamics) or bass / bed (also a part named lead that plays sustained chords) / even (arps, 8th/16th "
-                     "pulses) / backing (a vocal's _dbl / _harm / _prism parts): never flagged, why = how the "
-                     "kind was decided; warning flat_dynamics (lead: warn, other judged parts: info)"},
+                     "pulses) / backing (a vocal's _dbl / _harm / _prism parts) / registration (analysis.registration: an organ, "
+                     "no touch dynamics): never flagged, why = how the "
+                     "kind was decided; warning flat_dynamics (lead: warn, other judged parts: info); the registration tracks "
+                     "together: registrationDb = the organ's level range over its sections, swell = an expression lane - "
+                     "flat_dynamics (warn) when both are missing (under 3 dB, no swell)"},
         {"silentNotes", "nodes[].silentNotes: notes of a track that made no audible sound (analysis/SilentNotes.h) - notes = the "
                         "judged notes, events = the same with chord notes (within 30 ms) as one; each event's level = the loudest 10 ms "
                         "in its own span (start .. min(end + 0.25 s, start + 3 s, the next event)); medianDb = the track's median event "
@@ -1603,6 +1701,29 @@ void MixAnalyzer::feedNode(int node, const float* left, const float* right, int 
     n.stats->feed(left, right, frames);
     n.clicks->feed(left, right, frames);
     if (n.env) n.env->feed(left, right, frames);
+    if (!n.realismTried) {   // the notes are known by now (routing comes before the audio)
+        n.realismTried = true;
+        if (!n.isBus && n.hasRouting && !n.routing.notes.empty()) {
+            std::vector<analysis::ProbeNote> ps;
+            const bool tones = n.routing.tones.size() == n.routing.notes.size();
+            for (std::size_t k = 0; k < n.routing.notes.size(); ++k) {
+                const auto& [beat, dur] = n.routing.notes[k];
+                if (beat >= m.endBeat) continue;
+                const double on = m.secAtBeat(beat) * m.sampleRate, off = m.secAtBeat(beat + dur) * m.sampleRate;
+                if (!(on >= 0.0) || !std::isfinite(off)) continue;   // began before a preview window: not a clean onset
+                analysis::ProbeNote p;
+                p.on = static_cast<std::int64_t>(std::llround(on));
+                p.off = std::max(p.on + 1, static_cast<std::int64_t>(std::llround(off)));
+                if (tones) {
+                    p.pitch = n.routing.tones[k].pitch;
+                    p.velocity = n.routing.tones[k].velocity;
+                }
+                ps.push_back(p);
+            }
+            if (!ps.empty()) n.realism = std::make_unique<analysis::RealismProbe>(m.sampleRate, std::move(ps));
+        }
+    }
+    if (n.realism) n.realism->feed(left, right, frames);
 }
 
 void MixAnalyzer::feedMix(const float* left, const float* right, int frames) {
@@ -1621,6 +1742,7 @@ json MixAnalyzer::finish() {
     for (auto& n : m.nodes) {
         n.stats->finalize();
         if (n.env) n.env->finalize();
+        if (n.realism) n.realism->finish();
     }
     // Sanitise the stored mix (NaN/Inf -> 0, counted by the stream below) so every measure stays finite.
     const std::size_t numTicks = (m.mixL.size() + static_cast<std::size_t>(m.tickLen) - 1) / static_cast<std::size_t>(m.tickLen);
@@ -1675,7 +1797,7 @@ bool allScalars(const json& j) {
 // Keys in reading order: the digest and the problems first, identifiers first inside entries;
 // everything else alphabetical.
 int keyRank(const std::string& key, int depth) {
-    static const char* kTop[] = {"format", "version", "summary", "render", "warnings", "suggestions", "space", "clicks", "images",
+    static const char* kTop[] = {"format", "version", "summary", "render", "findings", "warnings", "suggestions", "space", "clicks", "images",
                                  "global", "sections", "nodes", "timeline", "reference", "glossary"};
     static const char* kInner[] = {"severity", "code", "message", "profile", "id", "name", "section", "verdict", "issues", "full",
                                    "time", "bar", "beat", "node", "file", "bus", "role", "implicit"};

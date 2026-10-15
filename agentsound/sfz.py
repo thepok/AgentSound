@@ -32,6 +32,8 @@ song, absolute paths as they are; zones get absolute paths. Sample files: case-i
 
 from __future__ import annotations
 
+import copy
+import fnmatch
 import math
 import os
 import re
@@ -52,6 +54,11 @@ COMPANION_PACKS = {'vpo-scripts-standard': ['vpo-wav'], 'vpo-scripts-performance
 
 # Engine limits (docs/RENDER_FORMAT.md, sampler zones).
 _GAIN_MIN_DB = -144.0
+# The level of the SFZ '*noise' generator: uniform white noise in +-0.25 (sfizz, the reference player: Config.h
+# uniformNoiseBounds; RMS -16.8 dBFS). The engine's own '*noise' zone is full scale (+-1, RMS -4.8 dBFS), so an
+# imported *noise region plays 20 log10(0.25) = -12.04 dB under it - without this the Weresax wind-noise layer
+# (cc122) came out 12 dB too loud (2026-10-15: cc122 = 30 lifted 8-16 kHz by ~16 dB over the dry sax).
+NOISE_GEN_DB = 20.0 * math.log10(0.25)
 _KNOWN_HEADERS = {'region', 'group', 'master', 'global', 'control', 'curve', 'effect', 'midi', 'sample'}
 
 
@@ -897,6 +904,8 @@ class _Import:
             self.skipped['silent at these controller values (amplitude / crossfade 0)'] += 1
             return None
         gain = vol + 20.0 * math.log10(amp * xf) + mic + z.pop('gain', 0.0)
+        if z['file'] == '*noise':
+            gain += NOISE_GEN_DB
         if gain < _GAIN_MIN_DB:
             self.skipped['silent at these controller values (amplitude / crossfade 0)'] += 1
             return None
@@ -1659,6 +1668,26 @@ def hammers(zones: list[dict], amount: float) -> list[dict]:
 
 def load(path, articulation=None, cc=None, mics=None, strict: bool = False, caller_file: str | None = None,
          dyn_cc='auto', keyswitches: str = 'live') -> tuple[list[dict], dict]:
+    """_load, memoized per process (the resolved file, its modification time and every argument; a deep copy per
+    call, so a caller may change what it gets): a multi-thousand-region import costs seconds, and a process that
+    compiles many songs with the same instruments (learn export, endless best-of-N) re-read it per song."""
+    try:
+        p = resolve_path(path, caller_file)
+        key = (str(Path(p).resolve()), Path(p).stat().st_mtime_ns, repr((articulation, cc, mics, strict, dyn_cc,
+                                                                          keyswitches)))
+    except (OSError, ComposeError):
+        return _load(path, articulation, cc, mics, strict, caller_file, dyn_cc, keyswitches)
+    hit = _LOAD_CACHE.get(key)
+    if hit is None:
+        hit = _LOAD_CACHE[key] = _load(path, articulation, cc, mics, strict, caller_file, dyn_cc, keyswitches)
+    return copy.deepcopy(hit)
+
+
+_LOAD_CACHE: dict[tuple, tuple] = {}
+
+
+def _load(path, articulation=None, cc=None, mics=None, strict: bool = False, caller_file: str | None = None,
+          dyn_cc='auto', keyswitches: str = 'live') -> tuple[list[dict], dict]:
     """(zones for the 'sampler' instrument, info) of an .sfz file. See the module docstring. dyn_cc: the controller
     played live by the sampler's 'dynamics' ('auto', a number, None = static); keyswitches: 'live' (every
     articulation, switched by keyswitch notes; the default when no articulation= is given) or 'static' (only the
@@ -1751,36 +1780,60 @@ _ZONE_FIXED = ('file', 'lo', 'hi', 'root', 'swLast', 'swDefault', 'swLo', 'swHi'
 
 
 def check_zone(over, where: str) -> dict:
-    """A validated zone override {zone param: value} (inst.sfz(zone=), sfz_multi programs' 'zone')."""
+    """A validated zone override {zone param: value} (inst.sfz(zone=), sfz_multi programs' 'zone'). An entry whose
+    value is a dict selects zones by file: {'<file glob>': {zone param: value}} sets those params only on the zones
+    whose file (base name, case-insensitive; a generator by its name: '*noise') matches the glob - e.g.
+    zone={'*noise': {'filter': 'lpf_2p'}}: a steeper filter on a wind-noise layer only."""
     over = over or {}
-    if not isinstance(over, dict) or not all(isinstance(k, str) and k for k in over) or \
-            any(k in over for k in _ZONE_FIXED):
-        raise ComposeError(f"{where}: 'zone' must be {{zone param: value}} (not file / key range / keyswitch / "
-                           f"trigger; dB: 'gain' / 'keygain' / level), got {over!r}")
-    return dict(over)
+    bad = (f"{where}: 'zone' must be {{zone param: value}} or {{file glob: {{zone param: value}}}} (not file / key "
+           f"range / keyswitch / trigger; dB: 'gain' / 'keygain' / level), got {over!r}")
+    if not isinstance(over, dict) or not all(isinstance(k, str) and k for k in over):
+        raise ComposeError(bad)
+    for k, v in over.items():
+        inner = v if isinstance(v, dict) else {k: v}
+        if not inner or not all(isinstance(i, str) and i for i in inner) or any(i in inner for i in _ZONE_FIXED) \
+                or any(isinstance(x, dict) for x in inner.values()):
+            raise ComposeError(bad)
+    return {k: (dict(v) if isinstance(v, dict) else v) for k, v in over.items()}
 
 
 def apply_zone(zones: list, over: dict) -> list:
     """The zones with `over` set on every attack zone (release-triggered zones keep theirs): the file's envelope
-    or filter overridden - a choir that speaks sooner at low velocity, a release that a track cannot shorten."""
+    or filter overridden - a choir that speaks sooner at low velocity, a release that a track cannot shorten.
+    {file glob: {...}} entries (check_zone) set their params on the matching zones only (any trigger), after the
+    plain ones."""
     if not over:
         return zones
-    return [dict(z, **over) if z.get('trigger') not in ('release', 'release_key') else z for z in zones]
+    plain = {k: v for k, v in over.items() if not isinstance(v, dict)}
+    sel = [(k.lower(), v) for k, v in over.items() if isinstance(v, dict)]
+    out = []
+    for z in zones:
+        if plain and z.get('trigger') not in ('release', 'release_key'):
+            z = dict(z, **plain)
+        name = os.path.basename(str(z.get('file', ''))).lower()
+        for glob, params in sel:
+            if fnmatch.fnmatchcase(name, glob):
+                z = dict(z, **params)
+        out.append(z)
+    return out
 
 
-def _keygain(spec, where: str) -> list | None:
-    """A validated 'keygain' curve: [[key, dB], ...] with rising keys (0..127) and dB -48..24; None when not given."""
+def _keygain(spec, where: str, name: str = 'keygain', lo: float = -48.0, hi: float = 24.0,
+             unit: str = 'dB') -> list | None:
+    """A validated key curve ('keygain': [[key, dB], ...], dB -48..24; 'keypan': [[key, pan], ...], pan -1..1) with
+    rising keys (0..127); None when not given."""
     if spec is None:
         return None
     ok = isinstance(spec, (list, tuple)) and len(spec) >= 1 and all(
         isinstance(p, (list, tuple)) and len(p) == 2 and all(isinstance(v, (int, float)) and not isinstance(v, bool)
-                                                              for v in p) and 0 <= p[0] <= 127 and -48 <= p[1] <= 24
+                                                              for v in p) and 0 <= p[0] <= 127 and lo <= p[1] <= hi
         for p in spec)
     if ok:
         keys = [p[0] for p in spec]
         ok = all(a < b for a, b in zip(keys, keys[1:]))
     if not ok:
-        raise ComposeError(f"{where}: 'keygain' must be [[key 0..127, dB -48..24], ...] with rising keys, got {spec!r}")
+        raise ComposeError(f"{where}: '{name}' must be [[key 0..127, {unit} {lo:g}..{hi:g}], ...] with rising keys, "
+                           f"got {spec!r}")
     return [[float(p[0]), float(p[1])] for p in spec]
 
 
@@ -1874,7 +1927,12 @@ def load_multi(programs: dict, keyswitch=0, default=None, cc=None, mics=None, st
     release-triggered ones): an articulation made from the same samples, e.g. a guitar palm mute {'path': same,
     'zone': {'filter': 'lpf_2p', 'cutoff': 1600, 'decay': 0.55, 'sustain': 0}}. 'keygain' ([[key, dB], ...],
     piecewise linear over each zone's root key, the file's keys) evens out a set whose notes were recorded at uneven
-    levels (e.g. [[36, 0], [60, 8]]: +8 dB at the top).
+    levels (e.g. [[36, 0], [60, 8]]: +8 dB at the top); 'keypan' ([[key, pan -1..1], ...], the same over the root
+    keys, added to each zone's pan) spreads a mono-sampled instrument as a stereo pair hears it (a guitar's low
+    strings a little left, its high ones right). 'releases': 'only' keeps just the program's release-triggered
+    zones and plays them as notes (attack-triggered, rt_decay dropped): a pack's finger-off / fret noises as an
+    articulation of their own that a player places where the hand makes them (guitarist: at chord changes and
+    position shifts) instead of after every note-off; 'keep' (the default) imports the file as it is.
     -> (zones, info): info['keyswitches'] = {name: key}, info['programs'] = {name: its info}."""
     if not isinstance(programs, dict) or not programs:
         raise ComposeError("sfz_multi: programs must be a non-empty dict {'articulation name': 'file.sfz', ...}")
@@ -1900,17 +1958,29 @@ def load_multi(programs: dict, keyswitch=0, default=None, cc=None, mics=None, st
     for i, name in enumerate(names):
         spec = programs[name]
         opts = dict(spec) if isinstance(spec, dict) else {'path': spec}
-        extra = set(opts) - {'path', 'articulation', 'cc', 'mics', 'gain', 'zone', 'keygain'}
+        extra = set(opts) - {'path', 'articulation', 'cc', 'mics', 'gain', 'zone', 'keygain', 'keypan', 'releases'}
         if extra or 'path' not in opts:
             raise ComposeError(f"sfz_multi[{name!r}]: a path or a dict with 'path' and optionally 'articulation', 'cc', "
                                f"'mics', 'gain' (dB), 'zone' (zone param overrides), 'keygain' ([[key, dB], ...]), "
-                               f"got {spec!r}")
+                               f"'keypan' ([[key, pan], ...]), 'releases' ('keep' | 'only'), got {spec!r}")
+        rel = opts.get('releases', 'keep')
+        if rel not in ('keep', 'only'):
+            raise ComposeError(f"sfz_multi[{name!r}]: releases must be 'keep' (the file as it is) or 'only' (its "
+                               f"release-triggered zones played as notes), got {rel!r}")
         over = check_zone(opts.get('zone'), f"sfz_multi[{name!r}]")
         keygain = _keygain(opts.get('keygain'), f"sfz_multi[{name!r}]")
+        keypan = _keygain(opts.get('keypan'), f"sfz_multi[{name!r}]", 'keypan', -1.0, 1.0, 'pan')
         pcc = dict(cc or {})
         pcc.update(opts.get('cc') or {})
         zs, info = load(opts['path'], articulation=opts.get('articulation'), cc=pcc or None, mics=opts.get('mics', mics),
                         strict=strict, caller_file=caller_file, dyn_cc=dyn_cc, keyswitches='static')
+        if rel == 'only':
+            zs = [{k: v for k, v in z.items() if k not in ('trigger', 'rtDecay')} for z in zs
+                  if z.get('trigger') in ('release', 'release_key')]
+            if not zs:
+                raise ComposeError(f"sfz_multi[{name!r}]: releases='only' but {opts['path']!r} has no release-"
+                                   f"triggered zones at these controllers (cc {pcc})")
+            info = {**info, 'zones': len(zs), 'releases': 'only (played as notes)'}
         g = opts.get('gain', 0.0)
         if isinstance(g, bool) or not isinstance(g, (int, float)) or not -48 <= g <= 24:
             raise ComposeError(f"sfz_multi[{name!r}]: gain must be dB -48..24, got {g!r}")
@@ -1922,13 +1992,17 @@ def load_multi(programs: dict, keyswitch=0, default=None, cc=None, mics=None, st
                     z[key] = groups.setdefault((i, v), len(groups) + 1)
             if over and z.get('trigger') not in ('release', 'release_key'):
                 z.update(over)
+            root = z.get('root')
+            k = root if isinstance(root, (int, float)) and not isinstance(root, bool) else \
+                (z.get('lo', 0) + z.get('hi', 127)) / 2.0
             if keygain:
-                root = z.get('root')
-                k = root if isinstance(root, (int, float)) and not isinstance(root, bool) else \
-                    (z.get('lo', 0) + z.get('hi', 127)) / 2.0
                 g2 = _interp(keygain, k)
                 if g2:
                     z['gain'] = round(z.get('gain', 0.0) + g2, 4)
+            if keypan:
+                p2 = _interp(keypan, k)
+                if p2:
+                    z['pan'] = round(max(-1.0, min(1.0, z.get('pan', 0.0) + p2)), 4)
             if g:
                 z['gain'] = round(z.get('gain', 0.0) + g, 4)
             z['swLast'] = keys[name]

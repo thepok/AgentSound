@@ -2,8 +2,11 @@
 80s "hero sax" (Raphael Ravenscroft on "Baker Street", Sanborn-era pop sax). recipes/HUMAN_FEEDBACK.md
 (2026-09-30, lamplight-avenue): "bei Baker Street klingt das Sax irgendwie epischer und praesenter".
 
-  leads:   layered/hero_sax = hero/sax   (the alto hero: close-miked, compressed, gritty, double-tracked)
-  returns: bus/hero_plate                (the big bright pre-delayed plate behind it)
+  leads:   hero/sax                      (THE hero sax, v2 - the late-70s record sax: dynamic mic, a breath trace,
+                                          4:1 compression, tube + tape grit, near-mono, a 10 Hz random autopan, a
+                                          bright 3.6 s plate; the user's pick 2026-10-15: "das wird das standard sax")
+           hero/sax_clean = layered/hero_sax  (the v1 hero: cleaner, double-tracked; opt-out: family='sax_clean')
+  returns: bus/hero_plate, bus/hero_plate_70s  (the big bright pre-delayed plates behind them)
 
 THE way to use it: agentsound.heroes.hero(s.track('sax', 'layered/hero_sax'), family='sax', bed=[...]) - the sound
 plus its mix rules (hero plate, echo throws, bed duck + carve, rides). This module defines the 'sax' preset of that
@@ -36,15 +39,16 @@ Version: see VERSION (bump it when the sound changes audibly).
 
 from .. import heroes
 from . import Patch, fx, inst, register
+from .sampled import WERESAX_CC, WERESAX_ZONE
 
-VERSION = 1
+VERSION = 2          # v2: hero/sax = the 70s record sax (HERO_SAX); v1 lives on as sax_clean / layered/hero_sax
 
 _WERESAX = 'samples/karoryfer-weresax/Programs/Sax.sfz'
 _MTG = 'samples/mtg-solo-sax/MTG Solo Saxophones/'
 
-# Everything that makes the sax a hero, in one place (the 'sax' preset of agentsound.heroes reads these keys; values
-# that are sax-specific are marked in the module notes above).
-HERO_SAX = {
+# The v1 hero sax (now the opt-out 'sax_clean' preset and the pinned layered/hero_sax): everything that made the sax
+# a hero, in one place (values that are sax-specific are marked in the module notes above).
+HERO_SAX_CLEAN = {
     'source': {'sfz': _WERESAX, 'level': -0.7, 'cc': {120: 127}, 'legatotime': 50, 'hp': 90, 'velcurve': 2.5},
     'double': [   # extra takes: (id, sfz, sampler level, layer level dB, fine ct, delay ms, pan)
         ('dbl_l', _MTG + 'MTG Alto Sax.sfz', 9.3, -10.0, 9.0, 17.0, -0.85),
@@ -68,25 +72,70 @@ HERO_SAX = {
              'comp': {'threshold': -26, 'ratio': 2.0, 'attack': 30, 'release': 160},
              'presence': {'peak3.freq': 3000, 'peak3.gain': 0.0, 'peak3.q': 0.7, 'high.freq': 9000, 'high.gain': 1.0}},
 }
-GAIN_DB = -2.6   # audition calibration of layered/hero_sax (-18.0 LUFS)
+GAIN_DB_CLEAN = -2.6   # audition calibration of layered/hero_sax (-18.0 LUFS)
+
+# THE hero sax (v2, hero/sax, hero(track, family='sax') in every genre): the late-70s record sax of the user's A/B
+# (2026-10-15, variant d: "started the imaginary sax in my head"; "nein, das wird das standard sax!"). Over the clean
+# hero: the Weresax with its breath trace (WERESAX_CC / WERESAX_ZONE: the dynamic mic, cc 122 = 16 through a 2-pole
+# 3 kHz low-pass), velocity curve 1.7 instead of 2.5 (the forte layer sounds from ~velocity 84: hooks played at 84-124
+# land where the A/B's 95-127 did), near-mono (width 0.3), one take (no doubles / octave by default), a firmer 4:1
+# compressor, a second tube saturator (drive 7, full) and 15 ips tape (drive 6) after the presence / exciter, a 10 Hz
+# smooth-random autopan tremolo (the reed's fast amplitude flutter: HUMAN_FEEDBACK 2026-10-15) and a bright 3.6 s plate
+# (bus/hero_plate_70s: bus/plate_80s with a longer, brighter tail). The doubles / octave layer of the clean hero stay
+# available: hero(..., double='takes', octave='muted').
+HERO_SAX = {
+    'source': {'sfz': _WERESAX, 'level': -0.7, 'cc': dict(WERESAX_CC), 'zone': dict(WERESAX_ZONE), 'legatotime': 50,
+               'hp': 90, 'velcurve': 1.7, 'width': 0.3},
+    'double': HERO_SAX_CLEAN['double'],
+    'octave': dict(HERO_SAX_CLEAN['octave']),
+    'eq': dict(HERO_SAX_CLEAN['eq']),
+    'comp': {'threshold': -33, 'ratio': 4.0, 'knee': 6, 'attack': 20, 'release': 120, 'automakeup': 'on'},
+    'drive': dict(HERO_SAX_CLEAN['drive']),
+    'presence': dict(HERO_SAX_CLEAN['presence']),
+    'air': dict(HERO_SAX_CLEAN['air']),
+    'grit': {'mode': 'tube', 'drive': 7, 'mix': 1.0},              # the second saturator, after the exciter
+    'tape': {'speed': '15', 'drive': 6},
+    'flutter': {'rate': 10, 'depth': 0.25, 'stereo': 180, 'ratemod': 3, 'depthmod': 0.1, 'modrate': 0.3,
+                'modshape': 'random'},                              # the autopan tremolo
+    'plate': {'decay': 3.6, 'damping': 12000},                      # bus/hero_plate_70s = bus/plate_80s with these
+    'space': dict(HERO_SAX_CLEAN['space'], plate_bus='bus/hero_plate_70s'),
+    'mix': dict(HERO_SAX_CLEAN['mix']),
+}
+GAIN_DB = -2.9   # audition calibration of hero/sax (-18.0 LUFS)
+USER_GAIN_DB = -3.1   # around another -18 LUFS sound (heroes.Preset.user_gain_db)
+# the 70s hero's chain order: the second saturator ('amp' stage), the tape and the autopan ('width' stage) after the
+# presence / exciter, as in the A/B (the song's inserts after the hero chain)
+ORDER_70S = ('tone', 'catch', 'comp', 'deess', 'drive', 'presence', 'exciter', 'amp', 'tape', 'chorus', 'double',
+             'width', 'dimension', 'air', 'echo')
 
 
 def hero_sax_stages(h: dict = HERO_SAX) -> dict:
-    """The hero chain as heroes stages: cut (tone) -> compress -> drive -> presence/air -> excite."""
-    return {'tone': dict(h['eq']), 'comp': dict(h['comp']), 'drive': dict(h['drive']),
-            'presence': dict(h['presence']), 'exciter': dict(h['air'])}
+    """The hero chain as heroes stages: cut (tone) -> compress -> drive -> presence/air -> excite (-> the 70s hero's
+    grit saturator, tape and autopan)."""
+    st = {'tone': dict(h['eq']), 'comp': dict(h['comp']), 'drive': dict(h['drive']),
+          'presence': dict(h['presence']), 'exciter': dict(h['air'])}
+    if h.get('grit'):
+        st['amp'] = [fx.saturator(**h['grit'])]
+    if h.get('tape'):
+        st['tape'] = dict(h['tape'])
+    if h.get('flutter'):
+        st['width'] = [fx.tremolo(**h['flutter'])]
+    return st
 
 
 def hero_sax_chain(h: dict = HERO_SAX) -> list:
-    """The hero insert chain after the takes are summed: cut -> compress -> drive -> presence/air -> excite."""
-    return heroes.chain(hero_sax_stages(h), named=False)
+    """The hero insert chain after the takes are summed (hero_sax_stages in the preset's order)."""
+    return heroes.chain(hero_sax_stages(h), ORDER_70S if h.get('grit') else heroes.ORDER, named=False)
 
 
-def hero_sax_source(h: dict = HERO_SAX) -> dict:
+def hero_sax_source(h: dict = HERO_SAX, octave_mode: str | None = None) -> dict:
     """The sax preset's source as heroes layer specs: {'main': ..., 'takes': [...], 'octave': ...}."""
     src = h['source']
+    kw = {'zone': dict(src['zone'])} if src.get('zone') else {}
+    if 'width' in src:
+        kw['width'] = src['width']
     main = {'id': 'sax', 'sound': inst.sfz(src['sfz'], lazy=True, level=src['level'], mono='legato',
-                                           legatotime=src['legatotime'], cc=dict(src['cc'])),
+                                           legatotime=src['legatotime'], cc=dict(src['cc']), **kw),
             'velcurve': src['velcurve'], 'hp': src['hp']}
     takes = [{'id': lid, 'sound': inst.sfz(path, lazy=True, level=lvl, mono='legato', legatotime=50), 'level': level,
               'fine': fine, 'delay': delay, 'pan': pan, 'hp': 160}
@@ -94,18 +143,18 @@ def hero_sax_source(h: dict = HERO_SAX) -> dict:
     o = h.get('octave')
     octave = {'id': 'octave', 'sound': inst.sfz(o['sfz'], lazy=True, level=o['level'], mono='legato', legatotime=50),
               'level': o['layer_level'], 'transpose': o['transpose'], 'hp': 90,
-              'mode': 'muted' if o['mute'] else 'on'} if o else None
+              'mode': octave_mode or ('muted' if o['mute'] else 'on')} if o else None
     return {'main': main, 'takes': takes, 'octave': octave}
 
 
-def hero_sax_layers(h: dict = HERO_SAX) -> list:
+def hero_sax_layers(h: dict = HERO_SAX_CLEAN) -> list:
     """The layers of layered/hero_sax (main take, the two doubles, the octave layer)."""
-    p = heroes.build('sax')
+    p = heroes.build('sax_clean')
     return list(p.instrument.layers)
 
 
-_SPACE = HERO_SAX['space']
-_NOTES = (f'v{VERSION}. The late-70s / 80s hero alto (Raphael Ravenscroft on "Baker Street", Sanborn-era pop sax): '
+_SPACE = HERO_SAX_CLEAN["space"]
+_NOTES_CLEAN = ('v1 (hero/sax until 2026-10-15; the opt-out sax_clean). The late-70s / 80s hero alto (Raphael Ravenscroft on "Baker Street", Sanborn-era pop sax): '
           'close-miked, bright and forward, heavily compressed, a little grit, double-tracked, LOUD on top. Takes: '
           'Weresax alto (Karoryfer, CC0) through its overdriven dynamic mic (cc 120 = 127; brighter on F5-Ab5 than the '
           'condenser, whose top notes lose ~5 dB of presence), velocity curve 2.5 (the file moves only ~5 dB from '
@@ -126,30 +175,63 @@ _NOTES = (f'v{VERSION}. The late-70s / 80s hero alto (Raphael Ravenscroft on "Ba
           '84-124 (still phrase arcs: touch()), articulation.perform (legato, scoops through instrument.pitchbend, '
           'the vibrato reaches every take), wide vibrato (24-28 ct) on the held peaks. Mix it as a hero: 1-3 dB over '
           'the whole band in the hook sections, the bed 6-8 dB under it (report: bed vs lead), song.carve(bed ..., '
-          'key=sax, depth=4) for the 1-4 kHz. The values live in HERO_SAX (patches/hero.py). Range: C#3-Ab5 (Weresax). '
-          'Measured -18.0 LUFS (audition phrase). Tweak: .layer("dbl_l", mute=True).layer("dbl_r", mute=True) (a '
-          'single take, mono), .layer("octave", mute=False) (always the octave), .but_fx("compressor", '
+          'key=sax, depth=4) for the 1-4 kHz. The values live in HERO_SAX_CLEAN (patches/hero.py). Range: C#3-Ab5 '
+          '(Weresax). Measured -18.0 LUFS (audition phrase). Tweak: .layer("dbl_l", mute=True).layer("dbl_r", '
+          'mute=True) (a single take, mono), .layer("octave", mute=False) (always the octave), .but_fx("compressor", '
           'threshold=-27) (less squeeze), .but_fx("saturator", drive=14) (more grit).')
 
-_SRC = hero_sax_source()
+_NOTES = (f'v{VERSION}. THE hero sax: the late-70s record alto (the user\'s pick in a blind A/B, 2026-10-15: "das wird '
+          'das standard sax"). Source: Weresax alto (Karoryfer, CC0) through its overdriven dynamic mic (cc 120 = 127) '
+          'with the file\'s wind-noise layer as a trace (cc 122 = 16 through a 2-pole 3 kHz low-pass: ~12 dB under the '
+          'dry sax in 3-16 kHz on held notes, felt more than heard), velocity curve 1.7 (hooks at 84-124 sound the '
+          'forte layer), near-mono (width 0.3), one take. Chain: high-pass 140, +1.5 dB 330 Hz, -2.5 dB 650 Hz, -4 dB '
+          '1.3 kHz -> compressor 4:1, -33 dB, 20 ms attack, 120 ms release -> tube drive 9 dB at 45 % -> +2 dB 3 kHz, '
+          '+3 dB shelf 8 kHz -> exciter from 3.5 kHz -> a second tube saturator (drive 7, full) -> 15 ips tape (drive '
+          '6) -> a 10 Hz autopan tremolo (depth 0.25, stereo 180, its rate +-3 Hz and depth +-0.1 moved by a smooth '
+          'random LFO at 0.3 Hz: the reed\'s fast flutter) -> the air stage. Sends: plate -14 (its own '
+          'bus/hero_plate_70s: the bright 80s EMT with a 3.6 s tail), hall -16, echo -24 with throws. How to play: '
+          'hornist.arrange(..., style=\'hero70s\') (pop phrasing, a growl on a held peak at most every 8 bars, no '
+          'shakes, the body sway) at velocities 84-124. Opt-outs: hero(..., family=\'sax_clean\') (the v1 hero: '
+          'cleaner, double-tracked; = layered/hero_sax), double=\'takes\' / octave=\'muted\' (the clean hero\'s MTG '
+          'doubles and octave tenor), drive=False, tape=False, width=False (no autopan). The values live in HERO_SAX '
+          '(patches/hero.py). Range: C#3-Ab5 (Weresax). Measured -18.0 LUFS (audition phrase).')
+
+_SRC = hero_sax_source(HERO_SAX, octave_mode='off')
 heroes.define(
-    'sax', family='sax', main=_SRC['main'], takes=_SRC['takes'], octave=_SRC['octave'], double='takes',
-    chain=hero_sax_stages(), named=False, gain_db=GAIN_DB,
+    'sax', family='sax', main=_SRC['main'], takes=_SRC['takes'], octave=_SRC['octave'], double=None,
+    sound='sampled/alto_sax',      # a track on the library alto becomes this hero's own source (the same Weresax)
+    chain=hero_sax_stages(HERO_SAX), order=ORDER_70S, named=False, gain_db=GAIN_DB,
     sends={'plate': _SPACE['plate'], 'hall': _SPACE['hall'], 'echo': _SPACE['echo']},
-    space={'plate_bus': _SPACE['plate_bus'], 'plate': _SPACE['plate'], 'echo': _SPACE['echo'],
+    space={'plate_bus': HERO_SAX['space']['plate_bus'], 'plate': _SPACE['plate'], 'echo': _SPACE['echo'],
            'throw': _SPACE['throw'], 'min_rest': 0.5, 'min_dur': 1.0},
     mix={'duck': 2.5, 'duck_attack': 15.0, 'duck_release': 260.0, 'carve_db': HERO_SAX['mix']['carve_db'],
          'carve_freq': HERO_SAX['mix']['carve_freq'], 'carve_q': HERO_SAX['mix']['carve_q'],
          'ride_db': HERO_SAX['mix']['ride_db'], 'dip_db': -2.0, 'dip_freq': 2500.0},
+    play={'vel': (84, 124), 'vib': {'depth': 24, 'rate': 5.4, 'delay': 0.3}, 'style': 'hero70s'},
+    user_gain_db=USER_GAIN_DB,
+    notes=_NOTES, audition={'notes': 'phrase'},
+    words=('sax', 'saxophone', 'alto', 'tenor', 'soprano', 'bari', 'weresax'),
+    measured={'lufs': -18.0})
+heroes.register('sax')
+
+_SRC_CLEAN = hero_sax_source(HERO_SAX_CLEAN)
+heroes.define(
+    'sax_clean', family='sax', main=_SRC_CLEAN['main'], takes=_SRC_CLEAN['takes'], octave=_SRC_CLEAN['octave'],
+    double='takes', chain=hero_sax_stages(HERO_SAX_CLEAN), named=False, gain_db=GAIN_DB_CLEAN,
+    sends={'plate': _SPACE['plate'], 'hall': _SPACE['hall'], 'echo': _SPACE['echo']},
+    space={'plate_bus': _SPACE['plate_bus'], 'plate': _SPACE['plate'], 'echo': _SPACE['echo'],
+           'throw': _SPACE['throw'], 'min_rest': 0.5, 'min_dur': 1.0},
+    mix={'duck': 2.5, 'duck_attack': 15.0, 'duck_release': 260.0, 'carve_db': HERO_SAX_CLEAN['mix']['carve_db'],
+         'carve_freq': HERO_SAX_CLEAN['mix']['carve_freq'], 'carve_q': HERO_SAX_CLEAN['mix']['carve_q'],
+         'ride_db': HERO_SAX_CLEAN['mix']['ride_db'], 'dip_db': -2.0, 'dip_freq': 2500.0},
     play={'vel': (84, 124), 'vib': {'depth': 24, 'rate': 5.4, 'delay': 0.3}},
     user_gain_db=-2.8,
-    genres={'jazz': {**heroes.PLAIN, **HERO_SAX['soft']}, 'ballad': {**heroes.PLAIN, **HERO_SAX['soft']},
+    genres={'jazz': {**heroes.PLAIN, **HERO_SAX_CLEAN['soft']}, 'ballad': {**heroes.PLAIN, **HERO_SAX_CLEAN['soft']},
             'classical': heroes.PLAIN},
-    notes=_NOTES, audition={'notes': 'phrase'}, patch='layered/hero_sax',
-    words=('sax', 'saxophone', 'alto', 'tenor', 'soprano', 'bari', 'weresax'),
+    notes=_NOTES_CLEAN, audition={'notes': 'phrase'}, patch='layered/hero_sax', aliases=('clean_sax',),
     measured={'lufs': -18.0, 'gr_median_db': 6.5, 'gr_p90_db': 8.7, 'spread_50ms_db': (7.0, 4.2),
               'lamplight_hooks_sax_vs_band_db': (0.8, 1.7), 'lamplight_bed_vs_lead_db': (-5.3, -8.3)})
-heroes.register('sax')
+heroes.register('sax_clean')
 
 
 register(Patch(
@@ -165,3 +247,14 @@ register(Patch(
           '{hp: -14} (and patches.get("layered/hero_sax").with_mix(sends={"plate": None}), so that the plate of the '
           'band stays for the snare). On lamplight-avenue the return sits ~5.5 LU under the dry sax and all reverbs '
           'together ~8.5 LU under the mix (pop: lush 7-16). Tweak: but_fx("reverb", decay=2.2-3.5, predelay=30-60).'))
+
+register(Patch(
+    'bus/hero_plate_70s',
+    fx=[fx.eq({'hp.freq': 500, 'lp.freq': 10000}),
+        fx.reverb(type='plate', mix=1.0, decay=HERO_SAX['plate']['decay'], predelay=22, lowcut=400, highcut=14000,
+                  damping=HERO_SAX['plate']['damping'], moddepth=0.5, width=1.0),
+        fx.eq({'peak3.freq': 4500, 'peak3.gain': 2.0, 'peak3.q': 0.7, 'output': 9.0})],
+    notes='v1. The 70s hero sax plate (hero/sax): bus/plate_80s (the bright EMT: send filtered 500 Hz-10 kHz, 22 ms '
+          'pre-delay, +2 dB at 4.5 kHz, +9 dB output) with a longer, brighter tail - RT60 3.6 s, damping 12 kHz (the '
+          'user\'s A/B pick, 2026-10-15). hero(track, family=\'sax\') sends to it (plate -14). Tweak: '
+          'but_fx("reverb", decay=2.4-4).'))

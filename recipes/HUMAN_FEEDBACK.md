@@ -174,6 +174,10 @@ Add new feedback here (date, song, the user's words, the rule) whenever the user
 
 ## Instruments
 
+- **2026-10-11, acoustic guitar demos (`songs/_demo_acoustic`: `sampled/acoustic_guitar` + guitarist `hand=`
+  'songwriter' / 'fingerstyle'):** "sounded nice". Rule: for acoustic guitar parts use that patch and those hands
+  (fingerpicked travis / arpeggio verses, songwriter strum with chucks) - first used in die-faehre-um-sieben.
+
 - **2026-09-30, lanterns-on-carmine:** "Drums etwas zu laut". The brushes sat 10.8-13 dB (RMS) under the lead
   per section, but taps, digs and kick bombs are transient (crest ~29 dB): their peaks reached the sax's and piano's.
   Rule: in acoustic jazz the drums sit clearly behind the piano and the horn, like a club trio record - brushes
@@ -317,8 +321,89 @@ Add new feedback here (date, song, the user's words, the rule) whenever the user
   The user: "the jazz should be more like that too" - singable heads, a left hand that changes per section and
   rests under the melody's breaths, a much wider dynamic range than the jazz tunes' 6-8 LU, the warm dark grand.
 
+- **2026-10-10, lofi-piano demos:** "das Knistern ist mir 30 % zu laut". Rule: the vinyl crackle is a faint bed,
+  barely there - lofi_piano's vinyl fader -5 -> -8 -> -9.5 -> -12.5 dB ("immer noch zu laut, nochmal 15 % weg", "nochmal 30 % weniger") (LOFI['vinyl_gain']) + its pops squashed (LOFI['vinyl_tame']). Lesson: crackle is judged by its PEAKS, not RMS (it read -53 dBFS RMS but peaked as high as the drums) - the analyzer's `spiky_track` now says so and the endless gate rejects it ("der test sollte näher am menschlichen ohr sein").
+
+- **2026-10-10, endless jazz trio:** "endless jazz trio, and with a verry smooth piano, i think the normal ones maybe
+  simply to dry" (earlier pianos: "schrill und hart"; the favourite: letters-to-the-morning). Measured on two trio
+  tunes: the piano's own tail was the 0.8 s salon at -11.5 plus a plate at -24 (plate return 26 LU under the piano,
+  letters-to-the-morning 16 LU; the mix's reverb -16 LU vs letters -11), the club grand (hammers 0.75, +1 dB at
+  3.2 kHz, +1.5 dB air) under a master with +1.5 dB presence: 2.5x letters' 2.5-6 kHz share, centroid 822 vs 797 Hz.
+  Rule: the trio's piano is solo_piano's grand (hammers 1.0, the split de-esser on loud notes, a 3.3 kHz dip, no
+  master presence lift) in a wetter club - every send +1-2.5 dB, the piano on the 1.9 s plate with 28 ms pre-delay
+  (high-passed: the upright stays clean): `jazz_trio voicing='smooth'` (jazz.SMOOTH_TRIO), the endless jazz-trio
+  default. A dry, close piano reads hard; reverb around the piano is part of "smooth".
+
 ## Clicks and parameter changes
 
 - "In msound wurden Parameteränderungen deswegen manchmal über ein paar Millisekunden gestreckt, um Klicks zu vermeiden."
   Rule: automation jumps must be smoothed (the engine does this; do not work around it), and every render's `clicks`
   must be 0 in the mix before delivery. Look at `clicks/click_NN.png`.
+
+## Films
+
+- "From Robot to Rubato" (the 8-minute narrated making-of documentary about the endless jazz piano, chart-and-panel
+  scenes, slow measured narration): "stop it pls, its to boring" - "the differences to small, to dry of a thema"
+  (the before/after examples sound too alike to a listener; refining a generator is a dry topic). Rule: an explainer film must not be a slideshow of
+  charts read aloud - short (2-3 min), the music in front (long listening excerpts, the before/after heard, not
+  described), fast cuts, movement on screen every few seconds, one surprising idea per chapter, fewer numbers; only
+  before/after pairs whose difference a casual listener hears instantly, and a topic with a story, not a changelog.
+
+- **2026-10-11, physical-model guitar (cx-physguitar demos A_physical_*, Codex):** "its nice to have small samplefree
+  sounds, so why not, but for the quality, it sounds simple and empty". Rule: a modelled instrument is not done when the
+  measured decay numbers match - judge the fullness of the body / room / attack against the sampled guitar; the sampled
+  Shinyguitar + guitarist hand feel (songs/_demo_acoustic) "sounded nice" and stays the default.
+
+- **2026-10-12, learned generator, three top30 samples (new-age 70 / jazz 30, D:/agentsound-learn/renders/cpu-blend):**
+  "so nicht sehr abwechslungsreich". All three were gentle / verse / minor at 65-68 BPM with the climax on C6 at ~90 %;
+  the one bright sample (morning, flowing, C major, 78) failed the arc gate. Rule: a set of generated pieces is judged
+  as a set - spread mood / feel / form / mode / tempo / climax across it (a set-level budget), and never let score
+  fine-tuning plus the gate quietly collapse the student onto its safest mode.
+
+- **2026-10-13, orchestral renders with the research-rule orchestra player (docs/ORCHESTRA_RULES.md) + section patches:
+  unbowed, lux-perpetua, ashes-and-chandeliers, _bands/symphony_orchestra:** "nice, really nice". Rule: keep the
+  ensemble.py rules (section asynchrony, family legato, phrase dynamics, breathing, bow weight, dynamics-coupled vibrato)
+  as the orchestral default; the endless orchestra builds on this player.
+
+- **2026-10-15, blueprint-boulevard sax A/B (an added fx.tremolo on the hero alto, solo 10 s clips 5-20 Hz):** the user
+  preferred 16 Hz / 25 % and asked for 10 Hz / 25 % autopan - "it sounds more real to me with it". Reading: the sampled
+  sax's looped sustain is too static; real reed tone has fast aperiodic amplitude / pitch micro-fluctuation (shimmer,
+  jitter, breath turbulence) that a fast tremolo imitates. Rule: give sampled winds a band-limited random (not sine)
+  amplitude + pitch micro-modulation as part of the hornist / hero chain, and judge it on the solo stem.
+- **2026-10-15, same A/B, round 2:** 10 Hz / 25 % / autopan (stereo 180) is "already quite good". A slow LFO on that
+  tremolo's rate and depth (10 +- 3 Hz, 0.25 +- 0.1 at 0.3 Hz, sine vs smooth random, and a stronger one): differences
+  "too minimal to decide" - the feature stays, smooth random recommended for winds. The first sampler `flutter`
+  (0.5 dB / 2 ct and 1.2 dB / 5 ct) sounded "fuerchterlich, irgendwas schrilles": its modulator noise was only a 2-pole
+  band-pass (audio-rate hash in the level / pitch: sidebands between the partials, lifted further by the hero chain's
+  exciter) and 5 ct of fast jitter chirps in the treble. Rule: a modulator must be band-limited steeply (fixed: -30
+  dB/oct above the band), random pitch jitter stays at 1-2 ct, and any modulation is judged on a bright solo stem.
+- **2026-10-15, the recent piano pieces (endless new-age r-sets, learned-student renders schema3):** "they lack a
+  blossoming where the tempo gets faster and more happens; they just ripple along; bass and lead always very clearly
+  separated; nothing flowing like Für Elise, where it is played across the whole keyboard". Rule: every piano piece
+  needs at least one bloom - a section where the motion density rises (8ths -> 16ths / triplets), the tempo pushes
+  forward a little and the texture opens up; and flowing textures where one continuous figure travels across the
+  registers and passes between the hands (Für Elise A-section arpeggios, broken chords over 2-3 octaves, runs that
+  carry into the melody) instead of a fixed bass-low / melody-high split.
+- **2026-10-15, body sway A/B (blueprint-boulevard sax stem, 20 s):** of a (discrete mic moves only), b (sway 1), c
+  (sway 2), d (sway 1 + mic moves every 2 bars) the user picked d. Rule: wind solos get the continuous body sway by
+  default (hornist STYLES sway=1 in hero / pop / ballad / jazz) and a denser mic budget on a featured hero line.
+  Comparing our hero alto with a famous late-70s sax record: ours with the 10 Hz autopan tremolo is closer, but "too
+  clean" (no breath noise, no grit / saturation, no period production).
+- **2026-10-15, sax grit A/B on a famous late-70s line (covers/baker-street, private):** breath noise (Weresax cc122 = 25,
+  2-pole 3 kHz low-pass on the noise zone) "much too loud" -> "80 % quieter or so"; of cc122 = 0 / 4 / 8 / 12 on the
+  full variant D (dynamic mic cc120 = 127, velocities 95-127, tube saturator drive 7, tape 15 ips drive 6, compressor
+  4:1, 3.6 s bright plate, near-mono, two growls on held peaks) the user picked **4**. Rule: a breath-noise layer is a
+  trace, felt more than heard.
+  Re-sent at breath 4: of a / b / c / d the user picked **d** - "that started the imaginary sax in my head": the
+  late-70s rock-sax sound = dynamic mic, hard velocity layer, tube saturation, tape, 4:1 compression, long bright
+  plate, near-mono, a few growls on held peaks, plus the 10 Hz autopan tremolo and the trace of breath.
+- **2026-10-15, sax grit A/B, variant d at breath 4:** "started the imaginary sax in my head" - and: "nein, das wird
+  das standard sax!". Rule: the late-70s record chain (dynamic mic + breath trace, 4:1, tube + tape grit, near-mono,
+  the 10 Hz smooth-random autopan, a bright 3.6 s plate, growls on held peaks) IS the hero sax (hero/sax v2) in every
+  genre; the clean double-tracked v1 is only an explicit opt-out (`family='sax_clean'`).
+- **2026-10-15, realism batch A blind pairs:** pair 1 (nylon solo arpeggio, FreePats one-sample-per-note): the user
+  picked X = the synthetic round robins (rrpitch 4, rrtone 1.5, rrattack 0.4, rrlevel 0.8, rrborrow 0.5, restrike 12)
+  over the plain patch -> sampled/nylon_guitar v2 carries them. Pairs 2-6 (nylon in a song, pianos, blend) unjudged.
+  Pair 5 (concert grand crescendo pp -> ff): the user picked X = the PLAIN patch over layers='blend' 0.4 + veltone
+  0.5, then: "just take 5Y, maybe experts hear it" -> sampled/concert_grand v2 carries realism.BLEND anyway (no
+  clear preference by ear; it removes the measured 17 dB brightness jump between layers).

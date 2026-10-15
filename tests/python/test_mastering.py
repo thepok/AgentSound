@@ -23,7 +23,7 @@ def report(*, lufs=-10.0, tp=-1.1, lra=6.0, plr=None, window=(-12, -9), lra_rang
     return {
         'global': {'lufsIntegrated': lufs, 'truePeakDbtp': tp, 'loudnessRange': lra,
                    'plr': plr if plr is not None else tp - lufs, 'stereoCorrelation': corr, 'lowEndCorrelation': low_corr,
-                   'widthPct': width, 'clippedSamples': clipped, 'dcOffset': list(dc), 'subsonicPct': 0.0,
+                   'lowEndEnergyShare': 0.2, 'widthPct': width, 'clippedSamples': clipped, 'dcOffset': list(dc), 'subsonicPct': 0.0,
                    'bandsVsRefDb': bands or {'sub': 0.0, 'bass': 0.0, 'lowmid': 0.0, 'mid': 0.0, 'presence': 0.0,
                                              'brilliance': 0.0, 'air': 0.0},
                    'thirdOctave': {'hz': HZ, 'vsRefDb': vs_ref or [0.0] * len(HZ)}},
@@ -157,6 +157,30 @@ class Platforms(unittest.TestCase):
 
 
 class Check(unittest.TestCase):
+    def test_shared_verdict_boundaries(self):
+        cases = json.loads((pathlib.Path(__file__).parents[1] / 'fixtures/verdicts.json').read_text())
+        aliases = {'low_end_not_mono': 'mono_low_end', 'loudness_low': 'loudness_window', 'loudness_high': 'loudness_window'}
+        watched = {'mono_low_end', 'true_peak', 'dc_offset', 'squashed', 'loudness_window'}
+        for c in cases:
+            with self.subTest(c['name']):
+                f = mastering.check(c['report'])
+                actual = {x['code']: x['severity'] for x in f if x['code'] in watched and x['severity'] != 'ok'}
+                self.assertEqual(actual, {aliases.get(k, k): v for k, v in c['expected'].items()})
+
+    def test_emitted_verdicts_are_authoritative(self):
+        from agentsound.verdicts import evaluate
+        rep = report()
+        rep['findings'] = evaluate(rep)
+        rep['global'].update(dcOffset=[0.5, 0.5], lowEndCorrelation=-1, plr=0)
+        self.assertNotIn('dc_offset', codes(mastering.check(rep)))
+        self.assertNotIn('mono_low_end', codes(mastering.check(rep)))
+        self.assertNotIn('squashed', codes(mastering.check(rep)))
+
+    def test_delivery_uses_unrounded_loudness(self):
+        rep = report(lufs=-20, window=(-20, -10))
+        rep['deliveryMetrics'] = {'lufsIntegrated': -20.051, 'truePeakDbtp': -1.1}
+        self.assertIn('loudness_window', codes(mastering.check(rep), 'warn'))
+
     def test_clean_master(self):
         f = mastering.check(report())
         self.assertEqual(codes(f, 'warn'), [])
@@ -170,13 +194,15 @@ class Check(unittest.TestCase):
         f = mastering.check(report(lufs=-6.0, tp=-0.2, plr=4.0, lra=1.5, clipped=12, dc=(0.004, 0.0), corr=-0.1,
                                    low_corr=0.5), render={'master': {'fx': []}})
         warn = codes(f, 'warn')
-        for c in ('true_peak', 'clipping', 'dc_offset', 'loudness_window', 'squashed', 'mono_low_end', 'mono_compat',
+        self.assertIn('clipping', codes(f, 'error'))
+        self.assertIn('squashed', codes(f, 'info'))
+        for c in ('true_peak', 'dc_offset', 'loudness_window', 'mono_low_end', 'mono_compat',
                   'no_limiter'):
             self.assertIn(c, warn)
         tp = next(x for x in f if x['code'] == 'true_peak')
         self.assertEqual(tp['fix']['params']['ceiling'], -1.2)
         self.assertEqual(next(x for x in f if x['code'] == 'mono_low_end')['fix']['params']['monobass'], 120)
-        order = [{'warn': 0, 'info': 1, 'ok': 2}[x['severity']] for x in f]
+        order = [{'error': 0, 'warn': 1, 'info': 2, 'ok': 3}[x['severity']] for x in f]
         self.assertEqual(order, sorted(order))                            # warn first, ok last
 
     def test_lra_against_the_genre(self):
@@ -192,7 +218,9 @@ class Check(unittest.TestCase):
 
     def test_tone(self):
         vs = [6.0 if f <= 100 else 0.0 for f in HZ]
-        f = mastering.check(report(vs_ref=vs, bands={'sub': 7.0, 'bass': 2.0}))
+        rep = report(vs_ref=vs, bands={'sub': 7.0, 'bass': 2.0})
+        rep['warnings'] = [{'code': 'balance_sub_high', 'severity': 'warn', 'message': 'sub +7 dB, limit +5'}]
+        f = mastering.check(rep)
         self.assertIn('tone_profile', codes(f, 'info'))
         self.assertIn('tone_band', codes(f, 'warn'))               # sub over its +5 limit: a mix problem
 
@@ -204,7 +232,7 @@ class Check(unittest.TestCase):
             (d / 'out' / 'song.render.json').write_text(json.dumps({'master': {'fx': [{'type': 'eq', 'params': {}}]}}),
                                                         encoding='utf-8')
             warn = codes(mastering.check(d), 'warn')
-            self.assertIn('true_peak', warn)
+            self.assertIn('true_peak', codes(mastering.check(d), 'error'))
             self.assertIn('no_limiter', warn)
         finally:
             shutil.rmtree(d, ignore_errors=True)

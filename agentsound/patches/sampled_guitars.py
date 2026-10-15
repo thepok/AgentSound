@@ -2,7 +2,8 @@
 (pre-amped sets and DI guitars through amp + cabinet chains), metal rhythm / lead, electric basses (finger, pick,
 slap, flatwound, hollowbody, short-scale, a Bass VI), a double bass and an electric upright.
 
-  acoustic:  sampled/steel_guitar sampled/concert_guitar sampled/archtop_guitar
+  acoustic:  sampled/acoustic_guitar (the played acoustic: mic'd Shinyguitar + its fret noises, chucks and mutes -
+             NOISES, guitarist hand='acoustic') sampled/steel_guitar sampled/concert_guitar sampled/archtop_guitar
   electric:  sampled/jazz_guitar sampled/clean_guitar sampled/dist_guitar sampled/fuzz_guitar (pre-amped FreePats FSBS)
              sampled/gretsch_guitar sampled/hofner_guitar (hollowbodies, keyswitched: twang / staccato / hammer-on or
              behind the bridge / palm mute)
@@ -41,7 +42,7 @@ VERSION = 2   # v2: the amped DI guitars and sampled/rock_bass on the engine's t
 
 LEVELS = {
     # acoustic
-    'steel_guitar': -2.5, 'concert_guitar': 1.7, 'archtop_guitar': 8.5,
+    'acoustic_guitar': 9.3, 'steel_guitar': -2.5, 'concert_guitar': 1.7, 'archtop_guitar': 8.5,
     # pre-amped electrics
     'jazz_guitar': -4.5, 'clean_guitar': -3.4, 'dist_guitar': -7.1, 'fuzz_guitar': -10.5,
     'gretsch_guitar': 13.0, 'hofner_guitar': 9.6,
@@ -261,6 +262,73 @@ register(Patch(
           "Articulations (keyswitches C-1, C#-1): 'open' (default) and 'muted' (the player's muting control, "
           "cc 110: short notes - clip.articulate('muted') for the choked chords of la pompe). Range E2-E6. "
           + _PLAY_GUITAR + ' ' + _KARORYFER + ' Sends: hall -14. Measured -18.0 LUFS (audition chords).',
+    audition={'notes': 'chord'}))
+
+# The played acoustic: Shinyguitar's microphone set (the archtop above, same samples) with everything a strumming /
+# picking hand makes besides the notes - the pack's own recordings, placed by agentsound.guitarist (hand='acoustic' /
+# 'fingerstyle' find them through NOISES): 'muted' (cc 110: the choked / palm-muted note), 'fret noise' (the pack's
+# finger-off release samples, 5 takes per note, played as notes where a finger leaves a string: chord changes,
+# position shifts - not after every note-off, which a re-struck string never makes) and, on keys C0-D#1 of the 'open'
+# program, the mute recordings: single muted strings, muted strums down / up (the chuck), a soft brush, a palm thud,
+# body knocks (5 takes each).
+ACOUSTIC_VEL = {'velcurve': [[1, 0.2], [64, 0.6], [127, 1.0]]}
+# The mute recordings (keys 12-27) sit ~8 dB under a strum's peak at the same velocity (a chuck at 85: -1.7 dBFS
+# peak vs +6.3 for 6-string strums at 70-100): +5 dB brings a chuck within ~3 dB of the strum it replaces, as a
+# played chuck is. The finger-off samples at velocity 35-65 land ~24 dB under the strums' peaks (heard in a picked
+# passage, under a strum mostly masked, as on a record): +3 dB.
+ACOUSTIC_NOISE_GAIN = [[12, 5.0], [27, 5.0], [30, 0.0]]
+ACOUSTIC_FRET_GAIN = 3.0
+# A stereo pair at the 12th fret hears the low strings a little to one side, the treble to the other (mono samples:
+# the strum sweeps across the image); the mute recordings stay in the middle.
+ACOUSTIC_PAN = [[12, 0.0], [27, 0.0], [36, -0.35], [52, 0.0], [72, 0.35]]
+# Toward a flat-top: against a strum on the FSS steel guitar the archtop's mic set measures +3 dB 250-800 Hz, +5 dB
+# 800 Hz-2.5 kHz and ~15 dB less air (relative band balance): the box and the honk cut, the top opened as far as the
+# recording carries it (its string zing ends where the samples do), the low E / A warmed a little.
+ACOUSTIC_EQ = dict(low__freq=130, low__gain=1.5, peak1__freq=420, peak1__gain=-2.5, peak1__q=1.0,
+                   peak2__freq=1250, peak2__gain=-3.0, peak2__q=0.9, peak3__freq=4200, peak3__gain=1.5,
+                   peak3__q=1.0, high__freq=9000, high__gain=4.0)
+NOISES = {
+    'sampled/acoustic_guitar': {
+        'fret': 'fret noise',             # the articulation whose notes are finger-off noises (at the string's pitch)
+        'muted': 'muted',                 # the choked note (palm / fretting-hand mute)
+        'strings': (12, 13, 14, 15, 16, 17),   # a single muted string, low E .. high e
+        'chuck': 18, 'chuck_up': 19,      # a muted strum down / up (the chuck of singer-songwriter strumming)
+        'brush': 20,                      # a soft muted brush across the strings
+        'thump': 21,                      # the palm slapping the strings (low thud)
+        'knock': (24, 25, 26, 27),        # body knocks / taps
+    },
+}
+"""Noise maps of the patches that carry a hand's noises (guitarist reads them: chucks, fret noises, squeaks, mutes):
+patch name -> {role: key(s) or articulation name}."""
+
+
+register(Patch(
+    'sampled/acoustic_guitar',
+    instrument=_multi({'open': {'path': SHINY, 'cc': {100: 127, 106: 0, 107: 0}, 'zone': ACOUSTIC_VEL,
+                                'keygain': ACOUSTIC_NOISE_GAIN, 'keypan': ACOUSTIC_PAN},
+                       'muted': {'path': SHINY, 'cc': {100: 127, 106: 0, 107: 0, 110: 96}, 'zone': ACOUSTIC_VEL,
+                                 'keypan': ACOUSTIC_PAN},
+                       'fret noise': {'path': SHINY, 'cc': {100: 127, 106: 127, 107: 0}, 'releases': 'only',
+                                      'gain': ACOUSTIC_FRET_GAIN, 'keypan': ACOUSTIC_PAN}},
+                      level=LEVELS['acoustic_guitar']),
+    fx=[_hp(70), _eq(**ACOUSTIC_EQ)],
+    sends={'room': -14, 'hall': -20},
+    notes='v1. The PLAYED acoustic guitar (Karoryfer Shinyguitar, microphone set): 4 velocity layers x 4 random '
+          'takes per note, E2-E6, and the hand\'s noises recorded with it - the guitarist places them '
+          '(guitarist.arrange(style=\'songwriter\' | \'fingerstyle\'), strum_pattern / travis(hand=\'acoustic\')). '
+          "Articulations (keyswitches C-1 .. D-1): 'open' (default), 'muted' (cc 110: the choked / palm-muted "
+          "note), 'fret noise' (the finger-off release samples, 5 takes per note, played at the string's pitch "
+          'where a finger leaves it: chord changes, position shifts). Keys C0-D#1 of \'open\' are the mute '
+          'recordings (NOISES): C0-F0 a single muted string (low E .. high e), F#0 a muted strum down (the '
+          'chuck), G0 one up, G#0 a soft brush, A0 the palm thud, C1-D#1 body knocks (+5 dB: a chuck lands ~3 dB '
+          'under the strum it replaces). An archtop voiced toward a flat-top (ACOUSTIC_EQ): the box (420 Hz) and '
+          'the honk (1.25 kHz) cut, +1.5 dB at 4.2 kHz, air +4 dB from 9 kHz, the low strings warmed - open and '
+          'warm, but its body stays an archtop\'s (less boom and sustain than a dreadnought, less string zing than '
+          'sampled/steel_guitar: a singer-songwriter / folk acoustic, not a jumbo). Mono samples spread as a stereo '
+          'pair hears them (keypan: low strings a little left, treble right). Its normalised layers get a velocity '
+          'curve (~9 dB from velocity 40 to 120). Strummed 6-string chords at velocity 90-115 run ~6 dB over the '
+          'audition chords: give the track gain_db -5..-7 in a strummed part. '
+          + _KARORYFER + ' Sends: room -14, hall -20. Measured -18.0 LUFS (audition chords).',
     audition={'notes': 'chord'}))
 
 

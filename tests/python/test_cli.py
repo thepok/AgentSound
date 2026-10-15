@@ -7,6 +7,8 @@ import shutil
 import sys
 import tempfile
 import unittest
+from types import SimpleNamespace
+from unittest.mock import patch
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2]))
 
@@ -44,6 +46,42 @@ def run(argv):
     with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
         code = cli.main(argv)
     return code, out.getvalue(), err.getvalue()
+
+
+class EngineQueries(unittest.TestCase):
+    def test_missing_engine(self):
+        for command in ('params', 'dx7', 'sf2'):
+            code, out, err = run([command, '--engine', str(pathlib.Path(__file__).with_name('missing.exe'))])
+            self.assertEqual((code, out), (3, ''))
+            self.assertIn('engine not found', err)
+
+    def test_forwarding_policies(self):
+        for command, options in (('params', ['--json', 'va']), ('dx7', ['--json', 'piano']),
+                                 ('sf2', ['--json', '--samples', '--file', 'test.sf2', 'piano', 'bass'])):
+            for is_json in (False, True):
+                args = SimpleNamespace(engine='engine.exe', json=is_json, type='va', samples=True,
+                                       file='test.sf2', search=['piano', 'bass'] if command == 'sf2' else 'piano')
+                expected_options = options if is_json else (['--markdown', 'va'] if command == 'params' else options[1:])
+                for code, stderr in ((0, ' no banks installed '), (2, ' bad input '), (7, ' failed '), (2, '')):
+                    with self.subTest(command=command, json=is_json, code=code, stderr=stderr):
+                        out, err = io.StringIO(), io.StringIO()
+                        proc = SimpleNamespace(stdout='output', stderr=stderr, returncode=code)
+                        with patch.object(cli, 'find_engine', return_value=pathlib.Path('engine.exe')), \
+                             patch.object(cli.subprocess, 'run', return_value=proc) as invoke, \
+                             contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                            if code:
+                                with self.assertRaises(cli.CliError) as raised:
+                                    getattr(cli, 'cmd_' + command)(args)
+                                self.assertEqual(raised.exception.code, 2 if command == 'sf2' and code == 2 else 4)
+                                detail = (stderr or 'output') if command == 'sf2' else stderr
+                                self.assertEqual(str(raised.exception), f'engine {command} failed: {detail.strip()}')
+                            else:
+                                self.assertEqual(getattr(cli, 'cmd_' + command)(args), 0)
+                        invoke.assert_called_once_with(['engine.exe', command] + expected_options,
+                                                       capture_output=True, text=True, encoding='utf-8', errors='replace')
+                        notice = stderr.strip() + '\n' if code == 0 and command == 'dx7' else ''
+                        self.assertEqual(out.getvalue(), 'output' + (notice if not is_json else ''))
+                        self.assertEqual(err.getvalue(), notice if is_json else '')
 
 
 class SongCommands(unittest.TestCase):
@@ -111,6 +149,43 @@ class Audition(unittest.TestCase):
                 self.assertIn(36, {n[2] for n in notes})
             if name == 'test/bass':
                 self.assertEqual(sorted(b['id'] for b in r['buses']), ['echo', 'hall'])
+
+    def test_realism_probe_materials(self):
+        patches.register(Patch('test/keys', {'type': 'va'}))
+        for kind in ('repeat', 'sweep', 'legato', 'sustain'):
+            notes = cli.audition_song('test/keys', kind).compile()['tracks'][0]['notes']
+            if kind == 'repeat':
+                self.assertEqual(sum(1 for n in notes if n[0] < 8), 8)
+                self.assertEqual(len({n[2] for n in notes if n[0] < 8}), 1)
+                self.assertEqual(len({n[3] for n in notes}), 1)
+            if kind == 'sweep':
+                self.assertEqual([n[3] for n in notes], list(range(20, 128, 4)) + [127])
+                self.assertEqual(len({n[2] for n in notes}), 1)
+            if kind == 'legato':   # overlapping: each note ends after the next one starts
+                self.assertTrue(all(a[0] + a[1] > b[0] for a, b in zip(notes, notes[1:])))
+                self.assertEqual({abs(b[2] - a[2]) for a, b in zip(notes, notes[1:])}, {1, 2, 5, 7, 12})
+            if kind == 'sustain':
+                self.assertEqual([n[3] for n in notes], [30, 70, 115])
+        with self.assertRaises(cli.CliError):   # the pedal material needs a sampler
+            cli.audition_song('test/keys', 'pedal')
+
+    def test_set_overrides(self):
+        sets = cli.parse_sets(['gtr.instrument.rrpitch=4', 'gtr.fx.0.mix=0.5', 'gtr.instrument.layers=blend'])
+        self.assertEqual(sets, [('gtr', None, 'rrpitch', 4), ('gtr', 0, 'mix', 0.5), ('gtr', None, 'layers', 'blend')])
+        self.assertEqual(cli.parse_sets(['rrtone=1.5', 'fx.1.mix=0'], 'patch'),
+                         [('patch', None, 'rrtone', 1.5), ('patch', 1, 'mix', 0)])
+        for bad in ('gtr.rrpitch=4', 'nothing', 'gtr.fx.x.mix=1'):
+            with self.assertRaises(cli.CliError):
+                cli.parse_sets([bad])
+        render = {'tracks': [{'id': 'gtr', 'instrument': {'type': 'sampler', 'params': {'level': 1}},
+                              'fx': [{'type': 'eq', 'params': {}}]}]}
+        cli.apply_sets(render, cli.parse_sets(['gtr.instrument.rrpitch=4', 'gtr.fx.0.mix=0.5']))
+        self.assertEqual(render['tracks'][0]['instrument']['params'], {'level': 1, 'rrpitch': 4})
+        self.assertEqual(render['tracks'][0]['fx'][0]['params'], {'mix': 0.5})
+        for bad in (['gtx.instrument.level=1'], ['gtr.fx.3.mix=1']):   # strict: unknown track / fx index
+            with self.assertRaises(cli.CliError):
+                cli.apply_sets(render, cli.parse_sets(bad))
+        self.assertEqual(cli.set_label(cli.parse_sets(['gtr.instrument.rrpitch=4'])), 'gtr.rrpitch=4')
 
     def _notes(self, name, kind='auto'):
         r = cli.audition_song(name, kind).compile()

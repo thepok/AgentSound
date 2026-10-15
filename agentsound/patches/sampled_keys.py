@@ -29,6 +29,7 @@ royalty-free-no-redistribution / unclear packs are fine for private listening an
 commercial release (the build's credits.txt lists them). Version: see VERSION.
 """
 
+from . import realism
 from . import Patch, fx, inst, register
 
 VERSION = 1
@@ -116,10 +117,12 @@ register(Patch(
 
 register(Patch(
     'sampled/concert_grand',
-    instrument=_sfz('samples/splendid-grand-piano/Splendid Grand Piano.sfz', level=1.3, width=0.75, polyphony=160),
+    instrument=_sfz('samples/splendid-grand-piano/Splendid Grand Piano.sfz', level=1.3, width=0.75, polyphony=160,
+                    **realism.BLEND),
     fx=[_hp(28)],
     sends={'hall': -12},
-    notes='v1. Splendid Grand Piano (the AKAI Steinway library, public domain; SFZ by kinwie): a big concert Steinway '
+    notes='v2. Splendid Grand Piano (the AKAI Steinway library, public domain; SFZ by kinwie), its 4 layers crossfaded '
+          '(realism.BLEND: layers=blend 0.4, veltone 0.5 - no brightness jump between layers): a big concert Steinway '
           'D, 4 velocity layers (pp, mp, mf, ff) plus key-release resonance, the most even of the sampled grands '
           '(neighbouring notes within 2-3 dB) - classical solo and concerto parts, film themes, grand ballads. Width '
           '0.75 (the spaced pair is wide and nearly uncorrelated; 0.75 keeps it mono-safe). Range A0-C8. Dynamics '

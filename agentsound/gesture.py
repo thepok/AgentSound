@@ -10,6 +10,7 @@ no zipper, no clicks. Lanes are abstract; a player's render() maps them to a tra
             dynamics and volume knob)
     bright  dB of tone that comes with the air          mic / prox / shelf   the mic stage (distance, 300 Hz, axis)
     room    dB on the reverb sends                       bend    semitones of pitch ('instrument.pitchbend')
+    pan     +- of the track's pan (the body's stereo drift: sway)
     vib     cents of the sampler's own (centred) vibrato depth
     harm    0..1 of the string's harmonic (sampler 'harmonic': pinch harmonics, controlled feedback)
     wah     0..1 wah pedal position (the 'wah' fx)        wahmix  0..1 the wah switched in (its mix)
@@ -19,8 +20,9 @@ The generic moves live here and are shared: pitch - bend (rise, overshoot, settl
 the 'vib' lane, or a waveform on the 'bend' lane that only goes UP from the note - a guitarist pushing the string - or
 DOWN from a bent note), scoop, fall, doit, shake, growl; air - push, pulse, swell, messa_di_voce, fp_cresc, bloom,
 taper, breath_release, accents; mic - lean_in, turn_away, off_axis, bell_swing, fade_away, pull_back (a
-singer's slow pull away from the mic on a long held note: agentsound.singer's mic_pull). agentsound.hornist (wind
-players), agentsound.fretwork (the lead guitarist's hands) and agentsound.singer are built on them.
+singer's slow pull away from the mic on a long held note: agentsound.singer's mic_pull) and the continuous body
+sway (sway, phrase-coupled by sway_contour: distance, axis, room and a little pan drift all the time).
+agentsound.hornist (wind players), agentsound.fretwork (the lead guitarist's hands) and agentsound.singer are built on them.
 """
 
 from __future__ import annotations
@@ -31,7 +33,8 @@ import math
 from .theory import ComposeError
 
 _EPS = 1e-6
-LANES = ('air', 'bright', 'bend', 'vib', 'mic', 'prox', 'shelf', 'room', 'harm', 'wah', 'wahmix', 'mute', 'echo')
+LANES = ('air', 'bright', 'bend', 'vib', 'mic', 'prox', 'shelf', 'room', 'pan', 'harm', 'wah', 'wahmix', 'mute',
+         'echo')
 _RES = 0.02          # seconds between sampled points (a lane never moves more than ~0.8 dB between two of them)
 
 
@@ -638,6 +641,117 @@ def pull_back(start, dur, bpm, *, db: float = -4.5, prox: float = -2.0, room: fl
         sh.append(_Shape('room', fn=lambda t: room * env(t, lean_in=False), t0=s, t1=bk))
     return Gesture('pull_back', 'mic', s, e, sh, dict(db=db, prox=prox, room=room, curve=cv,
                                                       coda=None if ca is None else (round(ca, 4), round(cb, 4))))
+
+
+def sway_contour(phrases, bpm, *, peaks=(), held: float = 0.45, spacing: float = 0.8) -> list:
+    """The phrase coupling of a sway(): keyframes (beat, -1..1) - toward +1 (the bell lifts, closer and on axis) on
+    the held high notes of each phrase (its register, +0.5 on the phrase's highest held note, +0.3 on a hook peak:
+    peaks= beats), -0.7 at each phrase end (the bell sinks, the player steps back), back to 0 halfway through the rest
+    (drifting). phrases: [[(start, dur, pitch), ...], ...] (beats); held: the shortest note (s) that moves the body;
+    keys closer than `spacing` s keep the stronger one (a body does not jerk with every note: <= ~0.6 Hz)."""
+    b = _bpm(bpm)
+    hk = [_num(p, 'sway_contour peaks (beats)') for p in (peaks or ())]
+    keys: list = []          # (beat, value, priority)
+    for ph in phrases:
+        ph = sorted(ph)
+        if not ph:
+            continue
+        lo, hi = min(p for _, _, p in ph), max(p for _, _, p in ph)
+        hold = [(s, d, p) for s, d, p in ph if d * 60.0 / b >= held]
+        top = max(hold, key=lambda n: (n[2], n[1]))[0] if hold else None
+        for s, d, p in hold:
+            r = (2.0 * (p - lo) / (hi - lo) - 1.0) if hi > lo else 0.0
+            v = 0.5 * r + (0.5 if s == top else 0.0) + (0.3 if any(abs(s - h) < 0.2 for h in hk) else 0.0)
+            keys.append((s + min(0.4 * d, _b(0.6, b)), max(-1.0, min(1.0, v)), abs(v)))
+        end = max(s + d for s, d, _ in ph)
+        keys.append((end, -0.7, 2.0))
+    keys.sort(key=lambda k: k[0])
+    out: list = []
+    gap = _b(_num(spacing, 'sway_contour spacing (s)', 0.1, 10), b)
+    for k in keys:
+        if out and k[0] - out[-1][0] < gap:
+            if k[2] > out[-1][2]:
+                out[-1] = k
+            continue
+        out.append(k)
+    # back to 0 halfway into the rest after a phrase end (when the next key is far enough)
+    res = []
+    for i, (t, v, pr) in enumerate(out):
+        res.append((t, v))
+        if pr >= 2.0:
+            nxt = out[i + 1][0] if i + 1 < len(out) else t + 2 * gap
+            if nxt - t >= 2 * gap:
+                res.append((t + min(0.5 * (nxt - t), _b(1.5, b)), 0.0))
+    return res
+
+
+def sway(start, dur, bpm, *, db: float = 1.2, prox: float = 1.5, shelf: float = 2.0, room: float = 1.5,
+         pan: float = 0.05, hz: float = 0.22, couple: float = 0.6, contour=None, seed=0, fade: float = 1.0,
+         post: bool = True) -> Gesture:
+    """A player's continuous BODY SWAY relative to the mic over a span (start, dur in beats): a real player never
+    stands still - distance and axis drift all the time (0.1-1 Hz), coupled: closer = louder (`db` on the mic lane),
+    fuller (`prox` dB of proximity ~300 Hz) and drier (`room` dB less on the reverb sends); the bell on / off axis =
+    `shelf` dB above ~3.2 kHz; a small stereo drift (`pan`, +- of the track's pan). Two smooth seeded noises (three slow
+    sines each, around `hz` Hz) drive distance and axis, a third the pan; `contour` (keyframes (beat, -1..1), e.g.
+    sway_contour(): the bell lifts toward the high / peak notes and sinks at phrase ends) is mixed in by `couple`
+    (0 = pure drift, 1 = only the phrase). Fades in / out over `fade` s; deterministic by seed; sampled every 20 ms
+    like every move (it changes < 0.1 dB between two points: no zipper). Additive with the discrete mic moves (lean_in,
+    bell_swing ...). post=True: hornist.render writes its distance LEVEL after the compressor (the breath stage) -
+    a compressor would flatten a slow +-1 dB drift to +-0.3 (measured on the hero sax); the tone stays on the mic stage.
+    agentsound.hornist.arrange(sway=1) places one over every clip; a singer can use it the same way."""
+    import random as _random
+    b = _bpm(bpm)
+    s, d = _pos(start), _num(dur, 'sway dur', 0.1)
+    e = s + d
+    f = _num(hz, 'sway hz', 0.03, 1.0)
+    cp = _num(couple, 'sway couple', 0, 1) if contour else 0.0
+    vals = {k: _num(v, f'sway {k}', -12, 12) for k, v in (('db', db), ('prox', prox), ('shelf', shelf),
+                                                          ('room', room))}
+    pn = _num(pan, 'sway pan', 0, 0.5)
+    fd = _b(_num(fade, 'sway fade (s)', 0.05, 10), b)
+    fd = min(fd, 0.5 * d)
+    rng = _random.Random(f"sway:{seed}:{s:.6f}")
+    # per channel: 3 sines (rate ratio, weight) with seeded phases and +-12 % rates; peak sum = 1
+    noises = [[(f * r * (1 + 0.12 * (2 * rng.random() - 1)), w, 2 * math.pi * rng.random())
+               for r, w in ((0.55, 0.5), (1.0, 0.33), (1.75, 0.17))] for _ in range(3)]
+    ck = _Shape('mic', [(float(t), max(-1.0, min(1.0, float(v)))) for t, v in contour]) if contour else None
+
+    def noise(i, t):
+        sec = (t - s) * 60.0 / b
+        return sum(w * math.sin(2 * math.pi * r * sec + ph) for r, w, ph in noises[i])
+
+    def env(t):
+        return _ease((t - s) / fd) * _ease((e - t) / fd)
+
+    def cont(t):
+        if ck is None:
+            return 0.0
+        if t <= ck.t0:
+            return ck.keys[0][1]
+        if t >= ck.t1:
+            return ck.keys[-1][1]
+        return ck(t)
+
+    def dist(t):
+        return env(t) * (cp * cont(t) + (1 - cp) * noise(0, t))
+
+    def axis(t):
+        return env(t) * (cp * cont(t) + (1 - cp) * noise(1, t))
+
+    res = _RES
+    sh = []
+    if vals['db']:
+        sh.append(_Shape('mic', fn=lambda t: vals['db'] * dist(t), t0=s, t1=e, res=res))
+    if vals['prox']:
+        sh.append(_Shape('prox', fn=lambda t: vals['prox'] * dist(t), t0=s, t1=e, res=res))
+    if vals['shelf']:
+        sh.append(_Shape('shelf', fn=lambda t: vals['shelf'] * axis(t), t0=s, t1=e, res=res))
+    if vals['room']:
+        sh.append(_Shape('room', fn=lambda t: -vals['room'] * (0.7 * dist(t) + 0.3 * axis(t)), t0=s, t1=e, res=res))
+    if pn:
+        sh.append(_Shape('pan', fn=lambda t: pn * env(t) * noise(2, t), t0=s, t1=e, res=res))
+    return Gesture('sway', 'mic', s, e, sh, dict(db=vals['db'], shelf=vals['shelf'], pan=pn, hz=f, couple=cp,
+                                                 post=bool(post)))
 
 
 def accents(notes, bpm, *, db_per_vel: float = 0.12, ms: float = 40.0, limit: float = 4.0, back=None) -> Gesture:

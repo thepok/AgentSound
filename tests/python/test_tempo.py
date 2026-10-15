@@ -41,6 +41,17 @@ class TempoMapMath(unittest.TestCase):
         self.assertEqual(m.seconds_at(13), 13 * 60 / 104)
         self.assertAlmostEqual(m.beat_at(m.seconds_at(7.25)), 7.25, places=12)
 
+    def test_segment_lookup_is_the_last_start_at_or_before(self):
+        m = TempoMap([[0, 120], [4, 120], [12, 60], [16, 60], [20, 140, 'smooth'], [22, 100, 'step']])
+        for b in (-1, 0, 3.99, 4, 11.5, 12, 16, 20, 21.9, 22, 22.1, 500):
+            want = m._segs[0]
+            for s in m._segs:                       # (the linear scan the bisection replaced)
+                if s[0] <= b:
+                    want = s
+                else:
+                    break
+            self.assertIs(m._seg(b), want, b)
+
     def test_linear_smooth_step(self):
         m = TempoMap([[0, 120], [4, 120], [12, 60], [16, 60], [20, 140, 'smooth'], [22, 100, 'step']])
         self.assertAlmostEqual(m.seconds_between(4, 12), 60 * 8 / (60 - 120) * math.log(60 / 120), places=12)

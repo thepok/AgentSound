@@ -1,6 +1,7 @@
 """Jazz band presets (agentsound/bandlib/jazz.py): every preset builds and compiles - on the installed sample packs
 and on the GeneralUser fallback -, the options, the helpers and jazz.band()'s sampled sounds."""
 import importlib.util
+import os
 import pathlib
 import sys
 import tempfile
@@ -21,12 +22,13 @@ PRESETS = ('jazz_trio', 'jazz_quartet', 'jazz_ballad', 'bossa', 'soul_ballad')
 
 @contextmanager
 def samples(packs=()):
-    """library.SAMPLES pointed at an empty folder where only `packs` look installed (a SOURCE.json each)."""
+    """library.SAMPLES pointed at an empty folder where only `packs` look installed (a SOURCE.json each), the
+    presets' fallbacks opted in ($AGENTSOUND_PACK_FALLBACK=1: without it compile raises on a missing pack)."""
     with tempfile.TemporaryDirectory() as tmp:
         for p in packs:
             (pathlib.Path(tmp) / p).mkdir()
             (pathlib.Path(tmp) / p / 'SOURCE.json').write_text('{}')
-        with mock.patch.object(library, 'SAMPLES', pathlib.Path(tmp)):
+        with mock.patch.object(library, 'SAMPLES', pathlib.Path(tmp)),                 mock.patch.dict(os.environ, {library.FALLBACK_ENV: '1'}):
             yield pathlib.Path(tmp)
 
 
@@ -89,6 +91,41 @@ class SoloPiano(unittest.TestCase):
 
 
 SOLO = jb.SOLO_PIANO
+
+
+class SmoothTrio(unittest.TestCase):
+    """jazz_trio voicing='smooth' (the endless jazz trio): solo_piano's softened grand over the trio, wetter sends,
+    the plate on the piano, no presence lift on the master; 'club' (the default) stays as it was."""
+
+    def build(self, **options):
+        s = Song('t', tempo=120, key='F major')
+        a = s.section('a', bars=1)
+        b = bands.make('jazz_trio', s, **options)
+        play_everything(s, b, a)
+        return b, s.compile()
+
+    def test_smooth(self):
+        b, d = self.build(voicing='smooth')
+        sm = jb.SMOOTH_TRIO
+        self.assertEqual(b.info['voicing'], 'smooth')
+        tracks = {t['id']: t for t in d['tracks']}
+        if 'Salamander' in b.info['sounds']['piano']:
+            self.assertIn('hammers fully softened', b.info['sounds']['piano'])
+            self.assertEqual(tracks['piano']['fx'][0]['type'], 'deesser')
+            self.assertEqual(tracks['comp']['fx'][1]['params']['hp.freq'], 90)      # clear of the upright
+        self.assertEqual(tracks['piano']['sends'], {'room': sm['sends']['piano'][0], 'plate': sm['sends']['piano'][1]})
+        self.assertEqual(tracks['drums']['sends'], {'room': sm['sends']['drums']})
+        eq = {f['type']: f['params'] for f in d['master']['fx']}['eq']
+        self.assertEqual(eq['peak3.gain'], 0.0)
+
+    def test_club_is_the_default(self):
+        b, d = self.build()
+        self.assertEqual(b.info['voicing'], 'club')
+        tracks = {t['id']: t for t in d['tracks']}
+        self.assertEqual(tracks['piano']['fx'][0]['type'], 'eq')
+        self.assertEqual(tracks['piano']['sends'], {'room': -11.5, 'plate': -24})
+        with self.assertRaises(ComposeError):
+            self.build(voicing='bright')
 
 
 class LofiPiano(unittest.TestCase):
@@ -261,17 +298,17 @@ class JazzPresets(unittest.TestCase):
                 x.section('a', bars=1)
             b0 = bands.make('jazz_ballad', s0, without=('sax',))
             b = bands.make('jazz_ballad', s, without=('sax',), lead='vocal')
-        self.assertEqual(b.comp.gain_db - b0.comp.gain_db, jb.VOCAL_LEAD['jazz_ballad']['faders']['comp'])
-        self.assertEqual(b.info['master_gain'], jb.VOCAL_LEAD['jazz_ballad']['master_gain'])
-        self.assertEqual(b.info['lead']['vocal_db'], jb.VOCAL_LEAD_DB)
-        vox = s.track('vocal', 'gm/grand_piano', gain_db=1.0)
-        vox._singer = {'parts': []}                 # what singer.sing() marks its tracks with
-        vox.note(60, 0)
-        b.comp.note(48, 0)
-        s.compile()
-        s.compile()                                 # idempotent
-        self.assertEqual(vox.gain_db, 1.0)                                  # the fader stays (hero key thresholds)
-        self.assertEqual([f.params['gain'] for f in vox.fx if f.name == 'lead_seat'], [jb.VOCAL_LEAD_DB])
+            self.assertEqual(b.comp.gain_db - b0.comp.gain_db, jb.VOCAL_LEAD['jazz_ballad']['faders']['comp'])
+            self.assertEqual(b.info['master_gain'], jb.VOCAL_LEAD['jazz_ballad']['master_gain'])
+            self.assertEqual(b.info['lead']['vocal_db'], jb.VOCAL_LEAD_DB)
+            vox = s.track('vocal', 'gm/grand_piano', gain_db=1.0)
+            vox._singer = {'parts': []}                 # what singer.sing() marks its tracks with
+            vox.note(60, 0)
+            b.comp.note(48, 0)
+            s.compile()
+            s.compile()                                 # idempotent
+            self.assertEqual(vox.gain_db, 1.0)                                  # the fader stays (hero key thresholds)
+            self.assertEqual([f.params['gain'] for f in vox.fx if f.name == 'lead_seat'], [jb.VOCAL_LEAD_DB])
         with self.assertRaisesRegex(ComposeError, 'lead must be'):
             bands.make('jazz_quartet', Song('u', tempo=120), lead='vocal')
 

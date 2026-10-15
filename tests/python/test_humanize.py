@@ -180,7 +180,7 @@ def phrase_line():
 class Body(unittest.TestCase):
     def test_profiles_and_strict(self):
         from agentsound.humanize import BODIES, body_profile
-        self.assertEqual(set(BODIES), {'calm', 'lyrical', 'swing', 'waltz', 'none'})
+        self.assertEqual(set(BODIES), {'calm', 'lyrical', 'swing', 'waltz', 'organ', 'none'})
         self.assertIsNone(body_profile('none'))
         with self.assertRaises(ComposeError):
             body_profile('wobbly')

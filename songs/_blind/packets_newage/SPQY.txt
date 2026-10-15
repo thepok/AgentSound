@@ -1,0 +1,416 @@
+BLIND PACKET ------------------------------------------------------------
+key      Eb major
+meter    3/4
+tempo    96 BPM at the start (rubato; ritardandi and tempo changes as performed)
+feel     straight 8ths
+length   119 bars, 3:58 incl. the ring-out
+layout   intro 8 | A1 16 | A2 16 | B1 18 | inter 4 | build 16 | climax 16 | A3 16 | coda 9 (bars)
+
+CHORD CHART (one cell per bar; "%" = same chord; two symbols in a cell = split bar)
+  intro    (bars 1-8) | Ebadd9 | % | Abmaj7 | Abmaj7/Eb | Cm7 | % | Bbsus4 | Bb |
+  A1       (bars 9-24) | Eb | Eb/G | Gm7 | Gm7/Bb | Ab6 | Ab6/Eb | Bb | Gm7 | Abmaj7 | % | G7/B | % | Cm | Eb/G | Ab | Bb |
+  A2       (bars 25-40) | Eb | Cm7 | Gm7 | % | Ab6 | Ab6/C | Bb | Eb/Bb | Ab | Fm7 | Abm6 | % | Ebadd9 | Cm7 | Fm7 | Bb7 |
+  B1       (bars 41-58) | Ab | Fm7 | Bb | % | Gmadd9 | Gmadd9/D | Cm7 | Eb/G | Ab | Fm7 | Bb/D | % | Abm6 | % | Bb | % | Eb/Bb | Bb |
+  inter    (bars 59-62) | Cm7 | Fm/C | Bbsus4 | Bb |
+  build    (bars 63-78) | Cm | Cm/Eb | Bb/D | % | Abmaj7 | % | Gm | Ebmaj7 | Fmadd9 | % | Eb/G | % | Ab | Ab/Eb | Bb | % |
+  climax   (bars 79-94) | Cm7 | Cm7/Eb | Bb | Eb/Bb | Gmadd9 | % | Eb/G | % | Ab | Ab/C | Bb7 | % | Abm6 | % | Gm7 | % |
+  A3       (bars 95-110) | Eb | Abmaj7/Eb | Gm7/D | % | Ab6/C | % | Bb | Gm7 | Ab | Ab/Eb | Abm6 | Abm6/Eb | Cm7 | Cm7/Eb | Cm7/G | Cm7 |
+  coda     (bars 111-119) | Eb | Ab/Eb | Abmaj7/Eb | % | Eb | % | Abm6 | % | Eb |
+
+NOTATION
+  bar numbers count from 1 over the whole piece; positions are beats in the bar (1 = downbeat)
+  RH  position:top-note duration(beats) velocity(1-127) [+n = n more right-hand notes struck under it]
+  LH  every left-hand attack: position:note (a+b = struck together), then the velocity range in the bar
+
+[intro]
+bar   1  Ebadd9
+   RH  1:G4 1.58 v50  2.5:Ab4 0.5 v52  3:G4 1.17 v49
+   LH  1:Eb2 1.5:Eb3 2:G3 2.5:Bb2 3:Eb3 3.5:G3  (v22-30)
+bar   2  Ebadd9
+   RH  1.08:Bb4 2.08 v61  3:G4 1.08 v53
+   LH  1:Eb2 1.5:Eb3 2:G3 2.5:Bb3 3:G3 3.5:Eb3  (v24-35)
+bar   3  Abmaj7
+   RH  1:Bb4 1.58 v64  2.5:C5 0.58 v66  2.92:Bb4 1.17 v60
+   LH  1:Ab2 1.5:Ab3 2:C4 2.5:Eb3 3:Ab3 3.5:C4  (v28-39)
+bar   4  Abmaj7/Eb
+   RH  1.08:Eb5 2 v65  3:Bb4 2.58 v46
+   LH  1:Eb2 1.5:C3 2:Eb3 2.5:Ab3 3:Eb3 3.5:C3  (v19-38)
+bar   5  Cm7
+   RH  rest
+   LH  1:C3 2:G3+C4+Eb4  (v15-28)
+bar   6  Cm7
+   RH  rest
+   LH  1:C3 2:G3+C4+Eb4  (v24-43)
+bar   7  Bbsus4
+   RH  rest
+   LH  1:Bb2 2:Eb3+F3+Bb3  (v23-41)
+bar   8  Bb
+   RH  rest
+   LH  1:Bb2 2:D4 3:F3+Bb3+D4  (v18-42)
+
+[A1]
+bar   9  Eb
+   RH  1:G4 1.58 v36  2.5:Ab4 0.5 v40  3:G4 1.17 v37
+   LH  1:Eb2 1.5:Eb3 2:G3 2.5:Bb2 3:Eb3 3.5:G3  (v15-23)
+bar  10  Eb/G
+   RH  1.08:Bb4 2.08 v46  3:G4 1.08 v42
+   LH  1:G2 1.5:G3 2:Bb3 2.5:Eb4 3:Bb3 3.5:G3  (v19-27)
+bar  11  Gm7
+   RH  1:Bb4 1 v48  2:C5 2.17 v52
+   LH  1:G2 2:G3 2.5:Bb3 3:D3+G3+Bb3  (v19-31)
+bar  12  Gm7/Bb
+   RH  1:D5 2 v52  3:C5 1.17 v40
+   LH  1:Bb2 1.5:Bb3 2:D4 2.5:G4 3:D4 3.5:Bb3  (v17-30)
+bar  13  Ab6
+   RH  1.08:Eb5 1.5 v55  2.5:C5 0.5 v65  2.92:Ab4 1.17 v58
+   LH  1:Ab2 2:Ab3 2.5:C4 3:Eb3+Ab3+C4  (v20-30)
+bar  14  Ab6/Eb
+   RH  1:G4 2 v67  3:Bb4 1.08 v53
+   LH  1:Eb2 1.5:C3 2:Eb3 2.5:Ab2 3:C3 3.5:Eb3  (v25-36)
+bar  15  Bb
+   RH  1:C5 0.58 v54  1.5:D5 0.17 v40  1.67:C5 0.17 v36  1.75:Bb4 0.17 v38  1.92:C5 0.17 v38  2.08:D5 1 v49  3:C5 1.08 v46
+   LH  1:Bb2 2:Bb3 2.5:D4 3:F3+Bb3+D4  (v18-36)
+bar  16  Gm7
+   RH  1:D5 2 v55
+   LH  1:G2 2:D3+G3+Bb3  (v21-32)
+bar  17  Abmaj7
+   RH  1.08:C5 1.5 v47  2.5:Bb4 0.5 v56  3:F5 1.08 v67
+   LH  1:Ab2 1.5:Ab3 2:C4 2.5:Eb4 3:C4 3.5:Ab3  (v20-29)
+bar  18  Abmaj7
+   RH  1:Eb5 2 v59
+   LH  1:Ab2 2:Eb3+Ab3+C4  (v24-37)
+bar  19  G7/B
+   RH  1.08:F5 1 v54  2:B4 2.17 v67
+   LH  1:B2 2:B3 2.5:D4 3:G3+B3+D4  (v31-57)
+bar  20  G7/B
+   RH  1:D5 2.08 v70  3:G5 1 v50
+   LH  1:B2 1.5:B3 2:D4 2.5:G3 3:B3 3.5:D4  (v25-51)
+bar  21  Cm
+   RH  1:F5 1.17 v61  2:G5 2 v70
+   LH  1:C3 1.5:C4 2:Eb4 2.5:G4 3:Eb4 3.5:C4  (v22-35)
+bar  22  Eb/G
+   RH  1:F5 2.17 v64  3:Eb5 1 v48
+   LH  1:G2 1.5:G3 2:Bb3 2.5:Eb3 3:G3 3.5:Bb3  (v25-41)
+bar  23  Ab
+   RH  2:C5 0.58 v65  2.5:Bb4 0.5 v58  2.92:Ab4 1.17 v58
+   LH  1:Ab2 2:Ab3 2.5:C4 3:Eb3+Ab3+C4  (v25-38)
+bar  24  Bb
+   RH  1.08:Bb4 1 v54
+   LH  1:Bb2 2:F3+Bb3+D4  (v21-41)
+
+[A2]
+bar  25  Eb
+   RH  1:G4 1.58 v58  2.5:Ab4 0.58 v58  3:G4 1.08 v60
+   LH  1:Eb2 1.5:Eb3 2:G3 2.5:Bb2 3:Eb3 3.5:G3  (v24-32)
+bar  26  Cm7
+   RH  1:Bb4 2.08 v72 +1  3:G4 1.08 v63
+   LH  1:C3 2:C4 2.5:Eb4 3:G3+C4+Eb4  (v23-38)
+bar  27  Gm7
+   RH  1:Bb4 1.08 v76 +1  2:C5 1.67 v74  3.58:D5 0.17 v60  3.67:C5 0.17 v57  3.83:Bb4 0.17 v57  3.92:C5 0.17 v56
+   LH  1:G2 1.5:G3 2:Bb3 2.5:D4 3:Bb3 3.5:G3  (v25-40)
+bar  28  Gm7
+   RH  1.08:D5 2 v80 +1  2.92:C5 1.17 v69
+   LH  1:G2 1.5:G3 2:Bb3 2.5:D3 3:G3 3.5:Bb3  (v23-41)
+bar  29  Ab6
+   RH  1:Eb5 1.5 v78  2.5:C5 0.5 v73  2.92:Ab4 1.17 v66 +1
+   LH  1:Ab2 2:Ab3 2.5:C4 3:Eb3+Ab3+C4  (v20-41)
+bar  30  Ab6/C
+   RH  1:G4 2.08 v71  3:Bb4 1 v55
+   LH  1:C3 1.5:C4 2:Eb4 2.5:Ab3 3:Eb4 3.5:C4  (v30-45)
+bar  31  Bb
+   RH  2:C5 0.5 v55  2.5:D5 0.5 v69  3:C5 1.08 v63
+   LH  1:Bb2 1.5:Bb3 2:D4 2.5:F3 3:Bb3 3.5:D4  (v31-42)
+bar  32  Eb/Bb
+   RH  1:Eb5 1 v78  2:D5 1 v49
+   LH  1:Bb2 2:Bb3 3:Eb3+G3+Bb3  (v18-46)
+bar  33  Ab
+   RH  1:C5 1.67 v50 +1  2.5:Bb4 0.42 v44  2.92:Eb5 0.92 v56
+   LH  1:Ab2 2:Ab3 2.5:C4 3:Eb3+Ab3+C4  (v20-27)
+bar  34  Fm7
+   RH  1:Eb5 2.17 v66 +1  3:G5 1.08 v55
+   LH  1:F2 1.5:F3 2:Ab3 2.5:C3 3:F3 3.5:Ab3  (v24-38)
+bar  35  Abm6
+   RH  1:F5 1.58 v74 +1  2.5:Gb5 0.5 v61  3:Ab5 1.08 v65
+   LH  1:Ab2 1.5:Ab3 2:Cb4 2.5:Eb4 3:Cb4 3.5:Ab3  (v26-49)
+bar  36  Abm6
+   RH  1:F5 1.17 v70 +1  2:Eb5 1.67 v62  3.5:Db5 0.5 v46
+   LH  1:Ab2 2:Ab3 2.5:Cb4 3:Eb3+Ab3+Cb4  (v18-35)
+bar  37  Ebadd9
+   RH  1:F5 0.5 v54  1.5:G5 1.08 v60  2.5:Eb5 0.58 v47  3:G5 1 v56 +1
+   LH  1:Eb2 1.5:Eb3 2:G3 2.5:Bb2 3:Eb3 3.5:G3  (v19-28)
+bar  38  Cm7
+   RH  1:Eb5 2.08 v58 +1  3:D5 1.08 v45
+   LH  1:C3 1.5:C4 2:Eb4 2.5:G4 3:Eb4 3.5:C4  (v21-30)
+bar  39  Fm7
+   RH  2:C5 0.5 v55  2.5:Bb4 0.58 v58  3:G4 1.08 v51
+   LH  1:F2 1.5:F3 2:Ab3 2.5:C3 3:F3 3.5:Ab3  (v27-36)
+bar  40  Bb7
+   RH  1:Bb4 1 v44
+   LH  1:Bb2 2:D4 3:F3+Bb3+D4  (v15-37)
+
+[B1]
+bar  41  Ab
+   RH  1:G5 1.08 v52  2:Eb5 1.08 v51  3:G5 1.08 v59  3.92:Eb5 1.58 v64
+   LH  1:Ab2 2:C4 3:Eb3+Ab3+C4  (v24-31)
+bar  42  Fm7
+   RH  2.5:G5 0.5 v75  3:Ab5 1.08 v78
+   LH  1:F2 2:F3 2.5:Ab3 3:C3+F3+Ab3  (v31-47)
+bar  43  Bb
+   RH  1:Bb5 1.08 v89  2:C6 0.58 v85  2.5:Bb5 0.42 v84  2.92:F5 1.08 v87
+   LH  1:Bb2 2:Bb3 3:F3+D4  (v37-55)
+bar  44  Bb
+   RH  1:D5 2.08 v93  2.92:F5 1 v72
+   LH  1:Bb2 2:D4 3:F3+Bb3+D4  (v26-50)
+bar  45  Gmadd9
+   RH  1:G5 1.17 v63  2.08:A5 1 v73  3:G5 1.08 v66
+   LH  1:G2 2:G3 3:D3+Bb3  (v26-35)
+bar  46  Gmadd9/D
+   RH  1:F5 1.58 v67  2.5:D5 0.5 v57  3:C5 1 v54
+   LH  1:D2 2:D3 3:G2+Bb2+D3  (v23-44)
+bar  47  Cm7
+   RH  2:Eb5 0.58 v71  2.5:D5 0.5 v71  3:Bb4 0.58 v59  3.5:G4 2.5 v61
+   LH  1:C3 2:C4 2.5:Eb4 3:G3+C4+Eb4  (v23-40)
+bar  48  Eb/G
+   RH  rest
+   LH  1:G2 2:Eb3+G3+Bb3  (v22-40)
+bar  49  Ab
+   RH  1:C5 1 v59  2:Bb4 1.08 v61  3:C5 1 v63
+   LH  1:Ab2 2:Ab3 3:Eb3+C4  (v29-37)
+bar  50  Fm7
+   RH  1:Bb4 1.67 v70  2.5:Ab4 0.5 v63  3:G4 1.17 v71
+   LH  1:F2 2:Ab3 3:C3+F3+Ab3  (v28-48)
+bar  51  Bb/D
+   RH  1:Bb4 1 v79  2:C5 0.5 v72  2.5:D5 0.5 v89  3:Bb4 1.17 v82
+   LH  1:D2 2:D3 2.5:F3 3:Bb2+D3+F3  (v30-49)
+bar  52  Bb/D
+   RH  1:D5 2.08 v102  2.92:C5 1.08 v80
+   LH  1:D2 2:F3 3:Bb2+D3+F3  (v28-54)
+bar  53  Abm6
+   RH  1:Eb5 0.58 v80  1.5:F5 0.17 v74  1.67:Eb5 0.17 v71  1.75:D5 0.17 v75  1.92:F5 0.58 v85 +1  2.5:Gb5 0.42 v99  2.92:F5 1.17 v95
+   LH  1:Ab2 2:Ab3 3:Eb3+Cb4  (v38-50)
+bar  54  Abm6
+   RH  1:Eb5 2.08 v105  2.92:Db5 1.08 v78
+   LH  1:Ab2 2:Ab3 2.5:Cb4 3:Eb3+Ab3+Cb4  (v32-60)
+bar  55  Bb
+   RH  1:D5 1.5 v81  2.5:G4 0.5 v51  3:Bb4 0.92 v56
+   LH  1:Bb2 2:D4 3:F3+Bb3+D4  (v26-57)
+bar  56  Bb
+   RH  1:Bb4 3.5 v66
+   LH  1:Bb2 2:Bb3 2.5:D4 3:F3+Bb3+D4  (v21-44)
+bar  57  Eb/Bb
+   RH  rest
+   LH  1:Bb2 2:Eb3+G3+Bb3  (v23-40)
+bar  58  Bb
+   RH  rest
+   LH  1:Bb2 2:F3+Bb3+D4  (v29-45)
+
+[inter]
+bar  59  Cm7
+   RH  rest
+   LH  1:C3 2:G3+C4+Eb4  (v26-43)
+bar  60  Fm/C
+   RH  rest
+   LH  1:C3 2:F3+Ab3+C4  (v28-48)
+bar  61  Bbsus4
+   RH  rest
+   LH  1:Bb2 2:Bb3 3:Eb3+F3+Bb3  (v28-51)
+bar  62  Bb
+   RH  rest
+   LH  1:Bb2 2:F3+Bb3+D4  (v24-50)
+
+[build]
+bar  63  Cm
+   RH  1.08:Eb5 1.42 v66  2.42:D5 0.5 v65  3:G4 1 v65
+   LH  1:C3 1.5:C4 2:Eb4 2.5:G3 3:C4 3.5:Eb4  (v28-49)
+bar  64  Cm/Eb
+   RH  1:D5 2.17 v79  3:Eb5 1.08 v68
+   LH  1:Eb2 1.5:Eb3 2:G3 2.5:C4 3:G3 3.5:Eb3  (v33-47)
+bar  65  Bb/D
+   RH  1:D5 1.08 v71  2:C5 0.58 v58  2.5:Eb5 0.5 v69  3:C5 1.58 v66
+   LH  1:D2 2:D3 3:Bb2+F3  (v32-47)
+bar  66  Bb/D
+   RH  1.5:G4 0.58 v57  2:Bb4 0.83 v63  3:Bb4 1.08 v55
+   LH  1:D2 1.5:D3 2:F3 2.5:Bb2 3:D3 3.5:F3  (v30-46)
+bar  67  Abmaj7
+   RH  1:C5 1.08 v71  2:F5 0.58 v79  2.5:C5 0.58 v64  3:Eb5 1.5 v77
+   LH  1:Ab2 1.5:Ab3 2:C4 2.5:Eb4 3:C4 3.5:Ab3  (v27-41)
+bar  68  Abmaj7
+   RH  1.5:Ab4 0.58 v61  2:C5 1 v76  2.92:F5 0.92 v85
+   LH  1:Ab2 2:Ab3 3:Eb3+C4  (v35-46)
+bar  69  Gm
+   RH  1:F5 1 v87  2:D5 1.08 v76  3:Bb4 1.08 v74
+   LH  1:G2 1.5:G3 2:Bb3 2.5:D3 3:G3 3.5:Bb3  (v34-50)
+bar  70  Ebmaj7
+   RH  1:C5 1.5 v82  3:Bb4 0.67 v67  3.58:G4 0.5 v62
+   LH  1:Eb2 2:Eb3 3:Bb2+G3  (v29-52)
+bar  71  Fmadd9
+   RH  1:Ab4 3.17 v88
+   LH  1:F2 1.5:F3 2:Ab3 2.5:C3 3:F3 3.5:Ab3  (v31-48)
+bar  72  Fmadd9
+   RH  1:Bb4 1.08 v87  2:C5 2.08 v95
+   LH  1:F2 1.5:F3 2:Ab3 2.5:C4 3:Ab3 3.5:F3  (v34-51)
+bar  73  Eb/G
+   RH  1:Eb5 1.08 v92  2:F5 0.5 v83  2.42:G5 0.58 v104  2.92:Eb5 1.67 v100
+   LH  1:G2 1.5:G3 2:Bb3 2.5:Eb3 3:G3 3.5:Bb3  (v43-63)
+bar  74  Eb/G
+   RH  1.5:D5 0.5 v83  2:Eb5 1 v94  3:Bb4 1.08 v73
+   LH  1:G2 2:G3 3:Eb3+Bb3  (v32-62)
+bar  75  Ab
+   RH  1:C5 1.08 v93  2:Eb5 0.5 v96  2.42:F5 0.58 v93  3:G5 1.58 v104
+   LH  1:Ab2 1.5:Ab3 2:C4 2.5:Eb3 3:Ab3 3.5:C4  (v34-56)
+bar  76  Ab/Eb
+   RH  1.42:F5 0.58 v101  2:C5 1.08 v105  2.92:Eb5 1.17 v99
+   LH  1:Eb2 1.5:C3 2:Eb3 2.5:Ab3 3:Eb3 3.5:C3  (v39-60)
+bar  77  Bb
+   RH  1.08:F5 1.58 v103  2.5:D5 0.5 v98  2.92:C5 1.17 v99
+   LH  1:Bb2 1.5:Bb3 2:D4 2.5:F3 3:Bb3 3.5:D4  (v39-61)
+bar  78  Bb
+   RH  1:Bb4 2.5 v110
+   LH  1:Bb2 1.5:Bb3 2:D4 2.5:F3 3:Bb3 3.5:D4  (v36-57)
+
+[climax]
+bar  79  Cm7
+   RH  1:Eb5 1.5 v98 +2  2.42:F5 0.5 v95  2.92:Eb5 1.17 v89 +2
+   LH  1:C3 1.5:C4 2:Eb4 2.5:G4 3:Eb4 3.5:C4  (v30-44)
+bar  80  Cm7/Eb
+   RH  1:G5 2 v110 +2  3:Eb5 1.17 v94 +2
+   LH  1:Eb2 1.5:Eb3 2:G3 2.5:C3 3:Eb3 3.5:G3  (v32-48)
+bar  81  Bb
+   RH  1:D5 1.5 v106 +1  2.5:F5 0.5 v99  2.92:D5 1.08 v92
+   LH  1:Bb2 1.5:Bb3 2:D4 2.5:F4 3:D4 3.5:Bb3  (v35-64)
+bar  82  Eb/Bb
+   RH  1:Bb4 2 v93  3:D5 1.08 v83 +2
+   LH  1:Bb2 1.5:G3 2:Bb3 2.5:Eb3 3:G3 3.5:Bb3  (v31-52)
+bar  83  Gmadd9
+   RH  1:F5 1.67 v97 +2  2.5:G5 0.5 v105  2.92:F5 1.08 v103
+   LH  1:G2 2:G3 3:D3+Bb3  (v35-46)
+bar  84  Gmadd9
+   RH  1:G5 1.67 v102  2.5:A5 0.5 v106  3:G5 1.08 v103
+   LH  1:G2 1.5:G3 2:Bb3 2.5:D4 3:Bb3 3.5:G3  (v39-59)
+bar  85  Eb/G
+   RH  1:F5 1.67 v111  2.5:G5 0.5 v106  2.92:F5 1.08 v103 +2
+   LH  1:G2 2:G3 3:Eb3+Bb3  (v35-61)
+bar  86  Eb/G
+   RH  1:D5 2.08 v101  2.92:F5 1 v101  3.92:G5 1.67 v94 +2
+   LH  1:G2 1.5:G3 2:Bb3 2.5:Eb4 3:Bb3 3.5:G3  (v35-57)
+bar  87  Ab
+   RH  2.5:Ab5 0.5 v99  2.92:G5 1.17 v101
+   LH  1:Ab2 1.5:Ab3 2:C4 2.5:Eb3 3:Ab3 3.5:C4  (v36-49)
+bar  88  Ab/C
+   RH  1:Ab5 1.67 v112 +2  2.5:Bb5 0.5 v104  2.92:Ab5 1.17 v103 +2
+   LH  1:C3 2:C4 3:Ab3+Eb4  (v37-63)
+bar  89  Bb7
+   RH  1:Bb5 1.33 v112  2.5:Bb5 0.5 v105  2.92:F5 1.08 v104
+   LH  1:Bb2 1.5:Bb3 2:D4 2.5:F4 3:D4 3.5:Bb3  (v43-67)
+bar  90  Bb7
+   RH  1:C6 1.58 v108  2.5:Bb5 0.58 v100  3:D6 1.08 v94  3.92:Bb5 3.25 v97
+   LH  1:Bb2 1.5:Bb3 2:D4 2.5:F3 3:Bb3 3.5:D4  (v38-60)
+bar  91  Abm6
+   RH  rest
+   LH  1:Ab2 1.5:Ab3 2:Cb4 2.5:Eb4 3:Cb4 3.5:Ab3  (v33-48)
+bar  92  Abm6
+   RH  1:Cb6 1.08 v106  2:Bb5 2.08 v100 +2
+   LH  1:Ab2 2:Ab3 3:Eb3+Cb4  (v29-53)
+bar  93  Gm7
+   RH  1:F5 1.5 v94  2.5:G5 0.5 v87  3:F5 0.92 v80 +2
+   LH  1:G2 1.5:G3 2:Bb3 2.5:D4 3:Bb3 3.5:G3  (v26-49)
+bar  94  Gm7
+   RH  1:F5 3 v85 +2
+   LH  1:G2 2:G3 3:D3+Bb3  (v20-40)
+
+[A3]
+bar  95  Eb
+   RH  1:G4 1.67 v61  2.5:Ab4 0.5 v61  3:G4 0.58 v48  3.5:Ab4 0.5 v51
+   LH  1:Eb2 2:Bb2+Eb3+G3  (v23-38)
+bar  96  Abmaj7/Eb
+   RH  1:Bb4 1 v65  2:Ab4 1 v57  2.92:G4 1.25 v62
+   LH  1:Eb2 2:Eb3 3:Ab2+C3+Eb3  (v25-42)
+bar  97  Gm7/D
+   RH  1:Bb4 1 v68  2:C5 1.08 v68  3:D5 0.58 v69  3.5:C5 0.5 v55
+   LH  1:D2 2:G2+Bb2+D3  (v28-49)
+bar  98  Gm7/D
+   RH  1:D5 1.08 v73  2:F5 0.58 v69  2.5:D5 0.5 v57  3:C5 1.17 v43
+   LH  1:D2 2:D3 3:G2+Bb2+D3  (v19-47)
+bar  99  Ab6/C
+   RH  1:Eb5 1.58 v56  2.5:C5 0.5 v58  3:Ab4 1 v55
+   LH  1:C3 2:Ab3+C4+Eb4  (v21-33)
+bar 100  Ab6/C
+   RH  1:G4 2.08 v59  2.92:Bb4 1.08 v52
+   LH  1:C3 2:Eb4 3:Ab3+C4+Eb4  (v23-42)
+bar 101  Bb
+   RH  1:C5 1.58 v58  2.5:D5 0.5 v54  3:C5 1.08 v52
+   LH  1:Bb2 2:F3+Bb3+D4  (v21-40)
+bar 102  Gm7
+   RH  1:D5 2 v57
+   LH  1:G2 2:D3+G3+Bb3  (v21-35)
+bar 103  Ab
+   RH  1:C5 1.67 v51  2.5:Bb4 0.5 v46  3:Eb5 0.92 v58
+   LH  1:Ab2 2:C4 3:Eb3+Ab3+C4  (v22-35)
+bar 104  Ab/Eb
+   RH  1:Eb5 1 v60  2:F5 1.17 v67  3.08:G5 1 v76
+   LH  1:Eb2 2:Ab2+C3+Eb3  (v27-44)
+bar 105  Abm6
+   RH  1:F5 1.67 v87  2.5:Gb5 0.5 v74  3:Ab5 1.08 v81
+   LH  1:Ab2 2:Cb4 3:Eb3+Ab3+Cb4  (v33-59)
+bar 106  Abm6/Eb
+   RH  1:F5 1.08 v87  2:Eb5 1.58 v68  3.5:Db5 0.42 v50
+   LH  1:Eb2 2:Ab2+Cb3+Eb3  (v26-57)
+bar 107  Cm7
+   RH  1:F5 1.08 v56  2:G5 0.58 v69  2.5:Eb5 0.42 v61  2.92:G5 0.58 v73  3.5:F5 0.42 v62  3.92:Eb5 1.08 v67
+   LH  1:C3 2:Eb4 3:G3+C4+Eb4  (v23-33)
+bar 108  Cm7/Eb
+   RH  2:F5 0.58 v66  2.5:Eb5 0.5 v57  3:D5 1.08 v59
+   LH  1:Eb2 2:C3+Eb3+G3  (v22-40)
+bar 109  Cm7/G
+   RH  1:C5 1.58 v59  2.5:Bb4 0.5 v46  3:G4 0.67 v38  3.58:Bb4 1.42 v49
+   LH  1:G2 2:G3 3:C3+Eb3+G3  (v19-40)
+bar 110  Cm7
+   RH  rest
+   LH  1:C3 2:Eb4 3:G3+C4+Eb4  (v16-36)
+
+[coda]
+bar 111  Eb
+   RH  1:G4 1.58 v46  2.5:F4 0.58 v42  3:G4 1 v49
+   LH  1:Eb2 2:Bb2+Eb3+G3  (v20-31)
+bar 112  Ab/Eb
+   RH  1:Eb4 1.58 v54  2.5:G4 1.33 v50
+   LH  1:Eb2 2:Eb3 3:Ab2+C3+Eb3  (v21-35)
+bar 113  Abmaj7/Eb
+   RH  1:G4 3.17 v59
+   LH  1:Eb2 2:Ab2+C3+Eb3  (v22-38)
+bar 114  Abmaj7/Eb
+   RH  1:Ab4 1.08 v50  2:G4 2.08 v51
+   LH  1:Eb2 2:Eb3 3:Ab2+C3+Eb3  (v18-35)
+bar 115  Eb
+   RH  1:Bb4 2.83 v43
+   LH  1:Eb2 2:Bb2+Eb3+G3  (v18-27)
+bar 116  Eb
+   RH  1:Bb4 1.08 v46  2:G4 2.08 v51
+   LH  1:Eb2 2:G3 3:Bb2+Eb3+G3  (v22-32)
+bar 117  Abm6
+   RH  1:Cb5 2.17 v54  3:Bb4 0.58 v42  3.5:Cb5 0.58 v44
+   LH  1:Ab2 2:Eb3+Ab3+Cb4  (v23-36)
+bar 118  Abm6
+   RH  1.08:Db5 1 v48  2:Cb5 2.08 v50
+   LH  1:Ab2 2:Cb4 3:Eb3+Ab3+Cb4  (v17-33)
+bar 119  Eb
+   RH  1:G4 2.75 v34  1.17:Bb4 2.58 v32  1.25:Eb5 2.5 v48
+   LH  1:Eb2+Bb2+Eb3+G3  (v19-27)
+
+ANALYSIS (from the rendered audio; the same analyser for every packet)
+  loudness range 14.4 LU
+  section loudness (LU relative to the whole piece):  intro -6.3  A1 -4.9  A2 -3.0  B1 +0.0  inter -9.1  build +1.6  climax +4.2  A3 -2.6  coda -6.5
+  note dynamics, right hand: level spread (10-90 %) 14.0 dB, within phrases 6.5 dB, dynamics 4.8 dB; velocities p10 47 p90 100 (min 32, max 112)
+  note dynamics, left hand: level spread (10-90 %) 9.8 dB, within phrases 6.6 dB, dynamics 5.6 dB; velocities p10 24 p90 49 (min 15, max 67)
+  density per section (per bar):  section: RH attacks / RH notes / LH attacks / mean RH top velocity
+     intro      1.2 /   1.2 /   4.1 /  56.6
+     A1         2.4 /   2.4 /   4.6 /  52.5
+     A2         2.8 /   3.4 /   5.1 /  60.8
+     B1         2.6 /   2.7 /   3.1 /  73.1
+     inter      0.0 /   0.0 /   2.2 /   0.0
+     build      2.9 /   2.9 /   5.2 /  81.4
+     climax     2.5 /   4.2 /   5.1 /  99.5
+     A3         3.1 /   3.1 /   2.5 /  60.7
+     coda       2.1 /   2.1 /   2.3 /  47.0
+  highest note: D6 at bar 90 beat 3 (climax; 75% into the piece), velocity 94
+  lowest note: D2

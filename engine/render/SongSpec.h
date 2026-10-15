@@ -2,6 +2,7 @@
 
 // Parsed, validated form of a render JSON document (docs/RENDER_FORMAT.md).
 
+#include "core/NoteExpression.h"
 #include "core/Params.h"
 #include "core/TempoMap.h"
 
@@ -19,6 +20,7 @@ struct NoteSpec {
     double durationBeats{};
     int pitch{};
     int velocity{};
+    int expression{-1};  // index into NodeSpec::expressions (the note's optional params), -1 = none
 };
 
 struct AutomationPoint {
@@ -131,6 +133,7 @@ struct NodeSpec {
     std::string output{"master"};
     std::vector<SendSpec> sends;
     std::vector<NoteSpec> notes;
+    std::vector<NoteExpression> expressions;   // per-note params of the notes that have them (NoteSpec::expression)
     std::vector<AutomationLane> automation;
     std::vector<ModulatorSpec> modulators;
     std::string path;
@@ -154,6 +157,12 @@ struct SilentNoteHint {
     std::string message;
 };
 
+// "analysis.packFallbacks": sample packs a band preset wanted but found missing, and what played instead (the compiler
+// writes them only with $AGENTSOUND_PACK_FALLBACK=1, else compile fails); the report raises 'pack_fallback' errors.
+struct PackFallbackHint {
+    std::string pack, instead, message;
+};
+
 struct AnalysisSpec {
     std::string profile{"default"};  // a name from analysis/Profiles.h (validated by parseSong)
     std::optional<std::pair<double, double>> loudness;  // integrated LUFS target override (min < max)
@@ -161,6 +170,10 @@ struct AnalysisSpec {
     // "analysis.audioOnsets": tracks whose notes trigger whole phrases (a singer's takes: one note per sung phrase,
     // the dynamics inside the audio) - their note dynamics are measured from the audio's own onsets
     std::vector<std::string> audioOnsets;
+    // "analysis.registration": tracks without touch dynamics (an organ) - their dynamics are registration changes and
+    // the swell box, judged as the organ's section-to-section level (flat_dynamics 'registration'), not per phrase
+    std::vector<std::string> registration;
+    std::vector<PackFallbackHint> packFallbacks;
 };
 
 struct SongSpec {

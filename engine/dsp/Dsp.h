@@ -62,6 +62,69 @@ inline std::uint64_t hashString(const char* s) noexcept {  // FNV-1a
     return h;
 }
 
+// Band-limited random modulation: white noise (Rng) through a TPT state-variable band-pass at the centre and two
+// 2-pole low-passes at 2x the centre (above it -30 dB/oct: a modulator must not carry audio-rate hash - a 2-pole
+// band-pass alone leaves -27 dB of noise at 300 Hz, whose sidebands around every partial sound shrill), scaled to unit
+// RMS and clipped at +-3. Irregular, not periodic: the shimmer / jitter of a held note (a sampler's 'flutter'). Run it
+// at a control rate; the coefficients are shared by every generator ticking at that rate.
+class BandNoise {
+public:
+    struct Svf {   // TPT state-variable filter coefficients (one band-pass or low-pass stage)
+        float a1{1.0f}, a2{0.0f}, a3{0.0f}, k{1.0f};
+        static Svf make(double hz, double q, double tickRate) noexcept {
+            Svf s;
+            const double g = std::tan(kPi * std::clamp(hz, 0.001, 0.45 * tickRate) / tickRate), k = 1.0 / q;
+            const double a1 = 1.0 / (1.0 + g * (g + k));
+            s.a1 = static_cast<float>(a1);
+            s.a2 = static_cast<float>(g * a1);
+            s.a3 = static_cast<float>(g * g * a1);
+            s.k = static_cast<float>(k);
+            return s;
+        }
+    };
+    struct Coefs {
+        Svf bp, lp;
+        float scale{0.0f};
+    };
+    // centre `hz` (the band ~hz/2..2hz at q 0.8, steep above), ticked `tickRate` times per second (hz << tickRate).
+    // The unit-RMS scale comes from the cascade's impulse response energy (white input of variance 1/3).
+    static Coefs coefs(double hz, double q, double tickRate) noexcept {
+        Coefs c;
+        c.bp = Svf::make(hz, q, tickRate);
+        c.lp = Svf::make(2.0 * hz, 0.7071, tickRate);
+        float st[6] = {};
+        double e = 0.0;
+        const int n = static_cast<int>(std::min(50000.0, 12.0 * tickRate / std::max(hz, 0.001)));   // 12 periods
+        for (int i = 0; i < n; ++i) {
+            const float y = run(c, st, i == 0 ? 1.0f : 0.0f);
+            e += static_cast<double>(y) * y;
+        }
+        c.scale = static_cast<float>(1.0 / std::sqrt(std::max(1e-30, e / 3.0)));
+        return c;
+    }
+    void reset(std::uint64_t seed) noexcept {
+        rng_.reseed(seed);
+        std::fill(st_, st_ + 6, 0.0f);
+    }
+    float next(const Coefs& c) noexcept { return std::clamp(run(c, st_, rng_.bipolar()) * c.scale, -3.0f, 3.0f); }
+
+private:
+    // one stage: mode 0 = band-pass (unity peak), 1 = low-pass; s = {ic1, ic2}
+    static float stage(const Svf& f, float* s, float x, int mode) noexcept {
+        const float v3 = x - s[1];
+        const float v1 = f.a1 * s[0] + f.a2 * v3;
+        const float v2 = s[1] + f.a2 * s[0] + f.a3 * v3;
+        s[0] = flush(2.0f * v1 - s[0]);
+        s[1] = flush(2.0f * v2 - s[1]);
+        return mode == 0 ? f.k * v1 : v2;
+    }
+    static float run(const Coefs& c, float* s, float x) noexcept {
+        return stage(c.lp, s + 4, stage(c.lp, s + 2, stage(c.bp, s, x, 0), 1), 1);
+    }
+    Rng rng_;
+    float st_[6]{};
+};
+
 // One-pole parameter smoother (exponential approach), time constant in seconds.
 class Smoother {
 public:

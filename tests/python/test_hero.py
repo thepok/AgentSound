@@ -148,7 +148,7 @@ class Library(unittest.TestCase):
 
 # ------------------------------------------------------------------------------------------------ the hero wrapper
 
-PRESETS = {'sax', 'piano', 'piano_pop', 'piano_strings', 'guitar', 'guitar_clean', 'guitar_heavy', 'synth',
+PRESETS = {'sax', 'sax_clean', 'piano', 'piano_pop', 'piano_strings', 'guitar', 'guitar_clean', 'guitar_heavy', 'synth',
            'darksynth', 'piano_synth', 'strings', 'brass', 'woodwind', 'voice', 'organ', 'generic'}
 TRACK_ONLY = {'vocal'}   # presets without a library patch: they wrap a track's own sound (a sung vocal: agentsound.singer)
 FAMILIES = {'sax', 'piano', 'guitar', 'synth', 'piano_synth', 'strings', 'brass', 'woodwind', 'voice', 'organ',
@@ -258,6 +258,26 @@ class WrapperPresets(unittest.TestCase):
                 self.assertEqual(_canon(new.instrument), _canon(old.instrument))
                 self.assertEqual((new.gain_db, new.sends), (old.gain_db, old.sends))
 
+    def test_sax_v2_is_the_70s_record_sax(self):
+        # THE hero sax (the user's pick 2026-10-15): the Weresax through the dynamic mic with the calibrated breath
+        # trace, one take, 4:1, tube + tape grit and the random autopan after the exciter; the plain library alto
+        # shares the source settings (sampled.WERESAX_CC / WERESAX_ZONE)
+        from agentsound.patches import sampled
+        p = patches.get('hero/sax')
+        (main,) = p.instrument.layers
+        self.assertEqual(main.instrument.lazy['cc'], {120: 127, 122: 16})
+        self.assertEqual(main.instrument.lazy['zone'], {'*noise': {'filter': 'lpf_2p'}})
+        self.assertEqual(main.instrument.params['width'], 0.3)
+        self.assertEqual(patches.get('sampled/alto_sax').instrument.lazy['cc'], sampled.WERESAX_CC)
+        types = [f.type for f in p.fx]
+        self.assertEqual(types[types.index('exciter') + 1:], ['saturator', 'tape', 'tremolo', 'utility'])
+        trem = next(f for f in p.fx if f.type == 'tremolo')
+        self.assertEqual((trem.params['rate'], trem.params['modshape']), (10, 'random'))
+        self.assertEqual(heroes.get_preset('sax').space['plate_bus'], 'bus/hero_plate_70s')
+        self.assertEqual(_canon(heroes.build('sax')), _canon(heroes.build('sax')))       # deterministic
+        with self.assertRaises(ComposeError):
+            heroes.hero(family='sax', drivee=False)                                     # strict stages
+
     def test_every_family_builds_on_its_default(self):
         for n in sorted(PRESETS):
             with self.subTest(preset=n):
@@ -267,7 +287,8 @@ class WrapperPresets(unittest.TestCase):
                 comps = [f for f in built.fx if f.type == 'compressor' and f.name != 'catch']
                 for c in comps:                     # the dynamics ear: slow attacks, moderate ratios
                     self.assertGreaterEqual(c.params.get('attack', 0), 15, n)
-                    self.assertLessEqual(c.params.get('ratio', 1), 3.0, n)
+                    # (the sax: the user's 70s record pick, 4:1)
+                    self.assertLessEqual(c.params.get('ratio', 1), 4.0 if n == 'sax' else 3.0, n)
                 s = Song('fam', tempo=100, key='A minor', seed=1)
                 a = s.section('a', bars=1)
                 for b in built.sends:
@@ -305,14 +326,23 @@ class WrapperPresets(unittest.TestCase):
         self.assertIn('hero(', p.notes)
         # the sax takes belong to the sax's own source: around another sound they become a micro-pitch double
         tl: list = []
-        t = heroes.build('sax', 'sampled/tenor_sax', octave=False, log=tl)
+        t = heroes.build('sax_clean', 'sampled/tenor_sax', octave=False, log=tl)
         self.assertEqual(t.instrument.type, 'sampler')
         self.assertIn('microshift', [f.type for f in t.fx])
         self.assertTrue(any("-> 'shift'" in x for x in tl))
+        # the 70s hero (the default): one take, no doubler; around the tenor its chain as it is
+        t = heroes.build('sax', 'sampled/tenor_sax')
+        self.assertEqual(t.instrument.type, 'sampler')
+        self.assertEqual([f.type for f in t.fx if f.type in ('microshift', 'saturator', 'tape', 'tremolo')],
+                         ['saturator', 'saturator', 'tape', 'tremolo'])
+        # ... and a track on the library alto (the same Weresax) gets the hero's own source
+        al: list = []
+        a = heroes.build('sax', 'sampled/alto_sax', log=al)
+        self.assertEqual(_canon(a.instrument), _canon(patches.get('hero/sax').instrument))
         # the family is inferred from the name
         self.assertEqual(heroes.infer('sampled/solo_violin').name, 'strings')
         self.assertEqual(heroes.infer('sampled/trumpet_section').name, 'brass')
-        self.assertEqual(heroes.infer('layered/hero_sax').name, 'sax')
+        self.assertEqual(heroes.infer('layered/hero_sax').name, 'sax_clean')
         self.assertEqual(heroes.infer('synthwave/supersaw_lead').name, 'synth')
         self.assertEqual(heroes.infer(inst.va()).name, 'synth')
         self.assertEqual(heroes.hero('sampled/solo_flute').name, 'hero/woodwind')     # the preset's own default
@@ -439,12 +469,17 @@ class WrapperMixRules(Base):
         self.assertFalse(any(f.name == 'air' for f in heroes.build('brass', air=False).fx))
 
     def test_acoustic_heroes_play_plain_in_jazz(self):
-        # jazz / ballad / classical: the sax is one natural instrument (Preset.genres) - no double, no octave, the
-        # soft voicing (no tube, no exciter, 2:1); synthwave keeps the doublers; explicit arguments win
-        def sax(genre, **kw):
+        # the clean v1 sax hero in jazz / ballad / classical: one natural instrument (Preset.genres) - no double, no
+        # octave, the soft voicing (no tube, no exciter, 2:1); synthwave keeps the doublers; explicit arguments win
+        def sax(genre, family='sax_clean', **kw):
             s = Song('g', tempo=120)
             s.section('a', bars=1)
-            return heroes.hero(s.track('sax', self.sampler()), family='sax', genre=genre, space=False, **kw)
+            return heroes.hero(s.track('sax', self.sampler()), family=family, genre=genre, space=False, **kw)
+        # THE sax hero (the 70s record sax) is the same in every genre (the user: "das wird das standard sax")
+        for g in ('jazz', 'synthwave', 'pop'):
+            v2 = sax(g, family='sax')
+            self.assertEqual([f.type for f in v2.fx if f.type in ('microshift', 'saturator', 'tape', 'tremolo')],
+                             ['saturator', 'saturator', 'tape', 'tremolo'], g)
         jz = sax('jazz')
         self.assertEqual(jz.instrument.type, 'sampler')                          # no octave layer: no stack
         self.assertFalse([f for f in jz.fx if f.type in ('microshift', 'saturator', 'exciter')])
@@ -483,8 +518,8 @@ class WrapperMixRules(Base):
         pad = s.track('pad', inst.va())
         sax = s.track('sax', 'layered/hero_sax')
         heroes.hero(sax, bed=[pad])                                   # the family inferred from the patch
-        self.assertEqual(sax.hero.preset.name, 'sax')
-        self.assertEqual(sax.patch, 'hero/sax')
+        self.assertEqual(sax.hero.preset.name, 'sax_clean')         # the v1 hero keeps its sound
+        self.assertEqual(sax.patch, 'hero/sax_clean')
         old = patches.get('layered/hero_sax')
         self.assertEqual(sax.instrument, old.instrument)
         self.assertEqual(sax.fx[:len(old.fx)], old.fx)
@@ -563,7 +598,7 @@ class SongsUnchanged(unittest.TestCase):
                     # since feat/hornist the sax is hero/sax (= layered/hero_sax + the 'air' breath stage) played
                     # by the wind player: the same sound, its air after the compressor, then hornist's 'mic' stage
                     sax = song.tracks['sax']
-                    self.assertEqual(sax.patch, 'hero/sax')
+                    self.assertEqual(sax.patch, 'hero/sax_clean')
                     old = patches.get('layered/hero_sax')
                     self.assertEqual(_canon(sax.instrument), _canon(old.instrument))
                     # hornist's 'mic' stage sits in front of the compressor (where a microphone is); without it the

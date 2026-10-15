@@ -31,6 +31,10 @@ MODULES = {
     # instruments
     'va': "virtual-analog polysynth: 2 osc + sub + noise, supersaw unison, ladder/SVF filter, envelopes, drift, "
           "free per-voice mod matrix ('mods'); pads, leads, basses, arps, plucks",
+    'wavetable': "wavetable synth (the va's voice engine: unison, filter, envelopes, 'mods') with 2 wavetable oscs + sub "
+                 "+ noise: smooth morphing position (env / lfo / velocity -> osc1.position), warps (sync bend mirror fm), "
+                 "band-limited mip levels; built-in tables basic pwm sync formant harmonics organ sine, or Serum / Surge "
+                 "(.wt) / Vital / Ableton / AKWF single-cycle WAV files; evolving pads, plucks, growl basses",
     'dx7': "DX7 FM synth (msfa core) playing the 256 original ROM voices by name: e.pianos, brass, bells, basses",
     'drums': "synthesized drum machine, GM key map (36 kick 38 snare 39 clap 42 hat 46 open hat ...), kits 808 909 "
              "linn synthwave modern, every piece tweakable (kick.decay, snare.snappy ...)",
@@ -153,9 +157,9 @@ def recipes() -> list[tuple[str, str]]:
 HELPER_MODULES = ('theory', 'voicing', 'notation', 'patterns', 'humanize', 'automation', 'modulation', 'midifx', 'vamod', 'jazz', 'pianist', 'romantic',
                   'drummer', 'hornist', 'gesture', 'fretwork', 'soloist', 'guitar_vocab', 'guitar_riff', 'horn_vocab', 'budget',
                   'bassist', 'guitarist', 'sfz', 'kits', 'organ', 'articulation', 'speech', 'tempo', 'song', 'sections', 'mixer',
-                  'mastering', 'heroes', 'bands', 'compare', 'delivery', 'library', 'silent_notes', 'figures',
-                  'bandlib.scoring', 'singer', 'lyrics', 'voicebank', 'endless.composer', 'endless.genres',
-                  'endless.perform', 'endless.run')
+                  'mastering', 'heroes', 'bands', 'compare', 'ears', 'delivery', 'library', 'silent_notes', 'figures',
+                  'bandlib.scoring', 'bandlib.ensemble', 'expressive', 'singer', 'lyrics', 'voicebank', 'organist', 'organ_vocab', 'endless.composer', 'endless.genres',
+                  'endless.perform', 'endless.run', 'endless.organ')
 
 
 def helpers() -> dict[str, list[tuple[str, str]]]:

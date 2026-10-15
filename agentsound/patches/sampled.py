@@ -30,6 +30,7 @@ audibly).
 """
 
 from . import Patch, fx, inst, register
+from . import realism
 from ..sfz import even_velcurve as _even_velcurve
 
 # Levels of the 'played' patches (audition-calibrated to -18 LUFS)
@@ -49,6 +50,16 @@ CHOIR_SPEAK = {'attack': 0.25, 'velAttack': -0.25}
 (a soft answer at velocity 40 took ~0.43 s to be heard); here 0.25 s x (1 - vel/127) (velocity 40: 0.17 s, 64: 0.12 s,
 120: 14 ms) - a soft choir still breathes in, but speaks on time when played directly (track.play); orch.Choir's
 speaking velocity and lanes stay the way for written dynamics."""
+
+
+# The Weresax alto as the library plays it (sampled/alto_sax and the hero sax): the overdriven dynamic mic (cc 120)
+# and the file's wind-noise layer (cc 122 "Noise Level") as a trace - its zone through a 2-pole 3 kHz low-pass (the
+# file's own 1-pole one lets ~11 dB more hiss through above 8 kHz). Calibrated on the user's pick (2026-10-15, A/B
+# cc122 = 0 / 4 / 8 / 12 before the SFZ *noise level fix = 16 now): the noise ~12.4 dB under the dry sax in 3-8 kHz and
+# 8-16 kHz on held notes (+0.24 dB on those bands), -34 dB under it below 3 kHz.
+WERESAX_CC = {120: 127, 122: 16}
+WERESAX_ZONE = {'*noise': {'filter': 'lpf_2p'}}
+ALTO_SAX_LEVEL = 0.6   # -0.7 on the condenser (v2); the dynamic mic plays 1.3 dB quieter (audition)
 
 
 def _sfz(path: str, level: float, **kw):
@@ -243,22 +254,29 @@ register(Patch(
 
 register(Patch(
     'sampled/alto_sax',
-    instrument=_sfz('samples/karoryfer-weresax/Programs/Sax.sfz', level=-0.7, mono='legato', legatotime=50),
+    instrument=_sfz('samples/karoryfer-weresax/Programs/Sax.sfz', level=ALTO_SAX_LEVEL, mono='legato', legatotime=50,
+                    cc=dict(WERESAX_CC), zone=dict(WERESAX_ZONE)),
     fx=[_hp(90)],
     sends={'hall': -12},
-    notes='v2. Weresax (Karoryfer, CC0): alto saxophone, 2 velocity layers x 2 round robins, two microphones blended '
-          'by cc 120. A monophonic legato player (mono=\'legato\': overlapping notes are legato transitions). Range: '
-          'C#3-G#5. Tweak: cc={111: 40..127} (vibrato depth), cc={120: 0..127} (mic blend). Its '
-          'variable EQ modulation (varN) is not supported and is left out (one warning). Sends: hall -12. Measured '
-          '-18.0 LUFS (audition melody).',
+    notes='v3. Weresax (Karoryfer, CC0): alto saxophone, 2 velocity layers x 2 round robins, two microphones blended '
+          'by cc 120 - here the overdriven dynamic mic (cc 120 = 127: the close 70s SM57 sound, as the hero sax; v2 '
+          'was the condenser, cc 120 = 0) - and the file\'s wind-noise layer as a trace (cc 122 = 16 through a '
+          '2-pole 3 kHz low-pass: the breath ~12 dB under the sax in 3-16 kHz, "felt more than heard", the user\'s '
+          'pick by ear 2026-10-15). A monophonic legato player (mono=\'legato\': overlapping notes are legato '
+          'transitions). Range: C#3-G#5. Tweak: cc={111: 40..127} (vibrato depth), cc={120: 0, 122: 16} (the clean '
+          'condenser), cc={122: 0} (no breath). Its variable EQ modulation (varN) is not supported and is left out '
+          '(one warning). Sends: hall -12. Measured -18.0 LUFS (audition melody).',
     audition={'notes': 'phrase'}))
 
 register(Patch(
     'sampled/nylon_guitar',
-    instrument=_sfz('samples/freepats-spanish-classical-guitar/SpanishClassicalGuitar-20190618.sfz', level=-3.4),
+    instrument=_sfz('samples/freepats-spanish-classical-guitar/SpanishClassicalGuitar-20190618.sfz', level=-3.4,
+                    **realism.FAMILY['nylon']),
     fx=[_hp(70)],
     sends={'hall': -14},
-    notes='v1. FreePats Spanish classical guitar (CC0): nylon strings, one sample per note. Bossa comping (strum the '
+    notes='v2. FreePats Spanish classical guitar (CC0): nylon strings, one sample per note, with the synthetic round '
+          'robins of realism.FAMILY["nylon"] (per-note detune / tone / attack / level, a neighbouring sample on '
+          'quick repeats; the user preferred it in a blind pair 2026-10-15). Bossa comping (strum the '
           'chords a few ms apart), arpeggios, ballads. Range: E2-B5 for real parts. Sends: hall -14. Measured '
           '-18.0 LUFS (audition arpeggio).',
     audition={'notes': 'arp'}))

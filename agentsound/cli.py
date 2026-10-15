@@ -1,11 +1,15 @@
 """Command line for composing agents.
 
     python -m agentsound build songs/<slug> [--section NAME | --from-beat X --to-beat Y] [--no-mp3] [--stems]
+                                             [--set TRACK.instrument.PARAM=V ...]   # an A/B variant: out/ab/<label>/
                                              [--profile default|synthwave|dreamwave|darksynth|jazz|classical|pop|rock|film]
     python -m agentsound check songs/<slug> [--profile P]   # compile + validate (engine too if built), no render
     python -m agentsound new <slug>                  # start songs/<slug>/song.py from the template
     python -m agentsound audition <patch> [--notes auto|arp|stab|rolling|roots|bass|riser|hit|phrase|chord|drums|...]
                                           [--profile P] [--out DIR]
+                                          [--set PARAM=V ...] [--ab PARAM=V ...]   # B = the override: loudness-matched
+                                          # a.wav / b.wav + a blind pair (probe materials: repeat sweep legato sustain
+                                          # pedal)
     python -m agentsound patches [prefix] [-v]
     python -m agentsound params [type] [--json]      # engine instrument/effect parameter reference
     python -m agentsound dx7 [search]                # DX7 ROM voice names for inst.dx7('...')
@@ -190,8 +194,8 @@ def apply_module_mix(song) -> str | None:
 # ------------------------------------------------------------------------- analysis profile
 
 # The engine's analysis profiles (engine/analysis/Profiles.cpp); the engine validates them strictly too.
-ANALYSIS_PROFILES = ('default', 'synthwave', 'dreamwave', 'darksynth', 'jazz', 'classical', 'piano', 'pop', 'edm',
-                     'rock', 'film')
+ANALYSIS_PROFILES = ('default', 'synthwave', 'dreamwave', 'darksynth', 'jazz', 'classical', 'piano', 'organ', 'pop',
+                     'edm', 'rock', 'film')
 _ANALYSIS_KEYS = ('profile', 'loudness')
 
 
@@ -227,7 +231,8 @@ def apply_analysis(render: dict, song_analysis=None, profile: str | None = None,
     settings written ({} = none: the engine uses profile 'default'). The compiler's own "silentNotes" (the
     compile-time silent notes, agentsound.silent_notes) are kept as they are; the song file cannot set them."""
     own = dict(render['analysis']) if isinstance(render.get('analysis'), dict) else render.get('analysis')
-    compiler = {k: own.pop(k) for k in ('silentNotes', 'audioOnsets') if k in own} if isinstance(own, dict) else {}
+    compiler = {k: own.pop(k) for k in ('silentNotes', 'audioOnsets', 'registration') if k in own} \
+        if isinstance(own, dict) else {}
     merged = check_analysis(own, 'render "analysis"') if own is not None else {}
     if song_analysis is not None:
         merged.update(check_analysis(song_analysis, where))
@@ -538,6 +543,34 @@ def _dynamics_lines(report: dict, hide=()) -> list[str]:
     return out
 
 
+def _realism_lines(report: dict, hide=()) -> list[str]:
+    """'realism' section of the summary: the probes per track (report nodes[].realism; docs/SAMPLE_REALISM_PLAN.md)."""
+    out = []
+    for n in report.get('nodes') or []:
+        r = n.get('realism') if isinstance(n, dict) else None
+        if not isinstance(r, dict) or not r or n.get('id') in hide:
+            continue
+        bits = []
+        if 'repeatSim' in r:
+            x = r['repeatSim']
+            bits.append(f"repeats sim {x.get('sim')}" + (f" wave {x['wave']}" if 'wave' in x else '') + f" ({x.get('pairs')} pairs)")
+        if 'layerStep' in r:
+            x = r['layerStep']
+            bits.append(f"layer steps max {x.get('maxLevelDb')} dB level / {x.get('maxBrightDb')} dB bright "
+                        f"(median {x.get('medianLevelDb')} / {x.get('medianBrightDb')})")
+        if 'sustainFlux' in r:
+            x = r['sustainFlux']
+            bits.append(f"sustain sd {x.get('rmsSdDb')} dB / {x.get('centroidSdCents')} ct, periodicity {x.get('periodicity')}")
+        if 'tailDecay' in r:
+            x = r['tailDecay']
+            bits.append(f"tails {x.get('firstDbPerSec')} then {x.get('laterDbPerSec')} dB/s")
+        if 'transitionDip' in r:
+            x = r['transitionDip']
+            bits.append(f"legato dip {x.get('dipDb')} dB" + (f", new pitch after {x['pitchMs']} ms" if 'pitchMs' in x else ''))
+        out.append(f"    {n.get('id')}: " + '; '.join(bits))
+    return (['  realism (played vs triggered; repeats sim/wave near 1 = a machine gun):'] + out) if out else []
+
+
 def image_lines(report_path: Path, width: int = 200) -> list[str]:
     """The report's image list ('file: what it shows'); falls back to the PNGs found next to it."""
     rdir = Path(report_path).parent
@@ -592,7 +625,8 @@ def summarize_report(path: Path, max_tracks: int = 24, hide=()) -> str:
             lines.append(f"    ... {len(items) - max_tracks} more")
     lines += _click_lines(report)
     lines += _dynamics_lines(report, hide)
-    ws = [w for w in _warnings(report) if not any(f"'{h}'" in w and 'silent' in w for h in hide)]
+    lines += _realism_lines(report, hide)
+    ws =[w for w in _warnings(report) if not any(f"'{h}'" in w and 'silent' in w for h in hide)]
     if ws:
         lines.append(f"  warnings ({len(ws)}):")
         lines += [f"    - {w}" for w in ws]
@@ -605,6 +639,118 @@ def summarize_report(path: Path, max_tracks: int = 24, hide=()) -> str:
     if len(lines) == 1:
         lines.append('  keys: ' + ', '.join(map(str, report)))
     return '\n'.join(lines)
+
+
+# ------------------------------------------------------------------------ A/B overrides
+
+def _set_value(text: str):
+    """An override value: a number, true / false, else the text (an enum choice like layers=blend)."""
+    t = text.strip()
+    if t.lower() in ('true', 'false'):
+        return t.lower() == 'true'
+    try:
+        v = float(t)
+    except ValueError:
+        return t
+    if not math.isfinite(v):
+        raise CliError(f"--set value {text!r} must be finite")
+    return int(v) if v.is_integer() and re.fullmatch(r'[+-]?\d+', t) else v
+
+
+def parse_sets(items, default_track: str | None = None) -> list[tuple]:
+    """--set / --ab overrides 'TRACK.instrument.PARAM=V' or 'TRACK.fx.N.PARAM=V' -> [(track, fx index or None, param,
+    value)]. With default_track (audition), 'PARAM=V' and 'instrument.PARAM=V' / 'fx.N.PARAM=V' mean that track."""
+    out = []
+    for item in items or []:
+        if '=' not in item:
+            raise CliError(f"--set {item!r}: use TRACK.instrument.PARAM=VALUE")
+        target, value = item.split('=', 1)
+        parts = [x for x in target.strip().split('.')]
+        if default_track is not None and parts and parts[0] not in (default_track,):
+            parts = [default_track] + (parts if parts[0] in ('instrument', 'fx') else ['instrument'] + parts)
+        if len(parts) == 3 and parts[1] == 'instrument' and all(parts):
+            out.append((parts[0], None, parts[2], _set_value(value)))
+        elif len(parts) == 4 and parts[1] == 'fx' and parts[2].isdigit() and parts[0] and parts[3]:
+            out.append((parts[0], int(parts[2]), parts[3], _set_value(value)))
+        else:
+            raise CliError(f"--set {item!r}: the target must be TRACK.instrument.PARAM or TRACK.fx.N.PARAM")
+    return out
+
+
+def song_sets(song, sets: list[tuple]) -> None:
+    """Hand the instrument overrides to the song before it compiles: its zone pruning sees them (layers='blend' loads
+    the neighbouring velocity layers, rrborrow the neighbouring keys). apply_sets() afterwards checks the targets."""
+    over: dict = {}
+    for track, fx, param, value in sets:
+        if fx is None:
+            over.setdefault(track, {})[param] = value
+    song.instrument_sets = over
+
+
+def apply_sets(render: dict, sets: list[tuple]) -> None:
+    """Override params in a compiled render dict (strict: an unknown track / fx index is an error here, an unknown
+    param name or a value out of range is the engine's error)."""
+    tracks = {t['id']: t for t in render.get('tracks', [])}
+    for track, fx, param, value in sets:
+        t = tracks.get(track)
+        if t is None:
+            close = difflib.get_close_matches(track, list(tracks), n=1)
+            raise CliError(f"--set: no track {track!r}" + (f" - did you mean {close[0]!r}?" if close else '') +
+                           f" (tracks: {', '.join(tracks)})")
+        if fx is None:
+            t['instrument'].setdefault('params', {})[param] = value
+        else:
+            chain = t.get('fx') or []
+            if not 0 <= fx < len(chain):
+                raise CliError(f"--set: track {track!r} has no fx #{fx} (its chain has {len(chain)})")
+            chain[fx].setdefault('params', {})[param] = value
+
+
+def set_label(sets: list[tuple]) -> str:
+    """Folder name of an override set: 'nylon.rrpitch=4+nylon.rrtone=1.5'."""
+    parts = [f"{t}{'' if fx is None else f'.fx{fx}'}.{p}={v}" for t, fx, p, v in sets]
+    return re.sub(r'[^A-Za-z0-9_.=+-]+', '_', '+'.join(parts))[:120] or 'ab'
+
+
+def _lufs_of(rdir: Path) -> float | None:
+    try:
+        g = json.loads((rdir / 'report.json').read_text(encoding='utf-8')).get('global', {})
+    except (OSError, ValueError):
+        return None
+    v = g.get('lufsIntegrated')
+    return float(v) if isinstance(v, (int, float)) and math.isfinite(v) and v > -70 else None
+
+
+def write_ab_pair(a_wav: Path, b_wav: Path, out: Path, *, la: float | None, lb: float | None, seed=None,
+                  names=('a', 'b')) -> list[str]:
+    """Loudness-matched copies of two renders (the louder one turned down to the quieter: no clipping) as
+    out/<a>.wav / <b>.wav (+ mp3), and a blind pair out/blind/X / Y (randomly assigned; out/blind/KEY.txt says which).
+    Returns summary lines."""
+    import random as _random
+    ff = find_ffmpeg()
+    if ff is None:
+        raise CliError('the A/B pair needs ffmpeg (PATH or C:/Program Files (x86)/ffmpeg/bin)')
+    target = min(x for x in (la, lb) if x is not None) if (la is not None or lb is not None) else None
+    ga = 0.0 if target is None or la is None else target - la
+    gb = 0.0 if target is None or lb is None else target - lb
+    out.mkdir(parents=True, exist_ok=True)
+    (out / 'blind').mkdir(exist_ok=True)
+    rng = _random.Random(seed) if seed is not None else _random.SystemRandom()
+    swap = rng.random() < 0.5
+    lines = []
+    for src, gain, name, blind in ((a_wav, ga, names[0], 'Y' if swap else 'X'), (b_wav, gb, names[1], 'X' if swap else 'Y')):
+        for dst, codec in ((out / f'{name}.wav', ['-c:a', 'pcm_s24le']), (out / f'{name}.mp3', ['-c:a', 'libmp3lame', '-b:a', '320k']),
+                           (out / 'blind' / f'{blind}.mp3', ['-c:a', 'libmp3lame', '-b:a', '320k'])):
+            proc = subprocess.run([ff, '-y', '-hide_banner', '-loglevel', 'error', '-i', str(src), '-af', f'volume={gain:.3f}dB',
+                                   *codec, str(dst)], capture_output=True, text=True, encoding='utf-8', errors='replace')
+            if proc.returncode != 0:
+                raise CliError(f"ffmpeg failed on {dst.name}: {(proc.stderr or '').strip()[:300]}")
+        lines.append(f"  {name}: {gain:+.2f} dB (loudness-matched)")
+    key = f"X = {names[1] if swap else names[0]}\nY = {names[0] if swap else names[1]}\n"
+    (out / 'blind' / 'KEY.txt').write_text(key, encoding='utf-8')
+    lines.insert(0, f"a/b       {out}  ({names[0]}.wav / {names[1]}.wav loudness-matched; blind pair blind/X.mp3 / "
+                    f"blind/Y.mp3, the key in blind/KEY.txt)")
+    return lines
 
 
 # --------------------------------------------------------------------------------- commands
@@ -704,7 +850,8 @@ def _render_and_report(song, render: dict, out_dir: Path, json_name: str, args, 
               f"report's silent_notes warnings below")
     for line in hero_lines(song):
         print(line)
-    a = {k: v for k, v in (render.get('analysis') or {}).items() if k not in ('silentNotes', 'audioOnsets')}
+    a = {k: v for k, v in (render.get('analysis') or {}).items()
+         if k not in ('silentNotes', 'audioOnsets', 'registration')}
     if a:
         print(f"analysis  profile {a.get('profile', 'default')!r}" +
               (f", loudness target {a['loudness'][0]:g}..{a['loudness'][1]:g} LUFS" if 'loudness' in a else ''))
@@ -739,9 +886,16 @@ def cmd_build(args) -> int:
         print(line)
     if args.stems:
         song.export(stems=True)
+    sets = parse_sets(getattr(args, 'set', None))
+    song_sets(song, sets)
     render = compile_song(song, song_py)
     apply_analysis(render, song_analysis, args.profile, f"{song_py.name}: ANALYSIS")
     out_dir = Path(args.out) if args.out else song_py.parent / 'out'
+    if sets:   # an A/B variant of the same song code: its own folder, the plain render stays where it is
+        apply_sets(render, sets)
+        out_dir = out_dir / 'ab' / set_label(sets)
+        print(f"a/b       {', '.join(f'{t}.' + ('instrument' if fx is None else f'fx.{fx}') + f'.{p}={v}' for t, fx, p, v in sets)}"
+              f"  -> {out_dir}")
     from_beat, to_beat, rdir = args.from_beat, args.to_beat, None
     if args.section:
         from .theory import ComposeError
@@ -755,7 +909,7 @@ def cmd_build(args) -> int:
     elif from_beat is not None or to_beat is not None:
         rdir = out_dir / f"range_{from_beat or 0:g}_{to_beat if to_beat is not None else 'end'}"
     delivery_settings(song)   # METADATA / COVER errors before the render
-    return _render_and_report(song, render, out_dir, 'song.render.json', args, from_beat, to_beat, rdir, deliver=True)
+    return _render_and_report(song, render, out_dir, 'song.render.json', args, from_beat, to_beat, rdir, deliver=not sets)
 
 
 def cmd_check(args) -> int:
@@ -822,6 +976,12 @@ AUDITION_MATERIAL = {
     'phrase': 'a 4-bar melody (leads, bells, anything else)',
     'chord': 'held 4-note chords (pads, strings, keys, organ, brass)',
     'drums': 'a 3-bar groove, a fill and a crash (kits)',
+    # realism probes (docs/SAMPLE_REALISM_PLAN.md; report nodes[].realism)
+    'repeat': 'the same note 8x at one velocity, then a chord repeated 8x (round robins: realism repeatSim)',
+    'sweep': 'one key, velocity 20 -> 127 in steps of 4 (velocity layers: realism layerStep)',
+    'legato': 'an overlapping interval ladder: steps of 1, 2, 5, 7 and 12 up and down (transitions: realism transitionDip)',
+    'sustain': '4 s held notes at pp / mf / ff (a living sustain: realism sustainFlux)',
+    'pedal': 'a pedalled chord change, then pedal up (sampler pedal; resonance and tails: realism tailDecay)',
 }
 # Other --notes names (patch categories) -> material.
 AUDITION_ALIASES = {
@@ -943,7 +1103,7 @@ def audition_song(patch_name: str, notes: str = 'auto', tempo: float = 100.0, ke
     hint = audition_hint(p)
     kind = (hint.get('notes') or _guess_kind(p)) if notes == 'auto' else audition_material(notes)
     s = Song(f"audition {patch_name}", tempo=tempo, key=key, seed=1, tail=6.0)
-    sec = s.section('audition', bars=4)
+    sec = s.section('audition', bars=7 if kind == 'sustain' else 4)
     for bus_id in p.sends:
         b = bus_id.lower()
         if any(w in b for w in ('echo', 'delay', 'dly')):
@@ -981,6 +1141,37 @@ def audition_song(patch_name: str, notes: str = 'auto', tempo: float = 100.0, ke
         m = s.motif('5:1/4 8:1/4 7:1/8 5:1/8 3:1/4 | 4:1/8 5:1/8 3:1/4 2:1/2 '
                     '| 5:1/4 8:1/4 9:1/8 8:1/8 7:1/4 | 8:1/2. r:1/4')   # exactly 4 bars
         t.play(m.clip(octave=4 + shift // 12, vel=100), sec)
+    elif kind == 'repeat':      # the same note 8x (quarters), then the tonic chord 8x
+        root = s.key.degree(1, octave=4 + shift // 12)
+        for k in range(8):
+            t.note(root, sec.start + k, 0.9, vel=90)
+        ch = chords(prog, voicing='close', register=(52 + shift, 72 + shift), voices=3, vel=90, gate=0.9).slice(0, 1)
+        for k in range(8):
+            t.play(ch.slice(0, 1), sec.start + 8 + k)
+    elif kind == 'sweep':       # one key, velocity 20, 24, ... 124, 127: an 8th each
+        root = s.key.degree(1, octave=4 + shift // 12)
+        for k, v in enumerate(list(range(20, 128, 4)) + [127]):
+            t.note(root, sec.start + 0.5 * k, 0.45, vel=v)
+    elif kind == 'legato':      # overlapping quarters (10 %): up and down by 1, 2, 5, 7, 12 semitones
+        p0 = s.key.degree(1, octave=4 + shift // 12)
+        ladder = [p0]
+        for step in (1, 2, 5, 7, 12):
+            ladder += [p0 + step, p0]
+        for k, pitch in enumerate(ladder):
+            t.note(pitch, sec.start + k, 1.1 if k + 1 < len(ladder) else 1.0, vel=90)
+    elif kind == 'sustain':     # 4 s notes at pp / mf / ff, a 1 s rest between
+        root = s.key.degree(1, octave=4 + shift // 12)
+        beats = 4.0 * tempo / 60.0
+        for k, v in enumerate((30, 70, 115)):
+            t.note(root, sec.start + k * (beats + tempo / 60.0), beats, vel=v)
+    elif kind == 'pedal':       # chord i under the pedal, a pedal change into VI, then pedal up (the tails ring out)
+        if p.instrument.type != 'sampler':
+            raise CliError(f"the 'pedal' material needs a sampler patch (sustain pedal), {patch_name!r} is "
+                           f"{p.instrument.type!r}")
+        cs = chords(prog, voicing='smooth', register=(48 + shift, 72 + shift), gate=0.4)
+        t.play(cs.slice(0, 4), sec.start)
+        t.play(cs.slice(4, 8), sec.start + 4)
+        t.automate('instrument.pedal', [[0, 1, 'step'], [4.05, 0, 'step'], [4.15, 1, 'step'], [10, 0, 'step']])
     elif kind in ('riser', 'hit'):
         try:
             pitch = note_pitch(hint['pitch']) if 'pitch' in hint else None
@@ -1011,15 +1202,36 @@ def audition_song(patch_name: str, notes: str = 'auto', tempo: float = 100.0, ke
 
 def cmd_audition(args) -> int:
     from .theory import ComposeError
-    try:
-        song = audition_song(args.patch, args.notes, args.tempo, args.key)
-        render = song.compile()
-    except ComposeError as e:
-        raise CliError(str(e)) from None
-    apply_analysis(render, None, args.profile)
+    sets = parse_sets(getattr(args, 'set', None), 'patch')
+    ab = parse_sets(getattr(args, 'ab', None), 'patch')
+
+    def compiled(extra):
+        try:
+            s = audition_song(args.patch, args.notes, args.tempo, args.key)
+            song_sets(s, sets + extra)
+            r = s.compile()
+        except ComposeError as e:
+            raise CliError(str(e)) from None
+        apply_analysis(r, None, args.profile)
+        apply_sets(r, sets + extra)
+        return s, r
+
+    song, render = compiled([])
     slug = re.sub(r'[^a-z0-9_-]+', '_', args.patch.lower()).strip('_')
+    if args.notes != 'auto':
+        slug += f"_{audition_material(args.notes)}"
     out_dir = Path(args.out) if args.out else REPO / 'auditions' / slug
-    return _render_and_report(song, render, out_dir, 'audition.render.json', args)
+    if not ab:
+        return _render_and_report(song, render, out_dir, 'audition.render.json', args)
+    song_b, rb = compiled(ab)
+    print(f"A         {args.patch} as is")
+    _render_and_report(song, render, out_dir / 'A', 'audition.render.json', args)
+    print(f"B         {args.patch} with {', '.join(f'{p}={v}' for _, _, p, v in ab)}")
+    _render_and_report(song_b, rb, out_dir / 'B', 'audition.render.json', args)
+    for line in write_ab_pair(out_dir / 'A' / 'mix.wav', out_dir / 'B' / 'mix.wav', out_dir,
+                              la=_lufs_of(out_dir / 'A'), lb=_lufs_of(out_dir / 'B')):
+        print(line)
+    return 0
 
 
 def cmd_patches(args) -> int:
@@ -1040,14 +1252,22 @@ def cmd_patches(args) -> int:
     return 0
 
 
-def cmd_params(args) -> int:
-    engine = find_engine(args.engine)
-    cmd = [str(engine), 'params'] + (['--json'] if args.json else ['--markdown']) + ([args.type] if args.type else [])
-    proc = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='replace')
+def _engine_query(args, command: str, options: list, *, error_codes=None, error_stdout=False,
+                  stderr_to=None) -> int:
+    proc = subprocess.run([str(find_engine(args.engine)), command] + options,
+                          capture_output=True, text=True, encoding='utf-8', errors='replace')
     sys.stdout.write(proc.stdout)
     if proc.returncode != 0:
-        raise CliError(f"engine params failed: {proc.stderr.strip()}", 4)
+        detail = (proc.stderr or proc.stdout) if error_stdout else proc.stderr
+        raise CliError(f"engine {command} failed: {detail.strip()}", (error_codes or {}).get(proc.returncode, 4))
+    if stderr_to is not None and proc.stderr.strip():
+        print(proc.stderr.strip(), file=stderr_to)
     return 0
+
+
+def cmd_params(args) -> int:
+    return _engine_query(args, 'params', (['--json'] if args.json else ['--markdown']) +
+                         ([args.type] if args.type else []))
 
 
 def _section_dir_name(name: str) -> str:
@@ -1179,6 +1399,24 @@ def cmd_compare(args) -> int:
     return 0
 
 
+def cmd_ears(args) -> int:
+    from . import ears
+    try:
+        res = ears.run(args.inputs, refs=args.ref or (), section=args.section, instrument=args.instrument,
+                       ffmpeg=find_ffmpeg(), out=args.out, repo=REPO, max_windows=args.max_windows,
+                       device=args.device)
+    except ears.EarsUnavailable as e:
+        raise CliError(str(e), 3) from None
+    except ears.EarsError as e:
+        raise CliError(str(e)) from None
+    print(f"ears ({res.get('device')}): realism 0..100 from {', '.join(ears.REALISM)} (README section 6)")
+    for line in ears.summary_lines(res):
+        print('  ' + line)
+    for p in res.get('written', []):
+        print(f"  wrote {p}")
+    return 0
+
+
 def cmd_mix(args) -> int:
     """The mix engineer: findings + plan from the last render, or --auto: render, measure, adjust (logged)."""
     from . import mixer
@@ -1251,26 +1489,14 @@ def cmd_master(args) -> int:
 
 
 def cmd_dx7(args) -> int:
-    engine = find_engine(args.engine)
-    cmd = [str(engine), 'dx7'] + (['--json'] if args.json else []) + ([args.search] if args.search else [])
-    proc = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='replace')
-    sys.stdout.write(proc.stdout)
-    if proc.returncode != 0:
-        raise CliError(f"engine dx7 failed: {proc.stderr.strip()}", 4)
-    if proc.stderr.strip():   # e.g. "no DX7 banks installed - see assets/dx7/README.md"
-        print(proc.stderr.strip(), file=sys.stderr if args.json else sys.stdout)
-    return 0
+    return _engine_query(args, 'dx7', (['--json'] if args.json else []) + ([args.search] if args.search else []),
+                         stderr_to=sys.stderr if args.json else sys.stdout)
 
 
 def cmd_sf2(args) -> int:
-    engine = find_engine(args.engine)
-    cmd = [str(engine), 'sf2'] + (['--json'] if args.json else []) + (['--samples'] if args.samples else []) + \
-          (['--file', args.file] if args.file else []) + list(args.search or [])
-    proc = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='replace')
-    sys.stdout.write(proc.stdout)
-    if proc.returncode != 0:
-        raise CliError(f"engine sf2 failed: {(proc.stderr or proc.stdout).strip()}", 2 if proc.returncode == 2 else 4)
-    return 0
+    return _engine_query(args, 'sf2', (['--json'] if args.json else []) + (['--samples'] if args.samples else []) +
+                         (['--file', args.file] if args.file else []) + list(args.search or []),
+                         error_codes={2: 2}, error_stdout=True)
 
 
 def cmd_samples(args) -> int:
@@ -1525,6 +1751,9 @@ def build_parser() -> argparse.ArgumentParser:
     b.add_argument('--from-beat', type=float, dest='from_beat')
     b.add_argument('--to-beat', type=float, dest='to_beat')
     b.add_argument('--stems', action='store_true', help='also write one WAV per track and bus')
+    b.add_argument('--set', action='append', metavar='TRACK.instrument.PARAM=V',
+                   help='override an instrument (or TRACK.fx.N.PARAM) param in the render JSON - an A/B variant of the '
+                        'same song code, written to out/ab/<label>/ (repeatable; with --section / --stems the per-stem pair)')
     profile_opt(b)
     engine_opts(b)
     b.set_defaults(func=cmd_build)
@@ -1548,6 +1777,11 @@ def build_parser() -> argparse.ArgumentParser:
                         '; aliases: ' + ', '.join(f"{k}={v}" for k, v in AUDITION_ALIASES.items()))
     a.add_argument('--tempo', type=float, default=100.0)
     a.add_argument('--key', default='A minor')
+    a.add_argument('--set', action='append', metavar='PARAM=V',
+                   help="override an instrument param (or fx.N.PARAM) of the patch (repeatable)")
+    a.add_argument('--ab', action='append', metavar='PARAM=V',
+                   help='render A (as is, with --set) and B (plus these overrides) into A/ and B/, loudness-matched '
+                        'a.wav / b.wav and a blind pair blind/X / Y with blind/KEY.txt (repeatable)')
     profile_opt(a)
     engine_opts(a)
     a.set_defaults(func=cmd_audition)
@@ -1590,6 +1824,20 @@ def build_parser() -> argparse.ArgumentParser:
     k.add_argument('--no-png', action='store_true', help="skip compare.png")
     k.add_argument('--engine')
     k.set_defaults(func=cmd_compare)
+
+    e = sub.add_parser('ears', help='learned ears (optional venv with torch): Audiobox Aesthetics PQ/PC/CE/CU, CLAP '
+                                    'P(real recording), similarity / FAD vs references, the combined realism score '
+                                    '-> out/ears.json + report.json "ears"')
+    e.add_argument('inputs', nargs='+', help='songs/<slug> (its out/mix.wav), audio files or folders of audio')
+    e.add_argument('--ref', action='append', help='reference audio file or folder (repeatable): refCos per file, '
+                                                  'FAD of the whole set')
+    e.add_argument('--section', action='store_true', help="also score each section of a song (out/report.json)")
+    e.add_argument('--instrument', help="noun for the CLAP realism prompts (default: the song's sampled tracks)")
+    e.add_argument('--max-windows', dest='max_windows', type=int, default=12,
+                   help='10 s windows per file, spread evenly (default 12)')
+    e.add_argument('--device', default='auto', choices=['auto', 'cuda', 'cpu'])
+    e.add_argument('--out', help='also write the full result JSON here')
+    e.set_defaults(func=cmd_ears)
 
     m = sub.add_parser('mix', help="the mix engineer: findings + mix plan from out/report.json; --auto renders, measures "
                                    "and adjusts trims / rides / ducks / dips toward the genre targets (out/mixer/MIX.py)")
@@ -1735,6 +1983,8 @@ def build_parser() -> argparse.ArgumentParser:
     sub.choices['makingof'].set_defaults(func=cmd_makingof)
     from .endless.run import add_parser as _endless_parser     # endless genres: python -m agentsound endless
     _endless_parser(sub)
+    from .learn.cli import add_parser as _learn_parser         # the learned generator: python -m agentsound learn
+    _learn_parser(sub)
     return ap
 
 

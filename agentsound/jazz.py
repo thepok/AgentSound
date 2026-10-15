@@ -944,7 +944,8 @@ id, library patch, params, dB on the track fader against the GeneralUser default
 Levelled to the GeneralUser balance on medium-swing material (two calibration lines at 138 BPM, velocities 88 / 100:
 comping, bass and brushes within ~1 dB; the MTG tenor needed +8.5 dB - at +6 it read 2.5 dB under the GeneralUser
 tenor); the Salamander plays at width 0.6 (at 0.8 its melody register measured correlation ~0, hollow in mono). Each
-falls back to GeneralUser GS alone when its pack is missing. With the Swirly brush kit the brush parts need its keymap: jazz.brushes(..., kit=b.kit, sweep=b.sweep);
+falls back to GeneralUser GS alone when its pack is missing (compile raises on that unless
+$AGENTSOUND_PACK_FALLBACK=1). With the Swirly brush kit the brush parts need its keymap: jazz.brushes(..., kit=b.kit, sweep=b.sweep);
 the MTG tenor is a legato player with live dynamics: horn_line(..., **b.horn) (param='dynamics', our vibrato)."""
 
 
@@ -1023,11 +1024,12 @@ def band(s, *, sax: bool = False, piano=None, bass=None, drums=None, horn=None, 
             if got[role] is not None or (role == 'sax' and not sax):
                 continue
             pack = SFZ_SOUNDS[role][0]
-            if not (library.SAMPLES / pack / 'SOURCE.json').is_file():
+            if not library.has(pack):
                 if sampled_sounds is True:
                     raise ComposeError(f"jazz.band(sampled_sounds=True): the {role} pack {pack!r} is not installed; "
                                        f"install it with `python -m agentsound samples fetch {pack}` (or use "
                                        f"sampled_sounds='auto': GeneralUser where a pack is missing)")
+                library.record(pack, f"GeneralUser GS ({role})", song=s)
                 continue
             got[role] = _sfz_sound(role)
             trim[role], eqs[role], desc[role] = SFZ_SOUNDS[role][3], dict(SFZ_SOUNDS[role][4]), SFZ_SOUNDS[role][5]

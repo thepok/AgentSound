@@ -620,10 +620,17 @@ BODIES: dict[str, Body | None] = {
     'waltz': Body('waltz', arc_ms=16.0, tempo=0.05, arc_vel=0.06, rit_beats=1.5, rit_w=0.88, rit_ms=30.0,
                   end_beats=3.0, end_w=0.7, end_ms=80.0, q=2.5, leap_ms=1.5, leap_cap=20.0, breath_ms=10.0,
                   breath_vel=0.94, sway=(1.055, 1.0, 0.975, 0.97), noise_ms=1.5, noise_vel=1.5, follow=0.7),
+    # an organist (agentsound.organist): no touch dynamics (arc_vel 0, no sway: the organ has no velocity), steady
+    # time with small arcs, phrase ends that broaden a little, a section's end a real ritardando, the hand's travel;
+    # no per-note motor noise (organist.perform moves every onset cluster together: the hands strike chords as one)
+    'organ': Body('organ', arc_ms=10.0, tempo=0.03, arc_vel=0.0, rit_beats=1.0, rit_w=0.9, rit_ms=30.0,
+                  end_beats=2.5, end_w=0.72, end_ms=90.0, q=2.5, leap_ms=1.2, leap_cap=15.0, breath_ms=12.0,
+                  breath_vel=1.0, sway=(1.0, 1.0, 1.0, 1.0), noise_ms=0.0, noise_vel=0.0, follow=1.0),
     'none': None,           # no body: the plain jitter (timing_ms / vel)
 }
 """Body profiles for track.humanize(body=...) / body(): 'calm' (ballads), 'lyrical' (straight 8ths, a singing
-line), 'swing' (a swung tune: steady time), 'waltz' (3/4: a light sway in the bar), 'none'. jazz.Feel.body picks one
+line), 'swing' (a swung tune: steady time), 'waltz' (3/4: a light sway in the bar), 'organ' (no touch
+velocity: time only; organist.perform), 'none'. jazz.Feel.body picks one
 from the feel; an endless piano feel names its own (genres feels 'body')."""
 
 BODY_MAX_MS = 40.0          # no onset of a phrase moves further than this (ritardandi at phrase / section ends add)

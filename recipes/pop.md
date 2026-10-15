@@ -117,8 +117,12 @@ print(b.describe())                                 # roles, buses and how to pl
   Guitar'`), alto / tenor sax (`karoryfer-weresax`, `mtg-solo-sax`), piano melody (octaves), whistle / flute-like
   lead (`inst.sf2('Whistle')`, `'Pan Flute'`).
 - **The hero sax** (late-70s / 80s sax pop: "Baker Street", Sanborn, Kenny G, Dave Koz; recipes/HUMAN_FEEDBACK.md
-  2026-09-30): `hero(s.track('sax', 'layered/hero_sax'), bed=[strings, pad, piano, keys], genre='pop')` - the hero
-  wrapper (docs/COMPOSE_API.md "Hero sounds") does all of the following in one logged call; by hand:
+  2026-09-30): `hero(s.track('sax', 'sampled/alto_sax'), family='sax', bed=[strings, pad, piano, keys], genre='pop')`
+  + `hornist.arrange(line, bpm, family='sax', style='hero70s', vel=(84, 124), ...)` - THE hero sax since 2026-10-15
+  (v2, the user's pick by ear: the Weresax dynamic mic with a breath trace, 4:1, tube + tape grit, near-mono, a 10 Hz
+  smooth-random autopan, a bright 3.6 s plate; growls on held peaks, no shakes). The hero wrapper (docs/COMPOSE_API.md
+  "Hero sounds") does all of the following in one logged call. The v1 hero (cleaner, double-tracked, an octave
+  tenor: `family='sax_clean'` / `layered/hero_sax`) by hand:
   `layered/hero_sax` (close-miked compressed gritty alto, double-tracked, `agentsound/patches/hero.py`) with its own `s.bus('hero_plate', 'bus/hero_plate')`, `articulation.throws(sax, line, at, bus=echo)` on the phrase
   ends, `s.carve(strings, pad, piano, keys, key=sax, depth=4)` so the bed's 1-4 kHz steps aside, the sax ridden 1-2 dB
   over the whole band in the hook sections (bed 6-8 dB under it). Worked example: `songs/lamplight-avenue`. The sax's
@@ -171,7 +175,9 @@ preset piano 1.6), 36 % of the chorus's 1-5 kHz band (18 %), crest 16.6 dB (19.0
 - **Keys**: grand piano (`gm/grand_piano`, `salamander-grand`), e-pianos (`greg-sullivan-epianos` Wurlitzer
   EP200 / CP80, `jrhodes3d`, DX7 `synthwave/epiano`), organ stabs, clavinet in funk-pop.
 - **Guitars**: clean 16th-note funk chords (`karoryfer-emilyguitar`, `karoryfer-shinyguitar` electric, FSBS clean
-  when installed), acoustic strums (`freepats-fss-steel-guitar`, strummed with `clip.strum`), muted plucks.
+  when installed), acoustic strums (`sampled/acoustic_guitar` - the Shinyguitar mics with recorded chucks and fret
+  noises - played by `guitarist.arrange(..., style='songwriter')` (chucks on 2 and 4, the 'acoustic' hand) or
+  `'fingerstyle'`; `sampled/steel_guitar` is brighter but has no noises; `songs/_demo_acoustic`), muted plucks.
 - **Pads and strings**: `synthwave/juno_pad`, `synthwave/warm_pad`, `gm/strings`, SSO strings (see
   recipes/classical.md) for ballads; string stabs in disco.
 - **Brass**: `gm/brass_section` stabs, synth brass (`inst.sf2('Synth Brass 1')`, DX7 `BRASS 1`).
@@ -224,7 +230,7 @@ kit.loop(drums({'kick': 'x...x...x...x...', 'clap': '....X.......X...', 'hat': '
 | Guitars | `karoryfer-emilyguitar/emily_clean.sfz` (SG, flatwounds; `emily_chords.sfz` for strums), `karoryfer-shinyguitar/Programs/electric_three.sfz` / `acoustic_three.sfz` | `freepats-fsbs-jazz` (clean jazz tone), FSBS clean (`freepats-fsbs-clean`, coming), `freepats-fss-steel-guitar/FSS-SteelStringGuitar-20200521.sfz` (acoustic), `freepats-spanish-classical-guitar`, `fiedler-natural-concert-guitar` (nylon), GM `'Clean Guitar'`, `'Muted Guitar'`, `gm/nylon_guitar` | FSS: GPL with FreePats exception (music free) |
 | Pads / synths | `synthwave/juno_pad`, `warm_pad`, `dream_pad`, `arp_pluck`, `poly_stab`, `jupiter_strings` | GM `'Warm Pad'`, `'Polysynth'`, `'Halo Pad'`, `karoryfer-caveman-cosmonaut/Programs/main.sfz` (80s combo organ / strings) | |
 | Strings / brass | `gm/strings`, `gm/brass_section`, SSO sections (recipes/classical.md) | `sampleradar-stabs/Misc Stabs/` (horn, string, orchestra hits), `fairlight-cmi-library-1-3` (ORCH5 hit etc., license unclear) | |
-| Sax lead | `layered/hero_sax` (the hero alto, see "The hero sax"), `karoryfer-weresax/Programs/Sax.sfz` (alto, CC0) | `mtg-solo-sax/MTG Solo Saxophones/MTG Alto Sax.sfz`, `MTG Tenor Sax.sfz` (CC-BY: MTG / UPF), `freepats-tenor-sax/TenorSaxophone-20200717.sfz` (CC0), GM `'Alto Sax'` | |
+| Sax lead | `hero/sax` (the hero alto, v2 the 70s record sax; `layered/hero_sax` = the v1 clean one, see "The hero sax"), `karoryfer-weresax/Programs/Sax.sfz` (alto, CC0) | `mtg-solo-sax/MTG Solo Saxophones/MTG Alto Sax.sfz`, `MTG Tenor Sax.sfz` (CC-BY: MTG / UPF), `freepats-tenor-sax/TenorSaxophone-20200717.sfz` (CC0), GM `'Alto Sax'` | |
 | Vocal-like | `gm/choir_aahs`, GM `'Voice Oohs'`, `'Synth Voice'` | SSO `Chorus - Notation/Mixed Chorus.sfz` | |
 
 ## Mix (profile `pop`; check report.json)

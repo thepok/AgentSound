@@ -42,8 +42,9 @@ import math
 import random
 
 from . import articulation as _art
+from .budget import Budget
 from .humanize import layback_ms
-from .patterns import Clip, Note, _as_prog, _pedal_spans, _vel, as_clip, seed_int, walking_bass
+from .patterns import Clip, Note, _as_prog, _pedal_spans, _vel, as_clip, seed_int, walking_bass, weighted_choice
 from .theory import Chord, ComposeError, Key, chord_scale, note
 
 __all__ = ['MOVES', 'STYLES', 'FILL_KINDS', 'FLASH', 'PARTS', 'RANGES', 'PATCHES', 'FAST', 'Memory', 'BassLine',
@@ -291,19 +292,6 @@ def _fold(p: int, lo: int, hi: int) -> int:
     while p < lo:
         p += 12
     return p if p <= hi else p - 12
-
-
-def _pick(rng: random.Random, weights: dict, avoid=None):
-    items = [(k, w * (0.3 if k == avoid else 1.0)) for k, w in weights.items() if w > 0]
-    if not items:
-        return None
-    tot = sum(w for _, w in items)
-    x = rng.random() * tot
-    for k, w in items:
-        x -= w
-        if x <= 0:
-            return k
-    return items[-1][0]
 
 
 def _n(start, dur, pitch, vel, art=None, glide=None) -> Note:
@@ -1380,9 +1368,9 @@ def arrange(prog, *, bpm, key=None, style: str = 'rock', part: str | None = None
             pool.pop('kick')
             if not pool:
                 raise ComposeError("bassist cell 'kick' needs kick= (a drum clip or a 16th pattern)")
-        main = _pick(rng, pool)
+        main = weighted_choice(rng, pool)
         alt_pool = {nm: w for nm, w in pool.items() if nm != main}
-        alt = _pick(rng, alt_pool) if alt_pool else main
+        alt = weighted_choice(rng, alt_pool) if alt_pool else main
         chars: list[str] = []
         bar_cell: list[str] = []
         for bi in range(n_bars):
@@ -1600,7 +1588,7 @@ def arrange(prog, *, bpm, key=None, style: str = 'rock', part: str | None = None
                     not any(abs(last.t - c_) < 0.02 for c_ in changes) and last.t % bpb > 0.02:
                 # the pitch is re-chosen below (relative to the note it leads into)
                 last.tok, last.kind, last.p = 'a', 'approach', None
-                moves.append((last.t, last.t + last.d, 'approach', _pick(rng, appr_kinds)))
+                moves.append((last.t, last.t + last.d, 'approach', weighted_choice(rng, appr_kinds)))
                 last.w = moves[-1][3]
                 continue
             if rng.random() < S['insert'] * (0.5 + dens):
@@ -1611,7 +1599,7 @@ def arrange(prog, *, bpm, key=None, style: str = 'rock', part: str | None = None
                     s0 = sounding[0]
                     s0.d = tc - g - s0.t
                     new = _Ev(tc - g, g, 'a', 'approach')
-                    kind_ = _pick(rng, appr_kinds)
+                    kind_ = weighted_choice(rng, appr_kinds)
                     new.w = kind_
                     evs.append(new)
                     moves.append((new.t, tc, 'approach', kind_))
@@ -1636,7 +1624,7 @@ def arrange(prog, *, bpm, key=None, style: str = 'rock', part: str | None = None
             ev.p = _fold(mid, lo, hi)
             ev.kind = 'approach'
             continue
-        kind_ = ev.w if isinstance(ev.w, str) else _pick(rng, appr_kinds)
+        kind_ = ev.w if isinstance(ev.w, str) else weighted_choice(rng, appr_kinds)
         above = prv is not None and prv > tgt
         pcs = _scale_pcs(tch, k)
         if kind_ == 'chromatic':
@@ -1671,6 +1659,9 @@ def arrange(prog, *, bpm, key=None, style: str = 'rock', part: str | None = None
     # ------------------------------------------------------------------ 6. budgets: memory
     booked_fill = list(memory.fills) if memory is not None else []
     booked_flash = list(memory.flash) if memory is not None else []
+    bud = Budget({'fill': fe * bpb, 'flash': fle * bpb}, same=('flash',), same_every=2 * fle * bpb,
+                 zero='unlimited', events=[(t, 'fill', None) for t, _ in booked_fill]
+                 + [(t, 'flash', kk) for t, kk in booked_flash])
     dropped: list = []
 
     # ------------------------------------------------------------------ 7. fills into the next downbeat
@@ -1694,7 +1685,7 @@ def arrange(prog, *, bpm, key=None, style: str = 'rock', part: str | None = None
                 continue
             if last and rng.random() >= 0.55 + 0.4 * dens:
                 continue
-            fl = _pick(rng, S['fill_len'])
+            fl = weighted_choice(rng, S['fill_len'])
             if style == 'funk' and b > 120:
                 fl = 1.0
             cands.append((score, bi, bar_end, fl))
@@ -1704,10 +1695,10 @@ def arrange(prog, *, bpm, key=None, style: str = 'rock', part: str | None = None
             if any(a0 - _EPS <= w0 < a1 for a0, a1, _ in ped):
                 continue
             t_abs = base + w0
-            if fe > 0 and any(abs(t_abs - x) < fe * bpb - _EPS for x, _ in booked_fill):
+            if not bud.allows(t_abs, 'fill'):
                 dropped.append((round(w0, 4), 'fill'))
                 continue
-            kind_ = _pick(rng, fill_w_ok)
+            kind_ = weighted_choice(rng, fill_w_ok)
             if kind_ is None:
                 continue
             tgt_ch = chord_at(bar_end) or chord_at(w0)
@@ -1763,6 +1754,7 @@ def arrange(prog, *, bpm, key=None, style: str = 'rock', part: str | None = None
                              else m for m in moves]
             moves.append((w0, land, 'fill', kind_))
             booked_fill.append((t_abs, kind_))
+            bud.book(t_abs, 'fill')
             fwin.append((w0, land))
         evs.sort(key=lambda ev: ev.t)
 
@@ -1816,16 +1808,13 @@ def arrange(prog, *, bpm, key=None, style: str = 'rock', part: str | None = None
     kept_flash: list = []
     for score, ev, kind_ in sorted(flash_c, key=lambda x: (-x[0], x[1].t)):
         t_abs = base + ev.t
-        allb = booked_flash + [(base + x.t, kk) for x, kk in kept_flash]
-        if fle > 0 and any(abs(t_abs - x) < fle * bpb - _EPS for x, _ in allb):
-            dropped.append((round(ev.t, 4), kind_))
-            continue
-        if fle > 0 and any(kk == kind_ and abs(t_abs - x) < 2 * fle * bpb - _EPS for x, kk in allb):
+        if not bud.allows(t_abs, 'flash', kind_):
             dropped.append((round(ev.t, 4), kind_))
             continue
         if any(x is ev for x, _ in kept_flash):
             continue
         kept_flash.append((ev, kind_))
+        bud.book(t_abs, 'flash', kind_)   # reserve candidates now; Memory records only played moves below
     new_evs: list = []
     removed: set = set()
     for ev, kind_ in kept_flash:

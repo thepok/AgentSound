@@ -10,6 +10,7 @@
 // automation every kAutomationStep samples. process() is never called with
 // more than ctx.maxBlock frames.
 
+#include "core/NoteExpression.h"
 #include "core/Params.h"
 
 #include <cstdint>
@@ -55,6 +56,19 @@ public:
 
     // noteId is unique per note for the whole render. velocity is 0..1 (MIDI vel / 127).
     virtual void noteOn(int noteId, int pitch, float velocity) = 0;
+    // A note with per-note expression (the optional fifth field of a render-JSON note, already validated against
+    // noteParamSpecs()). Instruments opt in by declaring their own note specs and overriding this overload; the
+    // default plays the note without it. Instruments without note specs reject non-empty expression at parse time.
+    virtual void noteOn(int noteId, int pitch, float velocity, const NoteExpression& expression) {
+        (void)expression;
+        noteOn(noteId, pitch, velocity);
+    }
+    virtual const std::vector<ParamSpec>& noteParamSpecs() const {
+        static const std::vector<ParamSpec> none;
+        return none;
+    }
+    // Strict: throws ConfigError on unknown keys, wrong types and out-of-range values.
+    virtual NoteExpression parseExpression(const json& value) const { return parseNoteExpression(value, noteParamSpecs()); }
     virtual void noteOff(int noteId) = 0;
 
     // OVERWRITES left/right[0..frames). Must stay finite; no allocation after prepare().

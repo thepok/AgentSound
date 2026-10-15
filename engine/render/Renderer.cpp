@@ -35,6 +35,7 @@ struct NoteEvent {
     float velocity;
     bool resumed{false};  // note-on moved to a preview's first sample (the note began earlier; modulators
                           // saw its real note-on in their preroll and ignore this one)
+    const NoteExpression* expression{nullptr};  // the note's params (NodeSpec::expressions), null = none
 };
 
 // Sample-accurate note events of a track's notes (song beats -> song samples through the tempo map),
@@ -59,7 +60,8 @@ void collectNoteEvents(const NodeSpec& spec, const TempoMap& tempo, std::int64_t
         const bool resumed = on < from;
         if (resumed) on = from;
         const int id = noteId++;
-        out.push_back({on, true, id, n.pitch, velocity, resumed});
+        out.push_back({on, true, id, n.pitch, velocity, resumed,
+                       n.expression >= 0 ? &spec.expressions[static_cast<std::size_t>(n.expression)] : nullptr});
         out.push_back({off, false, id, n.pitch, 0.0f});
     }
     std::stable_sort(out.begin(), out.end(), [](const NoteEvent& a, const NoteEvent& b) {
@@ -1031,7 +1033,8 @@ RenderResult renderSong(const SongSpec& song, const RenderOptions& options) {
                         const NoteEvent& ev = node.events[node.nextEvent];
                         const std::int64_t at = ev.sample - pos;
                         if (at > done) { segEnd = static_cast<int>(std::min<std::int64_t>(at, n)); break; }
-                        if (ev.on) node.instrument->noteOn(ev.id, ev.pitch, ev.velocity);
+                        if (ev.on && ev.expression) node.instrument->noteOn(ev.id, ev.pitch, ev.velocity, *ev.expression);
+                        else if (ev.on) node.instrument->noteOn(ev.id, ev.pitch, ev.velocity);
                         else node.instrument->noteOff(ev.id);
                         ++node.nextEvent;
                     }

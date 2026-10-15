@@ -214,8 +214,9 @@ master's air shelf), 0 clicks.
 - **Synths**: 80s arena pads and brass (`synthwave/juno_pad`, `synthwave/brass_stab`), a sync / saw lead for
   synth-rock.
 - **Sax**: a tenor / baritone growl for bar-rock (`karoryfer-bear-sax`, `karoryfer-weresax`); the soft-rock / AOR
-  hero sax solo ("Baker Street", Springsteen's Clarence Clemons) on `layered/hero_sax` - compressed, gritty,
-  double-tracked, its own `bus/hero_plate`, echo throws (`articulation.throws`) and the band carved around it
+  hero sax solo ("Baker Street", Springsteen's Clarence Clemons): `hero(track, family='sax')` (v2: the late-70s
+  record sax - dynamic mic + breath trace, 4:1, tube + tape grit, autopan, a bright 3.6 s plate) played with
+  `hornist.arrange(..., style='hero70s')` (growls on held peaks), echo throws (`articulation.throws`) and the band carved around it
   (`s.carve(..., key=sax)`): recipes/pop.md "The hero sax", `songs/lamplight-avenue`.
 
 ## Arrangement density and energy

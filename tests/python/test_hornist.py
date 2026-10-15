@@ -214,6 +214,18 @@ class Arranger(unittest.TestCase):
         none = hornist.arrange(hook(8), BPM, peaks=(1, 9, 17), seed=5, climax=True, style='ballad')
         self.assertFalse([m for m in none.moves if m[3] in hornist.FAST], 'ballad: no shakes')
 
+    def test_hero70s_style_growls_only(self):
+        # the 70s record sax (the user's pick): growls on the held peaks (climax by default, one per 8 bars), no shakes
+        p = hornist.arrange(hook(8), BPM, peaks=(1, 9, 17), seed=5, style='hero70s')
+        fast = [m for m in p.moves if m[3] in hornist.FAST]
+        self.assertTrue(fast and all(m[3] == 'growl' for m in fast), fast)
+        self.assertLessEqual(len(fast), 256 / (4 * 8) + 1)
+        same = hornist.arrange(hook(8), BPM, peaks=(1, 9, 17), seed=5, style='hero70s')
+        self.assertEqual(p.moves, same.moves)                                  # deterministic
+        off = hornist.arrange(hook(8), BPM, peaks=(1, 9, 17), seed=5, style='hero70s', climax=False)
+        self.assertLessEqual(len([m for m in off.moves if m[3] in hornist.FAST]), len(fast))
+        self.assertNotIn('climax', hornist.STYLES['pop'])
+
     def test_memory_counts_song_wide(self):
         mem = hornist.Memory()
         kw = dict(peaks=(1, 9, 17), seed=1, mic_every=16, section='chorus')
@@ -260,6 +272,55 @@ class Lanes(unittest.TestCase):
             if lane in lanes:
                 self.assertEqual(lanes[lane][0][1], 0.0)
                 self.assertEqual(lanes[lane][-1][1], 0.0)
+
+    def test_sway_is_continuous_smooth_slow_and_phrase_coupled(self):
+        off = hornist.arrange(hook(2), BPM, peaks=(1, 9, 17), seed=7, vel=(80, 120), sway=0)
+        self.assertNotIn('mic:sway', off.summary(), 'sway=0 turns it off')
+        on = hornist.arrange(hook(2), BPM, peaks=(1, 9, 17), seed=7, vel=(80, 120))
+        self.assertEqual(on.summary().get('mic:sway'), 1, 'on by default in the solo styles (approved by ear)')
+        cl = hornist.arrange(hook(2), BPM, peaks=(1, 9, 17), seed=7, vel=(80, 120), style='classical')
+        self.assertNotIn('mic:sway', cl.summary(), 'off in classical')
+        p = hornist.arrange(hook(2), BPM, peaks=(1, 9, 17), seed=7, vel=(80, 120), sway=1)
+        self.assertEqual(p.summary().get('mic:sway'), 1)
+        q = hornist.arrange(hook(2), BPM, peaks=(1, 9, 17), seed=7, vel=(80, 120), sway=1)
+        self.assertEqual(p.lanes(), q.lanes(), 'deterministic')
+        lanes = p.lanes()
+        for lane in ('mic', 'prox', 'shelf', 'room', 'pan'):
+            self.assertIn(lane, lanes)
+            self.check_smooth(lanes[lane], lane, 0.1)
+        # continuous: the mic lane moves all through the clip, not only around the discrete moves
+        mic = lanes['mic']
+        self.assertLess(mic[0][0], 0.5)
+        self.assertGreater(mic[-1][0], 60)
+        self.assertGreater(sum(1 for _, v, *_ in mic if abs(v) > 0.2) / len(mic), 0.4)
+        # slow: no faster than ~1 Hz (zero crossings of the pan drift)
+        pan = [v for _, v, *_ in lanes['pan']]
+        secs = (lanes['pan'][-1][0] - lanes['pan'][0][0]) * SPB
+        cross = sum(1 for a, b in zip(pan, pan[1:]) if a * b < 0)
+        self.assertLess(cross / 2 / secs, 1.0)
+        self.assertLessEqual(max(abs(v) for v in pan), 0.06)
+        # phrase-coupled: the bell is closer on the hook peaks than at the phrase ends
+        g = next(x for x in p.gestures if x.name == 'sway')
+        self.assertGreater(g.value('mic', 2.0), g.value('mic', 31.0))
+        # stronger = deeper; the depth key is checked
+        d1 = max(abs(v) for _, v, *_ in hornist.arrange(hook(2), BPM, seed=7, sway=1).lanes()['shelf'])
+        d2 = max(abs(v) for _, v, *_ in hornist.arrange(hook(2), BPM, seed=7, sway=2).lanes()['shelf'])
+        self.assertGreater(d2, 1.6 * d1)
+        with self.assertRaises(ComposeError):
+            hornist.arrange(hook(), BPM, sway=-1)
+
+    def test_sway_writes_the_pan_around_the_track_pan_unless_automated(self):
+        s, t = track(inst.va(), [fx.compressor(threshold=-30, ratio=3)], sends={'hall': -12})
+        t.pan = 0.2
+        hornist.arrange(hook(), BPM, seed=3, sway=1).place(t, 0)
+        pan = dict(t._auto)['pan']
+        self.assertTrue(all(0.13 < v < 0.27 for _, v, *_ in pan))
+        self.assertIn('send.hall', dict(t._auto))
+        s.compile()
+        s2, t2 = track(inst.va(), sends={'hall': -12})
+        t2.automate('pan', [(0, -0.5), (8, 0.5)])
+        hornist.arrange(hook(), BPM, seed=3, sway=1).place(t2, 0)
+        self.assertEqual(sum(1 for x, _ in t2._auto if x == 'pan'), 1, "someone else's pan lane is left alone")
 
     def test_steps_only_into_silence_or_at_a_scoop(self):
         p = hornist.arrange(hook(2), BPM, peaks=(1, 9, 17), seed=3)
@@ -362,8 +423,10 @@ class Targets(unittest.TestCase):
             s, t = track(name)
             plan = hornist.targets(t)
             self.assertEqual(plan['level'], level, name)
-        s, t = track('hero/sax')
+        s, t = track('hero/sax_clean')
         self.assertEqual(len(hornist.targets(t)['vibrato']), 4, 'every sampler layer of the stack')
+        s, t = track('hero/sax')            # the 70s hero: one take
+        self.assertEqual(len(hornist.targets(t)['vibrato']), 1)
         names = [f.name for f in t.fx]
         self.assertEqual(names[-1], 'air', "the hero's own air stage stays last")
         self.assertEqual(t.fx[names.index('mic') + 1].type, 'compressor', 'the mic stage in front of the compressor')

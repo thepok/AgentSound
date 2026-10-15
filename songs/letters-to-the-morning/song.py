@@ -286,7 +286,7 @@ def left_hand(rng) -> tuple[Clip, list]:
 def tempo_plan(s: Song) -> None:
     """Phrase rubato (the singer's breath: on through the phrase, broader into its end), ritardandi into the
     cadences and the breaths, the climax held on a fermata, a slow ending."""
-    SCORE.rubato(s, depth=0.05, shapes=('breath', 'breath', 'lean'), seed='bar')
+    SCORE.rubato(s, depth=0.05, seed='bar')
     for k in (8, 16, 36, 60):                      # the rests at the theme's half-way points: a small breath
         s.ritardando((bar(k) + 1.0, bar(k) + 4.0), to=0.9)
     for k in (12, 20, 28, 40, 64):                 # cadences
@@ -299,7 +299,7 @@ def tempo_plan(s: Song) -> None:
     s.set_tempo(bar(65), 66)
     s.ritardando((bar(67), bar(69)), to=0.75, a_tempo=False)
     s.fermata(bar(69) + 1.0, hold=3)
-    s.lilt((bar(1), bar(69)), beats={3: 0.03}, jitter=0.03, seed=41)
+    SCORE.lilt(s, (bar(1), bar(69)), beats={3: 0.03}, jitter=0.03, seed=41)
 
 
 # ------------------------------------------------------------------------------------------------ build

@@ -5,6 +5,7 @@ Compile only (no engine needed); the renders and reference comparisons are in th
 
 import contextlib
 import importlib.util
+import os
 import sys
 import tempfile
 import unittest
@@ -85,7 +86,7 @@ class TestSynthwaveBands(unittest.TestCase):
                     self.assertTrue(set(t.get('sends') or {}) <= buses, (n, t['id']))
 
     def test_fallbacks_without_sample_packs(self):
-        with tempfile.TemporaryDirectory() as empty, mock.patch.object(library, 'SAMPLES', Path(empty)):
+        with tempfile.TemporaryDirectory() as empty, mock.patch.object(library, 'SAMPLES', Path(empty)),                 mock.patch.dict(os.environ, {library.FALLBACK_ENV: '1'}):      # the fallbacks opted in
             for n in PRESETS:
                 with self.subTest(preset=n):
                     s, a = _song()
@@ -196,7 +197,7 @@ class TestSynthwaveBands(unittest.TestCase):
         for packs in (True, False):
             with tempfile.TemporaryDirectory() as empty:
                 ctx = mock.patch.object(library, 'SAMPLES', Path(empty)) if not packs else contextlib.nullcontext()
-                with ctx:
+                with ctx, mock.patch.dict(os.environ, {library.FALLBACK_ENV: '1'} if not packs else {}):
                     for n in PRESETS:
                         with self.subTest(preset=n, packs=packs):
                             s, a = _song()

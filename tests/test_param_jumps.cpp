@@ -255,7 +255,10 @@ std::string convolverIr() {
 // The VA's modulation matrix for the tests: every source type (voice and global LFOs, free and tempo-synced,
 // envelopes, velocity, random, a macro) on every kind of target, including the global hpf. Each routing's
 // amount is an automatable 'mod.<id>.amount' parameter, so it is jump- and step-tested like any other.
-json vaMods() {
+// The wavetable synth (the va's voice engine) gets the same matrix with the pulse-width route on the table position.
+bool isVa(const std::string& type) { return type == "va" || type == "wavetable"; }
+
+json vaMods(bool wavetable = false) {
     auto lfo = [](const char* shape, double hz, json extra = json::object()) {
         json s = {{"type", "lfo"}, {"shape", shape}, {"rateHz", hz}};
         for (auto it = extra.begin(); it != extra.end(); ++it) s[it.key()] = it.value();
@@ -268,7 +271,7 @@ json vaMods() {
     return json::array({
         route("vib", lfo("sine", 5.5, {{"delay", 0.05}, {"fade", 0.1}}), "pitch", 15),
         route("wah", lfo("triangle", 3, {{"mode", "global"}}), "cutoff", 0.5),
-        route("pwm", lfo("triangle", 0.7), "osc1.pw", 0.1),
+        wavetable ? route("pos", lfo("triangle", 0.7), "osc1.position", 0.1) : route("pwm", lfo("triangle", 0.7), "osc1.pw", 0.1),
         route("trem", lfo("sine", 0.5, {{"mode", "global"}}), "amp", -3),
         route("apan", lfo("sine", 0.5, {{"mode", "global"}}), "pan", 0.3),
         route("wob", json{{"type", "lfo"}, {"shape", "sine"}, {"rateBeats", 4}, {"mode", "global"}}, "cutoff", 0.3),
@@ -282,8 +285,8 @@ json vaMods() {
 }
 
 // The target of the routing behind 'mod.<id>.amount' ("" for other params).
-std::string vaModTarget(const std::string& param) {
-    for (const auto& m : vaMods())
+std::string vaModTarget(const std::string& param, bool wavetable = false) {
+    for (const auto& m : vaMods(wavetable))
         if (param == "mod." + m["id"].get<std::string>() + ".amount") return m["target"].get<std::string>();
     return "";
 }
@@ -311,6 +314,10 @@ json baseConfig(const std::string& type) {
                        // leaves almost nothing near 9 kHz), so even small clicks would stand out
         return {{"osc2.level", 0.6}, {"osc2.fine", 7}, {"sub.level", 0.3}, {"unison", 3}, {"cutoff", 900},
                 {"filter.env", 1}, {"glide", 0.02}, {"macro1", 0.5}, {"mods", vaMods()}};
+    if (type == "wavetable")  // the same patch on morphing tables, both at the saw frame of "basic" (position 2/3)
+        return {{"osc1.position", 0.67}, {"osc2.level", 0.6}, {"osc2.position", 0.67}, {"osc2.fine", 7}, {"sub.level", 0.3},
+                {"sub.wave", "square"}, {"unison", 3}, {"cutoff", 900}, {"filter.env", 1}, {"glide", 0.02}, {"macro1", 0.5},
+                {"mods", vaMods(true)}};
     if (type == "dx7") return {{"detune", 7}, {"modwheel", 0.2}};
     if (type == "sampler") return {{"cutoff", 3000}, {"samples", {{"file", "soundfonts/GeneralUser-GS.sf2"}, {"sample", "StrLoop - C3"}, {"loop", "forward"}, {"pan", 0.5}}}};
     if (type == "stack")  // a dx7 layer with a chorus insert + the sampler strings an octave up (every kind of stack param)
@@ -336,6 +343,16 @@ json paramContext(const std::string& type, const std::string& p) {
         if (p == "fm") return {{"osc1.wave", "sine"}, {"osc2.wave", "sine"}, {"osc2.semi", 12}};
         if (p.rfind("macro", 0) == 0 && p != "macro1") {  // (macro1 already drives resonance and hpf)
             json mods = vaMods();
+            mods.push_back({{"source", {{"type", "macro"}, {"index", std::stoi(p.substr(5))}}}, {"target", "cutoff"},
+                            {"amount", 2}});
+            return {{"mods", mods}};
+        }
+    } else if (type == "wavetable") {
+        if (p == "osc1.warp.amount") return {{"osc1.warp", "bend"}};
+        if (p == "osc2.warp.amount") return {{"osc2.warp", "bend"}};
+        if (p == "noise.stereo") return {{"noise.level", 0.3}};
+        if (p.rfind("macro", 0) == 0 && p != "macro1") {
+            json mods = vaMods(true);
             mods.push_back({{"source", {{"type", "macro"}, {"index", std::stoi(p.substr(5))}}}, {"target", "cutoff"},
                             {"amount", 2}});
             return {{"mods", mods}};
@@ -695,14 +712,15 @@ Response pitchResponse(const Stereo& S, long at) {
 
 // Pitch parameters measured with the pitch tracker: config for a single clean note.
 bool pitchSetup(const std::string& type, const std::string& p, json& config, int& note) {
-    const std::string modTarget = type == "va" ? vaModTarget(p) : "";
-    if (type == "va" && (p == "osc1.semi" || p == "osc1.fine" || p == "osc2.semi" || p == "osc2.fine" ||
+    const bool wt = type == "wavetable";
+    const std::string modTarget = isVa(type) ? vaModTarget(p, wt) : "";
+    if (isVa(type) && (p == "osc1.semi" || p == "osc1.fine" || p == "osc2.semi" || p == "osc2.fine" ||
                          p == "pitchbend" || modTarget == "pitch" || modTarget == "osc1.pitch" || modTarget == "osc2.pitch")) {
         const bool o2 = p.rfind("osc2", 0) == 0 || modTarget == "osc2.pitch";
-        config = {{"osc1.wave", "sine"}, {"osc2.wave", "sine"}, {"osc1.level", o2 ? 0 : 1}, {"osc2.level", o2 ? 1 : 0},
+        config = {{wt ? "osc1.table" : "osc1.wave", "sine"}, {wt ? "osc2.table" : "osc2.wave", "sine"}, {"osc1.level", o2 ? 0 : 1}, {"osc2.level", o2 ? 1 : 0},
                   {"drift.pitch", 0}, {"drift.cutoff", 0}, {"cutoff", 20000}, {"filter.env", 0}, {"filter.keytrack", 0},
                   {"resonance", 0}, {"filter.drive", 0}, {"amp.attack", 0.001}, {"macro1", 0.5}};
-        if (!modTarget.empty()) config["mods"] = vaParked(vaMods());  // (the amount params exist with the matrix)
+        if (!modTarget.empty()) config["mods"] = vaParked(vaMods(wt));  // (the amount params exist with the matrix)
         note = 93;  // A6: short periods, fine time resolution
         return true;
     }
@@ -763,6 +781,8 @@ const std::map<std::string, std::string>& slowAllowed() {
         {"va.fenv.decay", kEnvTime},
         {"va.fenv.release", kEnvTime},
         {"va.glide", "portamento time constant"},
+        {"wavetable.hpf", "the va's global high-pass (shared code, rise 2.5 ms): lowering it, the filter state first swings "
+                          "the other way on this chord, so the 10 % point lands ~5.5 ms late (va: 3 ms); no click"},
         {"dx7.modwheel", "depth of the patch LFO (vibrato, phase-dependent)"},
         {"dx7.velsens", kNextNote},
         {"dx7.attack", kNextNote},
@@ -780,6 +800,8 @@ const std::map<std::string, std::string>& slowAllowed() {
                              "15 ms when it starts cold"},
         {"sampler.harmonicnum", "which partial 'harmonic' isolates: no effect while harmonic is 0 (the default)"},
         {"sampler.harmonicfocus", "Q of the partial's band-passes: no effect while harmonic is 0 (the default)"},
+        {"sampler.flutterpitch", "depth of a random pitch modulation (phase-dependent; smoothed ~5 ms)"},
+        {"sampler.flutterrate", "band of the random flutter modulator: no effect while flutter / flutterpitch are 0 (the default)"},
         {"sf2.pedal", kPedal},
         {"drums.velocity", kNextHit},
         {"drums.humanize", kNextHit},
@@ -843,6 +865,8 @@ const std::map<std::string, std::string>& slowAllowed() {
         {"gatedreverb.tone", kTail},
         {"tremolo.rate", kLfoRate},
         {"tremolo.sync", kLfoPhase},
+        {"tremolo.ratemod", "depth of a slow rate modulation: shifts the LFO phase (phase-dependent)"},
+        {"tremolo.modrate", "speed of the slow rate / depth modulator: no effect while ratemod / depthmod are 0 (the default)"},
         {"ensemble.rate", kLfoRate},
         {"ensemble.shimmerrate", kLfoRate},
         {"ensemble.depth", kDelayTime},
@@ -891,7 +915,8 @@ const char* allowedReason(const std::string& type, const std::string& p) {
         }
     }
     const auto& m = slowAllowed();
-    const auto it = m.find(type + "." + p);
+    auto it = m.find(type + "." + p);
+    if (it == m.end() && type == "wavetable") it = m.find("va." + p);  // (the va's voice engine)
     if (it != m.end()) return it->second.c_str();
     if (type == "drums" && p.find('.') != std::string::npos) {  // per-piece sound parameters
         const std::string field = p.substr(p.find('.') + 1);
@@ -935,7 +960,7 @@ Response stepTest(bool instrument, const std::string& type, const json& config, 
     const std::vector<Note> notes = !instrument ? std::vector<Note>{}
                                     : type == "drums" ? drumNotes(p.name, len) : synthNotes(len, false);
     json c = config;
-    if (type == "va") {  // matrix LFOs parked and envelopes held (vaParked): the routing amounts act as static
+    if (isVa(type)) {  // matrix LFOs parked and envelopes held (vaParked): the routing amounts act as static
         c["mods"] = vaParked(c["mods"]);  // offsets; short decays: the chord sits on its sustain levels
         c["amp.decay"] = c["fenv.decay"] = 0.05;
     }
@@ -957,7 +982,7 @@ void testModule(bool instrument, const std::string& type, const std::string& onl
     if (instrument) {
         probeI = createInstrument(type);
         // (the va's matrix adds the 'mod.<id>.amount' params; a stack's params are its layers')
-        if (type == "va" || type == "stack") probeI->configure(baseConfig(type));
+        if (isVa(type) || type == "stack") probeI->configure(baseConfig(type));
     } else {
         probeF = makeEffect(type);
     }
@@ -1089,6 +1114,9 @@ void testTempoGrid() {
         {false, "ducker", {{"mode", "tempo"}, {"rate", 0.75}, {"offset", 0.25}, {"release", 400}, {"depth", 12}}, 0.0, true},
         {false, "tremolo", {{"sync", true}, {"beats", 1.25}, {"shape", "square"}, {"depth", 1}, {"stereo", 90}}, 0.0, true},
         {false, "tremolo", {{"rate", 3.7}, {"depth", 0.8}}, 0.0, false},
+        // the slow rate / depth modulator runs from the song start (the rate swing's phase integral in closed form)
+        {false, "tremolo", {{"rate", 9.0}, {"depth", 0.5}, {"stereo", 180}, {"ratemod", 3}, {"depthmod", 0.2}, {"modrate", 0.7}}, 0.0, false},
+        {false, "tremolo", {{"rate", 9.0}, {"depth", 0.5}, {"ratemod", 3}, {"depthmod", 0.2}, {"modrate", 0.7}, {"modshape", "random"}}, 0.0, false},
         {false, "phaser", {{"sync", true}, {"beats", 3}, {"depth", 1}, {"feedback", 0.5}}, 0.3, true},
         {false, "phaser", {{"rate", 0.37}, {"depth", 1}}, 0.3, false},
         {false, "chorus", {{"mode", "II"}}, 0.1, false},

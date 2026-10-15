@@ -20,7 +20,7 @@ from __future__ import annotations
 import copy
 
 from .. import bands, library
-from ..bands import Band, master_chain  # noqa: F401 - master_chain: pop / jazz import it from here
+from ..bands import Band, Builder, master_chain  # noqa: F401 - master_chain: pop / jazz import it from here
 from ..patches import FX, Instrument, fx, inst
 from ..patches import fx as _fx
 from .. import patches as _patches
@@ -33,8 +33,9 @@ from ..theory import ComposeError
 
 
 def installed(pack: str) -> bool:
-    """True when sample pack `pack` is installed (its SOURCE.json exists)."""
-    return (library.SAMPLES / pack / 'SOURCE.json').is_file()
+    """True when sample pack `pack` is installed (its SOURCE.json exists). A miss inside a preset is recorded
+    (library.want): the song's compile raises unless $AGENTSOUND_PACK_FALLBACK=1."""
+    return library.want(pack)
 
 
 def require(preset: str, role: str, *packs: str) -> None:
@@ -217,46 +218,6 @@ def layer(*instruments: Instrument, gains=None, pans=None) -> Instrument:
             out.params['samples'].extend(zones)
     return out
 
-
-class Builder:
-    """Shared plumbing of the presets: roles, overrides (sounds / ids / without), buses reused when the song has
-    them already."""
-
-    def __init__(self, song, preset: str, *, without=(), sounds=None, ids=None, analysis=None, notes=''):
-        self.s = song
-        self.preset = preset
-        self.without = set(without or ())
-        self.sounds = dict(sounds or {})
-        self.ids = dict(ids or {})
-        self.band = Band(song, preset, notes=notes, analysis=analysis)
-
-    def want(self, role: str) -> bool:
-        return role not in self.without
-
-    def track(self, role: str, default, *, fx=(), trim=0.0, pan=None, output='master', sends=None,
-              humanize=None, groove=None):
-        """Add the role's track (None when it is left out). `default` is a callable returning the sound: it runs
-        only when no override is given, so a missing pack of a replaced role does not matter. `trim` (dB) is the
-        preset's balance: a last 'utility' effect named 'trim' (fx.trim.gain), so the track fader (gain_db,
-        'gainDb' automation) stays 0 dB for the song."""
-        if not self.want(role):
-            return None
-        snd = self.sounds[role] if role in self.sounds else default()
-        chain = list(fx) + [_fx.utility(gain=round(trim, 2), name='trim')]
-        t = self.s.track(self.ids.get(role, role), snd, fx=chain, pan=pan, output=output,
-                         sends={k: v for k, v in (sends or {}).items() if k is not None} or None)
-        if humanize:
-            t.humanize(*humanize[:2], seed=humanize[2] if len(humanize) > 2 else None)
-        if groove:
-            t.groove(groove)
-        return self.band.add(role, t)
-
-    def bus(self, name: str, chain, **kw):
-        """A return / group bus: the song's own when it has one of that id already."""
-        b = self.s.buses.get(name)
-        if b is None:
-            b = self.s.bus(name, chain, **kw)
-        return self.band.bus(name, b)
 
 
 def lib_patch(name: str, **params):
@@ -469,7 +430,7 @@ def rock_band(song, *, without=(), sounds=None, ids=None, keys: str = 'organ', g
         raise ComposeError(f"rock_band: keys must be 'organ' or 'piano', got {keys!r}")
     if gain not in ('crunch', 'high'):
         raise ComposeError(f"rock_band: gain must be 'crunch' or 'high', got {gain!r}")
-    b = Builder(song, 'rock_band', without=without, sounds=sounds, ids=ids, analysis={'profile': 'rock'},
+    b = Builder(song, 'rock_band', bus_policy='reuse', trim_mode='insert', without=without, sounds=sounds, ids=ids, analysis={'profile': 'rock'},
                 notes=ROCK_NOTES)
     s = song
     vox = installed('voxengo-im-reverbs')
@@ -601,7 +562,7 @@ def indie_band(song, *, without=(), sounds=None, ids=None, keys: str = 'wurli', 
     dry garage kit: a 20" kick with snare wires, thin below 60 Hz - pair it with a fuller bass) | 'red_zeppelin'."""
     if keys not in ('wurli', 'organ'):
         raise ComposeError(f"indie_band: keys must be 'wurli' or 'organ', got {keys!r}")
-    b = Builder(song, 'indie_band', without=without, sounds=sounds, ids=ids, analysis={'profile': 'rock'},
+    b = Builder(song, 'indie_band', bus_policy='reuse', trim_mode='insert', without=without, sounds=sounds, ids=ids, analysis={'profile': 'rock'},
                 notes=INDIE_NOTES)
     s = song
     room = b.bus('room', _patches.get('bus/ir_room').fx if installed('little-devil-224xl-04-room')
@@ -708,7 +669,7 @@ drums -22 (-20 while playing), bass -23.5, lead -22. Master -10 LUFS."""
 def power_ballad(song, *, without=(), sounds=None, ids=None, kit: str = 'big_rusty') -> Band:
     """80s power ballad: grand piano, string section, Juno pad, a big-room kit with a huge plate, fingered bass and
     a singing lead guitar (DI -> Marshall 4x12, long echo, hall)."""
-    b = Builder(song, 'power_ballad', without=without, sounds=sounds, ids=ids, analysis={'profile': 'rock'},
+    b = Builder(song, 'power_ballad', bus_policy='reuse', trim_mode='insert', without=without, sounds=sounds, ids=ids, analysis={'profile': 'rock'},
                 notes=BALLAD_NOTES)
     s = song
     room = b.bus('room', _patches.get('bus/ir_room_big').fx if installed('little-devil-224xl-04-room')

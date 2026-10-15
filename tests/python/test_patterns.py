@@ -1,12 +1,35 @@
 import pathlib
+import random
 import sys
 import unittest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2]))
 
 from agentsound.patterns import (Clip, Motif, Note, arp, bassline, beats, chords, crash, drums, euclid, grid,
-                                 melody, snare_roll, tom_fill)
+                                 melody, snare_roll, tom_fill, weighted_choice)
 from agentsound.theory import ComposeError, Key, Progression
+
+
+class WeightedChoice(unittest.TestCase):
+    def test_seeded_choices_and_draw_count(self):
+        for multiplier, expected in ((0.3, 'abcbcabcbabb'), (0.15, 'abcbcabcbcbb')):
+            rng, control = random.Random(7), random.Random(7)
+            weights = {'b': 1, 'a': 3, 'c': 2, 'zero': 0, 'negative': -10}
+            choices = [weighted_choice(rng, weights, multipliers={'a': multiplier}) for _ in expected]
+            self.assertEqual(''.join(choices), expected)
+            for _ in expected:
+                control.random()
+            self.assertEqual(rng.getstate(), control.getstate())
+
+    def test_empty_tables_and_inclusive_boundary(self):
+        from unittest.mock import Mock
+        rng = Mock()
+        for weights in ({}, {'a': 0, 'b': -1}):
+            self.assertIsNone(weighted_choice(rng, weights))
+        rng.random.assert_not_called()
+        for draw, expected in ((0, 'b'), (0.25, 'b'), (1, 'a')):
+            rng.random.return_value = draw
+            self.assertEqual(weighted_choice(rng, {'b': 1, 'a': 3}), expected)
 
 
 class Durations(unittest.TestCase):

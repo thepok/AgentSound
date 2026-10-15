@@ -36,6 +36,7 @@ from .theory import ComposeError
 from .theory import note as _note_number
 
 __all__ = ['ARTICULATION_WORDS', 'SHAPES', 'articulate', 'articulation_of', 'glide', 'glide_of', 'note', 'plain',
+           'note_params', 'params_of',
            'leaps', 'detached', 'legato', 'bow_changes', 'humanize_starts', 'available', 'live_dynamics',
            'auto_articulate', 'expression_points', 'expression', 'vibrato_points', 'vibrato', 'vibrato_prefixes',
            'perform', 'throws']
@@ -58,22 +59,24 @@ _CLASSES: dict[tuple, type] = {}
 _KEEP = object()
 
 
-def _cls(art, gl) -> type:
-    key = (art, gl)
+def _cls(art, gl, params=None) -> type:
+    key = (art, gl, params)
     c = _CLASSES.get(key)
     if c is None:
-        label = '|'.join(x for x in (str(art) if art is not None else '', f"glide {gl:g} ms" if gl else '') if x)
-        c = type(f"Note[{label}]", (Note,), {'__slots__': (), 'art': art, 'glide': gl})
+        label = '|'.join(x for x in (str(art) if art is not None else '', f"glide {gl:g} ms" if gl else '',
+                                     ','.join(f"{k}={v:g}" for k, v in params) if params else '') if x)
+        c = type(f"Note[{label}]", (Note,), {'__slots__': (), 'art': art, 'glide': gl, 'nparams': params})
         _CLASSES[key] = c
     return c
 
 
-def _mark(n, art=_KEEP, gl=_KEEP) -> Note:
+def _mark(n, art=_KEEP, gl=_KEEP, params=_KEEP) -> Note:
     a = getattr(n, 'art', None) if art is _KEEP else art
     g = getattr(n, 'glide', None) if gl is _KEEP else gl
-    if a is None and not g:
+    q = getattr(n, 'nparams', None) if params is _KEEP else params
+    if a is None and not g and not q:
         return Note(*tuple(n))
-    return _cls(a, g)(*tuple(n))
+    return _cls(a, g, q or None)(*tuple(n))
 
 
 def articulation_of(n) -> str | int | None:
@@ -84,6 +87,23 @@ def articulation_of(n) -> str | int | None:
 def glide_of(n) -> float | None:
     """The portamento mark of a note in ms (None: no glide into it)."""
     return getattr(n, 'glide', None)
+
+
+def params_of(n) -> dict | None:
+    """The per-note params mark of a note ({name: number}, the render JSON's fifth note field), None: none."""
+    q = getattr(n, 'nparams', None)
+    return {k: int(v) if v.is_integer() else v for k, v in q} if q else None
+
+
+def _params_key(params) -> tuple | None:
+    if params is None:
+        return None
+    if not isinstance(params, dict) or not all(isinstance(k, str) and k for k in params):
+        raise ComposeError(f"note params must be a dict {{name: number}}, got {params!r}")
+    for k, v in params.items():
+        if isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v):
+            raise ComposeError(f"note param {k!r} must be a finite number, got {v!r}")
+    return tuple(sorted((k, float(v)) for k, v in params.items())) or None
 
 
 def _art_name(name) -> str | int:
@@ -166,8 +186,21 @@ def glide(clip, ms: float = 120.0, *, where=None, span=None, pitches=None) -> Cl
     return Clip._raw([_mark(n, gl=g) if ok(n) else n for n in c], c.length)
 
 
+def note_params(clip, params: dict | None, *, where=None, span=None, pitches=None) -> Clip:
+    """Mark notes with per-note params for the instrument ({name: number}: the render JSON's optional fifth note
+    field, docs/RENDER_FORMAT.md "Notes"; e.g. a guitar's {'string': 2}). The instrument declares which names it takes
+    (strict: the engine rejects unknown names, and instruments without note params reject any). Chosen as in
+    articulate(); None / {} removes the mark. Like the articulation and glide marks it survives the transforms built
+    on _replace (shift, transpose, velocity, humanize, groove ...); building fresh notes drops it. No notation
+    syntax: format() refuses a clip with params."""
+    c = as_clip(clip)
+    q = _params_key(params) if params else None
+    ok = _selector(c, where, span, pitches)
+    return Clip._raw([_mark(n, params=q) if ok(n) else n for n in c], c.length)
+
+
 def plain(clip) -> Clip:
-    """The clip without articulation / glide marks."""
+    """The clip without articulation / glide / params marks."""
     c = as_clip(clip)
     return Clip._raw([Note(*tuple(n)) for n in c], c.length)
 
@@ -469,11 +502,12 @@ def expression(track, clip, at=0.0, shapes='auto', *, target: str | None = None,
 
 
 def vibrato_points(clip, bpm: float, *, depth: float = 18.0, rate: float = 5.2, delay: float = 0.35, grow: float = 0.6,
-                   min_dur=0.75, rise: float = 0.5, spread: float = 0.2, seed=0, at=0.0) -> dict:
+                   min_dur=0.75, rise: float = 0.5, spread: float = 0.2, seed=0, at=0.0, depth_of=None) -> dict:
     """Delayed vibrato per long note: {'instrument.vibrato': depth points (cents), 'instrument.vibratorate': rate
     points (Hz)}. Notes of at least `min_dur` beats: a straight tone for `delay` s, then the depth grows to `depth`
     cents (+- spread, seeded) over `grow` s and dies at the note end (or where the next note takes over); the rate
-    starts at `rate` Hz and speeds up by up to `rise` Hz over the note (the vibrato intensifies). Other notes: none."""
+    starts at `rate` Hz and speeds up by up to `rise` Hz over the note (the vibrato intensifies). Other notes: none.
+    depth_of: a function Note -> cents instead of `depth` per note (orch.perform: wider when louder)."""
     c = as_clip(clip)
     bps = _num(bpm, 'vibrato bpm', 20, 400) / 60.0
     a0 = _pos(at)
@@ -494,7 +528,7 @@ def vibrato_points(clip, bpm: float, *, depth: float = 18.0, rate: float = 5.2, 
         off = e - 0.06 * bps
         if off <= d0 + _EPS:
             continue
-        dep = depth * (1.0 + spread * (2.0 * rng.random() - 1.0))
+        dep = (depth if depth_of is None else float(depth_of(n))) * (1.0 + spread * (2.0 * rng.random() - 1.0))
         top = dep if off >= d1 else dep * (off - d0) / (d1 - d0)
         dpts += [(s, 0.0, 'step'), (d0, 0.0), (min(d1, off), round(top, 3), 'smooth'), (off, round(top, 3)),
                  (e, 0.0, 'smooth')]

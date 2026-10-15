@@ -2,6 +2,8 @@
 
     python tests/run.py               # all modules, os.cpu_count() workers
     python tests/run.py -j 4 singer   # 4 workers, only modules whose name contains 'singer'
+    python tests/run.py endless soloist   # while working: only the modules of what you touched
+    python tests/run.py --full        # before a merge / public sync: test_notation compiles EVERY song (~30 min)
 
 Modules that drive the voicebank (WSL + GPU) run one after another in their own lane so they never fight for the GPU;
 everything else runs in parallel. The slowest modules start first (timings of the last run in tests/.timings.json,
@@ -41,8 +43,11 @@ def run_module(path):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('-j', type=int, default=os.cpu_count() or 4, help='parallel workers (default: all cores)')
+    ap.add_argument('--full', action='store_true', help='slow guards over every song (AGENTSOUND_FULL_TESTS=1)')
     ap.add_argument('filter', nargs='*', help='only modules whose name contains one of these words')
     a = ap.parse_args()
+    if a.full:
+        os.environ['AGENTSOUND_FULL_TESTS'] = '1'
     mods = sorted(TESTS.glob('test_*.py'))
     if a.filter:
         mods = [m for m in mods if any(f in m.stem for f in a.filter)]

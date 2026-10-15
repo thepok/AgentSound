@@ -44,7 +44,9 @@ touch the mix.
   No phrase longer than the singer's breath (about 6-8 s at a moderate tempo).
 - **Repetition with variation.** Verses change the story, the chorus repeats; the last chorus may change one word.
 - **Language: English** (the voicebanks sing English best; other languages only when the brief asks and the voice
-  supports them).
+  supports them). **German** with `hanami`: give every word's phonemes in a `LEX` dict and write the line with
+  `lyrics.spell(text, LEX)` (docs/COMPOSE_API.md "German"); sing it low and calm, short words on short notes, and
+  judge the intelligibility by ear (example: `songs/die-faehre-um-sieben`).
 
 ## The syntax (agentsound.lyrics, one token per note)
 

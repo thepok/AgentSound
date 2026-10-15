@@ -38,7 +38,7 @@ __all__ = ['Move', 'Vocabulary', 'Ctx', 'Part', 'Performance', 'Budget', 'ARCS',
            'DEVELOPMENTS', 'phrase_spans', 'key_of', 'chord_tones', 'pentatonic', 'scale', 'snap', 'step', 'fold', 'fit',
            'center', 'seconds', 'grid', 'vel', 'merge', 'trick', 'motif_in_register', 'answer_line', 'target_line',
            'run_line', 'transform', 'motif_cell', 'motif_line', 'MOTIVIC', 'CELL_MOVES', 'RUNS',
-           'BREATH', 'CONTRAST', 'PHRASES']
+           'BREATH', 'CONTRAST', 'PHRASES', 'LICKS', 'fresh', 'lick_ledger']
 
 _EPS = 1e-6
 
@@ -570,8 +570,14 @@ def _choose(cands: list, E: float, D: float, rng, recent: list, played=None) -> 
     return sorted(cands, key=score, reverse=True)
 
 
+OPENINGS = ('motif', 'fragment', 'line')
+"""How a melodic solo's first statement opens (solo(opening=)): 'motif' the motif (literal while literal quotes
+remain), 'fragment' a developed fragment of it (displaced, re-fitted), 'line' a line of its own (an answer move: the
+motif comes later). Blind round 7: every solo opened by quoting the head."""
+
+
 def solo(song, track, vocab: Vocabulary, at=None, arc: str = 'classic', motif=None, budget=None, seed=None, *,
-         prog=None, key=None, energy=None, place: bool = True) -> Performance:
+         prog=None, key=None, energy=None, place: bool = True, quotes: int = 2, opening: str = 'motif') -> Performance:
     """A solo on `track` over `at` (a Section, a list of Sections - one arc across them in order -, or (start beat,
     bars)) played from `vocab`'s moves along `arc` (ARCS: classic, build, ballad, trade, short, jazz). PHRASING: a
     melodic vocabulary (vocab.lines) breathes - heavy-tailed phrases (PHRASES: a 1-bar fragment to an 8-bar line, one
@@ -589,11 +595,17 @@ def solo(song, track, vocab: Vocabulary, at=None, arc: str = 'classic', motif=No
     (_lines): no octave wrap (a leap of a 9th+) inside a fast line, no bar repeated verbatim within 8 bars, the
     dynamics inside every run shaped by its contour (a ramp to its high point, low neighbours ghosted). prog= the
     chords (a Progression from the solo's start; ctx.chord(t)), key= (default song.key), energy= scales the arc (0.5..1.5),
-    place=False plans without writing. Returns a Performance; place=True writes it via vocab.place (or the notes and
+    quotes= the literal motif quotes a melodic solo may play (0..2; the rest transformed - blind round 7: the head
+    quoted verbatim in the solo), opening= how its first statement opens (OPENINGS), place=False plans without
+    writing. Returns a Performance; place=True writes it via vocab.place (or the notes and
     the gesture lanes) and adds its warnings to the song's advice. Deterministic by seed."""
     from .humanize import touch as _touch
     if not isinstance(vocab, Vocabulary):
         raise ComposeError(f"solo needs a soloist.Vocabulary, got {vocab!r}")
+    if opening not in OPENINGS:
+        raise ComposeError(f"solo opening must be one of {', '.join(OPENINGS)}, got {opening!r}")
+    if isinstance(quotes, bool) or not isinstance(quotes, int) or not 0 <= quotes <= 2:
+        raise ComposeError(f"solo quotes (literal motif quotes) must be 0..2, got {quotes!r}")
     spans = _spans(song, at)
     arc = _arc(arc)
     pb = vocab.phrase_bars
@@ -704,7 +716,7 @@ def solo(song, track, vocab: Vocabulary, at=None, arc: str = 'classic', motif=No
         stages = _stages(arc, len(phrases))
     varier = vocab.vary or vary
     stage_runs: list = []
-    quotes = 0                                           # literal quotes of the motif so far (lines: at most 2)
+    n_quotes = 0                                         # literal quotes of the motif so far (lines: `quotes`)
     prng = random.Random(f"{sd}:plans")
     # a melodic solo DEVELOPS a cell of the motif (blind round 5: the hook quoted again and again, a chord arpeggio per
     # bar): a stage starts from the motif's fragment, every call / line of the stage develops the cell before it
@@ -741,9 +753,9 @@ def solo(song, track, vocab: Vocabulary, at=None, arc: str = 'classic', motif=No
 
         def quote(m_, c_):
             """The motif (or its fragment) as given while quotes remain, else transformed (lines only)."""
-            nonlocal quotes
-            if not vocab.lines or quotes < 2:
-                quotes += 1
+            nonlocal n_quotes
+            if not vocab.lines or n_quotes < quotes:
+                n_quotes += 1
                 return m_
             return transform(m_, c_)
         if plan == 'state':
@@ -752,15 +764,21 @@ def solo(song, track, vocab: Vocabulary, at=None, arc: str = 'classic', motif=No
             # a melodic statement: the idea, a half-bar breath, a developed answer; a later statement varies the
             # idea's first half and answers it (blind round 3: the motif and then a held note over empty bars, again
             # and again, read as sparseness by rule)
-            if first:
+            if first and vocab.lines and opening == 'line':          # (a line of its own: the motif comes later)
+                slots.append(('call', 0.0, play_len, 'answer', base_motif))
+                m_ = None
+            elif first and (opening == 'motif' or not vocab.lines):
                 m_ = quote(base_motif, c_)
             elif vocab.lines:
                 m_ = varier(develop(base_motif, 'fragment', beats=max(bpb, base_motif.length / 2.0)), c_)
             else:
                 m_ = varier(base_motif, c_)
-            call = min(play_len, math.ceil(max((n.start + n.dur for n in as_clip(m_)), default=play_len) * 2) / 2)
+            call = min(play_len, math.ceil(max((n.start + n.dur for n in as_clip(m_)), default=play_len) * 2) / 2) \
+                if m_ is not None else play_len
             gap = max(0.5, math.floor(bpb / 2.0 * 2) / 2)
-            if vocab.lines and play_len - call - gap >= 1.5:
+            if m_ is None:
+                pass
+            elif vocab.lines and play_len - call - gap >= 1.5:
                 slots.append(('call', 0.0, call, 'motif', m_))
                 slots.append(('response', call + gap, play_len - call - gap, 'answer', m_))
             else:
@@ -1046,9 +1064,11 @@ def _lines(perf, key, prog, start, rng_, rng, bpb: float = 4.0, spans=None, trad
                the line turns, it never folds (inside the range)
       repeats  a bar (3+ attacks) equal to one of the 8 bars before it (positions, pitches, lengths) loses its last
                off-beat attack (the note before rings on) or, without one, its last note moves to another chord tone
-      runs     in a run of 4+ attacks half a beat apart or closer the velocities ramp to the run's high point and
-               fall after it, higher notes a little louder, a leap target leaned on, a low neighbour (under both sides)
-               ghosted 5-10 - the contour, never the beat; neighbours at most 15 apart
+      runs     in a run of 4+ attacks half a beat apart or closer the velocities ramp to the run's focus (RUN_TOUCH:
+               its high point, its landing or an early peak, drawn per run) and fall after it, a little louder higher
+               up, a leap target leaned on, now and then a low neighbour (under both sides) ghosted 5-10, a player's
+               unevenness on top - the phrase, never the beat, and not the pitch step by step; neighbours at most 15
+               apart
       chords   (with prog) a note on beat 1 / 3 (3/4: 1) or longer than half a beat that breaks theory.clash() over
                its chord (an anticipation: the chord it anticipates) moves a half / whole step onto a chord tone or
                tension; a note held into a chord it clashes with is released at the change (blind round 3: a moved
@@ -1203,28 +1223,31 @@ def _lines(perf, key, prog, start, rng_, rng, bpb: float = 4.0, spans=None, trad
                 shift([cs[k]], alt[0] - E[t_][3])
     # ---- run dynamics
     cs = clusters()
+    RT = RUN_TOUCH
     for r in runs(cs):
         if len(r) < 4:
             continue
         tops = [top(cs[j]) for j in r]
-        hp = max(range(len(r)), key=lambda j: (E[tops[j]][3], -j))
+        focus = _pick_w(rng, RT['focus'])
+        hp = max(range(len(r)), key=lambda j: (E[tops[j]][3], -j)) if focus == 'top' else \
+            len(r) - 1 if focus == 'end' else max(1, int(round(rng.uniform(0.25, 0.45) * (len(r) - 1))))
         base = sum(E[t][4] for t in tops) / len(tops)
         mean_p = sum(E[t][3] for t in tops) / len(tops)
         prev_v = None
         for j, t in enumerate(tops):
-            # the run's shape follows its contour, never the beat: a ramp to its high point and a fall after it,
-            # higher notes a little louder, a leap target leaned on, a low neighbour (under both sides) ghosted
+            # the run's shape follows the phrase, never the beat: a ramp to its focus and a fall after it, a little
+            # louder higher up, a leap target leaned on, now and then a low neighbour (under both sides) ghosted
             v = base * ((0.88 + 0.17 * j / hp) if j <= hp and hp else (1.05 - 0.15 * (j - hp) / max(1, len(r) - 1 - hp)))
-            v += 0.8 * (E[t][3] - mean_p)
+            v += RT['pitch'] * (E[t][3] - mean_p)
             ghost = False
             if 0 < j < len(tops) - 1:
                 pa, pb = E[tops[j - 1]][3], E[tops[j + 1]][3]
-                if E[t][3] < min(pa, pb):
+                if E[t][3] < min(pa, pb) and rng.random() < RT['ghost']:
                     v -= rng.uniform(5, 10)
                     ghost = True
                 elif abs(E[t][3] - pa) >= 5:
                     v += rng.uniform(3, 6)
-            v += rng.uniform(-3.5, 3.5)
+            v += rng.uniform(-RT['jitter'], RT['jitter'])
             if prev_v is not None and not ghost:             # neighbours at most 15 apart (a ghost excepted)
                 v = min(prev_v + 15, max(prev_v - 15, v))
             prev_v = v if not ghost else prev_v
@@ -1238,6 +1261,15 @@ def _lines(perf, key, prog, start, rng_, rng, bpb: float = 4.0, spans=None, trad
             per.setdefault(e[0], []).append(Note(e[1], max(0.03, e[2]), int(e[3]), int(e[4])))
     for pi, (a, s_, r_, nm, p) in enumerate(perf.parts):
         p.clip = Clip._raw(sorted(per.get(pi, [])), p.clip.length)
+
+
+RUN_TOUCH = {'focus': {'top': 0.35, 'end': 0.35, 'early': 0.3}, 'pitch': 0.5, 'jitter': 4.5, 'ghost': 0.5}
+"""The dynamics of a melodic solo's runs (_lines): the run swells to its focus - drawn per run: 'top' its high point,
+'end' its landing (a line leaning into its target), 'early' a point a quarter to half-way in (attack and release) -
+and falls after it; 'pitch' velocity per semitone over the run's mean, a 'jitter' of the hand (+-), a low neighbour
+ghosted in 'ghost' of the cases. Blind round 7: the solo's velocity followed the pitch on 74-84 % of the steps (a
+ramp to the high point plus 0.8 per semitone) - the touch follows the phrase and its accents;
+blind round 8 (pitch 0.25): the composed solos' velocity followed the pitch MORE (r 0.52-0.71 against 0.45-0.52)."""
 
 
 def _default_place(track, perf: Performance) -> None:
@@ -1430,7 +1462,8 @@ def answer_line(ctx, *, start=None, n=None, grid_=None) -> list:
     """An answer: [(start, dur, pitch)] - in MOTIVIC of the cases the motif's cell developed (motif_line: the call's
     cell answered), else a line (target_line: mostly falling, now and then an arch) from a 3rd-5th above the last
     note played (or the arc's centre), its length from the slot and the density (n notes, default about half the slot
-    at low density .. nearly all of it), landing on a chord tone near its last note held to the slot's end."""
+    at low density .. nearly all of it, but long enough that its landing holds ANSWER_HOLD bars at most), landing on
+    a chord tone near its last note held to the slot's end."""
     if start is None:
         start = ctx.last.pitch + ctx.rng.choice((3, 5, 7)) if ctx.last is not None else center(ctx, 0.08)
     if ctx.rng.random() < MOTIVIC:                       # mostly the motif's cell developed (blind round 5)
@@ -1440,7 +1473,8 @@ def answer_line(ctx, *, start=None, n=None, grid_=None) -> list:
     g = grid_ if grid_ is not None else (0.5 if ctx.density < 0.5 else 0.25)
     room = ctx.beats - 0.75
     if n is None:
-        n = max(3, int(room / g * (0.6 + 0.4 * ctx.density) * ctx.rng.uniform(0.85, 1.15)))
+        n = max(3, int(room / g * (0.6 + 0.4 * ctx.density) * ctx.rng.uniform(0.85, 1.15)),
+                int((room - ANSWER_HOLD * float(getattr(ctx, 'bpb', 4.0) or 4.0)) / g + 0.999))
     while n > 2 and n * g > room:
         n -= 1
     line = target_line(ctx, length=n * g, grid_=g, start=int(start),
@@ -1452,6 +1486,10 @@ def answer_line(ctx, *, start=None, n=None, grid_=None) -> list:
         tail = fold(snap(tail - 1, tones, -1), ctx, near=line[-1][2])
     return line + [(end, held(ctx.beats - end), tail)]
 
+
+ANSWER_HOLD = 0.6
+"""answer_line's landing note is held 0.6 bar at most (x the slot's bpb): the line runs long enough - blind round 8: a
+sparse waltz answer in a 10-beat slot held its landing 7 beats, silent bars inside the solo's phrases."""
 
 MOTIVIC = 0.45
 """The share of the solo's answer lines (answer_line; the piano's sequences and riffs too) built from the motif
@@ -1478,6 +1516,12 @@ def motif_cell(ctx, rng=None) -> list:
 
 
 def motif_line(ctx, *, length=None, start=None, contour=None) -> list:
+    """motif_line_once through the recent-lick memory (fresh): a development that repeats a recent lick is drawn
+    again."""
+    return fresh(ctx, lambda: motif_line_once(ctx, length=length, start=start, contour=contour))
+
+
+def motif_line_once(ctx, *, length=None, start=None, contour=None) -> list:
     """A line built FROM THE MOTIF (blind round 5: 'take a 3-5 note cell from the head and develop it'): a cell of
     ctx.motif (motif_cell) stated from `start` (default near the last note played / the arc's centre), then developed
     statement by statement (CELL_MOVES, drawn: sequenced along the contour - rise / fall / arch, turning at the
@@ -1596,7 +1640,70 @@ def _pick_w(rng, table: dict):
     return k_
 
 
+LICKS = {'notes': 5, 'bars': 4.0, 'tries': 4}
+"""The player's recent-lick memory (fresh): a cell of `notes` attacks (its pitches as struck) played again within
+`bars` bars reads as "that lick again" (blind round 7: a chromatic D-Eb-F-F#-G cell four times in four bars) - a
+line that would repeat one is drawn again, up to `tries` times, the freshest kept. One ledger per solo
+(ctx.memory['_licks'], a budget.Budget: the cell is the name, same_every the memory's span), shared by every line
+maker (target_line, motif_line, the pianist's runs)."""
+
+
+def lick_ledger(ctx):
+    """The solo's recent-lick ledger (a budget.Budget in ctx.memory; None for a context without a memory)."""
+    mem = getattr(ctx, 'memory', None)
+    if mem is None:
+        return None
+    led = mem.get('_licks')
+    if led is None:
+        led = mem['_licks'] = _Budget({'lick': 0.0}, zero='unlimited', same=('lick',),
+                                      same_every=LICKS['bars'] * float(getattr(ctx, 'bpb', 4.0) or 4.0))
+    return led
+
+
+def _lick_cells(line, at: float) -> list:
+    """[(song beat, cell)] of a line's LICKS['notes']-attack windows (tuples (start, dur, pitch) or Notes; one attack
+    per onset, its top note)."""
+    pts = sorted(((n.start, n.pitch) if hasattr(n, 'pitch') else (float(n[0]), int(n[2])) for n in line),
+                 key=lambda x: (x[0], -x[1]))
+    tops = []
+    for t, p in pts:
+        if tops and t - tops[-1][0] < 0.06:
+            continue
+        tops.append((t, p))
+    k = LICKS['notes']
+    return [(at + tops[i][0], tuple(p for _, p in tops[i:i + k])) for i in range(len(tops) - k + 1)]
+
+
+def fresh(ctx, make):
+    """A line from make() (a list of (start, dur, pitch) or a Clip, relative to ctx.at) that repeats no cell the
+    solo played within the last LICKS['bars'] bars (lick_ledger) nor one of its own inside that span: drawn again up
+    to LICKS['tries'] times, the one with the fewest stale cells kept and its cells booked."""
+    led = lick_ledger(ctx)
+    if led is None:
+        return make()
+    span = led.same_every
+    best = None
+    for _ in range(LICKS['tries']):
+        line = make()
+        cs = _lick_cells(line, ctx.at)
+        stale = sum(not led.allows(t, 'lick', c) for t, c in cs)
+        stale += sum(1 for i, (t, c) in enumerate(cs)
+                     if any(c2 == c and t - t2 < span and i - j >= LICKS['notes'] for j, (t2, c2) in enumerate(cs[:i])))
+        if best is None or stale < best[0]:
+            best = (stale, line, cs)
+        if not stale:
+            break
+    for t, c in best[2]:
+        led.book(t, 'lick', c)
+    return best[1]
+
+
 def target_line(ctx, *, length=None, grid_=0.5, start=None, contour=None) -> list:
+    """target_line_once through the recent-lick memory (fresh): a line that repeats a recent lick is drawn again."""
+    return fresh(ctx, lambda: target_line_once(ctx, length=length, grid_=grid_, start=start, contour=contour))
+
+
+def target_line_once(ctx, *, length=None, grid_=0.5, start=None, contour=None) -> list:
     """A line built TARGET-FIRST, the way a jazz player thinks it (not a pattern): the beats get targets - the 3rd
     or 7th of the chord sounding there (now and then another chord tone) - chosen along a contour (rise / fall /
     arch / valley, turned at the range's edges: the line never folds); the notes between are filled with scale

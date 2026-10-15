@@ -337,6 +337,24 @@ void testMaskingAndWarnings() {
     check(!hasWarning(r, "masking", {"pad"}), "no masking warning for the pad");
     check(hasWarning(r, "silent_node", {"ghost"}), "track that never exceeds -50 dBFS is reported as silent");
     check(hasWarning(r, "inaudible", {"whisper"}), "track contributing < 1 % everywhere is reported as nearly inaudible");
+    check(!hasWarning(r, "spiky_track"), "steady tones are not spiky");
+    {   // Crackle: rare single-sample pops - tiny RMS, loud peaks. The ear hears it (not silent) and too loud (spiky).
+        Stereo music = sine(sr, secs, 440.0, -6.0), crackle = sine(sr, secs, 440.0, -200.0);
+        for (std::size_t i = 4801; i < crackle.size(); i += 24007) crackle.L[i] = crackle.R[i] = 0.2f;   // -14 dBFS pops
+        Stereo m2 = music;
+        for (std::size_t i = 0; i < m2.size(); ++i) { m2.L[i] += crackle.L[i]; m2.R[i] += crackle.R[i]; }
+        as::MixAnalyzer an2;
+        const json c = analyse(an2, sr, m2, {music, crackle}, {"piano", "vinyl"}, sections);
+        check(!hasWarning(c, "silent_node", {"vinyl"}), "crackle with -14 dBFS pops is not reported as silent");
+        check(hasWarning(c, "spiky_track", {"vinyl"}), "crackle peaking 8 dB under the music is reported as spiky");
+        for (auto& v : crackle.L) v *= 0.1f;
+        for (auto& v : crackle.R) v *= 0.1f;
+        Stereo m3 = music;
+        for (std::size_t i = 0; i < m3.size(); ++i) { m3.L[i] += crackle.L[i]; m3.R[i] += crackle.R[i]; }
+        as::MixAnalyzer an3;
+        const json q = analyse(an3, sr, m3, {music, crackle}, {"piano", "vinyl"}, sections);
+        check(!hasWarning(q, "spiky_track"), "crackle 28 dB under the music is fine");
+    }
     bool suggestion = false;
     for (const auto& s : r["suggestions"]) suggestion = suggestion || s.get<std::string>().find("sub_bass") != std::string::npos;
     check(suggestion, "a suggestion addresses the masking pair");
@@ -440,8 +458,12 @@ void testEdgeCases(const std::string& outDir) {
         bool all = r["images"].size() >= 6;
         for (const auto& im : r["images"]) all = all && fs::exists(outDir + "/short/" + im["file"].get<std::string>());
         check(all, "10 ms render: every listed image written");
-        const std::string text = r.dump();
-        check(text.find("null") == std::string::npos,  // nlohmann writes NaN/Inf as null
+        std::function<bool(const json&)> finite = [&](const json& j) {
+            if (j.is_number()) return std::isfinite(j.get<double>());
+            if (j.is_structured()) for (const auto& v : j) if (!finite(v)) return false;
+            return true;  // findings may intentionally have a null value / limit
+        };
+        check(finite(r),
               "10 ms render with NaN/Inf input: every number in the report is finite");
         check(hasWarning(r, "non_finite", {"unstable"}), "non-finite node samples are reported");
         check(std::fabs(r["global"]["samplePeakDb"].get<double>() + 6.0) < 0.1, "non-finite mix samples are ignored for peaks");
@@ -588,7 +610,7 @@ void testProfiles() {
     namespace an = as::analysis;
     const double sr = 48000.0;
     {   // Registry: every profile, default first and identical to the old reference.
-        check(an::analysisProfileNames() == "default, synthwave, dreamwave, darksynth, jazz, classical, piano, pop, edm, rock, film",
+        check(an::analysisProfileNames() == "default, synthwave, dreamwave, darksynth, jazz, classical, piano, organ, pop, edm, rock, film",
               "profiles: " + an::analysisProfileNames());
         check(an::findAnalysisProfile("outrun") == nullptr && an::findAnalysisProfile("synthwave") != nullptr,
               "findAnalysisProfile: unknown names give nullptr");
@@ -647,7 +669,7 @@ void testProfiles() {
         for (const auto& w : boomy["warnings"])
             if (w["code"] == "balance_sub_high") named = w["message"].get<std::string>().find("'synthwave' reference") != std::string::npos;
         check(named, "balance warnings name the profile they compare against");
-        check(ref["profiles"] == json::array({"default", "synthwave", "dreamwave", "darksynth", "jazz", "classical", "piano", "pop",
+        check(ref["profiles"] == json::array({"default", "synthwave", "dreamwave", "darksynth", "jazz", "classical", "piano", "organ", "pop",
                                               "edm", "rock", "film"}),
               "report.reference.profiles lists the profile names as an array");
         // Per-section balance follows the profile too (sections[].bandsVsRefDb).
@@ -1258,7 +1280,7 @@ void testSpace(const std::string& outDir) {
     // Deterministic, never null, in the summary; images of the dry and the lush scene (overview SPACE
     // strip, stereo.png width target / wetness panel / space strip) are written for a look.
     check(spaceReportRouted(dryNarrow) == r1, "space assessment is deterministic");
-    check(r1.dump().find("null") == std::string::npos && r12.dump().find("null") == std::string::npos, "space report has no null values");
+    check(r1["space"].dump().find("null") == std::string::npos && r12["space"].dump().find("null") == std::string::npos, "space report has no null values");
     check(r1["summary"].get<std::string>().find("space dry") != std::string::npos, "summary line carries the space verdict");
     bool images = true;
     for (const auto& [name, sc] : {std::pair<std::string, SpaceScene>{"space_dry", dryNarrow}, {"space_lush", lush}, {"space_tails", shortTail}}) {
@@ -1836,11 +1858,120 @@ void testSongAndPngs(const std::string& outDir) {
 
 }  // namespace
 
+void testVerdictBoundaries() {
+    std::ifstream in("tests/fixtures/verdicts.json");
+    const json cases = json::parse(in);
+    for (const auto& c : cases) {
+        const json findings = as::evaluateReport(c["report"]);
+        json actual = json::object();
+        for (const auto& f : findings) {
+            actual[f["code"].get<std::string>()] = f["severity"];
+            check(f.contains("metric") && f.contains("value") && f.contains("limit") &&
+                  f.contains("node") && f.contains("section"), "structured verdict fields");
+        }
+        check(actual == c["expected"], c["name"].get<std::string>().c_str());
+        json emitted = c["report"];
+        emitted["findings"] = findings;
+        check(as::evaluateReport(emitted) == findings, "emitted findings reusable");
+    }
+    json section = cases[4]["report"];
+    section["sections"] = json::array({{{"name", "chorus"}, {"lowEndCorrelation", 0.74}, {"lowEndEnergyShare", 0.2}}});
+    int low = 0;
+    for (const auto& f : as::evaluateReport(section)) if (f["code"] == "low_end_not_mono") ++low;
+    check(low == 2, "global and section low-end verdicts retain distinct scope");
+    json override = {{"loudness", {-14.0, -14.0}}, {"loudnessToleranceLu", 1.0}, {"truePeakMaxDbtp", -0.5}};
+    check(as::evaluateReport(cases[5]["report"], override).empty(), "delivery overrides use the shared evaluator");
+    bool rejected = false;
+    try { as::evaluateReport(json::object(), {{"unknown", 1}}); }
+    catch (const std::invalid_argument&) { rejected = true; }
+    check(rejected, "verdict policies reject unknown keys");
+}
+
+// Realism probes (analysis/Realism.h) on synthetic parts: a repeated identical recording reads as a machine gun,
+// jittered copies do not; a looped sustain is periodic, a randomly modulated one is not.
+void testRealism() {
+    std::printf("realism probes\n");
+    const double sr = 48000.0, bpm = 120.0;   // a beat = 0.5 s
+    auto run = [&](const Stereo& part, const std::vector<std::array<double, 4>>& notes) {
+        as::MixAnalyzer an;
+        return analyse(an, sr, part, {part}, {"lead"}, {}, bpm, {false}, {}, [&](as::MixAnalyzer& a, const std::vector<int>& idx) {
+            as::NodeRouting r;
+            r.instrument = "sampler";
+            for (const auto& n : notes) {
+                r.notes.emplace_back(n[0], n[1]);
+                r.tones.push_back({static_cast<int>(n[2]), static_cast<int>(n[3])});
+            }
+            a.setNodeRouting(idx[0], r);
+        })["nodes"][0];
+    };
+    // one plucked "recording": partials with a noise attack, 0.4 s
+    std::uint32_t seed = 1;
+    auto noise = [&]() {
+        seed = seed * 1664525u + 1013904223u;
+        return static_cast<double>(seed >> 8) / 8388608.0 - 1.0;
+    };
+    auto pluck = [&](double detuneCents, double tilt, double noiseAmt, std::uint32_t noiseSeed) {
+        std::vector<double> x(static_cast<std::size_t>(0.4 * sr));
+        const std::uint32_t keep = seed;
+        seed = noiseSeed;
+        for (std::size_t i = 0; i < x.size(); ++i) {
+            const double t = static_cast<double>(i) / sr, f = 440.0 * std::pow(2.0, detuneCents / 1200.0);
+            double v = 0.0;
+            for (int h = 1; h <= 8; ++h) v += std::pow(10.0, (-3.0 - tilt) * (h - 1) / 20.0) * std::sin(2.0 * kPi * f * h * t) / h;
+            x[i] = 0.3 * std::exp(-t * 6.0) * v + noiseAmt * std::exp(-t * 60.0) * noise();
+        }
+        seed = keep;
+        return x;
+    };
+    auto place = [&](const std::vector<std::vector<double>>& takes) {
+        Stereo s = silence(sr, 0.5 * static_cast<double>(takes.size()) + 0.5);
+        for (std::size_t k = 0; k < takes.size(); ++k)
+            for (std::size_t i = 0; i < takes[k].size(); ++i) {
+                const std::size_t j = static_cast<std::size_t>(0.5 * sr) * k + i;
+                s.L[j] += static_cast<float>(takes[k][i]);
+                s.R[j] += static_cast<float>(takes[k][i]);
+            }
+        return s;
+    };
+    std::vector<std::array<double, 4>> notes;
+    for (int k = 0; k < 8; ++k) notes.push_back({static_cast<double>(k), 0.8, 69, 90});
+    const auto same = pluck(0, 0, 0.05, 7);
+    const json a = run(place(std::vector<std::vector<double>>(8, same)), notes)["realism"];
+    std::vector<std::vector<double>> varied;
+    for (int k = 0; k < 8; ++k) varied.push_back(pluck(6.0 * noise(), 1.5 * noise(), 0.05, 100u + static_cast<std::uint32_t>(k)));
+    const json b = run(place(varied), notes)["realism"];
+    const double sa = a["repeatSim"].value("sim", 0.0), wa = a["repeatSim"].value("wave", 0.0);
+    const double sb = b["repeatSim"].value("sim", 1.0), wb = b["repeatSim"].value("wave", 1.0);
+    check(a["repeatSim"].value("pairs", 0) == 7 && sa > 0.999 && wa > 0.999 && sb < sa - 0.002 && wb < 0.99,
+          fmt("repeatSim: identical copies sim %.4f wave %.4f (machine gun); jittered takes sim %.4f", sa, wa, sb) +
+              fmt(" wave %.3f", wb));
+
+    // sustain: a 3 s tone, its level looping every 200 ms vs moving randomly (smoothed noise)
+    auto sustain = [&](bool looped) {
+        Stereo s = silence(sr, 3.5);
+        double am = 0.0;
+        for (std::size_t i = 0; i < static_cast<std::size_t>(3.0 * sr); ++i) {
+            const double t = static_cast<double>(i) / sr;
+            am += (noise() - am) * 0.0005;
+            const double g = looped ? 1.0 + 0.15 * std::sin(2.0 * kPi * 5.0 * t) * std::sin(2.0 * kPi * 10.0 * t) : 1.0 + 3.0 * am;
+            s.L[i] = s.R[i] = static_cast<float>(0.2 * g * std::sin(2.0 * kPi * 440.0 * t));
+        }
+        return s;
+    };
+    const json lp = run(sustain(true), {{0.0, 6.0, 69, 90}})["realism"];
+    const json rn = run(sustain(false), {{0.0, 6.0, 69, 90}})["realism"];
+    const double pl = lp["sustainFlux"].value("periodicity", 0.0), pr = rn["sustainFlux"].value("periodicity", 1.0);
+    check(lp["sustainFlux"].value("notes", 0) == 1 && pl > 0.8 && pr < 0.5 && std::fabs(lp["sustainFlux"].value("periodMs", 0.0) - 200.0) < 15.0,
+          fmt("sustainFlux: a looped sustain is periodic (%.2f at %.0f ms), a randomly moving one is not (%.2f)", pl,
+              lp["sustainFlux"].value("periodMs", 0.0), pr));
+}
+
 int main(int argc, char** argv) {
     namespace fs = std::filesystem;
     const std::string outDir = argc > 1 ? argv[1] : (fs::temp_directory_path() / "agentsound_test_analysis").string();
     fs::create_directories(outDir);
     try {
+        testVerdictBoundaries();
         testFft();
         testChecksumsAndZlib();
         testPngRoundTrip(outDir);
@@ -1857,6 +1988,7 @@ int main(int argc, char** argv) {
         testSpaceNamesAndSongRouting();
         testGenreProfiles();
         testSongAndPngs(outDir);
+        testRealism();
     } catch (const std::exception& e) {
         std::printf("[FAIL] exception: %s\n", e.what());
         ++failures;

@@ -1,0 +1,34 @@
+{
+ "CTEH": {
+  "source": "composed",
+  "path": "songs/pro-orch-hopeful"
+ },
+ "DKTR": {
+  "source": "composed",
+  "path": "songs/pro-orch-night"
+ },
+ "MSKB": {
+  "source": "generated",
+  "path": "songs/_endless_orchestra/out/r1/003-toward-home"
+ },
+ "NDVA": {
+  "source": "generated",
+  "path": "songs/_endless_orchestra/out/r1/001-across-the-dawn"
+ },
+ "UMQT": {
+  "source": "composed",
+  "path": "songs/pro-orch-longing"
+ },
+ "VSFA": {
+  "source": "composed",
+  "path": "songs/pro-orch-epic"
+ },
+ "XFFH": {
+  "source": "generated",
+  "path": "songs/_endless_orchestra/out/r1/004-toward-the-night"
+ },
+ "YKGU": {
+  "source": "generated",
+  "path": "songs/_endless_orchestra/out/r1/002-bridges-of-the-sea"
+ }
+}

@@ -1531,6 +1531,8 @@ def _pitch_text(p: int, drums: bool, key) -> str:
 
 
 def _mark_text(n) -> str:
+    if _art.params_of(n):
+        raise ComposeError('format(): per-note params (articulation.note_params) have no notation syntax; keep the Clip')
     out = ''
     a = _art.articulation_of(n)
     if a is not None:

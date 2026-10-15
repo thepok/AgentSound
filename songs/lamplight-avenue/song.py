@@ -49,7 +49,7 @@ from agentsound import *
 from agentsound import articulation as art, bands, hornist, pianist
 from agentsound.bandlib.pop import epiano
 from agentsound.humanize import touch
-from agentsound.patches.hero import HERO_SAX
+from agentsound.patches.hero import HERO_SAX_CLEAN as HERO_SAX
 
 ANALYSIS = {'profile': 'pop'}
 METADATA = {'title': 'Lamplight Avenue', 'artist': 'AgentSound', 'album': 'Blue Hour Sessions',
@@ -57,7 +57,7 @@ METADATA = {'title': 'Lamplight Avenue', 'artist': 'AgentSound', 'album': 'Blue 
 COVER = {'style': 'jazz', 'palette': ['#e0a040', '#1d3557'], 'title': 'LAMPLIGHT AVENUE', 'subtitle': 'AgentSound'}
 
 TEMPO = 112
-SAX = os.environ.get('LAMPLIGHT_SAX', 'hero/sax')      # the hero sax (patches/hero.py + the heroes 'air' stage)
+SAX = os.environ.get('LAMPLIGHT_SAX', 'hero/sax_clean')  # the v1 hero sax (patches/hero.py + the heroes 'air' stage): this song's octave / doubles automation is built on its layers
 HORNIST = os.environ.get('LAMPLIGHT_HORNIST', '1') != '0'        # 0: the sax lines without the wind player (A/B)
 HERO = HERO_SAX['mix']
 
@@ -463,7 +463,7 @@ def build() -> Song:
     # the hero sax ridden up in the hook sections (riffs, choruses, the trade, the outro), level in the verses
     R = HERO['ride_db']
     lane(sax, SAX_DB, dict(zip(order, (0, R, 0, 0.5, R + 1.5, R, 0, 0.5, R + 1.5, R, 0, R + 2.5, R))))
-    if SAX in ('layered/hero_sax', 'hero/sax'):   # the octave-down tenor take for weight: the last chorus, outro riffs
+    if SAX in ('layered/hero_sax', 'hero/sax_clean'):   # the octave-down tenor take for weight: the last chorus, outro riffs
         sax.automate('instrument.layers.octave.mute', [(0, 1), (chorus3.start - 0.5, 0, 'step'),
                                                       (chorus3.end - 0.5, 1, 'step'), (outro.start - 0.5, 0, 'step')])
 

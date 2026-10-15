@@ -26,6 +26,16 @@ fingers, span and position. Every move takes the tempo (bpm) because strums and 
 time; velocities are shaped and timing carries a few ms of seeded human wobble. Articulations: with sound= (a
 track / patch) the player uses the guitar's own 'palm mute', 'dead note', 'hammer-on', 'muted' keyswitches
 (articulation.available); without them it emulates (short, lighter notes).
+
+The hand feel (HANDS / HandFeel, hand= on arrange / strum_pattern / arpeggio / travis, or a style's 'hand'): 'plain'
+(the default for the older styles, unchanged) or 'acoustic' / 'fingerstyle' - every rule a drawn distribution or a
+budget: strum spread drawn per stroke and scaled by tempo and force (slower and harder = wider), up-strokes lighter,
+a little late and on a drawn 2-5 strings (only the top ones), downs that sometimes miss the low string or only brush
+the top, per-string velocity jitter, slow OU drifts of timing and loudness over bars, a drawn lift before chord
+changes (and sometimes a damp), occasional skipped up-strokes and grazes; fingerstyle: thumb vs finger weights,
+pinch lag, skipped / swapped inner voices, added pinches. With a sound that has a noise map (sampled_guitars.NOISES,
+e.g. sampled/acoustic_guitar) chucks play the recorded muted strums / palm thuds and a Budget places fret-release
+noises and position-shift squeaks (logged as 'noise' moves); noises=False switches that off.
 """
 
 from __future__ import annotations
@@ -33,15 +43,17 @@ from __future__ import annotations
 import functools
 import math
 import random
+from dataclasses import dataclass
 from typing import NamedTuple
 
 from . import articulation as _art
 from .budget import Budget
 from .humanize import touch as _touch
-from .patterns import Clip, Note, _as_prog, _vel, as_clip, beats, seed_int
+from .patterns import Clip, Note, _as_prog, _vel, as_clip, beats, seed_int, weighted_choice
 from .theory import Chord, ComposeError, Key, Progression, chord_kind, chord_scale, note
 
-__all__ = ['TUNINGS', 'KINDS', 'TECHNIQUES', 'PATTERNS', 'STYLES', 'LEAD_STYLES', 'SECTION_ENERGY', 'FILLS',
+__all__ = ['TUNINGS', 'KINDS', 'TECHNIQUES', 'PATTERNS', 'STYLES', 'HANDS', 'HandFeel', 'hand_feel',
+           'LEAD_STYLES', 'SECTION_ENERGY', 'FILLS',
            'RHYTHM_ORNAMENTS', 'FAST', 'FLASH', 'SPICE', 'MOVES', 'Fretboard', 'Shape', 'Lick', 'Memory', 'Arrangement',
            'shape', 'shapes', 'voice_lead', 'best_capo', 'strum', 'chuck', 'strum_pattern', 'arpeggio', 'travis',
            'chug', 'skank', 'scratch', 'let_ring', 'hammer_chord', 'slide_chord', 'bass_run', 'choke', 'build',
@@ -152,19 +164,6 @@ def _clip(notes, length: float | None = None) -> Clip:
     end = max((n.start + n.dur for n in ns), default=0.0)
     L = float(length) if length is not None else (float(math.ceil(end - _EPS)) if end > 0 else 0.0)
     return Clip._raw(ns, L)
-
-
-def _pick(rng: random.Random, weights: dict, avoid=None):
-    items = [(k, w * (0.3 if k == avoid else 1.0)) for k, w in weights.items() if w > 0]
-    if not items:
-        return None
-    tot = sum(w for _, w in items)
-    x = rng.random() * tot
-    for k, w in items:
-        x -= w
-        if x <= 0:
-            return k
-    return items[-1][0]
 
 
 # ------------------------------------------------------------------------------------------------ the fretboard
@@ -633,6 +632,150 @@ def _is_sampler(sound) -> bool:
     return getattr(ins, 'type', None) == 'sampler' or (isinstance(ins, dict) and ins.get('type') == 'sampler')
 
 
+_NOISE_ROLES = ('fret', 'muted', 'strings', 'chuck', 'chuck_up', 'brush', 'thump', 'knock')
+
+
+def _noises(sound=None, given=None) -> dict | None:
+    """The hand-noise map of a sound: the patch's entry in sampled_guitars.NOISES (a track / patch / patch name), or
+    given= a dict of the same roles (fret / muted: articulation names; strings / knock: keys; chuck / chuck_up /
+    brush / thump: a key), False = none (chucks emulated, no finger noises)."""
+    if given is False:
+        return None
+    if isinstance(given, dict):
+        bad = set(given) - set(_NOISE_ROLES)
+        if bad:
+            raise ComposeError(f"noises: unknown role(s) {sorted(bad)}; use {', '.join(_NOISE_ROLES)}")
+        return dict(given)
+    if given is not None:
+        raise ComposeError(f"noises must be None (from the sound), False or a dict of {_NOISE_ROLES}, got {given!r}")
+    if sound is None:
+        return None
+    name = sound if isinstance(sound, str) else getattr(sound, 'patch', None) or getattr(sound, 'name', None)
+    name = getattr(name, 'name', name)
+    if not isinstance(name, str):
+        return None
+    from .patches.sampled_guitars import NOISES
+    m = NOISES.get(name)
+    return dict(m) if m else None
+
+
+# ------------------------------------------------------------------------------------------------ the hand's feel
+
+@dataclass(frozen=True)
+class HandFeel:
+    """How a real player's picking and fretting hands vary - every rule a distribution or a budget (user: "with all
+    the humanisation surroundings", the piano's body for the guitar). arrange(hand=...) / strum_pattern(hand=...) /
+    arpeggio / travis take a HANDS name or a HandFeel; None / 'plain' is the old fixed hand.
+
+    spread_tempo / spread_force / spread_sigma / up_ratio  a stroke's spread (ms for six strings) is drawn per stroke:
+                the technique's spread at 100 BPM x (100 / bpm)^spread_tempo (a fast song: tighter strokes) x
+                (1 + spread_force x (0.6 - weight)) (an accent is a faster arm) x lognormal(spread_sigma); an up-stroke
+                x up_ratio
+    step_jitter / vel_jitter  the pick meets each string a little unevenly: the gap between two strings +-step_jitter
+                (share), each string's velocity +-vel_jitter (share)
+    miss_low    a down-stroke's missed low strings: P(the lowest one, the two lowest) for a light stroke (an accent
+                half as often)
+    brush       P(a light down-stroke only brushes the top 3-4 strings)
+    up_count    weights of how many strings an up-stroke takes from the top ({2: .., 3: .., 4: .., 5: ..}; an accent one
+                more), never more than the technique's up-stroke strings + 1
+    up_late_ms  (mean, sd): the up-strokes on the off-beats land late by this (the arm's pendulum, not a grid)
+    drift_ms / drift_bars  the time drifts like a player's, not like white noise: an Ornstein-Uhlenbeck walk of sd
+                drift_ms that decorrelates over drift_bars bars
+    dyn_drift / dyn_bars  the same for the loudness (x 1 +- dyn_drift)
+    lift_ms / lift_sigma  a chord change: the fretted strings stop lift_ms early (lognormal(lift_sigma) per change)
+    damp        P(the picking hand damps every string at a change - a breath before the new chord)
+    fret_noise / fret_extra / fret_vel / fret_every  a finger-off noise where a ringing fretted string is lifted at a
+                change: P per change, P(a second finger), the velocity range, at most one per fret_every beats
+                (needs the sound's 'fret' noise: sampled/acoustic_guitar)
+    shift / shift_frets / shift_vel / shift_every  a position shift of shift_frets+ frets with a wound string fretted
+                before and after: the finger leaving and landing (two finger-off noises ~30 ms apart: no squeak
+                recording exists in the pack), P per shift, velocity range, budget (beats)
+    chuck_gain / thump  a chuck (X / x) on a sound with chuck recordings: the muted strum sample (down / up by the
+                stroke) at x chuck_gain of the stroke's velocity; P(an accented chuck also slaps the palm: the thud)
+    thumb       the thumb's weight (bass on the strong beats, on the others)
+    fingers     the fingers' weights (top string a - the melody rings out -, m, i, the 4th string i: the inner
+                voices lighter), pick_jitter their velocity spread
+    pinch_ms    (mean, sd): in a pinch (B+1) the finger lands this much after the thumb
+    thumb_mute  P(a thumb bass note is palm-muted - the muted articulation of the sound, else shorter)
+    ghost / up_skip  a strummed pattern is not a loop: the arm swinging through a rest sometimes grazes the top
+                strings (P per up-beat rest), an up-stroke sometimes only grazes them (P)
+    pick_skip / pick_swap / pinch_add  nor is a picked one: an inner-voice finger note left out (P), picked on the
+                neighbouring inner string (P; the top string carries the melody and stays), a thumb note on the beat
+                pinched with the top string (P)"""
+    name: str = 'custom'
+    spread_tempo: float = 0.35
+    spread_force: float = 0.45
+    spread_sigma: float = 0.22
+    up_ratio: float = 0.72
+    step_jitter: float = 0.3
+    vel_jitter: float = 0.07
+    miss_low: tuple = (0.18, 0.06)
+    brush: float = 0.12
+    up_count: tuple = ((2, 0.3), (3, 0.4), (4, 0.22), (5, 0.08))
+    up_late_ms: tuple = (4.0, 3.0)
+    drift_ms: float = 5.0
+    drift_bars: float = 2.0
+    dyn_drift: float = 0.05
+    dyn_bars: float = 4.0
+    timing_ms: float = 2.5
+    lift_ms: float = 22.0
+    lift_sigma: float = 0.45
+    damp: float = 0.08
+    fret_noise: float = 0.5
+    fret_extra: float = 0.25
+    fret_vel: tuple = (30.0, 62.0)
+    fret_every: float = 2.0
+    shift: float = 0.7
+    shift_frets: int = 3
+    shift_vel: tuple = (40.0, 70.0)
+    shift_every: float = 8.0
+    chuck_gain: float = 0.9
+    thump: float = 0.3
+    thumb: tuple = (0.9, 0.78)
+    fingers: tuple = (0.6, 0.42, 0.34, 0.28)
+    pick_jitter: float = 0.08
+    pinch_ms: tuple = (6.0, 4.0)
+    thumb_mute: float = 0.0
+    ghost: float = 0.12
+    up_skip: float = 0.06
+    pick_skip: float = 0.05
+    pick_swap: float = 0.1
+    pinch_add: float = 0.08
+
+
+HANDS: dict = {
+    'plain': None,
+    # the singer-songwriter's strumming arm: loose spreads, ups that skip strings, chucks, fret noises
+    'acoustic': HandFeel('acoustic'),
+    # fingerpicking: no strums to speak of; the thumb steady, the fingers lighter and uneven, pinches not quite
+    # together, the time breathing slowly, the fingers leaving strings at the changes
+    'fingerstyle': HandFeel('fingerstyle', drift_ms=6.0, drift_bars=3.0, dyn_drift=0.06, dyn_bars=4.0,
+                            timing_ms=3.0, lift_ms=14.0, lift_sigma=0.5, damp=0.0, fret_noise=0.55, fret_extra=0.15,
+                            fret_vel=(26.0, 54.0), fret_every=2.0, shift=0.8, shift_every=6.0, ghost=0.0,
+                            pick_skip=0.05, pick_swap=0.12, pinch_add=0.12),
+}
+"""Hand profiles for arrange(hand=) and the rhythm moves: 'plain' (the fixed hand of before: uniform spreads, all
+strings, white timing noise), 'acoustic' (a strummed acoustic), 'fingerstyle' (Travis / arpeggios); a HandFeel(...)
+for your own. STYLES name theirs ('songwriter' -> acoustic, 'fingerstyle' -> fingerstyle)."""
+
+
+def hand_feel(h) -> HandFeel | None:
+    """A HandFeel from a HANDS name, a HandFeel or None ('plain')."""
+    if h is None or isinstance(h, HandFeel):
+        return h
+    if isinstance(h, str) and h in HANDS:
+        return HANDS[h]
+    raise ComposeError(f"unknown guitar hand {h!r}; use one of {', '.join(HANDS)} or a guitarist.HandFeel(...)")
+
+
+def _ou(x: float, sd: float, tau: float, dt: float, rng: random.Random) -> float:
+    """One step of an Ornstein-Uhlenbeck walk (stationary sd, correlation time tau) over dt."""
+    if sd <= 0 or tau <= 0:
+        return 0.0
+    a = math.exp(-max(0.0, dt) / tau)
+    return a * x + sd * math.sqrt(max(0.0, 1.0 - a * a)) * rng.gauss(0.0, 1.0)
+
+
 # ------------------------------------------------------------------------------------------------ the picking hand
 
 class _Hand:
@@ -643,23 +786,27 @@ class _Hand:
     def __init__(self, bpm: float, lift_ms: float = 18.0, gap_ms: float = 7.0, max_ring: float = 8.0):
         self.b = bpm
         self.ev: list[list] = []          # [t, string, pitch, vel, art, end|None, fretted]
-        self.cuts: list[tuple[float, bool]] = []     # (time, only fretted strings)
+        self.cuts: list[tuple] = []     # (time, only fretted strings, strings | None, lift beats | None)
         self.lift = _ms(lift_ms, bpm)
         self.gap = _ms(gap_ms, bpm)
         self.max_ring = max_ring
+        self.extra: list[tuple] = []      # notes that belong to no string: noises (start, dur, key, vel, art)
+        self.changes: list[tuple] = []    # (time, old shape, new shape, lift beats)
 
     def add(self, t, string, pitch, vel, art=None, end=None, fretted=True):
         self.ev.append([float(t), int(string), int(pitch), float(vel), art, end, bool(fretted)])
 
-    def cut(self, t, fretted_only: bool = True, strings=None):
+    def cut(self, t, fretted_only: bool = True, strings=None, lift=None):
         """Stop strings at t: every string (fretted_only=False: a damp), the fretted ones (they lift lift_ms early),
         or strings= a set of string numbers (a chord change: the strings whose fret changes or that the new shape
-        mutes - an open string stops where a finger lands on it, a string the new grip leaves out is damped)."""
-        self.cuts.append((float(t), bool(fretted_only), None if strings is None else frozenset(strings)))
+        mutes - an open string stops where a finger lands on it, a string the new grip leaves out is damped).
+        lift= this cut's own lift (beats) instead of the hand's."""
+        self.cuts.append((float(t), bool(fretted_only), None if strings is None else frozenset(strings), lift))
 
-    def change(self, t, old: Shape, new: Shape):
+    def change(self, t, old: Shape, new: Shape, lift=None):
         """A chord change at t from shape old to shape new: the strings that do not keep their fret stop."""
-        self.cut(t, strings={s for s in range(6) if old.frets[s] != new.frets[s]})
+        self.cut(t, strings={s for s in range(6) if old.frets[s] != new.frets[s]}, lift=lift)
+        self.changes.append((float(t), old, new, self.lift if lift is None else lift))
 
     def notes(self, L: float | None = None) -> list[tuple]:
         by: dict[int, list] = {}
@@ -674,19 +821,24 @@ class _Hand:
                 e_ = t + self.max_ring if end is None else end
                 if i + 1 < len(es):
                     e_ = min(e_, es[i + 1][0] - self.gap)
-                for ct, only, ss in cuts:
+                for ct, only, ss, lf in cuts:
                     if ct <= t + 0.02:
                         continue
+                    lift = self.lift if lf is None else lf
                     if ss is not None:
                         if s in ss:
-                            e_ = min(e_, ct - (self.lift if fr else 0.0))
+                            e_ = min(e_, ct - (lift if fr else 0.0))
                             break
                     elif fr or not only:
-                        e_ = min(e_, ct - (self.lift if fr and only else 0.0))
+                        e_ = min(e_, ct - (lift if fr and only else 0.0))
                         break
                 if L is not None:
                     e_ = min(e_, L)
                 out.append((t, max(0.03, e_ - t), p, v, a))
+        for t, d, p, v, a in self.extra:
+            if L is not None and t >= L - 1e-6:
+                continue
+            out.append((max(0.0, t), d if L is None else max(0.03, min(d, L - t)), p, v, a))
         return out
 
 
@@ -720,7 +872,7 @@ def _restrict(sh: Shape, which) -> Shape:
 
 def _stroke(hand: _Hand, sh: Shape, t: float, *, up: bool = False, which='all', vel: float = 90.0,
             spread_ms: float = 24.0, rng: random.Random | None = None, art=None, end=None, onset: float = 0.3,
-            profile=None) -> list[float]:
+            profile=None, step_jit: float = 0.2, vel_jit: float = 0.035) -> list[float]:
     """One pick stroke across the strings `which` of shape `sh`: a downstroke low -> high, an upstroke high -> low,
     spread over spread_ms for six strings (fewer strings: proportionally less), the stroke centred a little after its
     start (onset: the share of the spread before the beat); per-string velocity from the stroke's profile (a down
@@ -736,10 +888,10 @@ def _stroke(hand: _Hand, sh: Shape, t: float, *, up: bool = False, which='all', 
     prof = profile or (_UP_PROFILE if up else _DOWN_PROFILE)
     times = []
     for i, s in enumerate(order):
-        ti = t0 + i * step * (1.0 + 0.2 * _tri(rng)) if i else t0
+        ti = t0 + i * step * (1.0 + step_jit * _tri(rng)) if i else t0
         k = i if up else int(round(i * 5 / max(1, len(order) - 1)))
         f = prof[min(k, len(prof) - 1)]
-        hand.add(ti, s, sh.pitches[s], vel * f * (1.0 + 0.035 * _tri(rng)), art,
+        hand.add(ti, s, sh.pitches[s], vel * f * (1.0 + vel_jit * _tri(rng)), art,
                  None if end is None else max(ti + 0.03, end), sh.frets[s] != 0)
         times.append(ti)
     return times
@@ -762,6 +914,11 @@ PATTERNS = {
     'anthem': ('1/8', 'D . D . D . D u'),
     'rock16': ('1/16', 'D . d u . u d u D . d u . u d u'),
     'build16': ('1/16', 'd u d u d u d u d u d u D u D u'),
+    # the singer-songwriter's chuck: the backbeat a muted strum (X), the ups keep the pendulum
+    'chuck': ('1/8', 'D . X u . u X u'),
+    'chuck_push': ('1/8', 'D . X u . u X U'),
+    'chuck_drive': ('1/8', 'D u X u D u X u'),
+    'chuck16': ('1/16', 'D . d u X . d u . u d u X . d u'),
     # palm-muted chugs / power chords
     'chug': ('1/8', 'P p p p P p p p'),
     'chug_push': ('1/8', 'P p p p P p D .'),
@@ -862,11 +1019,119 @@ class _Ctx:
     """How the picking hand plays (the technique's settings) while the engine walks a pattern over a progression."""
 
     def __init__(self, bpm, rng, arts, *, spread=(16, 30), up_strings='top4', down_strings='all', gate=None,
-                 timing_ms=5.0, late_ms=0.0, onset=0.3, palm_len=0.16, dead_len=0.045, swing=None):
+                 timing_ms=5.0, late_ms=0.0, onset=0.3, palm_len=0.16, dead_len=0.045, swing=None, feel=None,
+                 noises=None, bpb: float = 4.0):
         self.b, self.rng, self.arts = bpm, rng, arts
         self.spread, self.up_strings, self.down_strings = spread, up_strings, down_strings
         self.gate, self.timing_ms, self.late_ms, self.onset = gate, timing_ms, late_ms, onset
         self.palm_len, self.dead_len, self.swing = palm_len, dead_len, swing
+        self.feel, self.noises, self.bpb = feel, noises, bpb
+        if feel is not None:
+            self.timing_ms = feel.timing_ms        # the feel's drift carries the time; what is left is motor noise
+        self.pinch = False
+        self._last_pick = None
+        self._w = [None, 0.0, 0.0]                # the feel's walks: (last beat, time ms, loudness share)
+
+    def wobble(self, t: float) -> tuple[float, float]:
+        """The feel's slow drifts at beat t: (timing offset in beats, loudness factor); (0, 1) without a feel."""
+        f = self.feel
+        if f is None:
+            return 0.0, 1.0
+        w = self._w
+        dt = 0.0 if w[0] is None else max(0.0, t - w[0])
+        if w[0] is None:
+            w[1] = self.rng.gauss(0.0, f.drift_ms)
+            w[2] = self.rng.gauss(0.0, f.dyn_drift)
+        else:
+            w[1] = _ou(w[1], f.drift_ms, f.drift_bars * self.bpb, dt, self.rng)
+            w[2] = _ou(w[2], f.dyn_drift, f.dyn_bars * self.bpb, dt, self.rng)
+        w[0] = t if w[0] is None else max(w[0], t)
+        return _ms(max(-3 * f.drift_ms, min(3 * f.drift_ms, w[1])), self.b), max(0.75, min(1.25, 1.0 + w[2]))
+
+    def when(self, t: float, grid: float) -> float:
+        """The played time of grid step t: swing, the feel's drift (or none), motor noise, lay-back."""
+        dt, _ = self.wobble(t)
+        return max(0.0, _swung(t, grid, self.swing) + dt + _ms(self.timing_ms, self.b) * _tri(self.rng)
+                   + _ms(self.late_ms, self.b))
+
+    def spread_ms(self, w: float, up: bool) -> float:
+        """A stroke's spread (ms for six strings): drawn from the feel (tempo, force, lognormal), else uniform in
+        the technique's range (x 0.85 for an accent, x 0.7 for an up-stroke: the plain hand)."""
+        f = self.feel
+        if f is None:
+            s = self.rng.uniform(*self.spread)
+            return s * (0.7 if up else (0.85 if w >= 0.9 else 1.0))
+        base = 0.5 * (self.spread[0] + self.spread[1])
+        m = base * (100.0 / self.b) ** f.spread_tempo * (1.0 + f.spread_force * (0.6 - w))
+        s = m * math.exp(f.spread_sigma * self.rng.gauss(0.0, 1.0)) * (f.up_ratio if up else 1.0)
+        return max(4.0, min(90.0, s))
+
+    def vary(self, tok: str, t: float, grid: float, strumming: bool) -> str:
+        """The step a player actually plays for the pattern's `tok` (the feel's distributions; unchanged without a
+        feel): a rest on an up-beat grazed ('o'), an up-stroke only grazed, a finger note skipped or moved to the
+        neighbouring string, a thumb note on the beat pinched."""
+        f = self.feel
+        if f is None:
+            return tok
+        r = self.rng
+        up_pos = int(round(t / grid)) % 2 == 1
+        if tok in '.-':
+            return 'o' if strumming and up_pos and f.ghost and r.random() < f.ghost else tok
+        if tok in ('u',) and f.up_skip and r.random() < f.up_skip:
+            return 'o'
+        parts = tok.split('+')
+        if not all(p in 'BA1234' for p in parts):
+            return tok
+        out = []
+        for p in parts:
+            if p in '234':
+                # an inner voice (the top string is the melody: kept): left out, or picked on a neighbouring inner
+                # string - never the one just picked
+                x = r.random()
+                if len(parts) == 1 and x < f.pick_skip:
+                    return '.'
+                if x < f.pick_skip + f.pick_swap:
+                    cands = [str(k) for k in (int(p) - 1, int(p) + 1) if 2 <= k <= 4 and str(k) != self._last_pick]
+                    if cands:
+                        p = r.choice(cands)
+            out.append(p)
+        fingers = [p for p in out if p in '1234']
+        if fingers:
+            self._last_pick = fingers[-1]
+        if len(out) == 1 and out[0] in 'BA' and abs(t - round(t)) < 1e-6 and f.pinch_add and \
+                r.random() < f.pinch_add:
+            out.append('1')
+        return '+'.join(dict.fromkeys(out))
+
+    def strings(self, sh: Shape, which, up: bool, w: float) -> list[int]:
+        """The strings a stroke takes: `which` (the technique's), with the feel a drawn partial stroke - a down
+        that misses the lowest string(s) or only brushes the top, an up of 2-5 strings from the top."""
+        f = self.feel
+        if up and f is not None:
+            # an up-stroke: 2-5 strings from the top, at most one more than the technique's up-stroke strings, never
+            # a string the downs leave out
+            ss = _select(sh, self.down_strings)
+            if len(ss) <= 2:
+                return ss
+            r = self.rng
+            n = int(weighted_choice(r, {k: v for k, v in f.up_count})) + (1 if w >= 0.7 else 0)
+            cap = len(_select(sh, which)) + 1 if which not in (None, 'all') else len(ss)
+            n = max(2, min(n, cap, len(ss)))
+            return ss[-n:]
+        ss = _select(sh, which)
+        if f is None or len(ss) <= 2:
+            return ss
+        r = self.rng
+        acc = w >= 0.9
+        x = r.random()
+        if not acc and x < f.brush and len(ss) >= 5:
+            return ss[-r.choice((3, 4)):]
+        p1 = f.miss_low[0] * (0.5 if acc else 1.0)
+        p2 = f.miss_low[1] * (0.5 if acc else 1.0)
+        y = r.random()
+        drop = 2 if y < p2 else 1 if y < p1 + p2 else 0
+        drop = min(drop, max(0, len(ss) - 3))
+        return ss[drop:]
 
 
 def _alt_bass(sh: Shape) -> int | None:
@@ -893,6 +1158,8 @@ def _swung(t: float, grid: float, swing) -> float:
 
 
 def _token(hand, ctx, tok, sh, tt, t, vel_at, grid):
+    if ctx.feel is not None:
+        return _token_feel(hand, ctx, tok, sh, tt, t, vel_at, grid)
     rng = ctx.rng
     b = ctx.b
     gate_end = None if ctx.gate is None else tt + _sec(ctx.gate, b)
@@ -939,6 +1206,157 @@ def _token(hand, ctx, tok, sh, tt, t, vel_at, grid):
         s = ss[-k]
         w = 0.62 if k == 1 else 0.52
         hand.add(tt, s, sh.pitches[s], vel_at(t, w) * (1.0 + 0.05 * _tri(rng)), None, gate_end, sh.frets[s] != 0)
+
+
+def _token_feel(hand, ctx, tok, sh, tt, t, vel_at, grid):
+    """One pattern step played with a HandFeel (ctx.feel): drawn spreads and partial strokes, late ups, the
+    loudness drift, chucks from the sound's recordings, thumb / finger dynamics, pinches not quite together."""
+    f, rng, b, nz = ctx.feel, ctx.rng, ctx.b, ctx.noises or {}
+    if tok in '.-':
+        return
+    gate_end = None if ctx.gate is None else tt + _sec(ctx.gate, b)
+    acc = tok.isupper() and tok not in 'BA'
+    _, loud = ctx.wobble(t)
+    sj, vj = f.step_jitter, f.vel_jitter
+    if tok in 'Dd':
+        w = 1.0 if acc else 0.56
+        v = vel_at(t, w) * loud
+        _stroke(hand, sh, tt, up=False, which=ctx.strings(sh, ctx.down_strings, False, w), vel=v,
+                spread_ms=ctx.spread_ms(w, False), rng=rng, end=gate_end, onset=ctx.onset, step_jit=sj, vel_jit=vj)
+    elif tok in 'Uu':
+        w = 0.8 if acc else 0.4
+        late = max(0.0, rng.gauss(*f.up_late_ms))
+        _stroke(hand, sh, tt + _ms(late, b), up=True, which=ctx.strings(sh, ctx.up_strings, True, w),
+                vel=vel_at(t, w) * loud, spread_ms=ctx.spread_ms(w, True), rng=rng, end=gate_end,
+                onset=ctx.onset * 0.6, step_jit=sj, vel_jit=vj)
+    elif tok == 'o':
+        _stroke(hand, sh, tt + _ms(2.0 + max(0.0, rng.gauss(*f.up_late_ms)), b), up=True, which='top2',
+                vel=vel_at(t, 0.22) * loud, spread_ms=ctx.spread[0] * 0.6, rng=rng, end=tt + _sec(0.06, b),
+                onset=0.2, step_jit=sj, vel_jit=vj)
+    elif tok in 'Xx':
+        hand.cut(tt - _ms(1.0, b), fretted_only=False)
+        w = 0.75 if tok == 'X' else 0.34
+        up = (round(t / grid) % 2 == 1)
+        key = nz.get('chuck_up' if up else 'chuck')
+        v = vel_at(t, w) * loud
+        if key is not None:
+            # the recorded chuck: a muted strum whose loudest moment is ~20-35 ms in - started a little early
+            hand.extra.append((tt - _ms(12.0 + 4.0 * _tri(rng), b), _sec(0.3, b), int(key),
+                               v * f.chuck_gain * (1.0 + vj * _tri(rng)), None))
+            if tok == 'X' and nz.get('thump') is not None and rng.random() < f.thump:
+                hand.extra.append((tt + _ms(3.0 + 3.0 * rng.random(), b), _sec(0.2, b), int(nz['thump']),
+                                   v * 0.55, None))
+        else:
+            dead = ctx.arts.get('dead')
+            _stroke(hand, sh, tt, up=up, which='mid' if len(sh.strings) >= 4 else 'all', vel=v,
+                    spread_ms=ctx.spread_ms(0.9, up) * 0.6, rng=rng, art=dead,
+                    end=tt + _sec(ctx.dead_len if dead is None else 0.12, b), onset=0.2, step_jit=sj, vel_jit=vj)
+    elif tok in 'Pp':
+        palm = ctx.arts.get('palm')
+        w = 1.0 if tok == 'P' else 0.52
+        allowed = _select(sh, ctx.down_strings)
+        which = allowed if len(allowed) <= 3 else allowed[:3]
+        _stroke(hand, sh, tt, up=False, which=which, vel=vel_at(t, w) * loud, spread_ms=ctx.spread_ms(1.0, False) * 0.5,
+                rng=rng, art=palm, end=tt + _sec(ctx.palm_len * (1.4 if palm else 1.0), b), onset=0.2,
+                step_jit=sj, vel_jit=vj)
+    elif tok in 'BA':
+        s = sh.strings[0] if tok == 'B' else _alt_bass(sh)
+        if s is None:
+            return
+        strong = abs(t - round(t)) < 1e-6 and int(round(t)) % 2 == 0
+        w = f.thumb[0] if strong else f.thumb[1]
+        art, end = None, gate_end
+        if f.thumb_mute and rng.random() < f.thumb_mute:
+            art = ctx.arts.get('palm') or nz.get('muted')
+            end = tt + _sec(0.35 if art else 0.18, b)
+        hand.add(tt, s, sh.pitches[s], vel_at(t, w) * loud * (1.0 + f.pick_jitter * _tri(rng)), art, end,
+                 sh.frets[s] != 0)
+    elif tok in '1234':
+        ss = sh.strings
+        k = min(int(tok), len(ss) - 1)
+        if k < 1:
+            return
+        s = ss[-k]
+        w = f.fingers[min(k, len(f.fingers)) - 1]
+        t_ = tt + (_ms(max(0.0, rng.gauss(*f.pinch_ms)), b) if ctx.pinch else 0.0)
+        hand.add(t_, s, sh.pitches[s], vel_at(t, w) * loud * (1.0 + f.pick_jitter * _tri(rng)), None, gate_end,
+                 sh.frets[s] != 0)
+
+
+def _changes(hand, ctx, path, bounds) -> None:
+    """The fretting hand's chord changes: the strings that leave their fret stop (lifted a little early: the feel
+    draws each lift; sometimes the picking hand damps everything first)."""
+    f = ctx.feel
+    for i in range(1, len(bounds)):
+        if path[i] == path[i - 1]:
+            continue
+        if f is None:
+            hand.change(bounds[i], path[i - 1], path[i])
+            continue
+        lift = _ms(f.lift_ms * math.exp(f.lift_sigma * ctx.rng.gauss(0.0, 1.0)), ctx.b)
+        lift = min(lift, _ms(80.0, ctx.b))
+        hand.change(bounds[i], path[i - 1], path[i], lift=lift)
+        if f.damp and ctx.rng.random() < f.damp:
+            hand.cut(bounds[i] - lift, fretted_only=False, lift=0.0)
+
+
+_WOUND = (0, 1, 2)      # the wound strings (E A D): a finger dragged over them is heard
+
+
+def _finger_noises(hand, ctx, moves=None) -> None:
+    """After the performance: the fretting hand's noises at the chord changes (the sound's 'fret' articulation -
+    finger-off samples at the string's pitch): a ringing fretted string lifted at a change sometimes sounds its
+    finger leaving it, a position shift with a wound string under the finger before and after sounds the finger
+    leaving and landing. Probabilities and budgets from the feel; velocities follow how loud the string rang."""
+    f, nz = ctx.feel, ctx.noises or {}
+    art = nz.get('fret')
+    if f is None or art is None or not hand.changes:
+        return
+    rng = random.Random(seed_int(f"{ctx.rng.random():.12f}:fingers"))
+    bud = Budget({'fret': f.fret_every, 'shift': f.shift_every}, zero='unlimited')
+    by: dict[int, list] = {}
+    for e in hand.ev:
+        by.setdefault(e[1], []).append(e)
+
+    def ringing(s, t, lift):
+        evs = [e for e in by.get(s, ()) if t - 2.0 * ctx.bpb <= e[0] < t - lift - 1e-6]
+        return max(evs, key=lambda e: e[0]) if evs else None
+    for t, old, new, lift in sorted(hand.changes, key=lambda c: c[0]):
+        off = t - lift
+        lifted = [s for s in range(6) if old.frets[s] not in (None, 0) and new.frets[s] != old.frets[s]]
+        rang = [(s, ringing(s, t, lift)) for s in lifted]
+        rang = [(s, e) for s, e in rang if e is not None]
+        if not rang:
+            continue
+        wound_old = [s for s, _ in rang if s in _WOUND]
+        wound_new = [s for s in _WOUND if new.frets[s] not in (None, 0)]
+        if abs(new.pos - old.pos) >= f.shift_frets and wound_old and wound_new and rng.random() < f.shift \
+                and bud.allows(t, 'shift'):
+            s0 = rng.choice(wound_old)
+            s1 = min(wound_new, key=lambda s: abs(s - s0))
+            v = rng.uniform(*f.shift_vel)
+            hand.extra.append((off + _ms(rng.uniform(0, 6), ctx.b), _sec(0.25, ctx.b), old.pitches[s0], v, art))
+            hand.extra.append((off + _ms(rng.uniform(22, 40), ctx.b), _sec(0.25, ctx.b), new.pitches[s1], v * 0.75,
+                               art))
+            bud.book(t, 'shift', 'shift')
+            if moves is not None:
+                moves.append((off, t, 'noise', 'shift'))
+            continue
+        if rng.random() >= f.fret_noise or not bud.allows(t, 'fret'):
+            continue
+        weights = {s: (1.5 if s in _WOUND else 1.0) for s, _ in rang}
+        pick = [weighted_choice(rng, weights)]
+        if len(rang) > 1 and rng.random() < f.fret_extra:
+            rest = {s: w for s, w in weights.items() if s != pick[0]}
+            pick.append(weighted_choice(rng, rest))
+        evs = dict(rang)
+        for j, s in enumerate(pick):
+            loud = max(0.6, min(1.2, evs[s][3] / 90.0)) ** 0.5
+            hand.extra.append((off + _ms(rng.uniform(-3, 8) + 9 * j, ctx.b), _sec(0.25, ctx.b), old.pitches[s],
+                               rng.uniform(*f.fret_vel) * loud, art))
+        bud.book(t, 'fret', 'fret')
+        if moves is not None:
+            moves.append((off, t, 'noise', 'fret'))
 
 
 # ------------------------------------------------------------------------------------------------ rhythm parts
@@ -996,11 +1414,14 @@ def _segs(p: Progression, L: float) -> list[tuple[float, float, Chord]]:
 def _rhythm(prog, bpm, *, pattern, grid=None, kind='open', vel=(62, 100), spread=(16, 30), up_strings='top4',
             down_strings='all', gate=None, swing=None, anticipate: float = 0.0, open_change: float = 0.0,
             timing_ms: float = 5.0, late_ms: float = 0.0, sound=None, articulations=None, fretboard=None, seed=0,
-            take=None, length=None, start_shape=None, dyn=None, key=None, lift_ms: float = 18.0) -> dict:
+            take=None, length=None, start_shape=None, dyn=None, key=None, lift_ms: float = 18.0, feel=None,
+            noises=None) -> dict:
     """The shared rhythm engine: shapes voice-led over the progression, the pattern played across it, chord changes
     lifted (fretted strings stop lift_ms early), anticipations (a stroke an 8th before a change takes the new
-    chord), the open-string change stroke. Returns {'notes': [...], 'shapes': [(start, shape)], 'pushes': [...],
-    'hand': _Hand}."""
+    chord), the open-string change stroke. feel= a HandFeel (HANDS name) plays it with a player's variance and,
+    with the sound's noises (noises= / sampled_guitars.NOISES), chucks and finger noises. Returns {'notes': [...],
+    'shapes': [(start, shape)], 'pushes': [...], 'hand': _Hand}."""
+    feel = hand_feel(feel)
     b = _bpm(bpm)
     fb = fretboard if isinstance(fretboard, Fretboard) else _board(fretboard)
     p = _as_prog(prog, key, 4.0 if length is None else length)
@@ -1034,11 +1455,10 @@ def _rhythm(prog, bpm, *, pattern, grid=None, kind='open', vel=(62, 100), spread
                     pushes.append((t, c))
                 break
     ctx = _Ctx(b, nrng, arts, spread=spread, up_strings=up_strings, down_strings=down_strings, gate=gate,
-               timing_ms=timing_ms, late_ms=late_ms, swing=swing)
+               timing_ms=timing_ms, late_ms=late_ms, swing=swing, feel=feel,
+               noises=_noises(sound, noises) if feel is not None else None, bpb=bpb)
     hand = _Hand(b, lift_ms=lift_ms)
-    for i in range(1, len(bounds)):
-        if path[i] != path[i - 1]:
-            hand.change(bounds[i], path[i - 1], path[i])
+    _changes(hand, ctx, path, bounds)
 
     def shape_at(t):
         j = 0
@@ -1067,6 +1487,7 @@ def _rhythm(prog, bpm, *, pattern, grid=None, kind='open', vel=(62, 100), spread
             return
         _token(hand_, ctx_, part, sh, tt, t, vat, grid_)
     _play_steps_x(hand, ctx, toks, g, 0.0, L, shape_at, vel_at, on_step, token)
+    _finger_noises(hand, ctx)
     shapes_log = [(bounds[i], path[i]) for i in range(len(path))]
     return {'notes': hand.notes(L), 'shapes': shapes_log, 'pushes': pushes, 'hand': hand, 'L': L,
             'oc': oc_used[0] > -99.0}
@@ -1074,6 +1495,7 @@ def _rhythm(prog, bpm, *, pattern, grid=None, kind='open', vel=(62, 100), spread
 
 def _play_steps_x(hand, ctx, toks, g, t0, t1, shape_at, vel_at, on_step, token):
     n = len(toks)
+    strumming = any(set(x) & set('DdUu') for x in toks)
     i = int(math.floor(t0 / g + _EPS))
     rng = ctx.rng
     while True:
@@ -1082,11 +1504,21 @@ def _play_steps_x(hand, ctx, toks, g, t0, t1, shape_at, vel_at, on_step, token):
             break
         tok = toks[i % n]
         tok = on_step(t, tok) or tok
-        tt = max(0.0, _swung(t, g, ctx.swing) + _ms(ctx.timing_ms, ctx.b) * _tri(rng) + _ms(ctx.late_ms, ctx.b))
+        if ctx.feel is not None:
+            tok = ctx.vary(tok, t, g, strumming)
+        if ctx.feel is not None and tok in '.-':
+            i += 1
+            continue
+        if ctx.feel is not None:
+            tt = ctx.when(t, g)
+        else:
+            tt = max(0.0, _swung(t, g, ctx.swing) + _ms(ctx.timing_ms, ctx.b) * _tri(rng) + _ms(ctx.late_ms, ctx.b))
         sh = shape_at(t)
         if sh is not None:
+            ctx.pinch = '+' in tok
             for part in tok.split('+'):
                 token(hand, ctx, part, sh, tt, t, vel_at, g)
+            ctx.pinch = False
         i += 1
 
 
@@ -1113,11 +1545,15 @@ def chuck(chord, bpm, *, vel=78, strings='mid', dead=None, sound=None, kind: str
           at=0.0) -> Clip:
     """A dead strum (chuck / scratch): the strings `strings` struck while the fretting hand damps them - the
     percussive 'chk' of pop and funk strumming. dead= the guitar's dead-note articulation (default: found on sound=,
-    else emulated as a 45 ms tick)."""
+    else emulated as a 45 ms tick); a sound with chuck recordings (sampled/acoustic_guitar: sampled_guitars.NOISES)
+    plays its recorded muted strum instead."""
     b = _bpm(bpm)
+    a = _pos(at)
+    nz = _noises(sound) if dead is None else None
+    if nz and nz.get('chuck') is not None:
+        return _clip([(a, _sec(0.3, b), int(nz['chuck']), _vels(vel)[0], None)], a + 0.25)
     sh = _as_shape(chord, kind, fretboard)
     d = dead if dead is not None else _arts(sound).get('dead')
-    a = _pos(at)
     hand = _Hand(b)
     _stroke(hand, sh, 0.0, which=strings, vel=_vels(vel)[0], spread_ms=10.0, rng=random.Random(seed_int(seed)),
             art=d, end=_sec(0.045 if d is None else 0.12, b), onset=0.0)
@@ -1126,25 +1562,30 @@ def chuck(chord, bpm, *, vel=78, strings='mid', dead=None, sound=None, kind: str
 
 def strum_pattern(prog, bpm, *, pattern='pop', grid=None, kind: str = 'open', vel=(62, 100), spread=(16, 30),
                   swing=None, anticipate: float = 0.25, sound=None, articulations=None, fretboard=None, seed=0,
-                  length=None, at=0.0) -> Clip:
+                  length=None, at=0.0, hand=None, noises=None) -> Clip:
     """A strummed part over `prog` (a Progression / chord string; length= beats loops it): shapes voice-led (kind),
     `pattern` (PATTERNS name or tokens) with downs low -> high and ups high -> low on the top four strings, chord
     changes lifted a little early, an 8th-note anticipation of a change now and then (anticipate), velocities
-    vel=(lo, hi) shaped (accents, the one, a phrase arc), a few ms of human timing (seeded)."""
+    vel=(lo, hi) shaped (accents, the one, a phrase arc), a few ms of human timing (seeded). hand= a HANDS name
+    ('acoustic') or a HandFeel: a player's variance (drawn spreads, partial strokes, drift) and, with sound= a
+    patch that has them (sampled/acoustic_guitar), recorded chucks and finger noises at the changes (noises=False:
+    none)."""
     r = _rhythm(prog, bpm, pattern=pattern, grid=grid, kind=kind, vel=vel, spread=spread, swing=swing,
                 anticipate=anticipate, sound=sound, articulations=articulations, fretboard=fretboard, seed=seed,
-                length=length)
+                length=length, feel=hand, noises=noises)
     a = _pos(at)
     return _clip([(s + a, d, q, v, ar) for s, d, q, v, ar in r['notes']], a + r.get('L', 0.0))
 
 
 def arpeggio(prog, bpm, *, pattern='arp_ballad', grid=None, kind: str = 'open', vel=(52, 90), sound=None,
-             fretboard=None, seed=0, length=None, at=0.0) -> Clip:
+             fretboard=None, seed=0, length=None, at=0.0, hand=None, noises=None) -> Clip:
     """A picked arpeggio over `prog`: the pattern's B (the bass string), A (the alternate bass), 1-4 (strings from
     the top) on the grid, every string ringing until it is picked again or the chord changes (let ring) - ballad
-    arpeggios, p-i-m-a, jangle; the bass on the beat heavier, the fingers lighter."""
+    arpeggios, p-i-m-a, jangle; the bass on the beat heavier, the fingers lighter. hand='fingerstyle' (a HANDS name
+    / HandFeel): the thumb and each finger their own weight, pinches not quite together, the time drifting slowly,
+    finger noises at the changes on a sound that has them (sampled/acoustic_guitar)."""
     r = _rhythm(prog, bpm, pattern=pattern, grid=grid, kind=kind, vel=vel, sound=sound, fretboard=fretboard,
-                seed=seed, length=length, timing_ms=6.0, lift_ms=10.0)
+                seed=seed, length=length, timing_ms=6.0, lift_ms=10.0, feel=hand, noises=noises)
     a = _pos(at)
     return _clip([(s + a, d, q, v, ar) for s, d, q, v, ar in r['notes']], a + r.get('L', 0.0))
 
@@ -1818,6 +2259,9 @@ TECHNIQUES = {
     'boom_chick': dict(patterns={'boom_chick': 1.0}, turn=None, kind='open', spread=(10, 18), up='top3',
                        down='top4'),
     'ring': dict(patterns={'whole': 1.0}, turn=None, kind='open', spread=(40, 70), level=0.9),
+    'chuck': dict(patterns={'chuck': 3.0, 'chuck_drive': 1.0}, turn='chuck_push', kind='open', spread=(18, 32),
+                  up='top4'),
+    'chuck16': dict(patterns={'chuck16': 1.0}, turn='chuck_push', kind='open', spread=(14, 26), up='top4'),
 }
 """The rhythm hand's techniques (arrange(technique=...)): patterns (PATTERNS names with weights; turn = the variant
 for the last bar of a 4-bar phrase), the shape kind, the strum spread (ms for six strings), the strings of an
@@ -1865,11 +2309,27 @@ STYLES = {
                   open_change=0.1, spice_every=4, fill_every=4, timing_ms=5.0),
     'jazz': dict(sections={k: 'four' for k in SECTION_ENERGY}, fills={}, ornaments={}, fill=0.0, anticipate=0.0,
                  open_change=0.0, spice_every=0, fill_every=0, timing_ms=4.0),
+    # the acoustic singer-songwriter: chucks on the backbeat in the verse, open strums in the chorus, a picked
+    # bridge - played with the 'acoustic' hand (sampled/acoustic_guitar: real chucks and finger noises)
+    'songwriter': dict(sections={'intro': 'let_ring', 'verse': 'chuck', 'pre': 'strum', 'chorus': 'strum',
+                                 'post': 'strum', 'bridge': 'arpeggio', 'solo': 'strum', 'break': 'let_ring',
+                                 'outro': 'ring'},
+                       fills={'bass_run': 2.0, 'build': 1.0, 'choke': 0.5},
+                       ornaments={'hammer_chord': 2.0, 'sus4': 1.5},
+                       fill=0.6, anticipate=0.3, open_change=0.25, spice_every=4, fill_every=4, timing_ms=3.0,
+                       hand='acoustic'),
+    # fingerstyle: Travis picking and ballad arpeggios everywhere, hammer-ons on the changes, bass walks
+    'fingerstyle': dict(sections={'intro': 'arpeggio', 'verse': 'travis', 'pre': 'travis', 'chorus': 'travis',
+                                  'post': 'travis', 'bridge': 'arpeggio', 'solo': 'travis', 'break': 'let_ring',
+                                  'outro': 'let_ring'},
+                        fills={'bass_run': 2.0}, ornaments={'hammer_chord': 2.0, 'sus4': 1.0}, fill=0.5,
+                        anticipate=0.0, open_change=0.0, spice_every=3, fill_every=8, timing_ms=3.0,
+                        hand='fingerstyle'),
 }
 """arrange() style presets: the technique per section kind (SECTION_ENERGY keys), fills into the next section
-(weights; FILLS), chord ornaments (RHYTHM_ORNAMENTS), fill probability, anticipation (a stroke an 8th before a change
-takes the new chord), the open-string change stroke (the fretting hand already travelling), budgets (spice_every /
-fill_every bars) and the timing spread (ms)."""
+(weights; FILLS), chord ornaments (RHYTHM_ORNAMENTS), the hand (HANDS; none = plain), fill probability, anticipation
+(a stroke an 8th before a change takes the new chord), the open-string change stroke (the fretting hand already
+travelling), budgets (spice_every / fill_every bars) and the timing spread (ms)."""
 
 FILLS = ('build', 'bass_run', 'choke', 'slide_chord')
 """Section-end fills of the rhythm hand (the last 1-2 beats of a part with section_end=True): build (16th strums,
@@ -1916,7 +2376,7 @@ class Arrangement:
     """What arrange() / lead() played: clip (the notes, with articulation / glide marks), auto ({target: points},
     beats relative to the part: pitchbend for bends, vibrato), moves (a log: (start, end, kind, name) with kind
     'technique' | 'pattern' | 'shape' | 'anticipation' | 'ornament' | 'fill' | 'move' | 'phrasing' | 'vibrato' |
-    'dropped'), shapes ([(beat,
+    'dropped' | 'noise' (budgeted fret / shift noises of a hand feel)), shapes ([(beat,
     Shape)] the rhythm hand's grips), budget (what the budgets allowed), energy, technique, section.
     play(track, at) places it (notes + automation), take(n) = the same part played again (another take: the same
     decisions, new timing / velocity noise - for a double-tracked guitar), summary() counts the moves."""
@@ -1989,7 +2449,7 @@ def arrange(prog, *, bpm, key=None, style: str = 'pop', section=None, energy: fl
             open_change: float | None = None, swing=None, spice_every: float | None = None,
             fill_every: float | None = None, tuning='standard', capo: int = 0, fretboard=None, sound=None,
             articulations=None, memory: Memory | None = None, at=None, length=None, into=None,
-            strings=None) -> Arrangement:
+            strings=None, hand=None, noises=None, melody=None, slur: float = 0.12) -> Arrangement:
     """A rhythm guitarist's part over `prog` -> Arrangement (.clip, .play(track, at), .take(2), .moves, .shapes).
 
     The section decides (section= a Section - its name, length and start - or a name: intro, verse, pre, chorus,
@@ -2013,10 +2473,21 @@ def arrange(prog, *, bpm, key=None, style: str = 'pop', section=None, energy: fl
     band that leaves the low strings to the bass; ornaments, palm mutes and fills keep to them too). The hand has a
     speed limit: a 16th pattern faster than it can strum (above ~158 BPM) is played on the 8th grid. At a chord
     change the strings that do not keep their fret stop (a grip that leaves out the low E damps it). density 0..1
-    scales ornaments and fills. Deterministic by seed."""
+    scales ornaments and fills. hand= the player's feel (HANDS: 'plain', 'acoustic', 'fingerstyle' or a HandFeel;
+    default the style's - 'songwriter' / 'fingerstyle' play with theirs, the others plain): strokes whose spread is
+    drawn (tempo, force), partial strokes (a missed low string, ups of 2-5 strings), late ups, a drifting time and
+    loudness, drawn lifts at the changes, and on a sound with recorded hand noises (sampled/acoustic_guitar;
+    noises= a map or False) real chucks, finger noises at the changes and position shifts (budgeted, logged as
+    'noise' moves). melody= a Clip / Motif / notes (beats from the part's start, velocities as written - shape them
+    with humanize.touch): a CHORD MELODY - the picked pattern keeps going under it and the tune is fretted on top, as
+    a classical / fingerstyle player voices it (_melody_voice: the melody on the highest string the hand reaches from
+    the current grip, the pattern's notes on and above that string or at / above the melody's pitch left out while it
+    sounds, the strings above it damped; slur= P(a close step on the same string is hammered on / pulled off: softer,
+    no new pluck - logged as 'move' hammer_on / pull_off). Deterministic by seed."""
     if style not in STYLES:
         raise ComposeError(f"guitarist style must be one of {', '.join(STYLES)}, got {style!r}")
     S = STYLES[style]
+    feel = hand_feel(S.get('hand') if hand is None else hand)
     b = _bpm(bpm)
     dens = _num(density, 'guitarist density', 0, 1)
     sec_name = getattr(section, 'name', section)
@@ -2048,7 +2519,7 @@ def arrange(prog, *, bpm, key=None, style: str = 'pop', section=None, energy: fl
     base = _pos(at) if at is not None else (memory.clock if memory is not None else 0.0)
     moves: list = [(0.0, L, 'technique', tech)]
     # the pattern: the section's main one, a variant for the last bar of each 4-bar phrase
-    main = pattern if pattern is not None else _pick(rng, T['patterns'])
+    main = pattern if pattern is not None else weighted_choice(rng, T['patterns'])
     turn = None if pattern is not None else T.get('turn')
     if turn is not None and rng.random() > 0.35 + 0.5 * dens:
         turn = None
@@ -2098,7 +2569,7 @@ def arrange(prog, *, bpm, key=None, style: str = 'pop', section=None, energy: fl
     cands = []
     fill_kind, fill_len = None, 0.0
     if section_end and fw and L >= 2 * bpb - _EPS and rng.random() < p_fill:
-        fill_kind = _pick(rng, fw)
+        fill_kind = weighted_choice(rng, fw)
         fill_len = {'build': 2.0 if e >= 0.6 else 1.0, 'bass_run': 1.0 if b < 110 else 2.0, 'choke': 2.0,
                     'slide_chord': 1.0}[fill_kind]
         fill_len = min(fill_len, bpb)
@@ -2118,7 +2589,7 @@ def arrange(prog, *, bpm, key=None, style: str = 'pop', section=None, energy: fl
     for i, (a0, a1, c) in enumerate(segs0):
         if a1 - a0 < 2.0 - _EPS or a0 >= L - fill_len - 1.0 or rng.random() >= p_orn:
             continue
-        name = _pick(rng, ow)
+        name = weighted_choice(rng, ow)
         if name is None:
             continue
         cands.append(dict(name=name, cls='spice' if name != 'slide_chord' else 'flash', t=a0,
@@ -2144,9 +2615,14 @@ def arrange(prog, *, bpm, key=None, style: str = 'pop', section=None, energy: fl
     # parts moved the memory on) plays the very same shapes
     start_shape = memory.shape if memory is not None else None
 
+    nz = _noises(sound, noises) if feel is not None else None
+    mel = None if melody is None else as_clip(melody)
+    slur = _num(slur, 'guitarist slur', 0, 1)
+
     def run(take_):
         return _arrange_run(p, b, fb, T, k_, toks, g, turn, lo, hi, e, up, anti, oc, swing, arts, sound, rng_seed,
-                            take_, L, L_main, bpb, orn_at, fill_kind, fill_len, nxt, key, S, start_shape)
+                            take_, L, L_main, bpb, orn_at, fill_kind, fill_len, nxt, key, S, start_shape, feel, nz,
+                            mel, slur)
     rng_seed = seed_int(seed)
     notes, shapes_log, pushes, extra = run(take)
     for t, sh in shapes_log:
@@ -2176,8 +2652,67 @@ def arrange(prog, *, bpm, key=None, style: str = 'pop', section=None, energy: fl
                        section=sec_name, rerun=rerun)
 
 
+def _melody_voice(hand, ctx, mel, shape_at, fb, rng, arts, L_main, moves, slur=0.0) -> None:
+    """A chord melody (arrange(melody=)): the tune fretted on top of the picked pattern already in `hand`, the way a
+    classical / fingerstyle player voices it. Each melody note goes on the highest string the fretting hand reaches
+    from the current grip (the grip's own note when it has it; never on the bass string), plucked by the 'a' / 'm'
+    finger at its written velocity (+- the hand's jitter, a few ms of motor noise). While it sounds, the pattern's
+    notes on its string or above it, or at / above its pitch, are left out (the finger is busy, the tune stays on
+    top) and strings above it still ringing are damped. A close step (1-2 semitones) on the same string right after
+    the previous note is now and then slurred (P slur): hammered on / pulled off - softer, the guitar's 'hammer-on'
+    articulation when it has one."""
+    mel_ev = []
+    prev = None                                   # (string, fret, start, end, pitch)
+    jit = ctx.feel.pick_jitter if ctx.feel is not None else 0.05
+    for n in mel:
+        if n.start >= L_main - _EPS:
+            continue
+        sh = shape_at(n.start)
+        bass_s = sh.strings[0] if sh is not None and sh.strings else 0
+        pos = sh.pos if sh is not None else 0
+        best = None
+        for s, f in fb.positions(n.pitch, 0, min(fb.top, 15)):
+            if s <= bass_s and s < 5:
+                continue
+            cost = 0.55 * (5 - s)                 # the treble strings carry the tune
+            if sh is not None and sh.pitches[s] == n.pitch:
+                cost -= 2.5                       # the grip already frets it
+            if f > 0:
+                d = abs(f - max(pos, 1))
+                cost += 0.12 * d + 0.8 * max(0, d - fb.reach(max(pos, 1)))
+            if prev is not None and n.start - prev[3] < 0.6:
+                cost += 0.08 * abs(f - prev[1]) + (0.0 if s == prev[0] else 0.2)
+            if best is None or cost < best[0]:
+                best = (cost, s, f)
+        if best is None:                          # out of the neck's range: played where it falls
+            ps = fb.positions(n.pitch)
+            if not ps:
+                continue
+            best = (0.0,) + max(ps)
+        _, s, f = best
+        t0, t1 = n.start, n.start + n.dur
+        keep = {id(e) for e in mel_ev}
+        hand.ev = [e for e in hand.ev if id(e) in keep
+                   or not (t0 - 0.03 <= e[0] < t1 - 0.03 and (e[1] >= s or e[2] >= n.pitch))]
+        tt = max(0.0, t0 + _ms(ctx.timing_ms * 0.8, ctx.b) * _tri(rng))
+        if s < 5:
+            hand.cut(tt - _ms(2.0, ctx.b), strings=set(range(s + 1, 6)), lift=0.0)
+        v = n.vel * (1.0 + jit * _tri(rng))
+        art = None
+        if prev is not None and prev[0] == s and 1 <= abs(n.pitch - prev[4]) <= 2 and abs(t0 - prev[3]) < 0.05                 and prev[3] - prev[2] <= 1.0 and n.dur <= 1.5 and slur and rng.random() < slur:
+            name = 'hammer_on' if n.pitch > prev[4] else 'pull_off'
+            v *= 0.66
+            art = arts.get('hammer')
+            tt = t0
+            moves.append((prev[2], t1, 'move', name))
+        hand.add(tt, s, n.pitch, v, art, t1 + min(0.5, 0.15 * n.dur), f != 0)
+        mel_ev.append(hand.ev[-1])
+        prev = (s, f, t0, t1, n.pitch)
+
+
 def _arrange_run(p, b, fb, T, k_, toks, g, turn, lo, hi, e, up, anti, oc, swing, arts, sound, seed, take, L, L_main,
-                 bpb, orn_at, fill_kind, fill_len, nxt, key, S, start_shape):
+                 bpb, orn_at, fill_kind, fill_len, nxt, key, S, start_shape, feel=None, nz=None, mel=None,
+                 slur=0.0):
     """One performance of an arrangement (the decisions fixed by the caller; `take` changes only the noise)."""
     rng = random.Random(seed)
     nrng = random.Random(f"{seed}:take{take}") if take is not None else random.Random(f"{seed}:noise")
@@ -2207,11 +2742,9 @@ def _arrange_run(p, b, fb, T, k_, toks, g, turn, lo, hi, e, up, anti, oc, swing,
         ctx = _Ctx(b, nrng, arts, spread=T.get('spread', (16, 30)), up_strings=up, down_strings=T.get('down', 'all'),
                    gate=T.get('gate'), timing_ms=S.get('timing_ms', 5.0),
                    late_ms=T.get('late_ms', S.get('late_ms', 0.0)),
-                   swing=swing)
+                   swing=swing, feel=feel, noises=nz, bpb=bpb)
         hand = _Hand(b, lift_ms=T.get('lift_ms', 18.0))
-        for i in range(1, len(bounds)):
-            if path[i] != path[i - 1]:
-                hand.change(bounds[i], path[i - 1], path[i])
+        _changes(hand, ctx, path, bounds)
         idx = {}
 
         def shape_at(t):
@@ -2230,6 +2763,7 @@ def _arrange_run(p, b, fb, T, k_, toks, g, turn, lo, hi, e, up, anti, oc, swing,
         i = 0
         done_orn = set()
         picking = any(set(x) & set('BA1234') for x in toks)
+        strumming = any(set(x) & set('DdUu') for x in toks)
         pending: dict = {}
         while True:
             bar = int(math.floor(i * g / bpb + _EPS))
@@ -2249,7 +2783,13 @@ def _arrange_run(p, b, fb, T, k_, toks, g, turn, lo, hi, e, up, anti, oc, swing,
             if oc and tok == 'u' and round(t + g, 6) in changes and t - oc_last[0] >= 2 * bpb and nrng.random() < oc:
                 oc_last[0] = t
                 tok = '~'
-            tt = max(0.0, _swung(t, g, swing) + _ms(ctx.timing_ms, b) * _tri(nrng) + _ms(ctx.late_ms, b))
+            if feel is not None and tok != '~':
+                tok = ctx.vary(tok, t, g, strumming)
+            if feel is not None:
+                tt = ctx.when(t, g) if tok not in '.-' else t
+            else:
+                tt = max(0.0, _swung(t, g, swing) + _ms(ctx.timing_ms, b) * _tri(nrng) + _ms(ctx.late_ms, b))
+            ctx.pinch = '+' in tok
             sh = shape_at(t)
             key_t = round(t, 4)
             if pending and (t >= pending['until'] - _EPS or sh is not pending['shape']):
@@ -2297,9 +2837,17 @@ def _arrange_run(p, b, fb, T, k_, toks, g, turn, lo, hi, e, up, anti, oc, swing,
                         extra.append((t, t + g, 'ornament', 'open_change'))
                     else:
                         _token(hand, ctx, part, sh, tt, t, vel_at, g)
+            ctx.pinch = False
             i += 1
+        if mel is not None:
+            _melody_voice(hand, ctx, mel, shape_at, fb, nrng, arts, L_main, extra, slur)
+        _finger_noises(hand, ctx, extra)
         notes = hand.notes(L_main)
         shapes_log = [(bounds[i], path[i]) for i in range(len(path))]
+    # melody notes in the fill (or past the picked part): played as written, on top of the fill
+    tail = [] if mel is None else [n for n in mel if L_main - _EPS <= n.start < L - _EPS]
+    for n in tail:
+        notes.append((n.start + _ms(2.0 * _tri(nrng), b), min(n.dur * 1.1, L - n.start), n.pitch, n.vel, None))
     # the fill into the next section
     if fill_kind is not None:
         a0 = L - fill_len
@@ -2317,7 +2865,7 @@ def _arrange_run(p, b, fb, T, k_, toks, g, turn, lo, hi, e, up, anti, oc, swing,
         elif fill_kind == 'bass_run' and cur is not None and nxt is not None:
             c = bass_run(cur, nxt, fill_len, b, key=key, notes=int(round(fill_len * 2)) if fill_len >= 2 else 2,
                          vel=(lo + hi) / 2, seed=sd)
-            if cur_sh is not None:        # the chord keeps ringing on the treble strings under the walk
+            if cur_sh is not None and not tail:   # the chord rings on the treble strings under the walk
                 top = strum(cur_sh, fill_len, b, strings='top3', vel=lo * 0.9, spread_ms=14.0, seed=sd)
                 c = c | top
         elif fill_kind == 'slide_chord' and nxt is not None:

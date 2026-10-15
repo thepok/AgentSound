@@ -127,6 +127,35 @@ class Lyrics(_Env):
         lyrics.align(Clip([(0, 1, 60, 90)]), 'zork', warnings=warn)
         self.assertTrue(warn and 'zork' in warn[0])
 
+    def test_german_by_hand(self):
+        # the German symbols (o1 / u1 / l1 end in a digit: not a stress), 'ee = the stressed vowel, -er off-glide
+        s = lyrics.syllabify("l1 'a n d uh ng s sh t ee k".split(), 'landungssteg')
+        self.assertEqual([(x.onset, x.nucleus, x.coda) for x in s],
+                         [(('l1',), 'a', ('n',)), (('d',), 'uh', ('ng', 's')), (('sh', 't'), 'ee', ('k',))])
+        self.assertEqual([x.stress for x in s], [1, 0, 0])
+        self.assertEqual(lyrics.syllabify("ts uh rh 'yy k".split())[1].stress, 1)
+        s = lyrics.syllabify(['v', 'ee', 'ex'], 'wer')                         # one syllable: wer, der, mir
+        self.assertEqual((len(s), s[0].nucleus, s[0].coda), (1, 'ee', ('ex',)))
+        self.assertEqual(len(lyrics.syllabify(['v', 'a', 's', 'ex'])), 2)    # Was-ser: a vocalic -er syllable
+        self.assertEqual(lyrics.syllabify(['m', 'o1', 'n', 'd'])[0].nucleus, 'o1')
+        self.assertEqual(lyrics.vowel_class('ax'), 'closed')
+        self.assertEqual(lyrics.vowel_class('o1'), 'open')
+        t = lyrics.spell('*Die Fäh-re* geht, - (( wer ))', {'die': 'd iy', 'Fähre': "f 'eh rh ax", 'geht': 'g ee t',
+                                                             'wer': 'v ee ex'})
+        self.assertEqual(t, "*Die{d iy} Fähre{f 'eh rh ax}* geht{g ee t}, - (( wer{v ee ex} ))")
+        toks = lyrics.parse(t)
+        self.assertEqual([(x.text, x.emph) for x in toks if x.kind == 'word'],
+                         [('Die', 'emph'), ('Fähre', 'emph'), ('geht', ''), ('wer', 'intimate')])
+        self.assertEqual(toks[2].mark, ',')
+        c = Clip([(i, 1, 60 + i, 90) for i in range(6)], length=6)
+        sung = lyrics.align(c, t)
+        self.assertEqual([(x.kind, x.syllable.word) for x in sung],
+                         [('syllable', 'Die'), ('syllable', 'Fähre'), ('syllable', 'Fähre'), ('syllable', 'geht'),
+                          ('melisma', 'geht'), ('syllable', 'wer')])
+        with self.assertRaises(lyrics.LyricsError) as e:
+            lyrics.spell('Die Nacht', {'die': 'd iy'})
+        self.assertIn("'nacht'", str(e.exception))
+
     def test_lyricist_checks(self):
         c = Clip([(0, 1, 60, 90), (1.5, 0.5, 62, 90), (2, 2, 64, 90)], length=4)
         w = lyrics.check(c, 'to-night will')
@@ -183,6 +212,32 @@ class Voicebanks(_Env):
         with self.assertRaises(vb.VoicebankError) as e:
             vb.get('tiger').require()
         self.assertIn('not installed', str(e.exception))
+
+    def test_runner_tokenises_per_sub_model(self):
+        # TIGER: the pitch model's table lacks io / iz / rs -> its ids differ from the acoustic / duration ones
+        import importlib
+        with mock.patch.dict('sys.modules', {'onnxruntime': mock.MagicMock(), 'yaml': mock.MagicMock()}):
+            dr = importlib.import_module('agentsound.voicebank_runner.ds_runner')
+        full = ['<PAD>', 'AP', 'SP', 'a', 'ih', 'io', 'iy', 'iz', 'r', 'rs', 't', 'z', 'zh']
+        root = self.tmp / 'bank'
+        for sub, names in (('dsacoustic', full), ('dsdur', full),
+                           ('dspitch', [n for n in full if n not in ('io', 'iz', 'rs')])):
+            (root / sub).mkdir(parents=True)
+            (root / sub / 'phonemes.txt').write_text('\n'.join(names) + '\n', encoding='utf-8')
+            (root / sub / 'dsconfig.yaml').write_text('', encoding='utf-8')
+        cfgs = {'dsconfig.yaml': {'phonemes': 'dsacoustic/phonemes.txt'},
+                'dsdur/dsconfig.yaml': {'phonemes': 'phonemes.txt'},
+                'dspitch/dsconfig.yaml': {'phonemes': 'phonemes.txt'}}
+        r = root.as_posix()
+        with mock.patch.object(dr, '_yaml', lambda p: dict(cfgs[p[len(r) + 1:]])):
+            bank = dr.Bank(r, provider='cpu')
+        phs = ['a', 'io', 'z', 'zh', 'rs']
+        self.assertEqual(bank.tokens(phs).tolist(), [[3, 5, 11, 12, 9]])                         # acoustic
+        self.assertEqual(bank.tokens(phs, bank.dur_cfg['_phonemes']).tolist(), [[3, 5, 11, 12, 9]])
+        # pitch: z / zh in range of its table (the crash), io / rs fed as their stand-ins iy / t
+        self.assertEqual(bank.tokens(phs, bank.pitch_cfg['_phonemes']).tolist(), [[3, 5, 8, 9, 7]])
+        with self.assertRaises(ValueError):
+            bank.tokens(['xx'])
 
 
 def _song():

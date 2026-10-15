@@ -20,13 +20,14 @@ supersaw with an octave-down body, the bright high house piano, or the pluck), k
 
 from __future__ import annotations
 
+from ..bands import Builder, SoundChoice
 from .. import bands
 from ..bands import Band
 from ..patches import fx
 from ..patterns import drums as _drums
 from ..theory import ComposeError
 from .pop import kick_sub, tonic_sub
-from .rock import Builder, _eq, _patch_sound, installed, lib_patch, master_chain
+from .rock import _eq, _patch_sound, installed, lib_patch, master_chain
 
 VERSION = 1
 
@@ -169,20 +170,14 @@ def _kit(which: str, level: float = 0.0):
     return inst.drums(kit='909', level=level)
 
 
-def _lead(kind: str):
-    if kind == 'supersaw':
-        return lib_patch('edm/lead')
-    if kind == 'piano':
-        return lib_patch('sampled/piano_lead') if installed('salamander-grand') else lib_patch('gm/piano_lead')
-    if kind == 'pluck':
-        return lib_patch('edm/pluck')
-    raise ComposeError(f"edm lead must be 'supersaw', 'piano' or 'pluck', got {kind!r}")
-
-
-_LEAD_CHAIN = {
-    'supersaw': (lambda: [_eq(peak1__freq=400, peak1__gain=-1.5)], 0.0),
-    'piano': (lambda: [_eq(hp__freq=120, peak1__freq=350, peak1__gain=-2.0, high__freq=9000, high__gain=1.0)], 0.0),
-    'pluck': (lambda: [_eq(peak3__freq=3000, peak3__gain=1.0)], 1.0),
+LEADS = {
+    'supersaw': SoundChoice(lambda: lib_patch('edm/lead'),
+        lambda: [_eq(peak1__freq=400, peak1__gain=-1.5)], trim=0.0),
+    'piano': SoundChoice(lambda: lib_patch('sampled/piano_lead'),
+        lambda: [_eq(hp__freq=120, peak1__freq=350, peak1__gain=-2.0, high__freq=9000, high__gain=1.0)], trim=0.0,
+        requires=('salamander-grand',), fallback=lambda: lib_patch('gm/piano_lead')),
+    'pluck': SoundChoice(lambda: lib_patch('edm/pluck'),
+        lambda: [_eq(peak3__freq=3000, peak3__gain=1.0)], trim=1.0),
 }
 
 
@@ -202,12 +197,12 @@ def edm_band(song, *, style: str = 'house', without=(), sounds=None, ids=None, l
         raise ComposeError(f"edm style must be one of {', '.join(STYLES)}, got {style!r}")
     st = STYLES[style]
     lead = lead or st['lead']
-    if lead not in _LEAD_CHAIN:
+    if lead not in LEADS:
         raise ComposeError(f"{style}: lead must be 'supersaw', 'piano' or 'pluck', got {lead!r}")
     kit = kit or st['kit']
     notes = NOTES.format(preset=style, kit=kit, bass=st['bass'], chords=st['chords'], lead=lead, **{
         k: st[k] for k in ('pump', 'chord_pump', 'pad_pump', 'master_gain')})
-    b = Builder(song, style, without=without, sounds=sounds, ids=ids, analysis={'profile': 'edm'}, notes=notes)
+    b = Builder(song, style, bus_policy='reuse', trim_mode='insert', without=without, sounds=sounds, ids=ids, analysis={'profile': 'edm'}, notes=notes)
     s = song
     beat_ms = 60000.0 / float(s.tempo)
     plate = b.bus('plate', lib_patch('bus/plate').fx)
@@ -236,8 +231,8 @@ def edm_band(song, *, style: str = 'house', without=(), sounds=None, ids=None, l
                     fx=[_eq(hp__freq=250, peak1__freq=450, peak1__gain=-3.0, high__freq=9000, high__gain=1.5)],
                     sends={hall: -6})
     pluck_t = b.track('pluck', lambda: lib_patch('edm/pluck'), pan=0.25, trim=-6.0, sends={echo: -9, hall: -14})
-    chain, trim = _LEAD_CHAIN[lead]
-    b.track('lead', lambda: _lead(lead), trim=trim, fx=chain(), sends={hall: -12, echo: -14, plate: -16})
+    choice = LEADS[lead]
+    b.track('lead', choice.make, trim=choice.trim, fx=choice.chain(), sends={hall: -12, echo: -14, plate: -16})
     if kit_t is not None:
         rel = st['pump_release'] * beat_ms
         for t, depth in ((bass_t, st['pump']), (chords_t, st['chord_pump']), (pad_t, st['pad_pump']),

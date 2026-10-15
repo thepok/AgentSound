@@ -25,7 +25,7 @@ std::string joined(const std::vector<std::string>& items) {
 
 }  // namespace
 
-std::vector<std::string> instrumentTypes() { return {"va", "dx7", "drums", "sf2", "sampler", "stack"}; }
+std::vector<std::string> instrumentTypes() { return {"va", "dx7", "drums", "sf2", "sampler", "stack", "wavetable"}; }
 
 std::vector<std::string> effectTypes() {
     auto types = dynamicsEffectTypes();
@@ -43,6 +43,7 @@ std::unique_ptr<Instrument> createInstrument(std::string_view type) {
     if (type == "sf2") return makeSf2Synth();
     if (type == "sampler") return makeSampler();
     if (type == "stack") return makeStack();
+    if (type == "wavetable") return makeWavetableSynth();  // (VaSynth.h)
     throw ConfigError("unknown instrument type '" + std::string(type) + "' (known: " + joined(instrumentTypes()) + ")");
 }
 

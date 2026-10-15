@@ -1,4 +1,4 @@
-"""VA modulation matrix: free, per-voice modulation routings for the 'va' instrument.
+"""VA modulation matrix: free, per-voice modulation routings for the 'va' and 'wavetable' instruments.
 
 The va synth has fixed amp and filter envelopes (amp.*, fenv.* + filter.env); everything else that moves
 is a routing in its "mods" list - as many as you like (up to 64), each with its own source:
@@ -45,6 +45,10 @@ Targets and amount units (per voice unless noted; the amount is what a source va
   unison.detune                     added (kept in 0..1)
   fm                                osc2 -> osc1 phase-modulation index in radians (needs osc1.wave 'sine')
   hpf                               octaves of the global high-pass: only global sources (lfo mode='global', macro)
+  osc1.position, osc2.position      'wavetable' only: table position (added to oscN.position, kept in 0..1)
+  osc1.warp, osc2.warp              'wavetable' only: warp amount (added to oscN.warp.amount, kept in 0..1)
+(osc1.pw, osc2.pw and fm are 'va' only.) The same routes drive a wavetable's morph:
+    inst.wavetable('formant', mods=[vamod.env(a=0.8, d=4, s=0.3) >> ('osc1.position', 0.7)])
 
 Every route's amount is the automatable instrument param 'mod.<id>.amount' (id given) or 'mod.<index>.amount'
 (its position in the list), smoothed ~5 ms. A flat param 'mod.<id>.amount' also overrides it:
@@ -60,7 +64,7 @@ from .modulation import parse_rate
 from .theory import ComposeError, note as _note
 
 __all__ = ['TARGETS', 'SHAPES', 'Source', 'Route', 'lfo', 'env', 'velocity', 'key', 'random', 'macro',
-           'normalize_mods', 'describe']
+           'normalize_mods', 'describe', 'targets_for', 'check_targets']
 
 MAX_MODS = 64
 # target -> (amount min, amount max, unit, global)
@@ -71,7 +75,27 @@ TARGETS = {
     'noise.level': (-1.0, 1.0, '', False), 'cutoff': (-10.0, 10.0, 'oct', False), 'resonance': (-1.0, 1.0, '', False),
     'filter.drive': (-1.0, 1.0, '', False), 'amp': (-96.0, 24.0, 'dB', False), 'pan': (-2.0, 2.0, '', False),
     'unison.detune': (-1.0, 1.0, '', False), 'fm': (-10.0, 10.0, 'rad', False), 'hpf': (-10.0, 10.0, 'oct', True),
+    'osc1.position': (-1.0, 1.0, '', False), 'osc2.position': (-1.0, 1.0, '', False),
+    'osc1.warp': (-1.0, 1.0, '', False), 'osc2.warp': (-1.0, 1.0, '', False),
 }
+# The instruments with a 'mods' matrix and the targets only one of them has.
+INSTRUMENTS = ('va', 'wavetable')
+_ONLY = {'va': {'osc1.pw', 'osc2.pw', 'fm'}, 'wavetable': {'osc1.position', 'osc2.position', 'osc1.warp', 'osc2.warp'}}
+
+
+def targets_for(instrument: str) -> tuple[str, ...]:
+    """The modulation targets of the 'va' or 'wavetable' instrument."""
+    other = set().union(*(v for k, v in _ONLY.items() if k != instrument))
+    return tuple(t for t in TARGETS if t not in other)
+
+
+def check_targets(mods: list[dict], instrument: str, where: str) -> None:
+    """ComposeError when a routing targets a param the instrument does not have (osc1.pw on a wavetable ...)."""
+    ok = targets_for(instrument)
+    for i, r in enumerate(mods):
+        if r['target'] not in ok:
+            raise ComposeError(f"{where}[{i}]: target {r['target']!r} is not a {instrument!r} target; "
+                               f"targets: {', '.join(ok)}")
 SHAPES = ('sine', 'triangle', 'saw', 'ramp', 'square', 'samplehold', 'smoothrandom')
 _SHAPE_ALIASES = {'tri': 'triangle', 'saw_down': 'saw', 'saw_up': 'ramp', 'sh': 'samplehold', 's&h': 'samplehold',
                   'random': 'samplehold', 'smooth': 'smoothrandom', 'smooth_random': 'smoothrandom'}

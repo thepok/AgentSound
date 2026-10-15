@@ -6,7 +6,7 @@ violin theme, an 80s trumpet solo).
     lead = hero(s.track('lead', 'sampled/solo_violin'), family='strings', genre='film', bed=[pad, strings],
                 competitors=[piano], sections=[chorus1, chorus2])          # the sound + the mix rules, on the track
     p = hero('sampled/trumpet', family='brass')       # a Patch: the trumpet through the brass hero chain
-    p = hero(family='sax')                            # the family's own hero (= layered/hero_sax)
+    p = hero(family='sax')                            # the family's own hero (= hero/sax; the v1 sax: layered/hero_sax)
     hero.play(lead, line, verse)                      # = heroes.play: the family's player (velocity arcs, vibrato)
 
 A hero is three things, and the wrapper does all of them from one table (PRESETS, one preset per family / variant):
@@ -477,7 +477,7 @@ def infer(sound) -> Preset:
             if words & set(p.words):
                 return p
     ins = _instrument_of(sound)
-    if ins is not None and ins.type in ('va', 'dx7'):
+    if ins is not None and ins.type in ('va', 'wavetable', 'dx7'):
         return PRESETS['synth']
     return PRESETS['generic']
 

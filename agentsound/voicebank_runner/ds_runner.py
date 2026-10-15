@@ -41,6 +41,11 @@ import onnxruntime as ort
 import yaml
 
 
+# a bank phoneme missing from a sub-model's table -> the nearest one it knows (TIGER's dspitch: Mandarin io, the
+# rare vowel iz, the stop rs)
+PH_STANDIN = {'io': 'iy', 'iz': 'ih', 'rs': 't'}
+
+
 def _yaml(path):
     with open(path, encoding='utf-8') as f:
         return yaml.safe_load(f)
@@ -93,6 +98,9 @@ class Bank:
             return None
         c = _yaml(p)
         c['_dir'] = f'{self.root}/{folder}'
+        # each sub-model has its own phoneme table (TIGER's pitch model lacks 3 of the acoustic phonemes, so the
+        # ids after them differ): tokenise with it, never with the acoustic one
+        c['_phonemes'] = self._phonemes(f"{c['_dir']}/{c['phonemes']}") if c.get('phonemes') else self.phonemes
         c['_speakers'] = self._embeds(c.get('speakers') or [], c['_dir'])
         return c
 
@@ -105,11 +113,21 @@ class Bank:
             self._sessions[path] = s
         return s
 
-    def tokens(self, phonemes):
+    def tokens(self, phonemes, table=None):
+        """[1, n] ids in `table` (a sub-model's own; default the acoustic one). A bank phoneme that a sub-model
+        was trained without (TIGER's pitch model: io, iz, rs) is fed as its stand-in (PH_STANDIN)."""
+        table = self.phonemes if table is None else table
         bad = [p for p in phonemes if p not in self.phonemes]
         if bad:
             raise ValueError(f"phonemes not in this bank: {sorted(set(bad))}")
-        return np.array([[self.phonemes[p] for p in phonemes]], dtype=np.int64)
+        ids = []
+        for p in phonemes:
+            if p not in table:
+                p = PH_STANDIN.get(p, p)
+                if p not in table:
+                    raise ValueError(f"phoneme {p!r} is not in this sub-model's table and has no stand-in")
+            ids.append(table[p])
+        return np.array([ids], dtype=np.int64)
 
     # ---- speaker mixes
     def spk(self, mix, n, table):
@@ -144,7 +162,7 @@ class Bank:
         c = self.dur_cfg
         if c is None:
             raise ValueError('this bank has no duration model (dsdur/)')
-        toks = self.tokens(job['phonemes'])
+        toks = self.tokens(job['phonemes'], c['_phonemes'])
         n = toks.shape[1]
         ling = self.session(f"{c['_dir']}/{c['linguistic']}")
         feeds = {'tokens': toks, 'word_div': np.array([job['word_div']], dtype=np.int64),
@@ -162,7 +180,7 @@ class Bank:
         c = self.pitch_cfg
         if c is None:
             raise ValueError('this bank has no pitch model (dspitch/)')
-        toks = self.tokens(job['phonemes'])
+        toks = self.tokens(job['phonemes'], c['_phonemes'])
         ph_dur = np.array([job['ph_dur']], dtype=np.int64)
         nf = int(ph_dur.sum())
         ling = self.session(f"{c['_dir']}/{c['linguistic']}")

@@ -1,3 +1,5 @@
+import hashlib
+import json
 import pathlib
 import statistics
 import sys
@@ -182,6 +184,50 @@ class TestPlayability(unittest.TestCase):
 
 
 class TestArrange(unittest.TestCase):
+    def test_master_fixed_seed_fingerprints(self):
+        # Captured from master 7d9fce9 before migrating the ledger; includes note marks and song-wide records.
+        expected = {
+            'rock': 'c301433b5d79c376c3901d6d99251948defe5f3e67190a8c5323b52c0c8d1225',
+            'pop': '40241a41d9457659829d3cbe28c423bc1f645b721745d249f9a03f4624cd5631',
+            'country': '603a4ce44da0be881929a04276dab32f1ceb89c963a474a86bead24b3bab6a87',
+            'funk': '2fd9c8247d4c26912b7f434562c7e9834783aaaf60b17983d7b41b106120d0b6',
+            'motown': '9f6500699373ebb5480a8bf781ad254d3dcae24f17a52e2ff59ce3296ee98ff2',
+            'disco': 'd41f03c49bf68ea5ad08172fb0372871ab571fc1d973d6ce2764050d70f1d94f',
+            'ballad': '2e1baf2457ad74130d76ad748a1fb16d77b7abdb99b321edf73baf9d81c16115',
+            'reggae': 'a3a449a905f9abd6864ac5846360afa931f8014a66784be45425bf8ed0ae6a6e',
+            'tumbao': 'd39761879b9ba6efbc8e3ce365c9f1e12d3a195f15681a035105669cabf29597',
+            'synth': 'b6c858f854f36f3223b0353a6c9e72ea64e65a4e53baa1b4c5d8af76979e6935',
+            'walking': '6ed6c41c9f852dd43fdaaf39c55dc1a5ea9eaaf600a93b2573a07f157d3a7f37',
+        }
+        for style, digest in expected.items():
+            rows = []
+            for spacing in (None, 0):
+                for seed in (0, 1, 7, 23):
+                    mem = bassist.Memory().played(2, 'slide').played(15, 'fill')
+                    for at in (0, 32):
+                        line = bassist.arrange('Em C G D Em C Am B7', bpm=112, key='E minor', style=style,
+                                               seed=seed, density=1.0, memory=mem, at=at,
+                                               fill_every=spacing, flash_every=spacing)
+                        rows.append([[(tuple(n), art.articulation_of(n), art.glide_of(n)) for n in line.clip],
+                                     line.clip.length, line.moves, line.budget, mem.fills, mem.flash, mem.clock])
+            self.assertEqual(hashlib.sha256(json.dumps(rows, sort_keys=True).encode()).hexdigest(), digest, style)
+
+    def test_fill_spacing_exact_memory_boundary(self):
+        kw = dict(bpm=112, style='rock', seed=1, density=1, timing=False, flash={}, fills={'run_up': 1})
+        prog = 'Em C G D Em C Am B7'
+        for offset, allowed in [(0, True), (0.5e-6, True), (2e-6, False)]:
+            mem = bassist.Memory().played(30 + offset, 'fill')
+            line = bassist.arrange(prog, memory=mem, at=32, **kw)
+            self.assertEqual((30.0, 'run_up') in line.budget['fills'], allowed)
+
+    def test_flash_spacing_exact_memory_boundaries(self):
+        kw = dict(bpm=112, style='rock', seed=0, density=1, timing=False, flash={'slide': 1}, fills={})
+        for previous, gap in [('slide', 32), ('octave_pop', 16)]:
+            for offset, allowed in [(0, True), (0.5e-6, True), (2e-6, False)]:
+                mem = bassist.Memory().played(48 - gap + offset, previous)
+                line = bassist.arrange('Em C G D Em C Am B7', memory=mem, at=32, **kw)
+                self.assertEqual((16.0, 'slide') in line.budget['flash'], allowed, (previous, offset))
+
     def line(self, **kw):
         a = dict(bpm=BPM, key=KEY, style='rock', part='chorus', seed=3)
         a.update(kw)

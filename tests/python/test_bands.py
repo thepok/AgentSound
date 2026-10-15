@@ -22,6 +22,37 @@ def _toy(song, *, without=(), sounds=None, ids=None, **opts):
     return b
 
 
+class TestConstruction(unittest.TestCase):
+    def test_lazy_override_and_omission(self):
+        from unittest.mock import Mock
+        from agentsound.bands import Builder
+        for mode in ('insert', 'fader'):
+            b = Builder(Song('t'), 'test', bus_policy='reuse', trim_mode=mode,
+                        without=('pad',), sounds={'lead': inst.va()}, ids={'lead': 'hook'})
+            missing = Mock(side_effect=AssertionError('unused default sound'))
+            self.assertIsNone(b.track('pad', missing))
+            t = b.track('lead', missing, trim=-3)
+            self.assertEqual(t.id, 'hook')
+            self.assertEqual(t.gain_db, 0 if mode == 'insert' else -3)
+            missing.assert_not_called()
+
+    def test_lead_records_fallback_and_fresh_effects(self):
+        import tempfile
+        from unittest.mock import patch
+        from agentsound import library
+        from agentsound.bandlib import pop, edm
+        for table, args in ((pop.LEADS, ('pop_band',)), (edm.LEADS, ())):
+            for choice in table.values():
+                with self.subTest(choice=choice):
+                    first, second = choice.chain(), choice.chain()
+                    self.assertEqual(first, second)
+                    self.assertTrue(all(a is not b for a, b in zip(first, second)))
+                    if choice.requires:
+                        with tempfile.TemporaryDirectory() as d, patch.object(library, 'SAMPLES', Path(d)):
+                            # The real fallback must build without the primary pack.
+                            self.assertIsNotNone(choice.make(*args))
+
+
 class TestBands(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

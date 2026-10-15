@@ -17,6 +17,9 @@ The QUALITY GATE: before rendering the tune's shape (composer.shape: the single 
 phrase, the hook in every A, the register following the arc), then the report: 0 clicks, no flat_dynamics on a lead,
 0 silent notes, the loudness inside the genre's window - a failed tune is deleted and the next seed composed with the
 same plan (logged in OUT/endless.log).
+BEST-OF-N (--candidates N, default the genre's plan['candidates'] = 8): per slot N tunes are composed and performed
+without audio, scored (composer.score: one number from the notes) and only the best is rendered (the next best when
+the gate fails); --candidates 1 = one seed at a time. `python -m agentsound score TARGET` prints a piece's score.
 """
 from __future__ import annotations
 
@@ -29,7 +32,7 @@ import threading
 import time
 from pathlib import Path
 
-from .composer import breath, compose, describe_set, mix_plan, piano_tells, set_plan, shape
+from .composer import breath, compose, describe_set, mix_plan, piano_tells, score, set_plan, shape
 from .genres import GENRES, STYLES, get
 
 
@@ -52,9 +55,22 @@ def add_parser(sub) -> None:
     p.add_argument('--gap', type=float, default=4.0, help='seconds of silence between tunes in --join (default 4)')
     p.add_argument('--keep', action='store_true', help='keep mix.wav and the render json')
     p.add_argument('--tries', type=int, default=5, help='seeds to try per tune before giving up (default 5)')
+    p.add_argument('--candidates', type=int,
+                   help="best-of-N: compose + perform N candidate tunes per slot without audio, score them "
+                        "(composer.score) and render only the best (default: the genre's plan['candidates'], 8; "
+                        "1 = one seed at a time, as before)")
     p.add_argument('--engine', help='engine executable (default: $AGENTSOUND_ENGINE or build/agentsound.exe)')
     p.add_argument('--list', action='store_true', help='list the genres with their moods, feels and forms')
     p.set_defaults(func=cmd_endless)
+    s = sub.add_parser('score', help="the quality score 0-100 of a piano piece from its notes (composer.score: the "
+                                     "blind test's tells, breath, body against the composed references) and its worst "
+                                     "offenders - a songs/<slug> with a song.py or an endless tune folder (tune.json)")
+    s.add_argument('target', help='songs/<slug> (song.py: build(), TUNE optional) or an endless OUT/NNN-<title> folder')
+    s.add_argument('--style', choices=list(STYLES) + ['organ'], help="the score table (default: the tune's genre; a song with a "
+                                                         "'solo' section: jazz, else new-age)")
+    s.add_argument('--all', action='store_true', help='print every metric, not only the worst five')
+    s.add_argument('--json', action='store_true', help='print the result as JSON')
+    s.set_defaults(func=cmd_score)
 
 
 def _swing_arg(x):
@@ -69,6 +85,10 @@ def slug(text: str) -> str:
 
 
 # ------------------------------------------------------------------------------------------------ the gate
+
+RENDER_BLOCKING = {'clicks', 'flat_dynamics', 'silent_notes', 'silent_node', 'silent_section',
+                   'spiky_track', 'loudness_low', 'loudness_high', 'loudness_missing'}
+
 
 def breath_gate(genre, song) -> list[str]:
     """The genre's band['breath'] minimums on composer.breath(song) (checked before rendering: cheap)."""
@@ -86,51 +106,98 @@ def gate(report: dict, genre, song=None) -> list[str]:
     the genre's band['breath'] minimums: the playing must breathe (composer.breath: quiet1 = the share of time
     without a new right-hand onset for a beat+, att_cv4 = how much the density varies per 4 bars)."""
     out = breath_gate(genre, song) if song is not None else []
-    g = report.get('global') or {}
-    if (g.get('clicks') or 0) > 0:
-        out.append(f"{g['clicks']} clicks")
-    for n in report.get('nodes') or []:
-        d = n.get('dynamics')
-        if isinstance(d, dict) and d.get('flat') and d.get('kind') == 'lead':
-            out.append(f"flat dynamics on {n.get('id')}")
-        sil = n.get('silentNotes')
-        k = (sil.get('silent') or 0) + (sil.get('compileSilent') or 0) if isinstance(sil, dict) else 0
-        if k > 0:
-            out.append(f"{k} silent notes on {n.get('id')}")
-    for w in report.get('warnings') or []:
-        code = str(w.get('code', ''))
-        if code == 'flat_dynamics' and w.get('severity') in ('warn', 'error'):
-            out.append('flat_dynamics: ' + str(w.get('message', ''))[:120])
-        if 'silent' in code:
-            out.append(f"{code}: " + str(w.get('message', ''))[:120])
-    lo, hi = genre.band.get('loudness', (-20.0, -10.0))
-    lufs = g.get('lufsIntegrated')
-    if not isinstance(lufs, (int, float)) or not lo <= lufs <= hi:
-        out.append(f"loudness {lufs} LUFS outside {lo:g}..{hi:g}")
+    from ..verdicts import DELIVERY, evaluate
+    policy = dict(DELIVERY['endless'], loudness=list(genre.band.get('loudness', (-20.0, -10.0))))
+    for f in evaluate(report, policy=policy):
+        if f['code'] in RENDER_BLOCKING and (f['code'] != 'flat_dynamics' or f['severity'] in ('warn', 'error')):
+            out.append(f"{f['code']}: {f['message']}"[:160])
     return sorted(set(out))
 
 
 # ------------------------------------------------------------------------------------------------ one tune
 
-def render_tune(genre, seed: int, out_root: Path, index: int, args, log, plan: dict | None = None,
-                prev=None) -> dict | None:
-    """Compose (plan: a set_plan entry), check the shape, build, render, deliver and gate one tune; None when the gate
-    failed (the files are removed). prev: the Song of the tune before it in the set (its licks are drawn less often:
-    perform.build); info['_song'] is this one's."""
-    from .. import cli
-    from .perform import build, cover, metadata
-    t0 = time.perf_counter()
+def prepare(genre, seed: int, args, log, plan: dict | None = None, prev=None):
+    """Compose (plan: a set_plan entry), check the shape (the arc check), build and check the breath of one tune -
+    no audio: (tune, song), or None when a check rejected it (logged)."""
+    from .perform import build
     tune = compose(genre, seed, mood=args.mood, swing=args.swing, plan=plan)
     form_shape = shape(tune)
     if form_shape['issues']:
         log(f"seed {seed}: '{tune.title}' REJECTED by the arc check ({'; '.join(form_shape['issues'])}) - rerolling")
         return None
-    t1 = time.perf_counter()
     song = build(tune, genre, prev=prev)
     early = breath_gate(genre, song)
     if early:
         log(f"seed {seed}: '{tune.title}' REJECTED by the breath check ({'; '.join(early)}) - rerolling")
         return None
+    return tune, song
+
+
+def seeds_for(genre, n: int) -> int:
+    """The seeds a best-of-n slot may use: n x the genre's plan['candidate_tries'] (default 1: n seeds, the arc /
+    breath rejects lost; new-age 2: ~40 % of its seeds failed the arc check, best-of-8 saw 3-5 candidates)."""
+    return max(n, int(round(n * genre.plan.get('candidate_tries', 1))))
+
+
+def candidates(genre, seed: int, n: int, args, log, plan: dict | None = None, prev=None) -> list[dict]:
+    """BEST-OF-N: compose + perform n candidate tunes for one slot (seeds seed .. seed+n-1; the slot's plan, or - a
+    single tune without one - the first candidate's mood / feel / key / tempo pinned for the others), WITHOUT
+    rendering, each scored by composer.score: [{'seed', 'tune', 'song', 'score', 'plan'}] best first (the arc /
+    breath rejects dropped). Logs every candidate's score and the best one's worst offenders."""
+    from ..theory import ComposeError, PackMissingError
+    out, slot = [], plan
+    for sd in range(seed, seed + seeds_for(genre, n)):
+        if len(out) >= n:                         # (a genre's candidate_tries: rejected seeds are replaced)
+            break
+        try:
+            made = prepare(genre, sd, args, log, plan=slot, prev=prev)
+        except PackMissingError:                  # an install problem: every candidate would hit it
+            raise
+        except ComposeError as e:
+            log(f"seed {sd}: compose error ({e}) - next candidate")
+            continue
+        if made is None:
+            continue
+        tune, song = made
+        used = slot
+        if slot is None:                          # (the others play the first one's slot)
+            slot = {'mood': tune.mood, 'feel': tune.feel, 'key': tune.key, 'tempo': tune.tempo,
+                    **(getattr(tune, 'arrange', None) or {})}       # (the set-level draws: one per slot)
+        sc = score(song, tune, genre)
+        out.append({'seed': sd, 'tune': tune, 'song': song, 'score': sc, 'plan': used})
+        log(f"  candidate seed {sd}: '{tune.title}' ({tune.form}, {tune.feel}) score {sc['score']:.1f}"
+            + (f" (capped: {', '.join(sc['hard'])})" if sc['hard'] else ''))
+    out.sort(key=lambda c: (-c['score']['score'], c['seed']))
+    if out:
+        mean = sum(c['score']['score'] for c in out) / len(out)
+        best = out[0]
+        log(f"best of {len(out)}: seed {best['seed']} '{best['tune'].title}' {best['score']['score']:.1f} (the "
+            f"candidates' mean {mean:.1f}); its worst: " + '; '.join(_worst_line(w) for w in best['score']['worst']))
+    return out
+
+
+def _worst_line(w: dict) -> str:
+    return f"{w['metric']} {w['value']:g} (want {w['lo']:g}..{w['hi']:g}, -{w['lost']:.1f})"
+
+
+def render_tune(genre, seed: int, out_root: Path, index: int, args, log, plan: dict | None = None,
+                prev=None, made: dict | None = None) -> dict | None:
+    """Compose (plan: a set_plan entry), check the shape, build, render, deliver and gate one tune; None when the gate
+    failed (the files are removed). prev: the Song of the tune before it in the set (its licks are drawn less often:
+    perform.build); made: a candidates() entry (composed, built and scored already: only rendered here);
+    info['_song'] is this one's; tune.json carries its score (composer.score) and the exact compose arguments."""
+    from .. import cli
+    from .perform import cover, metadata
+    t0 = time.perf_counter()
+    if made is None:
+        got = prepare(genre, seed, args, log, plan=plan, prev=prev)
+        if got is None:
+            return None
+        tune, song = got
+        sc = score(song, tune, genre)
+    else:
+        tune, song, sc, plan, seed = made['tune'], made['song'], made['score'], made['plan'], made['seed']
+    t1 = time.perf_counter()
     render = song.compile()
     cli.apply_analysis(render, {'profile': genre.band.get('profile', 'jazz')})
     t2 = time.perf_counter()
@@ -164,13 +231,20 @@ def render_tune(genre, seed: int, out_root: Path, index: int, args, log, plan: d
     timing = {'compose_s': round(t1 - t0, 2), 'build_s': round(t2 - t1, 2), 'render_s': round(t3 - t2, 2),
               'deliver_s': round(t4 - t3, 2), 'total_s': round(t4 - t0, 2), 'audio_s': round(audio_s, 1),
               'realtime_x': round(audio_s / max(1e-6, t4 - t0), 2)}
-    piano = genre.plan.get('perform', 'jazz') == 'piano'
+    piano = genre.plan.get('perform', 'jazz') in ('piano', 'organ', 'orchestra')
+    own = genre.style in ('organ', 'orchestra')       # (their own tells: the score's parts)
     info = dict(tune.to_dict(), shape=shape(tune) if piano else shape(tune, song), style=genre.style,
-                tells=piano_tells(song, tune),
+                tells=piano_tells(song, tune) if not own else {k: v[0] for k, v in sc['parts'].items()},
+                score={'score': sc['score'], 'style': sc['style'], 'hard': sc['hard'], 'worst': sc['worst'],
+                       'parts': sc['parts'], 'candidates': (made or {}).get('candidates')},
+                compose={'seed': seed, 'mood': args.mood, 'swing': args.swing, 'plan': plan},
                 sections=getattr(song, 'endless_sections', None), plan=plan, timing=timing,
                 lufs=g.get('lufsIntegrated'),
                 lra=g.get('loudnessRange'),
                 gate='pass', files={'mp3': str(d / 'mix.mp3'), 'cover': str(d / 'cover.png')},
+                orchestration=(dict(getattr(song, 'orch_score').to_dict(), size=getattr(song, 'orch_size', None),
+                                    roles=song.orchestration.roles())
+                               if getattr(song, 'orch_score', None) is not None else None),
                 piano_dynamics_db=next((n['dynamics'].get('dynamicsDb') for n in report.get('nodes') or []
                                         if n.get('id') == 'piano' and isinstance(n.get('dynamics'), dict)), None))
     (d / 'tune.json').write_text(json.dumps(info, indent=1, ensure_ascii=False), encoding='utf-8')
@@ -186,7 +260,7 @@ def render_tune(genre, seed: int, out_root: Path, index: int, args, log, plan: d
         f"{f' swing {tune.swing:.2f}' if tune.swing else ''}, {tune.form}; {audio_s:.0f} s in {t4 - t0:.0f} s "
         f"(compose {timing['compose_s']} s, render {timing['render_s']} s); {g.get('lufsIntegrated')} LUFS; climax "
         f"{cl['pitch']} in {cl['part']} at {cl['x']:.0%} of the head; LRA {g.get('loudnessRange')} LU, breath "
-        f"{info['tells']['quiet1']}, phrase rests {info['tells']['phrase_rests']} -> {d}")
+        f"{info['tells'].get('quiet1')}, phrase rests {info['tells'].get('phrase_rests')}, score {sc['score']:.1f} -> {d}")
     return info
 
 
@@ -248,7 +322,7 @@ def describe_genres() -> str:
 
 def cmd_endless(args) -> int:
     from ..cli import REPO, CliError
-    from ..theory import ComposeError
+    from ..theory import ComposeError, PackMissingError
     if args.list:
         print(describe_genres())
         return 0
@@ -313,16 +387,31 @@ def cmd_endless(args) -> int:
             if prev is not None and getattr(prev, 'endless_tune', None) is not None and \
                     prev.endless_tune.genre != g_.name:
                 prev = None                            # (the licks' memory is one genre's)
-            for _ in range(max(1, args.tries)):
-                try:
-                    info = render_tune(g_, seed, out_root, index, args, log, plan=slot, prev=prev)
-                except ComposeError as e:
-                    log(f"seed {seed}: compose error ({e}) - rerolling")
-                seed += 1
-                if info:
-                    break
+            n_cand = args.candidates if args.candidates is not None else g_.plan.get('candidates', 8)
+            if n_cand > 1:                             # best-of-N: score without audio, render the best (the next
+                ranked = candidates(g_, seed, n_cand, args, log, plan=slot, prev=prev)   # on a failed gate)
+                seed += seeds_for(g_, n_cand)
+                summary = {'n': len(ranked), 'mean': round(sum(c['score']['score'] for c in ranked) /
+                                                           max(1, len(ranked)), 1),
+                           'scores': {c['seed']: c['score']['score'] for c in ranked}}
+                for rank, c in enumerate(ranked[:max(1, args.tries)]):
+                    info = render_tune(g_, c['seed'], out_root, index, args, log, prev=prev,
+                                       made=dict(c, candidates=dict(summary, rank=rank + 1)))
+                    if info:
+                        break
+            else:
+                for _ in range(max(1, args.tries)):
+                    try:
+                        info = render_tune(g_, seed, out_root, index, args, log, plan=slot, prev=prev)
+                    except PackMissingError:
+                        raise
+                    except ComposeError as e:
+                        log(f"seed {seed}: compose error ({e}) - rerolling")
+                    seed += 1
+                    if info:
+                        break
             if not info:
-                log(f"no tune passed the gate in {args.tries} seeds - stopping")
+                log(f"no tune passed the gate in {args.tries} {'candidates' if n_cand > 1 else 'seeds'} - stopping")
                 break
             song_ = info.pop('_song', None)
             prev = song_ if set_n else None             # the set's memory: the next tune avoids its licks
@@ -345,3 +434,79 @@ def cmd_endless(args) -> int:
         player.join()
     logf.close()
     return 0 if made else 1
+
+
+# ------------------------------------------------------------------------------------------------ score
+
+def load_scored(target: Path):
+    """(song, tune or None, genre or None) of a score target: an endless tune folder (tune.json: the tune composed
+    again from its 'compose' arguments - or seed / plan / swing / mood for older folders - and built WITHOUT the set's
+    memory of the tune before it) or a song folder / song.py (build(), its module-level TUNE when it has one)."""
+    import importlib.util
+    import sys
+    from ..cli import CliError
+    from .perform import build
+    target = Path(target)
+    tj = target / 'tune.json'
+    if tj.is_file():
+        d = json.loads(tj.read_text(encoding='utf-8'))
+        g = get(d['genre'])
+        c = d.get('compose') or {'seed': d['seed'], 'swing': d.get('swing'), 'plan': d.get('plan'), 'mood': None}
+        tries = [c['mood']] if 'compose' in d else [None, d.get('mood')]
+        for mood in tries:
+            tune = compose(g, c['seed'], mood=mood, swing=c.get('swing'), plan=c.get('plan'))
+            if tune.title == d['title']:
+                return build(tune, g), tune, g
+        raise CliError(f"{tj}: seed {c['seed']} composes '{tune.title}', not '{d['title']}' (made by other code?)")
+    py = target if target.suffix == '.py' else target / 'song.py'
+    if not py.is_file():
+        raise CliError(f"score: {target} has neither a tune.json nor a song.py")
+    spec = importlib.util.spec_from_file_location('agentsound_score_' + re.sub(r'\W', '_', py.parent.name), py)
+    mod = importlib.util.module_from_spec(spec)
+    sys.path.insert(0, str(py.parent))
+    try:
+        spec.loader.exec_module(mod)
+        song = mod.build() if hasattr(mod, 'build') else getattr(mod, 'song', None)
+    finally:
+        sys.path.remove(str(py.parent))
+    if song is None:
+        raise CliError(f"{py} must define build() -> Song or a module-level `song`")
+    tune = getattr(mod, 'TUNE', None)
+    return song, tune, (get(tune.genre) if tune is not None and getattr(tune, 'genre', None) in GENRES else None)
+
+
+def format_score(sc: dict, every: bool = False) -> str:
+    """The score, why it is capped, and its worst offenders (every metric with every=True)."""
+    from .genres import SCORES
+    t = SCORES[sc['style']]
+    head = f"score {sc['score']:.1f} / 100 ({sc['style']} table, {len(sc['parts'])} metrics"
+    head += f"; capped from {sc['mean']:.1f} by the hard rule(s) {', '.join(sc['hard'])})" if sc['hard'] else ')'
+    lines = [head]
+    rows = sorted(sc['parts'], key=lambda k: sc['parts'][k][1]) if every else [w['metric'] for w in sc['worst']]
+    lines.append('every metric (worst first):' if every else 'worst offenders:')
+    for k in rows:
+        v, sub, w = sc['parts'][k]
+        lo, hi = t[k][0], t[k][1]
+        lines.append(f"  {k:<16} {v:>8.3g}   want {lo:g}..{hi:g}   sub {sub:.2f}  weight {w:g}"
+                     + ('  HARD' if t[k][3] else ''))
+    if sc['missing']:
+        lines.append(f"not measured: {', '.join(sc['missing'])}")
+    return '\n'.join(lines)
+
+
+def cmd_score(args) -> int:
+    from ..cli import CliError
+    from ..theory import ComposeError
+    try:
+        song, tune, g = load_scored(Path(args.target))
+        if args.style:
+            g = get(STYLES.get(args.style, args.style))
+        sc = score(song, tune, g)
+    except ComposeError as e:
+        raise CliError(str(e)) from None
+    if args.json:
+        print(json.dumps(sc, indent=1))
+    else:
+        print(f"{Path(args.target)}: {song.title}" + (f" ({tune.genre}, seed {tune.seed})" if tune is not None else ''))
+        print(format_score(sc, args.all))
+    return 0

@@ -12,12 +12,13 @@ agentsound/bandlib/rock.py.
 
 from __future__ import annotations
 
+from ..bands import Builder, SoundChoice
 from .. import bands, library
 from ..bands import Band
 from ..patches import Instrument, fx, inst
 from .. import patches as _patches
 from ..theory import ComposeError
-from .rock import (BASS_ARTICULATIONS, EMILY, FASHION, FSBS_DI, Builder, _chain, _eq, _patch_sound, amp, articulated,
+from .rock import (BASS_ARTICULATIONS, EMILY, FASHION, FSBS_DI, _chain, _eq, _patch_sound, amp, articulated,
                    guitar_di, installed, layer, lib_patch, master_chain, piano, rock_kit, wurlitzer)
 
 CHART_KIT = 'samples/sampleradar-essential-drumkit/Chart Kit'
@@ -137,40 +138,26 @@ def horn_section(level: float = 0.0) -> Instrument:
     return inst.sf2('Brass Section', level=level)
 
 
-def lead_sound(kind: str, preset: str):
-    """Lead voices: 'synth' (synthwave/pulse_lead), 'soft' (synthwave/soft_lead), 'sax' (Weresax alto, legato,
-    CC0), 'tenor' (MTG tenor sax, legato, CC-BY), 'guitar' (Emily SG DI, legato - the role chain adds the amp),
-    'piano' (Salamander)."""
-    if kind == 'synth':
-        return lib_patch('synthwave/pulse_lead')
-    if kind == 'soft':
-        return lib_patch('synthwave/soft_lead')
-    if kind == 'sax':
-        return lib_patch('sampled/alto_sax') if installed('karoryfer-weresax') else inst.sf2('Alto Sax', mono='on')
-    if kind == 'tenor':
-        return lib_patch('sampled/tenor_sax') if installed('mtg-solo-sax') else inst.sf2('Tenor Sax', mono='on')
-    if kind == 'guitar':
-        return guitar_di(EMILY, preset, 'lead', articulations=(), mono='legato', legatotime=30)
-    if kind == 'piano':
-        return piano()
-    raise ComposeError(f"{preset}: lead must be one of synth, soft, sax, tenor, guitar, piano; got {kind!r}")
-
-
-# lead insert chains per kind (after the sound's own patch fx) and the trim that puts each lead at about -19 LUFS
-_LEAD_CHAIN = {
-    'synth': (lambda: [_eq(hp__freq=180, peak1__freq=400, peak1__gain=-2.0, peak3__freq=3500, peak3__gain=-1.5)],
-              1.0),
-    'soft': (lambda: [_eq(hp__freq=180, peak1__freq=400, peak1__gain=-1.5)], 0.0),
-    'sax': (lambda: [_eq(hp__freq=150, peak1__freq=400, peak1__gain=-2.0, peak3__freq=2800, peak3__gain=1.0),
-                     fx.compressor(threshold=-22, ratio=3, attack=10, release=150, automakeup='on')], -1.0),
-    'tenor': (lambda: [_eq(hp__freq=110, peak1__freq=380, peak1__gain=-2.5, peak3__freq=2600, peak3__gain=1.0),
-                       fx.compressor(threshold=-22, ratio=3, attack=10, release=150, automakeup='on')], -1.0),
-    'guitar': (lambda: amp('clean', gain=3.0) + [fx.compressor(threshold=-24, ratio=3, attack=8, release=120,
+LEADS = {
+    'synth': SoundChoice(lambda preset: lib_patch('synthwave/pulse_lead'),
+        lambda: [_eq(hp__freq=180, peak1__freq=400, peak1__gain=-2.0, peak3__freq=3500, peak3__gain=-1.5)], trim=1.0),
+    'soft': SoundChoice(lambda preset: lib_patch('synthwave/soft_lead'),
+        lambda: [_eq(hp__freq=180, peak1__freq=400, peak1__gain=-1.5)], trim=0.0),
+    'sax': SoundChoice(lambda preset: lib_patch('sampled/alto_sax'),
+        lambda: [_eq(hp__freq=150, peak1__freq=400, peak1__gain=-2.0, peak3__freq=2800, peak3__gain=1.0),
+                     fx.compressor(threshold=-22, ratio=3, attack=10, release=150, automakeup='on')], trim=-1.0,
+        requires=('karoryfer-weresax',), fallback=lambda preset: inst.sf2('Alto Sax', mono='on')),
+    'tenor': SoundChoice(lambda preset: lib_patch('sampled/tenor_sax'),
+        lambda: [_eq(hp__freq=110, peak1__freq=380, peak1__gain=-2.5, peak3__freq=2600, peak3__gain=1.0),
+                       fx.compressor(threshold=-22, ratio=3, attack=10, release=150, automakeup='on')], trim=-1.0,
+        requires=('mtg-solo-sax',), fallback=lambda preset: inst.sf2('Tenor Sax', mono='on')),
+    'guitar': SoundChoice(lambda preset: guitar_di(EMILY, preset, 'lead', articulations=(), mono='legato', legatotime=30),
+        lambda: amp('clean', gain=3.0) + [fx.compressor(threshold=-24, ratio=3, attack=8, release=120,
                                                               automakeup='on'),
                                                 fx.chorus(mode='I', mix=0.2),
-                                                _eq(hp__freq=150, peak1__freq=350, peak1__gain=-2.0)], -4.2),
-    'piano': (lambda: [_eq(hp__freq=100, peak1__freq=300, peak1__gain=-2.5, peak3__freq=3500, peak3__gain=1.5)],
-              -1.0),
+                                                _eq(hp__freq=150, peak1__freq=350, peak1__gain=-2.0)], trim=-4.2),
+    'piano': SoundChoice(lambda preset: piano(),
+        lambda: [_eq(hp__freq=100, peak1__freq=300, peak1__gain=-2.5, peak3__freq=3500, peak3__gain=1.5)], trim=-1.0),
 }
 
 
@@ -221,9 +208,9 @@ def pop_band(song, *, without=(), sounds=None, ids=None, keys: str = 'rhodes', b
         raise ComposeError(f"pop_band: keys must be 'rhodes', 'wurli' or 'piano', got {keys!r}")
     if bass not in ('electric', 'synth'):
         raise ComposeError(f"pop_band: bass must be 'electric' or 'synth', got {bass!r}")
-    if lead not in _LEAD_CHAIN:
-        raise ComposeError(f"pop_band: lead must be one of {', '.join(_LEAD_CHAIN)}, got {lead!r}")
-    b = Builder(song, 'pop_band', without=without, sounds=sounds, ids=ids, analysis={'profile': 'pop'},
+    if lead not in LEADS:
+        raise ComposeError(f"pop_band: lead must be one of {', '.join(LEADS)}, got {lead!r}")
+    b = Builder(song, 'pop_band', bus_policy='reuse', trim_mode='insert', without=without, sounds=sounds, ids=ids, analysis={'profile': 'pop'},
                 notes=POP_NOTES)
     s = song
     plate = b.bus('plate', _patches.get('bus/ir_plate').fx if installed('little-devil-224xl-13-cd-plate-a')
@@ -278,8 +265,8 @@ def pop_band(song, *, without=(), sounds=None, ids=None, keys: str = 'rhodes', b
     b.track('pluck', lambda: lib_patch('synthwave/arp_pluck'), pan=0.55, trim=-6.0,
             fx=[_eq(hp__freq=300, peak3__freq=3500, peak3__gain=-1.5), fx.chorus(mode='I', mix=0.35)],
             sends={echo: -8, hall: -14})
-    lead_chain, lead_trim = _LEAD_CHAIN[lead]
-    b.track('lead', lambda: lead_sound(lead, 'pop_band'), trim=lead_trim, fx=lead_chain(),
+    choice = LEADS[lead]
+    b.track('lead', lambda: choice.make('pop_band'), trim=choice.trim, fx=choice.chain(),
             sends={plate: -9, echo: -12, hall: -15},
             humanize=(3, 5, 65) if lead in ('sax', 'tenor', 'guitar', 'piano') else None)
     if kit_t is not None:
@@ -338,7 +325,7 @@ def funk_band(song, *, without=(), sounds=None, ids=None, keys: str = 'clav', ba
         raise ComposeError(f"funk_band: bass must be 'finger', 'round' or 'slap', got {bass!r}")
     if lead not in ('tenor', 'sax', 'synth', 'guitar'):
         raise ComposeError(f"funk_band: lead must be 'tenor', 'sax', 'synth' or 'guitar', got {lead!r}")
-    b = Builder(song, 'funk_band', without=without, sounds=sounds, ids=ids, analysis={'profile': 'pop'},
+    b = Builder(song, 'funk_band', bus_policy='reuse', trim_mode='insert', without=without, sounds=sounds, ids=ids, analysis={'profile': 'pop'},
                 notes=FUNK_NOTES)
     s = song
     room = b.bus('room', _chain('bus/ir_ambience', convolver={'width': 1.3}) if installed('little-devil-224xl-04-room')
@@ -391,10 +378,9 @@ def funk_band(song, *, without=(), sounds=None, ids=None, keys: str = 'clav', ba
                 fx.compressor(threshold=-22, ratio=3, attack=5, release=100, automakeup='on'),
                 fx.width(width=1.3)],
             sends={room: -6, plate: -10}, humanize=(5, 6, 75))
-    lead_key = {'tenor': 'tenor', 'sax': 'sax', 'synth': 'synth', 'guitar': 'guitar'}[lead]
-    lead_chain, lead_trim = _LEAD_CHAIN[lead_key]
-    b.track('lead', lambda: lead_sound(lead_key, 'funk_band'), pan=-0.1, trim=lead_trim - 2.0,
-            fx=lead_chain() + [_eq(peak2__freq=1000, peak2__gain=-3.5, peak2__q=0.8),
+    choice = LEADS[lead]
+    b.track('lead', lambda: choice.make('funk_band'), pan=-0.1, trim=choice.trim - 2.0,
+            fx=choice.chain() + [_eq(peak2__freq=1000, peak2__gain=-3.5, peak2__q=0.8),
                                fx.microshift(style='smooth', detune=4, delay=10, focus=300, mix=0.5)],
             sends={plate: -9, echo: -13, room: -12}, humanize=(4, 5, 76))
     if kit_t is not None and bass_t is not None:

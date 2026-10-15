@@ -20,6 +20,9 @@ Levels: a role's track gain_db is the preset's level for it (rock / pop keep it 
 `b.bass.automate('gainDb', [(0, 0), (solo.start, 2, 'smooth'), ...])` means "the preset's level, +2 dB in the solo".
 
 The presets live in agentsound/bandlib/*.py (one file per genre family) and register themselves here.
+Missing sample packs: a preset plays its substitute and records the miss (library.want, inside make()); the song's
+compile then raises PackMissingError with the install command unless $AGENTSOUND_PACK_FALLBACK=1 (then an error-level
+'pack_fallback' report warning) - never a silent fallback.
 """
 
 from __future__ import annotations
@@ -92,6 +95,98 @@ class Band:
 
     def __repr__(self) -> str:
         return f"Band({self.preset!r}: {', '.join(self.roles)})"
+
+
+@dataclass(frozen=True)
+class SoundChoice:
+    """A lazy sound, its pack fallback, and its matching insert chain and trim."""
+    sound: Callable
+    chain: Callable
+    trim: float = 0.0
+    requires: tuple = ()
+    fallback: Callable | None = None
+
+    def make(self, *args):
+        from . import library
+        missing = [p for p in self.requires if not library.has(p)]
+        if missing and self.fallback is not None:
+            snd = self.fallback(*args)
+            for p in missing:
+                library.record(p, _sound_name(snd))
+            return snd
+        return self.sound(*args)
+
+
+def _sound_name(snd) -> str:
+    """A short name of a sound (a patch name, an instrument's type / preset) for the pack-fallback messages."""
+    name = getattr(snd, 'name', None)
+    if isinstance(name, str) and name:
+        return name
+    ins = getattr(snd, 'instrument', snd)
+    if getattr(ins, 'type', None) == 'drums':
+        return 'the engine drum machine'
+    params = getattr(ins, 'params', None) or {}
+    what = params.get('preset') or params.get('file') or params.get('program')
+    kind = getattr(ins, 'type', type(snd).__name__)
+    return f"{kind} {what}" if what is not None else str(kind)
+
+
+class Builder:
+    """Band plumbing: bus_policy='reuse' keeps an existing bus, 'new' rejects collisions,
+    'distinct' gives another ensemble its own return. trim_mode='insert' keeps the fader at zero;
+    'fader' adds the trim to gain_db. Sound preparation (including patch sends) stays with the family.
+    """
+
+    def __init__(self, song, preset, *, bus_policy, trim_mode='fader', callable_overrides=False,
+                 without=(), sounds=None, ids=None,
+                 analysis=None, notes=''):
+        self.s, self.preset = song, preset
+        self.without, self.sounds, self.ids = set(without or ()), dict(sounds or {}), dict(ids or {})
+        self.bus_policy, self.trim_mode = bus_policy, trim_mode
+        self.callable_overrides = callable_overrides
+        self.band = Band(song, preset, notes=notes, analysis=analysis)
+
+    def want(self, role):
+        return role not in self.without
+
+    def add_track(self, role, sound, *, humanize=None, groove=None, **mix):
+        t = self.s.track(self.ids.get(role, role), sound, **mix)
+        if groove is not None:
+            t.groove(groove)
+        if isinstance(humanize, dict):
+            t.humanize(**humanize)
+        elif humanize is not None:
+            t.humanize(*humanize)
+        return self.band.add(role, t)
+
+    def track(self, role, default, *, fx=(), trim=0.0, gain_db=0.0, prepare=None, **mix):
+        if not self.want(role):
+            return None
+        sound = self.sounds[role] if role in self.sounds else default
+        if callable(sound) and (role not in self.sounds or self.callable_overrides):
+            sound = sound()
+        if prepare is not None:
+            sound = prepare(sound, role)
+        chain = builtins.list(fx)
+        if self.trim_mode == 'insert':
+            from .patches import fx as effects
+            chain.append(effects.utility(gain=round(trim, 2), name='trim'))
+            mix['sends'] = {k: v for k, v in (mix.get('sends') or {}).items() if k is not None} or None
+        else:
+            gain_db += trim
+        return self.add_track(role, sound, fx=chain, gain_db=gain_db, **mix)
+
+    def bus(self, name, chain=(), *, create=None, **mix):
+        bid = name
+        if self.bus_policy == 'distinct':
+            n = 1
+            while bid in self.s.buses or bid in self.s.tracks:
+                n += 1
+                bid = f'{name}_{self.preset}' if n == 2 else f'{name}_{self.preset}{n}'
+        b = self.s.buses.get(bid) if self.bus_policy == 'reuse' else None
+        if b is None:
+            b = create(bid) if create is not None else self.s.bus(bid, chain, **mix)
+        return self.band.bus(name, b)
 
 
 @dataclass
@@ -173,7 +268,9 @@ def make(name: str, song, **options) -> Band:
         bad = set((options.get(key) or {})) - set(p.roles)
         if bad:
             raise ComposeError(f"band {name!r}: {key}= names unknown roles {sorted(bad)}; roles: {', '.join(p.roles)}")
-    band = p.build(song, **options)
+    from . import library
+    with library.watching(song):          # a missing pack -> its substitute is recorded: Song.compile() raises
+        band = p.build(song, **options)
     if not isinstance(band, Band):
         raise ComposeError(f"band preset {name!r} did not return a Band")
     return band

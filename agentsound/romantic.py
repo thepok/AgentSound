@@ -34,12 +34,16 @@ import math
 import random
 
 from .humanize import leap_delay_ms
+from .expressive import CHARGE, harmonic_charge, melodic_charge  # noqa: F401  (the shared KTH charge)
+from .expressive import charge as _charge  # noqa: F401
 from .patterns import Clip, Note, _vel, as_clip, seed_int
 from .theory import ComposeError, Key, note
 
-__all__ = ['SHAPES', 'LEVELS', 'fioritura', 'grace', 'turn', 'trill', 'accompany', 'lean_on_long', 'cantabile',
-           'dynamics', 'melody_rubato', 'pedal_changes', 'decay_db', 'figure_stats', 'score', 'Score', 'Event',
-           'harmonize']
+__all__ = ['SHAPES', 'LEVELS', 'RULES', 'ASYNC', 'PEDAL', 'CHARGE', 'ARTICULATION', 'PHRASE_TEMPO', 'ACCOMPANIMENT',
+           'fioritura', 'grace', 'turn',
+           'trill', 'accompany', 'lean_on_long', 'cantabile', 'dynamics', 'melody_rubato', 'pedal_changes', 'decay_db',
+           'figure_stats', 'score', 'Score', 'Event', 'harmonize', 'travel_ms', 'spread', 'melodic_charge',
+           'harmonic_charge', 'articulate']
 
 _EPS = 1e-6
 
@@ -49,6 +53,84 @@ landing), 'accel' (faster and faster), 'rit' (slowing down), 'even', 'wave' (two
 
 LEVELS = {'ppp': 0.45, 'pp': 0.55, 'p': 0.7, 'mp': 0.85, 'mf': 1.0, 'f': 1.15, 'ff': 1.3, 'fff': 1.42}
 """Velocity factors of the dynamic marks for dynamics() (mf = the written level)."""
+
+# ------------------------------------------------------------------------------------------------ the rule tables
+# The performance rules Score.perform plays by, one table per rule family (docs/PIANIST_RULES.md: the source and the
+# published range of every number). A song may pass its own values (Score.perform(rules={'async': {...}})).
+
+ASYNC = {
+    'travel': (4000.0, 20.0),   # hammer travel time (ms) = a / (velocity + b): softer keys sound later (Goebl 2001)
+    'max_ms': 45.0,             # no velocity lead beyond this (melody leads 20-40 ms, rarely 50+: Palmer 1989, Goebl)
+    'sd_ms': 5.0,               # the lead's own spread per onset
+    'chord_sd_ms': 8.0,         # a chord's softer notes: + |N(0, sd)| after the loudest (within +-15 ms: Goebl 2001)
+    'sync_ms': 14.0,            # the melody against the bass on a half-bar anchor: +-spread (melody_rubato sync_ms)
+    'lean_ms': 18.0,            # melody_rubato's push-pull inside a half bar (Chopin's rubato, kept small)
+    'anticipate': 0.12,         # the chance of a bass anticipation under a long anchor note (Goebl 2001, Vernon 1936)
+    'anticipate_ms': (25.0, 55.0),    # how late the melody then follows the bass
+    'peak_ms': 25.0,            # a melodic summit (a long local top) arrives this much late (agogic accent)
+    'lh_roll': (0.6, 0.4),      # a left-hand chord: (near-simultaneous, rolled bottom-up) shares, drawn per chord
+    'roll_ms': (4.0, 10.0),     # ... the bottom-up roll's step per note (x the softness: a soft chord rolls wider)
+    'arp': 0.4,                 # the chance the cadence chord of a phrase is arpeggiated (bottom-up, slow) ...
+    'arp_ms': (35.0, 70.0),     # ... at this step per note (max_ms does not cap it: the roll is the gesture)
+}
+"""Asynchrony: the melody lead as the hammers' velocity artifact (the louder melody sounds first, its lead grows with
+the velocity difference), the spread inside a chord, the occasional bass anticipation of the romantic style."""
+
+PEDAL = {
+    'delay_ms': 60.0,           # syncopated pedal: up this long AFTER the new harmony's onset (Repp 1996: 40-150)
+    'lift_ms': 110.0,           # ... and down again this much later (the new bass is caught, the old chord cleared)
+    'vary': 0.25,               # the foot is no clock: both x (72 / BPM) ** 0.5 x 1 + N(0, vary) per change
+    'half_to': 0.6,             # a half change: the treble's dampers touch, the bass rings on (0.5-0.7)
+    'half_beats': 2.0,          # half changes only inside one harmony held at least this long (beats)
+    'same_bass': 'half',        # a new chord over the same bass: 'half' change (the bass rings on) or 'full'
+    'flutter_ms': 320.0, 'flutter_to': 0.6,    # a chromatic run's quick half lifts (pedal_changes flutter)
+    'tail': 2.0,                # beats after the last bar before the pedal comes up
+}
+"""Pedalling: legato pedal just after every harmony change, a half change at the resolution of a melody's non-chord
+tone inside a long harmony (the passing note is cleared, the bass rings on), quick half lifts in chromatic runs."""
+
+# CHARGE (melodic / harmonic charge: the KTH rules every player shares - the pianist, the orchestra) lives in
+# agentsound.expressive with melodic_charge / harmonic_charge; imported above, romantic.CHARGE is that table.
+
+ARTICULATION = {
+    'repeat_ms': (40.0, 90.0),  # a repeated key is released 25 % of the IOI (within this) before it strikes again
+    'leap': 7,                  # a leap of this many semitones or more ...
+    'leap_ms': (15.0, 45.0),    # ... detaches the note before it (leap articulation; more for wider leaps)
+    'legato': (0.07, 0.03),     # finger legato: the key overlap = N(mean, sd) x the IOI (KOR; Bresin & Battel 2000)
+    'legato_ms': (12.0, 100.0),  # ... within these ms (Repp 1997: legato overlaps of some tens of ms)
+}
+"""Articulation of the melody (DM repetition and leap articulation): the hand lets go of a key it strikes again and
+before a wide leap; everything else stays legato (melody_rubato re-ties it)."""
+
+PHRASE_TEMPO = {
+    'depth': (0.4, 1.6),        # a phrase's rubato depth x U(lo, hi): no two phrases breathe alike (Repp 1992)
+    'straight': 0.15,           # the share of phrases played nearly straight (depth x 0.2)
+    'peak': {'phrase': (0.3, 0.8), 'period': (0.25, 0.7), 'end': (0.2, 0.55)},     # where the phrase is fastest
+    'close': {'phrase': (0.0, 1.0), 'period': (0.6, 1.5), 'end': (1.2, 2.0)},   # its final lengthening (x depth)
+    'lilt': (0.0, 1.0),         # a phrase's beat lilt x U(lo, hi): some phrases keep an even pulse
+    'lilt_jitter': 0.4,         # the beat jitter x this: the phrase carries the shape, the beat stays near the grid
+}
+"""The phrase tempo (Score.rubato / Score.lilt): every phrase draws its own arch - its depth, where it is fastest,
+how much it lengthens at its end - by its level: a 'phrase' inside a period closes lightly, a 'period' (every second
+phrase: the consequent's cadence) deeper, the piece's 'end' deepest (final lengthening grows with the depth of the
+boundary: Todd 1985 / 1992, Repp 1992, Penel & Drake 1998)."""
+
+ACCOMPANIMENT = {
+    'arc': (0.12, 0.28),        # the left hand's phrase swell: x 1 + arc x (the arch - 0.5), drawn per phrase
+    'peak': (0.45, 0.75),       # ... where it crests (its share of the phrase)
+    'follow': 0.4,              # the hand follows the melody's level: x (the melody now / its phrase mean) ** follow
+    'charge': 2.4,              # harmonic charge of the left hand (velocity x sqrt charge: CHARGE['harmonic'])
+    'tension': 3.0,             # + velocity on a tension chord (a tritone in it, or resolving down a fifth)
+    'bass': (0.92, 1.1),        # the bass against the figure: x U(lo, hi) at a phrase's start and end, linear between
+    'below_db': 6.0,            # budget: a phrase's accompaniment median at least this many dB under the melody's
+}
+"""The left hand's dynamics in a broken-chord figure (Score.perform figures): it follows the phrase's arc and the
+melody (at a smaller range), swells into the tension chords and relaxes at their resolution, shifts the balance of
+bass and figure, and always stays under the tune (Repp 1996: the accompaniment's dynamic profile parallels the
+melody's a few dB below it)."""
+
+RULES = {'async': ASYNC, 'pedal': PEDAL, 'charge': CHARGE, 'articulation': ARTICULATION, 'phrase_tempo': PHRASE_TEMPO,
+         'accompaniment': ACCOMPANIMENT}
 
 
 # ------------------------------------------------------------------------------------------------ helpers
@@ -572,7 +654,8 @@ def dynamics_factor(points, curve: str = 'smooth'):
 
 def melody_rubato(clip: Clip, anchors, bpm, *, lean_ms: float = 35.0, late_ms: float = 6.0,
                   sync_ms: float = 32.0, agogic_ms: float = 50.0, leap: int = 5, peak_ms: float = 40.0,
-                  free_ms: float = 10.0, legato: float = 0.03, seed=0) -> Clip:
+                  free_ms: float = 10.0, legato: float = 0.03, seed=0, lead=None, anticipate: float = 0.0,
+                  anticipate_ms=(25.0, 55.0)) -> Clip:
     """Tempo rubato the Chopin way: the MELODY moves freely while the left hand keeps time (the hand that plays
     the accompaniment is the conductor). Only `clip` (the right hand) is moved; the tempo map stays the LH's.
     Between two `anchors` (beats: bar lines, half bars) every onset gets an offset in real time:
@@ -586,6 +669,10 @@ def melody_rubato(clip: Clip, anchors, bpm, *, lean_ms: float = 35.0, late_ms: f
       agogic     a note after a leap of `leap`+ semitones is held back up to `agogic_ms` (x leap / 12), a local
                  summit (2+ semitones over both neighbours, 0.4 s or longer) `peak_ms`
       free       +-`free_ms` of seeded irregularity
+      lead       lead(beat, velocity) -> ms: the melody note sounds that much EARLIER (the hammers' velocity
+                 artifact against the accompaniment struck with it - Score.perform builds it from the left hand)
+      anticipate the chance that a long note on an anchor (0.8 s+) follows the bass by anticipate_ms (lo, hi) ms
+                 instead (the romantic bass anticipation)
     The offsets never reorder the notes (at most 40 % of the time to the neighbours); notes sounding together
     (chords, octaves) move together; afterwards every melody note is re-tied to the next onset (+`legato` beats)
     unless a rest follows. `bpm` is a number or a function beat -> BPM (song.tempo_at)."""
@@ -614,6 +701,8 @@ def melody_rubato(clip: Clip, anchors, bpm, *, lean_ms: float = 35.0, late_ms: f
         if on_anchor:
             g = max(-2.0, min(2.0, rng.gauss(0.0, 1.0)))
             ms = (late_ms + sync_ms * g) * min(1.0, secs / 0.8) if secs >= 0.3 else 0.0
+            if anticipate > 0 and secs >= 0.8 and rng.random() < anticipate:
+                ms += anticipate_ms[0] + (anticipate_ms[1] - anticipate_ms[0]) * rng.random()
         if i > 0:
             lp = abs(n.pitch - tops[i - 1].pitch)
             if lp >= leap:
@@ -621,6 +710,8 @@ def melody_rubato(clip: Clip, anchors, bpm, *, lean_ms: float = 35.0, late_ms: f
         if 0 < i < len(tops) - 1 and secs >= 0.4 and n.pitch >= tops[i - 1].pitch + 2                 and n.pitch >= tops[i + 1].pitch + 2:
             ms += peak_ms
         ms += (rng.random() * 2 - 1) * free_ms
+        if lead is not None:
+            ms -= lead(s, n.vel)
         offs.append(_beats(ms / 1000.0, bpm, s))
     # keep the order: at most 40 % of the distance to each neighbour
     moved = []
@@ -643,9 +734,15 @@ def melody_rubato(clip: Clip, anchors, bpm, *, lean_ms: float = 35.0, late_ms: f
 
 
 def pedal_changes(changes, *, end, lift_ms: float = 90.0, bpm=60.0, dry=(), flutter=(),
-                  flutter_ms: float = 280.0, flutter_to: float = 0.0) -> list:
-    """Legato (syncopated) pedalling: at every harmony change in `changes` (beats) the pedal comes up WITH the
-    new bass and goes down again `lift_ms` later (the new harmony is caught, the old one cleared); up at `end`;
+                  flutter_ms: float = 280.0, flutter_to: float = 0.0, delay_ms: float = 0.0, half=(),
+                  half_to: float = 0.6, vary: float = 0.0, seed=0) -> list:
+    """Legato (syncopated) pedalling: at every harmony change in `changes` (beats) the pedal comes up `delay_ms`
+    after the new bass (0 = with it; a pianist's foot follows the hand by 40-150 ms, Repp 1996 - the new keys are
+    down by then, so their notes are caught) and goes down again `lift_ms` later (the old harmony cleared); up at
+    `end`; `half` = beats of half changes (the pedal to `half_to` for `lift_ms`, `delay_ms` after the beat: the
+    treble's dampers touch - a passing note cleared - while the bass rings on); `vary` > 0: the foot is no clock -
+    every change's delay and lift x (72 / the tempo there) ** 0.5 (slower music, a slower foot) x a seeded
+    1 + N(0, vary) (within 0.5..1.6);
     `dry` = (start, end) windows with the pedal up; `flutter` = (start, end) windows where the pedal is cleared
     every `flutter_ms` (up `lift_ms`, down again): chromatic fioriture and cadenzas over one harmony keep their
     bass and resonance but do not pile every passing note into a cluster. `flutter_to` = the pedal value of those
@@ -653,15 +750,31 @@ def pedal_changes(changes, *, end, lift_ms: float = 90.0, bpm=60.0, dry=(), flut
     rings on). Points for 'instrument.pedal' (steps)."""
     ch = sorted({_num(float(c), 'pedal change') for c in changes})
     e = _num(float(end), 'pedal end')
+    dl = _num(delay_ms, 'pedal delay_ms', 0, 400)
+    hv = _num(half_to, 'pedal half_to', 0, 0.95)
+    vr = _num(vary, 'pedal vary', 0, 1)
+    rng = random.Random(seed_int(seed) + 29)
+
+    def foot(ms, at):
+        if not vr or not ms:
+            return ms
+        return ms * (72.0 / _bpm_at(bpm, at)) ** 0.5 * min(1.6, max(0.5, 1.0 + rng.gauss(0.0, vr)))
     pts = []
     for c in ch:
         if c >= e:
             break
-        up_len = _beats(lift_ms / 1000.0, bpm, c)
-        if pts and pts[-1][0] >= c - _EPS:
-            pts = [p for p in pts if p[0] < c - _EPS]
-        pts.append((round(c, 6), 0.0, 'step'))
-        pts.append((round(c + up_len, 6), 1.0, 'step'))
+        c0 = c + (_beats(foot(dl, c) / 1000.0, bpm, c) if dl else 0.0)
+        up_len = _beats(foot(lift_ms, c) / 1000.0, bpm, c0)
+        if pts and pts[-1][0] >= c0 - _EPS:
+            pts = [p for p in pts if p[0] < c0 - _EPS]
+        pts.append((round(c0, 6), 0.0, 'step'))
+        pts.append((round(c0 + up_len, 6), 1.0, 'step'))
+    for h in sorted({float(x) for x in half}):
+        h0 = h + (_beats(foot(dl, h) / 1000.0, bpm, h) if dl else 0.0)
+        h1 = h0 + _beats(foot(lift_ms, h) / 1000.0, bpm, h0)
+        if h1 >= e or any(p[1] == 0.0 and h0 - 2 * (h1 - h0) <= p[0] <= h1 + _EPS for p in pts):
+            continue                                  # a full change is there already
+        pts += [(round(h0, 6), hv, 'step'), (round(h1, 6), 1.0, 'step')]
     for a, b in dry:
         pts = [p for p in pts if not a <= p[0] < b]
         pts.append((round(a, 6), 0.0, 'step'))
@@ -686,6 +799,124 @@ def pedal_changes(changes, *, end, lift_ms: float = 90.0, bpm=60.0, dry=(), flut
         elif not clean or clean[-1][1] != p[1]:
             clean.append(p)
     return clean
+
+
+# ------------------------------------------------------------------------------------------------ expression rules
+
+def travel_ms(vel, travel=None) -> float:
+    """The hammer's travel time (ms) from the finger's push to the string at a velocity: a / (velocity + b) with
+    (a, b) = ASYNC['travel'] - about 70 ms at velocity 36, 47 at 66, 36 at 90 (softer keys sound later; Goebl 2001
+    measured this on a computer-monitored grand: the melody's lead is mostly this artifact)."""
+    a, b = travel or ASYNC['travel']
+    return float(a) / (max(1.0, float(vel)) + float(b))
+
+
+def spread(clip: Clip, bpm, *, seed=0, travel=None, max_ms: float | None = None, sd_ms: float | None = None,
+           tol: float = 0.02, hand: str = 'rh', ends=(), roll=None, roll_ms=None, arp: float | None = None,
+           arp_ms=None) -> Clip:
+    """Chord asynchrony: notes struck together (onsets within `tol` beats) sound in the order of their hammers -
+    the loudest first, every softer one travel_ms(its velocity) - travel_ms(the loudest) later plus |N(0, sd_ms)|
+    of the hand's own spread, at most `max_ms` (ASYNC). A voiced chord thereby leads with its melody note by a few
+    ms (the right hand: the melody is in its chords).
+    hand='lh': the left hand's chords (no melody in them) draw their roll per chord (ASYNC lh_roll): mostly near-
+    simultaneous (half the velocity artifact + |N(0, sd_ms / 2)|), else rolled bottom-up (roll_ms per note, wider
+    for a soft chord: x travel_ms(its mean velocity) / travel_ms(64), plus half the velocity artifact); a chord
+    struck at one of the `ends` beats (a phrase's cadence chord) is arpeggiated with the chance `arp` (bottom-up,
+    arp_ms per note, not capped by max_ms)."""
+    mx = ASYNC['max_ms'] if max_ms is None else _num(max_ms, 'spread max_ms', 0, 200)
+    sd = ASYNC['chord_sd_ms'] if sd_ms is None else _num(sd_ms, 'spread sd_ms', 0, 50)
+    if hand not in ('rh', 'lh'):
+        raise ComposeError(f"spread hand must be 'rh' or 'lh', got {hand!r}")
+    p_up = (roll or ASYNC['lh_roll'])[1]
+    rlo, rhi = roll_ms or ASYNC['roll_ms']
+    p_arp = ASYNC['arp'] if arp is None else _num(arp, 'spread arp', 0, 1)
+    alo, ahi = arp_ms or ASYNC['arp_ms']
+    ends = [float(e) for e in ends]
+    rng = random.Random(seed_int(seed) + 7)
+    ns = sorted(clip, key=lambda n: (n.start, -n.vel, -n.pitch))
+    out, i = [], 0
+    while i < len(ns):
+        j = i + 1
+        while j < len(ns) and ns[j].start - ns[i].start <= tol:
+            j += 1
+        grp = ns[i:j]
+        if len(grp) == 1:
+            out.append(grp[0])
+        elif hand == 'rh':
+            ref = travel_ms(max(n.vel for n in grp), travel)
+            out.append(grp[0])
+            for n in grp[1:]:
+                ms = min(mx, max(0.0, travel_ms(n.vel, travel) - ref) + abs(rng.gauss(0.0, sd)))
+                d = _beats(ms / 1000.0, bpm, n.start)
+                out.append(n._replace(start=n.start + d, dur=max(0.03, n.dur - d)))
+        else:
+            ref = travel_ms(max(n.vel for n in grp), travel)
+            up = sorted(grp, key=lambda n: n.pitch)
+            soft = travel_ms(sum(n.vel for n in grp) / len(grp), travel) / travel_ms(64, travel)
+            if any(abs(grp[0].start - e) <= tol for e in ends) and rng.random() < p_arp:
+                step, cap = rng.uniform(alo, ahi), None
+            elif rng.random() < p_up:
+                step, cap = rng.uniform(rlo, rhi) * soft, mx
+            else:
+                step, cap = None, mx
+            ms = [0.5 * max(0.0, travel_ms(n.vel, travel) - ref) + (abs(rng.gauss(0.0, sd * 0.5)) if step is None
+                                                                     else k * step) for k, n in enumerate(up)]
+            m0 = min(ms)                             # the chord's first note sounds where it was written
+            for n, x in zip(up, ms):
+                x -= m0
+                ms_ = x if cap is None else min(cap, x)
+                if ms_ <= 0:
+                    out.append(n)
+                    continue
+                d = _beats(ms_ / 1000.0, bpm, n.start)
+                out.append(n._replace(start=n.start + d, dur=max(0.03, n.dur - d)))
+        i = j
+    return Clip._raw(out, clip.length)
+
+
+def articulate(clip: Clip, bpm, *, repeat_ms=None, leap: int | None = None, leap_ms=None, legato=None,
+               legato_ms=None, seed=0) -> Clip:
+    """The melody's articulation (the top note of every onset; Director Musices' repetition and leap articulation):
+    a key struck again is let go 25 % of the time between the two onsets earlier (within repeat_ms (lo, hi): the key
+    has to come up for the hammer to strike again), and the note before a leap of `leap`+ semitones lets go
+    leap_ms (lo at the leap, hi at two octaves) before the next onset (the hand travels). Every other note tied to
+    the next one (legato: it ends at or after the next onset) overlaps it by `legato` = (mean, sd) x the IOI, within
+    legato_ms (lo, hi) - the finger legato's key overlap grows with the IOI and is never the same twice (Bresin &
+    Battel 2000; seeded). Defaults ARTICULATION. Nothing gets shorter than half its sounding time."""
+    a = ARTICULATION
+    rlo, rhi = repeat_ms or a['repeat_ms']
+    lp = a['leap'] if leap is None else int(leap)
+    llo, lhi = leap_ms or a['leap_ms']
+    km, ks = legato or a['legato']
+    klo, khi = legato_ms or a['legato_ms']
+    rng = random.Random(seed_int(seed) + 17)
+    ns = sorted(clip, key=lambda n: (n.start, -n.pitch))
+    tops = []
+    for i, n in enumerate(ns):
+        if tops and abs(n.start - tops[-1][1].start) < 0.02:
+            continue
+        tops.append((i, n))
+    out = list(ns)
+    for k, (i, n) in enumerate(tops[:-1]):
+        nx = tops[k + 1][1]
+        end = n.start + n.dur
+        if end < nx.start - _EPS:
+            continue                                  # a rest: already detached
+        ioi_ms = (nx.start - n.start) * 60000.0 / _bpm_at(bpm, n.start)
+        iv = abs(nx.pitch - n.pitch)
+        ms = 0.0
+        if iv == 0:
+            ms = min(rhi, max(rlo, 0.25 * ioi_ms))
+        elif iv >= lp:
+            ms = llo + (lhi - llo) * min(1.0, (iv - lp) / max(1, 24 - lp))
+        if ms <= 0:
+            kot = min(khi, max(klo, max(0.0, rng.gauss(km, ks)) * ioi_ms))
+            if end <= nx.start + _beats(0.25, bpm, nx.start):       # tied (not held on under the next notes)
+                out[i] = n._replace(dur=nx.start - n.start + _beats(kot / 1000.0, bpm, nx.start))
+            continue
+        new_end = nx.start - _beats(ms / 1000.0, bpm, nx.start)
+        out[i] = n._replace(dur=max(0.5 * min(n.dur, nx.start - n.start), new_end - n.start))
+    return Clip._raw(out, clip.length)
 
 
 # ------------------------------------------------------------------------------------------------ measuring
@@ -862,20 +1093,60 @@ class Score:
         return self.bar(self.bars + 1)
 
     # ------------------------------------------------------------------ the phrase loops
-    def rubato(self, song, *, depth: float = 0.04, phrase: str = 'arch', shapes=None, seed=None, bars=None,
-               overlap: float | None = None) -> None:
-        """song.rubato over every phrase (in the bars range (first, last) when given): `phrase` (or `shapes`
-        cycled phrase by phrase), depth, seed (None: the song's; an int; 'bar' = the phrase's first bar). Two
-        phrases that share a bar meet `overlap` beats into it (the bar's last beat is the next phrase's pickup)."""
-        for i, (a, b) in enumerate(self.phrases):
-            if bars is not None and not (bars[0] <= a and b <= bars[1]):
-                continue
+    def rubato(self, song, *, depth: float = 0.04, phrase: str = 'drawn', shapes=None, seed=None, bars=None,
+               overlap: float | None = None, table: dict | None = None) -> None:
+        """song.rubato over every phrase (in the bars range (first, last) when given), depth, seed (None: the song's;
+        an int; 'bar' = the phrase's first bar). phrase='drawn' (the default): every phrase draws its own arch from
+        PHRASE_TEMPO (`table` overrides keys) - its depth x U(depth range), nearly straight at the 'straight' share,
+        its peak and final lengthening by its level ('phrase', every second one a 'period', the last the 'end');
+        else a song.rubato shape name (or `shapes` cycled phrase by phrase). Two phrases that share a bar meet
+        `overlap` beats into it (the bar's last beat is the next phrase's pickup)."""
+        T = dict(PHRASE_TEMPO)
+        for k, v in (table or {}).items():
+            if k not in T:
+                raise ComposeError(f"rubato table: unknown key {k!r}; use {', '.join(T)}")
+            T[k] = v
+        drawn = phrase == 'drawn' and not shapes
+        sel = [(i, ab) for i, ab in enumerate(self.phrases)
+               if bars is None or (bars[0] <= ab[0] and ab[1] <= bars[1])]
+        for n, (i, (a, b)) in enumerate(sel):
             shared_start = overlap is not None and any(b0 == a for _, b0 in self.phrases)
             shared_end = overlap is not None and any(a0 == b for a0, _ in self.phrases)
             span = (self.bar(a) + (overlap if shared_start else 0),
                     self.bar(b) + (overlap if shared_end else self.bar_beats))
             sd = a if seed == 'bar' else seed
-            song.rubato(span, depth=depth, phrase=shapes[i % len(shapes)] if shapes else phrase, seed=sd)
+            if not drawn:
+                song.rubato(span, depth=depth, phrase=shapes[i % len(shapes)] if shapes else phrase, seed=sd)
+                continue
+            key = f"{song.seed if seed in (None, 'bar') else seed}:phrase:{a}"
+            rng = random.Random(seed_int(key))
+            level = 'end' if n == len(sel) - 1 else 'period' if n % 2 else 'phrase'
+            f = rng.uniform(*T['depth'])
+            if rng.random() < T['straight']:
+                f *= 0.2
+            song.rubato(span, depth=min(0.25, depth * f), seed=seed_int(key) % 100003,
+                        peak=rng.uniform(*T['peak'][level]), close=rng.uniform(*T['close'][level]))
+
+    def lilt(self, song, span, *, beats=None, jitter: float = 0.0, seed=None, table: dict | None = None) -> None:
+        """song.lilt over `span` phrase by phrase: every phrase draws how much of the beat lilt it plays (PHRASE_TEMPO
+        lilt: x U(lo, hi), some phrases keep an even pulse) and the jitter x lilt_jitter - not one fixed beat delay
+        in every bar of the piece (a sawtooth in the tempo map). Bars outside the phrases draw like a phrase."""
+        T = dict(PHRASE_TEMPO)
+        T.update(table or {})
+        s0, s1 = (span.start, span.end) if hasattr(span, 'start') else (float(span[0]), float(span[1]))
+        cuts = sorted({s0, s1} | {self.bar(a) for a, _ in self.phrases if s0 < self.bar(a) < s1})
+        for x0, x1 in zip(cuts, cuts[1:]):
+            if x1 - x0 < self.bar_beats - _EPS:
+                continue
+            key = f"{song.seed if seed is None else seed}:lilt:{x0:g}"
+            rng = random.Random(seed_int(key))
+            f = rng.uniform(*T['lilt'])
+            try:
+                song.lilt((x0, x1), beats={k: v * f for k, v in (beats or {}).items()},
+                          jitter=jitter * T['lilt_jitter'], seed=seed_int(key) % 100003)
+            except ComposeError as e:
+                if 'holds no whole bar' not in str(e):
+                    raise
 
     def touch(self, clip, levels, *, gap=16, **kw) -> list:
         """Per-phrase dynamics of a melody: for each phrase (lo, hi) = levels[(first, last)] - the notes of its
@@ -911,7 +1182,8 @@ class Score:
     def perform(self, song, rh_track, lh_track=None, *, pedal: bool = True, touch=None, breath: float = 0.3,
                 accompany=None, lh_dyn: float = 0.6, rubato=None, cap: int = 112, accent_cap: float = 118,
                 roll_bpm=None, anchors: str = 'half', pedal_opts=None, plain: bool = False, figures=None,
-                figure_vel: float = 41, inner: float | None = None) -> dict:
+                figure_vel: float = 41, inner: float | None = None, figure_opts: dict | None = None,
+                rules: dict | None = None) -> dict:
         """Play the score like a romantic pianist (the nocturne etude's measured pipeline):
           left hand first (the timekeeper: the tempo map knows its onsets) - accompany() per entry (`accompany`
             options: vel 38, bass 1.2, first 1.0, second 0.88, top 1.06, roll_ms 14), the dynamics at a gentler
@@ -920,45 +1192,95 @@ class Score:
             hi 96, gap 1/4, start 0.55, end 0.4, pitch 0.9; each phrase end takes `breath` beats of air for it),
             accents x their factor (at most `accent_cap`), then every ornament in real time at the tempo map:
             ^tr = trill() landing on the next note, ^turn = turn(), ^fig = fioritura() (ease 0.2 when even, 0.8
-            else; lighter in the middle), ^roll chords = pianist.roll at `roll_bpm` (default the song tempo); then
+            else, flatter where the tempo moves on too fast for it; lighter in the middle), ^roll chords =
+            pianist.roll at `roll_bpm` (default the song tempo); then
             lean_on_long, cantabile, the dynamics, melody_rubato (`rubato` options: sync_ms 42, seed 3; anchors at
             every half bar) and a cap (`cap`: the climax sings, not bangs)
           figures - instead of accompany() entries a BROKEN-CHORD left hand: [(at, beats, chord symbol, figure)] with
             figure a pianist.FIGURES name (flowing 8ths over a 10th, rocking, walking 10ths, a waltz's oom-pah-pah,
-            'half' / 'still' under a breath ...) at `figure_vel`, a swell per phrase (+-8 %), the dynamics at the
-            gentler slope; the pedal changes with every entry's chord
+            'half' / 'still' under a breath ...; a fifth item {option: value} overrides `figure_opts` for that
+            entry - a raised cap, mirror) at `figure_vel`, its dynamics by ACCOMPANIMENT (a drawn swell per
+            phrase, the bass / figure balance shifting, swelling into tension chords, following the melody and a
+            budget under it; plain: +-8 %), the dynamics at the gentler slope; its chords rolled per chord
+            (spread hand='lh': together / bottom-up, an arpeggiated cadence chord now and then); the pedal
+            changes with every entry's chord; `figure_opts`: pianist.figure's register
+            ({'bass_lo': the lowest bass, 'cap': the top} - an e-piano's hand sits higher than a grand's)
           inner - the right hand's own chords voiced to the top: the notes under the melody x inner (0.78: the
             sixths / thirds under a long note, the climax's chords sing softer than the tune)
-          pedal - pedal_changes() with the harmony (the left hand's bass + chord), cleared in chromatic figures
-            (`pedal_opts`: lift_ms 110, flutter_ms 320, flutter_to 0.6, tail 2 beats after the last bar)
+          pedal - pedal_changes() with the harmony (the left hand's bass + chord) `delay_ms` after it, a half change
+            where the melody resolves a non-chord tone inside a long harmony, cleared in chromatic figures
+            (`pedal_opts` over PEDAL: delay_ms 60, lift_ms 110, half_to 0.6, flutter_ms 320, flutter_to 0.6, tail 2
+            beats after the last bar)
+          the expression rules (RULES - docs/PIANIST_RULES.md; `rules` = {family: {key: value}} overrides): the
+            melody's lead over the left hand and every chord's spread as the hammers' velocity artifact (ASYNC), the
+            melodic and harmonic charge of the figures' chords (CHARGE), the melody's repetition / leap articulation
+            (ARTICULATION), the pedal's timing (PEDAL)
         plain=True: the score as the plain tools read it - the etude's 'before' baseline for an A/B: every
         left-hand strike at one level (humanized), the figures on an even grid, pianist.trill / turn, chords rolled
         25 ms, the dynamics as crescendo spans, no singing line, no rubato, no cleared pedal.
         Returns {'rh': Clip, 'lh': Clip, 'pedal': points, 'figures': [(clip, bpm, at)]}."""
         bpm = song.tempo_at
         out: dict = {'figures': []}
-        fig_changes = []
+        R = {k: dict(v) for k, v in RULES.items()}
+        for fam, kv in (rules or {}).items():
+            if fam not in R:
+                raise ComposeError(f"perform rules: unknown family {fam!r}; use {', '.join(R)}")
+            for k in kv:
+                if k not in R[fam]:
+                    raise ComposeError(f"perform rules[{fam!r}]: unknown key {k!r}; use {', '.join(R[fam])}")
+            R[fam].update(kv)
+        A = R['async']
+        rg, lg = getattr(rh_track, '_groove', None), getattr(lh_track, '_groove', None)
+        if not plain and rg is not None and lg is not None and rg.late_ms != lg.late_ms:
+            # one player: the right hand sits where the left hand sits (a band feel lays the melody back against
+            # the comping - here the melody's timing against the left hand is ASYNC's and melody_rubato's)
+            import dataclasses
+            rh_track.groove(dataclasses.replace(rg, late_ms=lg.late_ms))
+        fig_changes, lh_later = [], False
+        harmony = []                                   # [(beat, chord symbol)]: the figures' chords
+        if figures:
+            last = None
+            for at, beats, sym, fig, *_ in sorted(figures, key=lambda f: f[0]):
+                if sym != last:
+                    harmony.append((float(at), sym))
+                last = sym
+        chord_at = self._chord_at(harmony) if harmony else None
         if figures and lh_track is not None:
             from . import pianist
             rng = random.Random(seed_int(len(figures)) + 41)
             ns, last = [], None
-            for at, beats, sym, fig in sorted(figures, key=lambda f: f[0]):
-                ns += pianist.figure(sym, fig, at, beats, vel=figure_vel, bar=self.bar_beats, rng=rng)
+            fo = dict(figure_opts or {})
+            if fo.get('repeats'):                      # (the repeated-tone budget runs over the figures)
+                fo['recent'] = []
+            for at, beats, sym, fig, *own in sorted(figures, key=lambda f: f[0]):
+                ns += pianist.figure(sym, fig, at, beats, vel=figure_vel, bar=self.bar_beats, rng=rng,
+                                     **(dict(fo, **own[0]) if own and own[0] else fo))
                 if sym != last:
                     fig_changes.append(round(float(at), 4))
                 last = sym
 
-            def swell(n):
-                for a, b in self.phrases:
-                    if self.bar(a) <= n.start < self.bar(b + 1):
-                        x = (n.start - self.bar(a)) / max(_EPS, self.bar(b + 1) - self.bar(a))
-                        return n._replace(vel=_vel(n.vel * (0.92 + 0.16 * math.sin(math.pi * x))))
-                return n
-            lh = Clip._raw([swell(n) for n in ns], max(n.start + n.dur for n in ns))
+            AC = R['accompaniment']
+            lh = Clip._raw(ns, max(n.start + n.dur for n in ns))
+            if not plain:
+                lh = self._lh_arc(lh, AC, seed=len(ns))
+            else:
+                lh = Clip._raw([self._swell(n) for n in lh], lh.length)
             if self.dyn:
                 lh = dynamics(lh, [(b, LEVELS[lv] ** lh_dyn) for b, lv in self.dyn])
-            lh_track.play(lh, 0)
+            if not plain:
+                if self.key is not None:
+                    lh = harmonic_charge(lh, harmony, self.key, vel=AC['charge'] * lh_dyn, table=R['charge']['pcs'],
+                                         tension=AC['tension'])
+                ends = []                                  # the cadence chord of every phrase
+                for a, b in self.phrases:
+                    hs = [t for t, _ in harmony if self.bar(a) - _EPS <= t < self.bar(b + 1) - _EPS]
+                    if hs:
+                        ends.append(hs[-1])
+                lh = spread(lh, bpm, seed=len(ns), travel=A['travel'], max_ms=A['max_ms'], sd_ms=A['chord_sd_ms'],
+                            hand='lh', ends=ends, roll=A['lh_roll'], roll_ms=A['roll_ms'], arp=A['arp'],
+                            arp_ms=A['arp_ms'])
             out['lh'] = lh
+            lh_later = True
         elif self.entries and lh_track is not None:
             ns = []
             if plain:
@@ -983,6 +1305,8 @@ class Score:
                 lh = Clip._raw(ns, max(n.start + n.dur for n in ns))
                 if self.dyn:
                     lh = dynamics(lh, [(b, LEVELS[lv] ** lh_dyn) for b, lv in self.dyn])
+                lh = spread(lh, bpm, seed=len(ns), travel=A['travel'], max_ms=A['max_ms'], sd_ms=A['chord_sd_ms'],
+                            hand='lh', roll=A['lh_roll'], roll_ms=A['roll_ms'])
             lh_track.play(lh, 0)
             out['lh'] = lh
         if self.events:
@@ -991,7 +1315,9 @@ class Score:
                 # phrase (the score's phrases are its phrases); melody_rubato keeps the hands' independence
                 rubato = dict(dict(free_ms=0.0, agogic_ms=0.0), **(rubato or {}))
                 rh_track.mark_phrases(*[self.bar(a) for a, _ in self.phrases])
-            rh = self._right_hand(song, bpm, touch, breath, rubato, cap, accent_cap, roll_bpm, anchors, out, plain)
+            lead = None if plain or out.get('lh') is None else self._lead(out['lh'], A)
+            rh = self._right_hand(song, bpm, touch, breath, rubato, cap, accent_cap, roll_bpm, anchors, out, plain,
+                                  R=R, chord_at=chord_at, harmony=harmony, lead=lead)
             if inner is not None:                    # voice the top: the notes under the melody sing softer
                 f = _num(inner, 'perform inner', 0.3, 1)
                 tops: dict = {}
@@ -1000,10 +1326,19 @@ class Score:
                     tops[k] = max(tops.get(k, 0), n.pitch)
                 rh = Clip._raw([n if n.pitch == tops[round(n.start, 2)] else n._replace(vel=_vel(n.vel * f))
                                 for n in rh], rh.length)
+            if not plain:
+                rh = spread(rh, bpm, seed=len(self.events), travel=A['travel'], max_ms=A['max_ms'],
+                            sd_ms=A['chord_sd_ms'])
             rh_track.play(rh, 0)
             out['rh'] = rh
+        if lh_later:                                   # the broken-chord hand under the tune: follow it, stay below
+            if not plain and out.get('rh') is not None:
+                out['lh'] = self._lh_under(out['lh'], out['rh'], R['accompaniment'])
+            lh_track.play(out['lh'], 0)
         if pedal:
-            po = dict(lift_ms=110, flutter_ms=320, flutter_to=0.6, tail=2.0)
+            po = {k: v for k, v in R['pedal'].items() if k not in ('half_beats', 'same_bass')}
+            if plain:
+                po.update(delay_ms=0.0, vary=0.0)
             po.update(pedal_opts or {})
             tail = po.pop('tail')
             changes, last = list(fig_changes), None
@@ -1017,7 +1352,18 @@ class Score:
                 if e.kind == 'fig' and len(e.pitches) >= 6:
                     if sum(1 for x, y in zip(e.pitches, e.pitches[1:]) if abs(x - y) == 1) >= 3:
                         flutter.append((e.at, e.at + e.dur))
-            ped = pedal_changes(changes, end=self.end + tail, bpm=bpm, flutter=flutter, **po)
+            half = [] if plain or chord_at is None or 'rh' not in out else \
+                self._half_changes(out['rh'], harmony, R['pedal']['half_beats'])
+            if not plain and R['pedal']['same_bass'] == 'half' and len(harmony) > 1:
+                # a new chord over the same bass (a colour change, a suspension resolving, a pedal point): the
+                # bass rings on - a half change clears the treble only
+                from .theory import chord as _chord
+                keep = {round(b1, 4) for (b0, s0), (b1, s1) in zip(harmony, harmony[1:])
+                        if _chord(s0).bass_pc % 12 == _chord(s1).bass_pc % 12}
+                half += sorted(c for c in changes if round(c, 4) in keep)
+                changes = [c for c in changes if round(c, 4) not in keep]
+            ped = pedal_changes(changes, end=self.end + tail, bpm=bpm, flutter=flutter, half=half, seed=len(changes),
+                                **po)
             for t in (rh_track, lh_track):
                 if t is not None:
                     t.automate('instrument.pedal', ped)
@@ -1033,8 +1379,150 @@ class Score:
                 clip = crescendo(clip, l0, l1, span=(b0, b1 - 1e-3))
         return clip
 
+    def _phrase_of(self, t):
+        """(index, first beat, last beat) of the phrase holding beat t (a shared bar belongs to the later phrase), or
+        None."""
+        hit = None
+        for i, (a, b) in enumerate(self.phrases):
+            if self.bar(a) - _EPS <= t < self.bar(b + 1) - _EPS:
+                hit = (i, self.bar(a), self.bar(b + 1))
+        return hit
+
+    def _swell(self, n):
+        """The plain left hand's swell: +-8 % over every phrase."""
+        for a, b in self.phrases:
+            if self.bar(a) <= n.start < self.bar(b + 1):
+                x = (n.start - self.bar(a)) / max(_EPS, self.bar(b + 1) - self.bar(a))
+                return n._replace(vel=_vel(n.vel * (0.92 + 0.16 * math.sin(math.pi * x))))
+        return n
+
+    def _lh_arc(self, lh: Clip, AC: dict, seed=0) -> Clip:
+        """The left hand's phrase arc (ACCOMPANIMENT): per phrase a swell of drawn size cresting at a drawn place,
+        and the bass against the figure drawn at the phrase's start and end (linear between); the bass is the lowest
+        note of every harmony span (and its octaves)."""
+        from .tempo import _shaped
+        rng = random.Random(seed_int(seed) + 61)
+        draws = [(rng.uniform(*AC['arc']), rng.uniform(*AC['peak']), rng.uniform(*AC['bass']),
+                  rng.uniform(*AC['bass'])) for _ in self.phrases]
+        ns = sorted(lh, key=lambda n: (n.start, n.pitch))
+        low: dict = {}                                 # the bass pitch class per bar
+        for n in ns:
+            k = int((n.start - self.pickup + _EPS) // self.bar_beats)
+            if k not in low or n.pitch < low[k]:
+                low[k] = n.pitch
+        out = []
+        for n in ns:
+            ph = self._phrase_of(n.start)
+            if ph is None:
+                out.append(n)
+                continue
+            i, s0, s1 = ph
+            arc, pk, b0, b1 = draws[i]
+            x = min(1.0, max(0.0, (n.start - s0) / max(_EPS, s1 - s0)))
+            f = 1.0 + arc * (_shaped(x, pk, 0.0) - 0.5)
+            lo = low[int((n.start - self.pickup + _EPS) // self.bar_beats)]
+            if n.pitch % 12 == lo % 12 and n.pitch <= lo + 12:
+                f *= b0 + (b1 - b0) * x
+            out.append(n._replace(vel=_vel(n.vel * f)))
+        return Clip._raw(out, lh.length)
+
+    def _lh_under(self, lh: Clip, rh: Clip, AC: dict) -> Clip:
+        """The left hand under the melody (ACCOMPANIMENT): it follows the melody's level (x (the melody's last
+        note / its phrase mean) ** follow) and every phrase's median stays below_db under the melody's - where the
+        melody plays (a note within the last bar); alone the hand keeps its level."""
+        tops: dict = {}
+        for n in rh:
+            k = round(n.start, 2)
+            if k not in tops or n.pitch > tops[k].pitch:
+                tops[k] = n
+        mel = sorted(tops.values(), key=lambda n: n.start)
+        if not mel:
+            return lh
+        import bisect
+        import statistics
+        ts = [n.start for n in mel]
+        by: dict = {}
+        for n in mel:
+            ph = self._phrase_of(n.start)
+            by.setdefault(None if ph is None else ph[0], []).append(n.vel)
+        fol = _num(AC['follow'], 'accompaniment follow', 0, 2)
+        out, groups = [], {}
+        for n in lh:
+            ph = self._phrase_of(n.start)
+            key = None if ph is None else ph[0]
+            mv = by.get(key)
+            j = bisect.bisect_right(ts, n.start + 0.02) - 1
+            if not mv or j < 0 or n.start - mel[j].start > self.bar_beats:
+                out.append(n)                      # the hand alone (an intro, a bar of air): its own level
+                continue
+            n = n._replace(vel=_vel(n.vel * (mel[j].vel / (sum(mv) / len(mv))) ** fol))
+            groups.setdefault(key, []).append(len(out))
+            out.append(n)
+        cap = 10 ** (-_num(AC['below_db'], 'accompaniment below_db', 0, 30) / 20)
+        for key, idx in groups.items():
+            mv = by.get(key)
+            if not mv:
+                continue
+            ratio = statistics.median(out[k].vel for k in idx) / statistics.median(mv)
+            if ratio > cap:
+                for k in idx:
+                    out[k] = out[k]._replace(vel=_vel(out[k].vel * cap / ratio))
+        return Clip._raw(out, lh.length)
+
+    def _chord_at(self, harmony):
+        """chord_at(beat) -> the chord symbol in force there from [(beat, symbol)] (None before the first)."""
+        import bisect
+        ts = [b for b, _ in harmony]
+
+        def at(t):
+            i = bisect.bisect_right(ts, t + 1e-4) - 1
+            return harmony[i][1] if i >= 0 else None
+        return at
+
+    def _lead(self, lh: Clip, A: dict):
+        """lead(beat, velocity) -> ms the melody note sounds before the left hand struck with it: the hammers'
+        travel-time difference (ASYNC travel, max_ms) + N(0, sd_ms), none where the left hand strikes nothing."""
+        at: dict = {}
+        for n in lh:
+            k = round(n.start, 2)
+            at[k] = max(at.get(k, 0), n.vel)
+        rng = random.Random(seed_int(len(lh)) + 13)
+
+        def lead(beat, vel):
+            v = at.get(round(beat, 2))
+            if v is None:
+                return 0.0
+            ms = travel_ms(v, A['travel']) - travel_ms(vel, A['travel']) + rng.gauss(0.0, A['sd_ms'])
+            return max(-A['max_ms'], min(A['max_ms'], ms))
+        return lead
+
+    def _half_changes(self, rh: Clip, harmony, min_beats: float) -> list:
+        """Beats of half pedal changes: inside a harmony held `min_beats` or longer, where the melody resolves a
+        non-chord tone by step into a chord tone (the passing / neighbour note is cleared, the bass rings on)."""
+        from .theory import chord as _chord
+        tops: dict = {}
+        for n in rh:
+            k = round(n.start, 2)
+            if k not in tops or n.pitch > tops[k].pitch:
+                tops[k] = n
+        line = [tops[k] for k in sorted(tops)]
+        spans = [(b, harmony[i + 1][0] if i + 1 < len(harmony) else self.end, sym)
+                 for i, (b, sym) in enumerate(harmony)]
+        out = []
+        for a, z, sym in spans:
+            if z - a < min_beats - _EPS:
+                continue
+            c = _chord(sym)
+            tones = {(c.root + i) % 12 for i in c.intervals} | {c.bass_pc % 12}
+            ins = [n for n in line if a - 0.1 <= n.start < z - 0.1]
+            for p, q in zip(ins, ins[1:]):
+                if q.start > a + 0.5 and p.pitch % 12 not in tones and q.pitch % 12 in tones and \
+                        0 < abs(q.pitch - p.pitch) <= 2:
+                    out.append(round(q.start, 4))
+        return out
+
     def _right_hand(self, song, bpm, touch_opts, breath, rubato_opts, cap, accent_cap, roll_bpm, anchors, out,
-                    plain=False):
+                    plain=False, R=None, chord_at=None, harmony=(), lead=None):
         from . import pianist
         from .humanize import touch as _touch
         sk = []
@@ -1085,9 +1573,17 @@ class Score:
                 notes_ += list(pianist.turn(e.pitch, d, song.tempo, key=self.key or song.key, vel=v, at=at))
             elif e.kind == 'fig':
                 shape = e.args[0] if e.args else kw.pop('shape', 'arch')
-                kw.setdefault('ease', 0.2 if shape == 'even' else 0.8)
+                # too fast where the phrase moves on: the pianist flattens the gesture
+                eases = [kw.pop('ease')] if 'ease' in kw else [0.2] if shape == 'even' else [0.8, 0.55, 0.3, 0.0]
                 kw.setdefault('dip', 7 if len(e.pitches) > 5 else 4)
-                f = fioritura(list(e.pitches), d, bpm, at=at, shape=shape, vel=(v, v - 6), seed=int(at * 7), **kw)
+                for k, ez in enumerate(eases):
+                    try:
+                        f = fioritura(list(e.pitches), d, bpm, at=at, shape=shape, vel=(v, v - 6), seed=int(at * 7),
+                                      ease=ez, **kw)
+                        break
+                    except ComposeError as err:
+                        if 'max_rate' not in str(err) or k == len(eases) - 1:
+                            raise
                 out['figures'].append((f, bpm, at))
                 notes_ += list(f)
             elif e.kind == 'trill':
@@ -1105,8 +1601,8 @@ class Score:
                 notes_ += list(turn(e.pitch, d, bpm, at=at, key=self.key or song.key, vel=v, **kw))
             elif e.kind in ('mordent', 'prall'):
                 kw.setdefault('upper', e.kind == 'prall' or (bool(e.args) and e.args[0] == 'upper'))
-                notes_ += list(pianist.mordent(e.pitch, d, _bpm_at(bpm, at), key=self.key or song.key, vel=v, at=at,
-                                               **kw))
+                bpm_ = max(20.0, _bpm_at(bpm, at))     # (under a deep rit + fermata: the ornament's floor)
+                notes_ += list(pianist.mordent(e.pitch, d, bpm_, key=self.key or song.key, vel=v, at=at, **kw))
             elif e.kind == 'crush':
                 if e.args:
                     kw.setdefault('grace', int(e.args[0]))
@@ -1119,11 +1615,19 @@ class Score:
         rh = Clip._raw(notes_, max(n.start + n.dur for n in notes_))
         if plain:
             return self._plain_dyn(rh, 1.0)
+        R = R or RULES
+        A = R['async']
         rh = lean_on_long(rh, bpm, gain=10)
+        if chord_at is not None:
+            rh = melodic_charge(rh, chord_at, vel=R['charge']['melodic'], table=R['charge']['pcs'])
         rh = cantabile(rh, bpm)
         if self.dyn:
             rh = dynamics(rh, list(self.dyn))
-        ro = dict(sync_ms=42, seed=3)
+        if harmony and self.key is not None:
+            rh = harmonic_charge(rh, harmony, self.key, vel=R['charge']['harmonic'], table=R['charge']['pcs'])
+        ro = dict(sync_ms=A['sync_ms'], lean_ms=A['lean_ms'], peak_ms=A['peak_ms'], seed=3, lead=lead,
+                  anticipate=A['anticipate'], anticipate_ms=A['anticipate_ms'], late_ms=0.0)   # (the bass-first
+        # style is the anticipation's: a share of the long anchor notes, not every downbeat late)
         ro.update(rubato_opts or {})
         if anchors == 'half':
             anc = [self.bar(k) + h * self.bar_beats / 2 for k in range(1, self.bars + 1) for h in (0, 1)]
@@ -1132,6 +1636,9 @@ class Score:
         else:
             anc = list(anchors)
         rh = melody_rubato(rh, anc + [self.end], bpm, **ro)
+        ar = R['articulation']
+        rh = articulate(rh, bpm, repeat_ms=ar['repeat_ms'], leap=ar['leap'], leap_ms=ar['leap_ms'],
+                        legato=ar['legato'], legato_ms=ar['legato_ms'], seed=len(rh))
         return Clip._raw([n._replace(vel=min(n.vel, cap)) for n in rh], rh.length)
 
 

@@ -363,7 +363,8 @@ std::vector<json> assessDynamics(MixImpl& m, std::vector<DynamicsFinding>& findi
             kind[i] = k;
             reason[i] = why;
         };
-        if (backingName(n.id)) set("backing", "a double / harmony / prism of a vocal");
+        if (n.routing.registration) set("registration", "no touch dynamics (an organ): registration and swell");
+        else if (backingName(n.id)) set("backing", "a double / harmony / prism of a vocal");
         else if (evenName(n.id)) set("even", "arp / sequence id: even by design");
         else if (leadNamed && sustainedChords(evs[i])) set("bed", "named lead, plays sustained chords: a bed");
         else if (!leadNamed && pulsePart(evs[i])) set("even", "8th/16th pulse or arpeggio figure");
@@ -672,6 +673,54 @@ std::vector<json> assessDynamics(MixImpl& m, std::vector<DynamicsFinding>& findi
             R.severity = 2;
             R.mark = fmt("%d/%d phrases flat", flatCount, np);
         }
+    }
+
+    // 4. Instruments without touch dynamics (analysis.registration: an organ) are not judged per phrase - every pipe
+    //    speaks at its level whatever the finger does. Their dynamics are the REGISTRATION (stops drawn, manuals
+    //    changed: the level from section to section) and the SWELL box (an expression lane). Judged together: the
+    //    organ's combined level per section (the registration tracks summed) must move by kRegistrationDb between
+    //    its sections, or a swell lane must shape it - else the organ plays one level all piece (flat_dynamics).
+    {
+        constexpr double kRegistrationDb = 3.0;
+        std::vector<double> lv(ns, -200.0);
+        bool swell = false, any = false;
+        std::vector<std::string> ids;
+        for (std::size_t i = 0; i < nn; ++i) {
+            const NodeData& n = m.nodes[i];
+            if (n.isBus || !n.routing.registration || n.routing.notes.empty()) continue;
+            any = true;
+            ids.push_back(n.id);
+            for (const std::string& t : n.routing.automated)
+                swell = swell || (t.rfind("instrument.", 0) == 0 && t.find("expression") != std::string::npos);
+            for (std::size_t s = 0; s < ns && s < n.sectionRmsDb.size(); ++s)
+                if (n.sectionRmsDb[s] > -60.0)
+                    lv[s] = 10.0 * std::log10(std::pow(10.0, lv[s] / 10.0) + std::pow(10.0, n.sectionRmsDb[s] / 10.0));
+        }
+        double lo = 1e9, hi = -1e9;
+        int played = 0;
+        for (std::size_t s = 0; s < ns; ++s) {
+            if (lv[s] <= -60.0 || m.sections[s].endSec - m.sections[s].startSec < 4.0) continue;
+            lo = std::min(lo, lv[s]);
+            hi = std::max(hi, lv[s]);
+            ++played;
+        }
+        if (any && played >= 2 && !swell && hi - lo < kRegistrationDb) {
+            findings.push_back({1, "flat_dynamics",
+                                fmt("the organ (%zu registration tracks) plays every section at nearly one level: %.1f dB between its "
+                                    "loudest and softest section (want %.0f+), no swell lane. An organ has no touch dynamics - its "
+                                    "dynamics are the registration: draw / retire stops between sections (soft flutes -> principal "
+                                    "chorus -> full organ), move phrases to another manual (the echo), open and close the swell box "
+                                    "(orch.swell).",
+                                    ids.size(), hi - lo, kRegistrationDb),
+                                {}, ids});
+            suggestions.push_back("the organ needs registration contrast between its sections (or a swell lane): change stops / "
+                                  "manuals at phrase seams, open the swell box into the climax.");
+        }
+        for (std::size_t i = 0; i < nn; ++i)
+            if (m.nodes[i].routing.registration && out[i].is_object()) {
+                out[i]["registrationDb"] = any && played >= 2 ? r1(hi - lo) : 0.0;
+                out[i]["swell"] = swell;
+            }
     }
     return out;
 }

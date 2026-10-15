@@ -150,6 +150,19 @@ class Parser(Tmp):
         zones, _ = sfz.load(p)
         self.assertEqual((zones[0]['lo'], zones[0]['hi']), (60, 60))
 
+    def test_load_is_memoized_per_file_and_arguments_as_copies(self):
+        p = self.sfz('<region> sample=a.wav key=48\n', wavs=['a.wav'])
+        zones, info = sfz.load(p)
+        zones[0]['lo'] = 1                                           # a caller's change stays its own
+        again, _ = sfz.load(p)
+        self.assertEqual(again[0]['lo'], 48)
+        self.assertEqual(again, sfz._load(p)[0])
+        self.assertEqual(sfz.load(p, cc={1: 64})[0], sfz._load(p, cc={1: 64})[0])
+        os.utime(p, ns=(os.stat(p).st_atime_ns, os.stat(p).st_mtime_ns + 10**9))
+        with open(p, 'w', encoding='utf-8') as f:                      # a changed file is read again
+            f.write('<region> sample=a.wav key=50\n')
+        self.assertEqual(sfz.load(p)[0][0]['lo'], 50)
+
     def test_case_insensitive_files_and_flac_fallback(self):
         p = self.sfz('<region> sample=SMP/Piano.FLAC key=60\n<region> sample=smp\\other.wav key=61\n',
                      wavs=['smp/piano.wav', 'smp/Other.wav'])
@@ -210,6 +223,33 @@ ampeg_sustain=50 ampeg_release=0.8 amp_veltrack=50 loop_mode=loop_continuous loo
         self.assertEqual(r['trigger'], 'release')
         self.assertAlmostEqual(r['rtDecay'], 6)
         self.assertEqual(r['loop'], 'oneshot')
+
+    def test_noise_generator_level_and_zone_selectors(self):
+        # SFZ '*noise' is +-0.25 uniform noise (sfizz): 12.04 dB under the engine's full-scale '*noise' zone, on top
+        # of the region's own level (the Weresax wind-noise layer: amplitude_oncc122, a 1-pole filter)
+        p = self.sfz('''<region> sample=*noise lokey=49 hikey=80 amplitude_oncc122=100 cutoff=3000 fil_type=lpf_1p
+<region> sample=*sine key=60 volume=-6
+<region> sample=a.wav key=62
+''', wavs=['a.wav'])
+        n, s, a = sfz.load(p, cc={122: 127})[0]
+        self.assertAlmostEqual(n['gain'], 20 * math.log10(0.25), places=3)
+        self.assertAlmostEqual(s['gain'], -6.0)                    # *sine: full scale as in sfizz
+        self.assertNotIn('gain', a)
+        n16 = sfz.load(p, cc={122: 16})[0][0]
+        self.assertAlmostEqual(n16['gain'], 20 * math.log10(16 / 127 * 0.25), places=3)
+        self.assertEqual(n['filter'], 'lpf_1p')
+        # zone={'<file glob>': {...}}: only the matching zones (a generator by its name), plain keys on every attack zone
+        over = sfz.check_zone({'*noise': {'filter': 'lpf_2p'}, 'release': 0.3}, 't')
+        z = sfz.apply_zone(sfz.load(p, cc={122: 127})[0], over)
+        self.assertEqual([x.get('filter') for x in z], ['lpf_2p', None, None])
+        self.assertEqual([x.get('release') for x in z], [0.3, 0.3, 0.3])
+        self.assertEqual(sfz.apply_zone(z, sfz.check_zone({'A.WAV': {'tune': 5}}, 't'))[2]['tune'], 5)  # any case
+        for bad in ({'*noise': {'gain': 3}}, {'*noise': {}}, {'*noise': {'x': {'y': 1}}}, {'file': 'b.wav'}):
+            with self.assertRaises(ComposeError):
+                sfz.check_zone(bad, 't')
+        ins = inst.sfz(p, cc={122: 127}, zone={'*noise': {'filter': 'lpf_2p', 'cutoff': 2500}})
+        nz = next(x for x in ins.params['samples'] if x['file'] == '*noise')
+        self.assertEqual((nz['filter'], nz['cutoff']), ('lpf_2p', 2500))
 
     def test_review_fixes(self):
         p = self.sfz('<group> group=7 polyphony=5\n<region> sample=a.wav key=42\n'

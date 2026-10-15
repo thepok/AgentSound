@@ -2,12 +2,14 @@
 
 #include "core/TempoMap.h"
 #include "dsp/Dsp.h"
+#include "instruments/Wavetable.h"
 
 #include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -59,6 +61,8 @@ enum P : int {
     kMacro1, kMacro2, kMacro3, kMacro4, kMacro5, kMacro6, kMacro7, kMacro8,
     kMods,
     kMode, kPolyphony, kGlide, kPitchbend, kLevel, kPan,
+    kVaCount,  // the "va" params end here; the wavetable mode's own params follow (fixed defaults in "va")
+    kTable1 = kVaCount, kFrame1, kPos1, kWarp1, kWarpAmt1, kTable2, kFrame2, kPos2, kWarp2, kWarpAmt2, kSubWave,
     kParamCount
 };
 
@@ -68,7 +72,7 @@ constexpr int kSmoothed[] = {
     kSubLevel, kNoiseLevel, kNoiseStereo, kUniDetune, kUniSpread, kDriftPitch, kDriftCutoff,
     kCutoff, kResonance, kDrive, kKeytrack, kFilterEnv, kFilterVel, kAmpVel,
     kMacro1, kMacro2, kMacro3, kMacro4, kMacro5, kMacro6, kMacro7, kMacro8,
-    kPitchbend, kPan, kAmpA, kAmpD, kAmpR, kFenvA, kFenvD, kFenvR};
+    kPitchbend, kPan, kAmpA, kAmpD, kAmpR, kFenvA, kFenvD, kFenvR, kPos1, kPos2, kWarpAmt1, kWarpAmt2};
 // Envelope times: a jump (release 20 s -> 1 ms while notes ring) glides, so the running stage speeds up
 // over a few ms instead of cutting the note off within a fraction of a millisecond.
 constexpr int kEnvTimes[] = {kAmpA, kAmpD, kAmpR, kFenvA, kFenvD, kFenvR};
@@ -80,33 +84,40 @@ constexpr int kEnvTimes[] = {kAmpA, kAmpD, kAmpR, kFenvA, kFenvD, kFenvR};
 enum Tgt : int {
     kTPitch, kTOsc1Pitch, kTOsc2Pitch, kTOsc1Pw, kTOsc2Pw, kTOsc1Level, kTOsc2Level, kTSubLevel, kTNoiseLevel,
     kTCutoff, kTResonance, kTDrive, kTAmp, kTPan, kTDetune, kTFm, kTHpf,
+    kTPos1, kTPos2, kTWarp1, kTWarp2,  // wavetable mode only
     kTargetCount
 };
+constexpr std::uint8_t kVa = 1, kWt = 2, kBoth = 3;  // which synth mode has a target
 struct TargetInfo {
     const char* name;
     float lo, hi;       // amount range
     const char* unit;
     bool global;
     const char* what;   // for the amount parameter's help text
+    std::uint8_t modes;
 };
 constexpr TargetInfo kTargets[kTargetCount] = {
-    {"pitch", -4800, 4800, "ct", false, "pitch of every oscillator and the sub, in cents"},
-    {"osc1.pitch", -4800, 4800, "ct", false, "osc1 (and the sub) pitch in cents"},
-    {"osc2.pitch", -4800, 4800, "ct", false, "osc2 pitch in cents"},
-    {"osc1.pw", -0.9f, 0.9f, "", false, "osc1 pulse width (added to osc1.pw, kept in 0.02..0.98)"},
-    {"osc2.pw", -0.9f, 0.9f, "", false, "osc2 pulse width (added to osc2.pw, kept in 0.02..0.98)"},
-    {"osc1.level", -1, 1, "", false, "osc1 level (added to osc1.level, kept in 0..1)"},
-    {"osc2.level", -1, 1, "", false, "osc2 level (added to osc2.level, kept in 0..1)"},
-    {"sub.level", -1, 1, "", false, "sub level (added to sub.level, kept in 0..1)"},
-    {"noise.level", -1, 1, "", false, "noise level (added to noise.level, kept in 0..1)"},
-    {"cutoff", -10, 10, "oct", false, "filter cutoff in octaves"},
-    {"resonance", -1, 1, "", false, "resonance (added to resonance, kept in 0..1)"},
-    {"filter.drive", -1, 1, "", false, "filter drive (added to filter.drive, kept in 0..1)"},
-    {"amp", -96, 24, "dB", false, "voice gain in dB (all amp routings add up; -96 = silent)"},
-    {"pan", -2, 2, "", false, "voice pan (added to pan, kept in -1..1)"},
-    {"unison.detune", -1, 1, "", false, "unison detune (added to unison.detune, kept in 0..1)"},
-    {"fm", -10, 10, "rad", false, "osc2 -> osc1 phase-modulation index (added to fm, kept in 0..10)"},
-    {"hpf", -10, 10, "oct", true, "global high-pass cutoff in octaves"},
+    {"pitch", -4800, 4800, "ct", false, "pitch of every oscillator and the sub, in cents", kBoth},
+    {"osc1.pitch", -4800, 4800, "ct", false, "osc1 (and the sub) pitch in cents", kBoth},
+    {"osc2.pitch", -4800, 4800, "ct", false, "osc2 pitch in cents", kBoth},
+    {"osc1.pw", -0.9f, 0.9f, "", false, "osc1 pulse width (added to osc1.pw, kept in 0.02..0.98)", kVa},
+    {"osc2.pw", -0.9f, 0.9f, "", false, "osc2 pulse width (added to osc2.pw, kept in 0.02..0.98)", kVa},
+    {"osc1.level", -1, 1, "", false, "osc1 level (added to osc1.level, kept in 0..1)", kBoth},
+    {"osc2.level", -1, 1, "", false, "osc2 level (added to osc2.level, kept in 0..1)", kBoth},
+    {"sub.level", -1, 1, "", false, "sub level (added to sub.level, kept in 0..1)", kBoth},
+    {"noise.level", -1, 1, "", false, "noise level (added to noise.level, kept in 0..1)", kBoth},
+    {"cutoff", -10, 10, "oct", false, "filter cutoff in octaves", kBoth},
+    {"resonance", -1, 1, "", false, "resonance (added to resonance, kept in 0..1)", kBoth},
+    {"filter.drive", -1, 1, "", false, "filter drive (added to filter.drive, kept in 0..1)", kBoth},
+    {"amp", -96, 24, "dB", false, "voice gain in dB (all amp routings add up; -96 = silent)", kBoth},
+    {"pan", -2, 2, "", false, "voice pan (added to pan, kept in -1..1)", kBoth},
+    {"unison.detune", -1, 1, "", false, "unison detune (added to unison.detune, kept in 0..1)", kBoth},
+    {"fm", -10, 10, "rad", false, "osc2 -> osc1 phase-modulation index (added to fm, kept in 0..10)", kVa},
+    {"hpf", -10, 10, "oct", true, "global high-pass cutoff in octaves", kBoth},
+    {"osc1.position", -1, 1, "", false, "osc1 wavetable position (added to osc1.position, kept in 0..1)", kWt},
+    {"osc2.position", -1, 1, "", false, "osc2 wavetable position (added to osc2.position, kept in 0..1)", kWt},
+    {"osc1.warp", -1, 1, "", false, "osc1 warp amount (added to osc1.warp.amount, kept in 0..1)", kWt},
+    {"osc2.warp", -1, 1, "", false, "osc2 warp amount (added to osc2.warp.amount, kept in 0..1)", kWt},
 };
 
 std::vector<ParamSpec> buildSpecs() {
@@ -237,10 +248,139 @@ std::vector<ParamSpec> buildSpecs() {
 const std::vector<ParamSpec>& specs() {
     static const std::vector<ParamSpec> s = [] {
         auto v = buildSpecs();
-        if (v.size() != static_cast<std::size_t>(kParamCount)) throw std::logic_error("va: spec table mismatch");
+        if (v.size() != static_cast<std::size_t>(kVaCount)) throw std::logic_error("va: spec table mismatch");
         return v;
     }();
     return s;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Wavetable mode ("wavetable"): the same voice engine with two wavetable oscillators instead of the
+// BLEP ones. Its spec list is the va list without the analog waveform params (osc*.wave, osc*.pw,
+// osc2.sync, fm) plus the table / position / warp params; enum P indexes both through Mode::pidx.
+
+enum Warp : int { kWarpNone, kWarpSync, kWarpBend, kWarpMirror, kWarpFm, kWarpCount };
+const std::vector<std::string> kWarpNames{"none", "sync", "bend", "mirror", "fm"};
+// Wavetable sub waves (choice order) -> oscillator waveform
+constexpr int kSubWaves = 4;
+const std::vector<std::string> kSubWaveNames{"sine", "triangle", "square", "saw"};
+
+struct WtOnly {
+    int id;
+    ParamSpec spec;
+};
+
+std::vector<WtOnly> wtOnlySpecs() {
+    std::vector<WtOnly> v;
+    const std::string warpHelp =
+        "warp of the table's phase: none | sync (hard sync inside the cycle, ratio 1..8 with the amount: the sync "
+        "sweep) | bend (phase bend: squeezes the cycle towards its start, brighter and nasal) | mirror (blends in the "
+        "cycle played forth and back: hollow, octave-ish) | fm (phase-modulated by the other oscillator's output: osc1 "
+        "by osc2, osc2 by osc1; bells, growl). Amount in osc<N>.warp.amount (modulation target osc<N>.warp).";
+    for (int o = 1; o <= 2; ++o) {
+        const std::string n = "osc" + std::to_string(o);
+        const bool one = o == 1;
+        v.push_back({one ? kTable1 : kTable2,
+                     num(n + ".table", 0, 0, 0, "name",
+                         "The wavetable - a string, not a number: a built-in name or a table file. Built-ins: " +
+                             wt::builtinHelp() + ". Files: .wav (Serum 'clm ' chunk, Surge 'srge' chunk, Ableton / "
+                             "Vital / plain frames of osc" + std::to_string(o) + ".framesize, single cycles such as "
+                             "AKWF) or Surge .wt; a relative name is looked up in $AGENTSOUND_WAVETABLES, then "
+                             "assets/wavetables/ (Python: './x.wav' = next to the song). Default \"basic\".",
+                         false)});
+        v.push_back({one ? kFrame1 : kFrame2,
+                     num(n + ".framesize", 0, 65536, 0, "samples",
+                         "Samples per frame of a WAV table (whole number): 0 = auto (the Serum / Surge chunk, else 2048 "
+                         "when the length divides, a single cycle when the file is <= 4096 samples, else 4096 / 1024 / "
+                         "512 / 256). Set it for plain WAV tables of other sizes.",
+                         false)});
+        v.push_back({one ? kPos1 : kPos2,
+                     num(n + ".position", 0, 1, 0, "",
+                         "Wavetable position 0..1 (first .. last frame), crossfaded smoothly between neighbouring frames. "
+                         "Automate it, or modulate it with mods routings (env / lfo / velocity -> " + n +
+                             ".position) for evolving pads and plucks that open up.")});
+        v.push_back({one ? kWarp1 : kWarp2, choice(n + ".warp", kWarpNames, 0, "Oscillator " + std::to_string(o) + " " + warpHelp)});
+        v.push_back({one ? kWarpAmt1 : kWarpAmt2,
+                     num(n + ".warp.amount", 0, 1, 0, "",
+                         "Warp amount 0..1 for " + n + ".warp (0 = the plain table; sync: ratio 1 + 7 x amount, bend: up "
+                         "to 8x squeeze, mirror: blend, fm: index up to 1 cycle).")});
+    }
+    v.push_back({kSubWave, choice("sub.wave", kSubWaveNames, 0,
+                                  "Sub oscillator waveform: sine (clean weight, default), triangle, square (the va's "
+                                  "hollow sub), saw.")});
+    return v;
+}
+
+// The wavetable spec list and its P -> spec index map.
+struct WtLayout {
+    std::vector<ParamSpec> specs;
+    std::array<int, kParamCount> pidx{};
+};
+
+const WtLayout& wtLayout() {
+    static const WtLayout lay = [] {
+        const auto& va = specs();
+        const auto only = wtOnlySpecs();
+        auto vaSpec = [&](const char* name) -> ParamSpec {
+            for (const auto& sp : va)
+                if (sp.name == name) return sp;
+            throw std::logic_error(std::string("wavetable: no va spec ") + name);
+        };
+        auto wtSpec = [&](const char* name) -> ParamSpec {
+            for (const auto& w : only)
+                if (w.spec.name == name) return w.spec;
+            throw std::logic_error(std::string("wavetable: no spec ") + name);
+        };
+        WtLayout l;
+        const char* order[] = {"osc1.table", "osc1.framesize", "osc1.position", "osc1.warp", "osc1.warp.amount",
+                               "osc1.level", "osc1.semi", "osc1.fine",
+                               "osc2.table", "osc2.framesize", "osc2.position", "osc2.warp", "osc2.warp.amount",
+                               "osc2.level", "osc2.semi", "osc2.fine", "osc2.phase",
+                               "sub.level", "sub.octave", "sub.wave"};
+        for (const char* n : order) {
+            bool isWt = false;
+            for (const auto& w : only) isWt = isWt || w.spec.name == n;
+            l.specs.push_back(isWt ? wtSpec(n) : vaSpec(n));
+        }
+        // the rest of the va list from noise.level on, minus the analog waveform params
+        bool on = false;
+        for (const auto& sp : va) {
+            on = on || sp.name == "noise.level";
+            if (on) l.specs.push_back(sp);
+        }
+        for (auto& sp : l.specs) {
+            if (sp.name == "osc1.level") sp.help = "Oscillator 1 (wavetable osc1.table) level into the filter (0 = off).";
+            else if (sp.name == "osc2.level")
+                sp.help = "Oscillator 2 (wavetable osc2.table) level (0 = off; it still runs as the fm source of osc1). "
+                          "Another table, an octave (osc2.semi -12 / 12) or a detuned copy (osc2.fine 5-12) of osc1.";
+            else if (sp.name == "sub.level") sp.help = "Sub oscillator level (sub.wave, one or two octaves below osc1): bass weight.";
+            else if (sp.name == "osc2.phase")
+                sp.help = "Start phase of osc2 (0..1 of a cycle) when osc.retrig restarts the oscillators.";
+            else if (sp.name == "osc.retrig")
+                sp.help = "off = free-running oscillators (every note starts at a different phase); on = the first "
+                          "unison voice restarts at phase 0 on each note (osc2 at osc2.phase): identical, punchy "
+                          "attacks for basses and plucks.";
+            else if (sp.name == "mods")
+                sp.help = "Modulation matrix - a list, not a number: [{\"source\": {...}, \"target\": T, \"amount\": x, "
+                          "\"id\": name}, ...], up to 64 routings, the same sources as the va (lfo / env / velocity / key / "
+                          "random / macro; Python: agentsound.vamod). Targets (amount unit): osc1.position, "
+                          "osc2.position, osc1.warp, osc2.warp; pitch, osc1.pitch, osc2.pitch (ct); osc1.level, "
+                          "osc2.level, sub.level, noise.level; cutoff (oct); resonance; filter.drive; amp (dB); pan; "
+                          "unison.detune; hpf (oct, global sources only). Each amount is the automatable param "
+                          "mod.<id or index>.amount.";
+        }
+        l.pidx.fill(-1);
+        for (int i = 0; i < kParamCount; ++i) {
+            std::string name;
+            if (i < kVaCount) name = va[static_cast<std::size_t>(i)].name;
+            for (const auto& w : only)
+                if (w.id == i) name = w.spec.name;
+            for (std::size_t k = 0; k < l.specs.size(); ++k)
+                if (l.specs[k].name == name) l.pidx[static_cast<std::size_t>(i)] = static_cast<int>(k);
+        }
+        return l;
+    }();
+    return lay;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -455,6 +595,54 @@ void fmRun(Wave w2, Osc& o1, Osc& o2, const OscPairRamps& r, float* x, int len) 
         case Wave::Square: fmLoop<Wave::Square, kSync>(o1, o2, r, x, len); break;
         case Wave::Triangle: fmLoop<Wave::Triangle, kSync>(o1, o2, r, x, len); break;
         case Wave::Sine: fmLoop<Wave::Sine, kSync>(o1, o2, r, x, len); break;
+    }
+}
+
+// Sub oscillator over a control sub-block (free-running), accumulating g * osc into x.
+template <Wave W>
+void subLoop(Osc& o, double& inc, double dinc, float& g, float dg, float* x, int len) noexcept {
+    for (int n = 0; n < len; ++n) {
+        inc += dinc; g += dg;
+        float unused;
+        x[n] += g * o.tick<W>(inc, 0.5f, unused);
+    }
+}
+
+// Wavetable read with a phase warp (wavetable mode). fpos: frame position (0..frames-1); w: warp amount
+// 0..1; fmIn: the other oscillator's output (kWarpFm).
+inline float wtSample(const wt::Table& t, int level, float fpos, double ph, int warp, float w, float fmIn) noexcept {
+    switch (warp) {
+        case kWarpSync: {
+            double q = ph * (1.0 + 7.0 * w);
+            q -= std::floor(q);
+            return t.read(level, fpos, q);
+        }
+        case kWarpBend: {  // rational phase bend, slope 1 + 7w at the cycle start, 1 / (1 + 7w) at its end
+            const double q = 1.0 / (1.0 + 7.0 * w);
+            return t.read(level, fpos, ph / (ph + q * (1.0 - ph)));
+        }
+        case kWarpMirror: {
+            const float a = t.read(level, fpos, ph);
+            if (w <= 0.0f) return a;
+            const float b = t.read(level, fpos, ph < 0.5 ? 2.0 * ph : 2.0 - 2.0 * ph);
+            return a + w * (b - a);
+        }
+        case kWarpFm: {
+            double q = ph + static_cast<double>(w * fmIn);
+            q -= std::floor(q);
+            return t.read(level, fpos, q);
+        }
+        default: return t.read(level, fpos, ph);
+    }
+}
+// How much a warp raises the highest partial (for the mip level).
+inline double warpMul(int warp, float w) noexcept {
+    switch (warp) {
+        case kWarpSync:
+        case kWarpBend: return 1.0 + 7.0 * w;
+        case kWarpMirror: return w > 0.0f ? 2.0 : 1.0;
+        case kWarpFm: return 1.0 + 4.0 * w;
+        default: return 1.0;
     }
 }
 
@@ -791,7 +979,26 @@ struct RampD {
 
 class VaSynth final : public Instrument {
 public:
-    VaSynth() : params_(specs()) {}
+    // wavetable = false: the "va" synth; true: the "wavetable" synth (same voice engine, wavetable oscillators).
+    explicit VaSynth(bool wavetable = false) : wt_(wavetable), name_(wavetable ? "wavetable" : "va") {
+        if (wt_) {
+            params_ = Params(wtLayout().specs);
+            pidx_ = wtLayout().pidx;
+        } else {
+            params_ = Params(specs());
+            for (int i = 0; i < kParamCount; ++i) pidx_[static_cast<std::size_t>(i)] = i < kVaCount ? i : -1;
+        }
+        // params a mode does not have read a fixed value: their default (the va's sub is a square; the
+        // wavetable mode has no analog waveforms: osc*.wave stay saw, fm 0, sync off)
+        for (int i = 0; i < kParamCount; ++i) {
+            const ParamSpec* sp = nullptr;
+            if (i < kVaCount) sp = &specs()[static_cast<std::size_t>(i)];
+            for (const auto& w : wtOnlySpecs())
+                if (w.id == i) fixed_[static_cast<std::size_t>(i)] = w.spec.def;
+            if (sp) fixed_[static_cast<std::size_t>(i)] = sp->def;
+        }
+        fixed_[kSubWave] = 2.0f;  // (va: square)
+    }
 
     void configure(const json& params) override;
     // A changing tempo: tempo-synced LFOs (voice and global) follow the song's beats.
@@ -830,11 +1037,20 @@ private:
         Svf svfL, svfR;
         RampD inc1[kMaxUni], inc2[kMaxUni], incSub;
         Ramp pw1, pw2, fco, gainL, gainR, g1, g2, gSub, gNoise, res, pre, bpg, fm;
+        // wavetable mode: positions (0..1), warp amounts; osc1's last output per unison voice (osc2's fm source).
+        // The oscillator phases are o1[u].t / o2[u].t.
+        Ramp pos1, pos2, warp1, warp2;
+        float wtLast1[kMaxUni] = {};
     };
     struct Held { int id; int pitch; float vel; };
 
-    float p(int i) const noexcept { return params_.get(i); }
-    int ichoice(int i) const noexcept { return static_cast<int>(params_.get(i) + 0.5f); }
+    // Param P of either mode (a param the mode does not have reads its fixed value)
+    float p(int i) const noexcept {
+        const int k = pidx_[static_cast<std::size_t>(i)];
+        return k >= 0 ? params_.get(k) : fixed_[static_cast<std::size_t>(i)];
+    }
+    int ichoice(int i) const noexcept { return static_cast<int>(p(i) + 0.5f); }
+    const std::string& specName(int i) const { return params_.specs()[static_cast<std::size_t>(pidx_[static_cast<std::size_t>(i)])].name; }
 
     void parseMods(const json& list, std::vector<ParamSpec>& specsOut);
     int parseSource(const json& j, const std::string& where, int modIndex);
@@ -848,6 +1064,8 @@ private:
     void controlVoice(Voice& v, bool snap);
     void evalMods(Voice& v, bool snap, std::int64_t age, float* T);
     void renderVoice(Voice& v, float* outL, float* outR, int len);
+    void wavetableOscs(Voice& v, float* bL, float* bR, int len);
+    void parseTables(const json& params);
     void advanceGlobalRamps(int n);
     Voice& allocate();
     void startVoice(Voice& v, int id, int note, float vel, double fromPitch);
@@ -871,7 +1089,15 @@ private:
     bool glideOn() const noexcept { return p(kGlide) > 0.0f; }
     bool noiseWide() const noexcept { return sm_[kNoiseStereo] > 1e-4f; }
 
+    const bool wt_;            // wavetable mode
+    const std::string name_;   // "va" | "wavetable" (error messages)
     Params params_;
+    std::array<int, kParamCount> pidx_{};     // P -> index in params_ (-1: not a param of this mode)
+    std::array<float, kParamCount> fixed_{};  // value of the P's this mode does not have
+    // wavetable mode: table names (built-in or file), the tables (loaded in prepare), warp types
+    std::string tableName_[2] = {"basic", "basic"};
+    std::shared_ptr<const wt::Table> tables_[2];
+    int warp1_ = kWarpNone, warp2_ = kWarpNone;
     unsigned seenVersion_ = ~0u;
     double fs_ = 48000.0, fsi_ = 96000.0, bpm_ = 120.0, hzToInc_ = 440.0 / 96000.0;
     float maxCutoff_ = 40000.0f, piOverFsi_ = 0.0f;
@@ -917,6 +1143,7 @@ private:
     bool sync_ = false, pink_ = false, oscRetrig_ = false;
     int ftype_ = 0, mode_ = 0, poly_ = 16, unison_ = 1;
     float subScale_ = 0.5f;
+    Wave subWave_ = Wave::Square;
     std::int64_t ctlClock_ = 0;  // internal samples since the render start at the end of the current control period
     EnvCoefs ampC_, fenvC_;
     float glideC_ = 0.0f;
@@ -949,17 +1176,22 @@ std::string fmtNum(double x) {
 }
 
 void VaSynth::configure(const json& params) {
-    if (!params.is_null() && !params.is_object()) throw ConfigError("va: params must be a JSON object");
+    if (!params.is_null() && !params.is_object()) throw ConfigError(name_ + ": params must be a JSON object");
     srcs_.clear();
     mods_.clear();
-    std::vector<ParamSpec> all = specs();
+    std::vector<ParamSpec> all = wt_ ? wtLayout().specs : specs();
     if (params.is_object()) {
         const auto it = params.find("mods");
         if (it != params.end()) parseMods(*it, all);
     }
     params_ = Params(all);
-    params_.configure(params, "va", {"mods"});  // (a flat 'mod.<id>.amount' key overrides the entry's amount)
-    if (ichoice(kOsc1Wave) != static_cast<int>(Wave::Sine)) {
+    if (wt_) {
+        params_.configure(params, name_, {"mods", "osc1.table", "osc2.table"});
+        parseTables(params);
+    } else {
+        params_.configure(params, "va", {"mods"});  // (a flat 'mod.<id>.amount' key overrides the entry's amount)
+    }
+    if (!wt_ && ichoice(kOsc1Wave) != static_cast<int>(Wave::Sine)) {
         // fm only acts on a sine osc1: elsewhere automating it would be silently ignored, so it is not
         // automatable (the renderer then rejects such a lane).
         ParamSpec& f = all[static_cast<std::size_t>(kFm)];
@@ -968,10 +1200,11 @@ void VaSynth::configure(const json& params) {
         params_ = Params(std::move(all));
         params_.configure(params, "va", {"mods"});
     }
-    for (int i : {static_cast<int>(kUnison), static_cast<int>(kPolyphony), static_cast<int>(kSubOctave)}) {
-        const float v = params_.get(i);
-        if (v != std::round(v))
-            throw ConfigError("va: '" + specs()[static_cast<std::size_t>(i)].name + "' must be a whole number");
+    for (int i : {static_cast<int>(kUnison), static_cast<int>(kPolyphony), static_cast<int>(kSubOctave),
+                  static_cast<int>(kFrame1), static_cast<int>(kFrame2)}) {
+        if (pidx_[static_cast<std::size_t>(i)] < 0) continue;
+        const float v = p(i);
+        if (v != std::round(v)) throw ConfigError(name_ + ": '" + specName(i) + "' must be a whole number");
     }
     std::fill(std::begin(used_), std::end(used_), false);
     globalTargets_ = false;
@@ -985,21 +1218,54 @@ void VaSynth::configure(const json& params) {
     }
 }
 
+// Wavetable mode: "osc1.table" / "osc2.table" are strings (a built-in table name or a .wav / .wt file).
+void VaSynth::parseTables(const json& params) {
+    tableName_[0] = tableName_[1] = "basic";
+    if (!params.is_object()) return;
+    for (int o = 0; o < 2; ++o) {
+        const std::string key = o == 0 ? "osc1.table" : "osc2.table";
+        const auto it = params.find(key);
+        if (it == params.end()) continue;
+        std::string all;
+        for (const auto& n : wt::builtinNames()) all += (all.empty() ? "" : ", ") + n;
+        if (!it->is_string() || it->get<std::string>().empty()) {
+            throw ConfigError(name_ + ": '" + key + "' must be a built-in table name (" + all +
+                              ") or a wavetable file (.wav / .wt)");
+        }
+        const std::string v = it->get<std::string>();
+        if (!wt::isBuiltin(v) && !wt::looksLikeFile(v)) {
+            throw ConfigError(name_ + ": '" + key + "' = '" + v + "' is neither a built-in table (" + all +
+                              ") nor a .wav / .wt file");
+        }
+        if (wt::isBuiltin(v) && p(o == 0 ? kFrame1 : kFrame2) > 0.0f) {
+            throw ConfigError(name_ + ": osc" + std::to_string(o + 1) + ".framesize only applies to a table file, not "
+                              "the built-in '" + v + "'");
+        }
+        tableName_[o] = v;
+    }
+    for (int i : {static_cast<int>(kFrame1), static_cast<int>(kFrame2)}) {
+        const float f = p(i);
+        if (f > 0.0f && f < 4.0f) throw ConfigError(name_ + ": '" + specName(i) + "' must be 0 (auto) or 4..65536");
+    }
+}
+
 void VaSynth::parseMods(const json& list, std::vector<ParamSpec>& specsOut) {
     if (!list.is_array()) {
-        throw ConfigError("va: 'mods' must be a list of routings [{\"source\": {\"type\": \"lfo\", ...}, \"target\": "
+        throw ConfigError(name_ + ": 'mods' must be a list of routings [{\"source\": {\"type\": \"lfo\", ...}, \"target\": "
                           "\"cutoff\", \"amount\": 1.5, \"id\": \"wob\"}, ...]");
     }
     if (list.size() > static_cast<std::size_t>(kMaxMods)) {
-        throw ConfigError("va: 'mods' has " + std::to_string(list.size()) + " routings; at most " +
+        throw ConfigError(name_ + ": 'mods' has " + std::to_string(list.size()) + " routings; at most " +
                           std::to_string(kMaxMods));
     }
+    const std::uint8_t mode = wt_ ? kWt : kVa;
     std::string targets;
-    for (int t = 0; t < kTargetCount; ++t) targets += (t ? ", " : "") + std::string(kTargets[t].name);
+    for (int t = 0; t < kTargetCount; ++t)
+        if (kTargets[t].modes & mode) targets += (targets.empty() ? "" : ", ") + std::string(kTargets[t].name);
     std::vector<std::string> ids;
     for (std::size_t i = 0; i < list.size(); ++i) {
         const json& e = list[i];
-        const std::string w = "va: mods[" + std::to_string(i) + "]";
+        const std::string w = name_ + ": mods[" + std::to_string(i) + "]";
         if (!e.is_object()) {
             throw ConfigError(w + " must be an object {\"source\": {...}, \"target\": \"cutoff\", \"amount\": 1.5, "
                                   "\"id\": \"name\"}");
@@ -1030,7 +1296,7 @@ void VaSynth::parseMods(const json& list, std::vector<ParamSpec>& specsOut) {
         if (tj.is_string()) {
             const std::string tn = tj.get<std::string>();
             for (int k = 0; k < kTargetCount; ++k)
-                if (tn == kTargets[k].name) t = k;
+                if ((kTargets[k].modes & mode) && tn == kTargets[k].name) t = k;
             if (t < 0) throw ConfigError(w + ": unknown target '" + tn + "' (targets: " + targets + ")");
         } else {
             throw ConfigError(w + ": 'target' must be a string (" + targets + ")");
@@ -1225,8 +1491,16 @@ void VaSynth::prepare(const RenderContext& ctx) {
     hpLogMin_ = std::log2(5.0f);
     hpLogMax_ = static_cast<float>(std::log2(0.45 * fs_));
 
-    rng_.reseed(ctx.seed ^ dsp::hashString("as.instrument.va"));
-    modSeed_ = ctx.seed ^ dsp::hashString("as.instrument.va.mods");
+    rng_.reseed(ctx.seed ^ dsp::hashString(wt_ ? "as.instrument.wavetable" : "as.instrument.va"));
+    modSeed_ = ctx.seed ^ dsp::hashString(wt_ ? "as.instrument.wavetable.mods" : "as.instrument.va.mods");
+    if (wt_) {  // the tables: built (cached) or read here, never in process()
+        for (int o = 0; o < 2; ++o) {
+            const std::string& n = tableName_[o];
+            tables_[o] = wt::isBuiltin(n) ? wt::builtin(n)
+                                          : wt::load(wt::resolvePath(ctx.assetDir, n),
+                                                     static_cast<int>(std::lround(p(o == 0 ? kFrame1 : kFrame2))));
+        }
+    }
     stamp_ = 0;
     clock_ = 0;
     // Song position (the renderer's rounding of startBeat to a sample). A render that does not start on
@@ -1256,7 +1530,7 @@ void VaSynth::prepare(const RenderContext& ctx) {
     }
     amt_.assign(mods_.size(), 0.0f);
     amt1_.assign(mods_.size(), 0.0f);
-    for (std::size_t m = 0; m < mods_.size(); ++m) amt_[m] = amt1_[m] = p(mods_[m].param);
+    for (std::size_t m = 0; m < mods_.size(); ++m) amt_[m] = amt1_[m] = params_.get(mods_[m].param);
     gRaw_.assign(srcs_.size(), 0.0f);
     gJump_.assign(srcs_.size(), 0.0f);
     gOut_.assign(srcs_.size(), 0.0f);
@@ -1339,7 +1613,7 @@ void VaSynth::evalGlobalSources(std::int64_t n, bool snap) {
     if (globalTargets_) {  // (amounts unsmoothed here: the hpf glide smooths the sum, as for the hpf param)
         float h = 0.0f;
         for (std::size_t m = 0; m < mods_.size(); ++m)
-            if (kTargets[mods_[m].target].global) h += gOut_[static_cast<std::size_t>(mods_[m].src)] * p(mods_[m].param);
+            if (kTargets[mods_[m].target].global) h += gOut_[static_cast<std::size_t>(mods_[m].src)] * params_.get(mods_[m].param);
         hpfMod_ = h;
     }
 }
@@ -1362,6 +1636,12 @@ void VaSynth::refresh() {
     mode_ = ichoice(kMode);
     poly_ = std::clamp(static_cast<int>(std::lround(p(kPolyphony))), 1, kMaxPoly);
     subScale_ = std::lround(p(kSubOctave)) <= -2 ? 0.25f : 0.5f;
+    {
+        static constexpr Wave kSub[kSubWaves] = {Wave::Sine, Wave::Triangle, Wave::Square, Wave::Saw};
+        subWave_ = kSub[std::clamp(ichoice(kSubWave), 0, kSubWaves - 1)];
+    }
+    warp1_ = ichoice(kWarp1);
+    warp2_ = ichoice(kWarp2);
 
     const int u = std::clamp(static_cast<int>(std::lround(p(kUnison))), 1, kMaxUni);
     if (u != unison_ || lastDet_ < 0.0f) {
@@ -1486,7 +1766,7 @@ void VaSynth::control() {
         if (std::fabs(t - a) + std::fabs(t - s) < 1e-6f * (1.0f + std::fabs(t))) a = s = t;
     }
     for (std::size_t m = 0; m < mods_.size(); ++m) {  // routing amounts: the same smoother
-        const float t = p(mods_[m].param);
+        const float t = params_.get(mods_[m].param);
         float& a = amt1_[m];
         float& s = amt_[m];
         a += (t - a) * smC_;
@@ -1669,6 +1949,12 @@ void VaSynth::controlVoice(Voice& v, bool snap) {
     const float noise = level(kNoiseLevel, kTNoiseLevel);
     v.gNoise.to(noise, snap);
     v.fm.to(fmCarrier_ ? std::clamp(sm_[kFm] + T[kTFm], 0.0f, 10.0f) : 0.0f, snap);
+    if (wt_) {
+        v.pos1.to(std::clamp(sm_[kPos1] + T[kTPos1], 0.0f, 1.0f), snap);
+        v.pos2.to(std::clamp(sm_[kPos2] + T[kTPos2], 0.0f, 1.0f), snap);
+        v.warp1.to(std::clamp(sm_[kWarpAmt1] + T[kTWarp1], 0.0f, 1.0f), snap);
+        v.warp2.to(std::clamp(sm_[kWarpAmt2] + T[kTWarp2], 0.0f, 1.0f), snap);
+    }
 
     // filter
     const float dc = snap ? v.driftCut.s2 : v.driftCut.tick(v.rng, driftA_, driftMin_, driftRange_);
@@ -1717,34 +2003,38 @@ void VaSynth::renderVoice(Voice& v, float* outL, float* outR, int len) {
     const bool fmOn = !v.fm.zero();  // (only ever non-zero with a sine osc1)
 
     // Oscillators. Osc1 also runs silently when it is the sync master of an audible osc2; osc2 also
-    // runs silently as the FM modulator.
-    const bool runA = osc1On || (osc2On && sync_);
-    for (int u = 0; u < unison_; ++u) {
-        float x[kCtl], wrap[kCtl], unusedWrap[kCtl];
-        std::fill(x, x + len, 0.0f);
-        double i1 = v.inc1[u].v, i2 = v.inc2[u].v;
-        if (fmOn) {
-            const OscPairRamps r{i1, v.inc1[u].d, i2, v.inc2[u].d, v.pw2.v, v.pw2.d,
-                                 v.g1.v, v.g1.d, v.g2.v, v.g2.d, v.fm.v, v.fm.d};
-            if (sync_) fmRun<true>(w2_, v.o1[u], v.o2[u], r, x, len);
-            else fmRun<false>(w2_, v.o1[u], v.o2[u], r, x, len);
-            i1 += v.inc1[u].d * len;
-            i2 += v.inc2[u].d * len;
-        } else {
-            if (runA) oscRun<false>(w1_, v.o1[u], i1, v.inc1[u].d, v.pw1.v, v.pw1.d, v.g1.v, v.g1.d, wrap, x, len);
-            else i1 += v.inc1[u].d * len;
-            if (osc2On && sync_) oscRun<true>(w2_, v.o2[u], i2, v.inc2[u].d, v.pw2.v, v.pw2.d, v.g2.v, v.g2.d, wrap, x, len);
-            else if (osc2On) oscRun<false>(w2_, v.o2[u], i2, v.inc2[u].d, v.pw2.v, v.pw2.d, v.g2.v, v.g2.d, unusedWrap, x, len);
-            else i2 += v.inc2[u].d * len;
-        }
-        v.inc1[u].v = i1;
-        v.inc2[u].v = i2;
-        float pl = uPanL_[u].v, pr = uPanR_[u].v;
-        const float dpl = uPanL_[u].d, dpr = uPanR_[u].d;
-        if (st) {
-            for (int n = 0; n < len; ++n) { pl += dpl; pr += dpr; bL[n] += x[n] * pl; bR[n] += x[n] * pr; }
-        } else {
-            for (int n = 0; n < len; ++n) { pl += dpl; bL[n] += x[n] * pl; }
+    // runs silently as the FM modulator. (Wavetable mode: wavetableOscs.)
+    if (wt_) {
+        wavetableOscs(v, bL, bR, len);
+    } else {
+        const bool runA = osc1On || (osc2On && sync_);
+        for (int u = 0; u < unison_; ++u) {
+            float x[kCtl], wrap[kCtl], unusedWrap[kCtl];
+            std::fill(x, x + len, 0.0f);
+            double i1 = v.inc1[u].v, i2 = v.inc2[u].v;
+            if (fmOn) {
+                const OscPairRamps r{i1, v.inc1[u].d, i2, v.inc2[u].d, v.pw2.v, v.pw2.d,
+                                     v.g1.v, v.g1.d, v.g2.v, v.g2.d, v.fm.v, v.fm.d};
+                if (sync_) fmRun<true>(w2_, v.o1[u], v.o2[u], r, x, len);
+                else fmRun<false>(w2_, v.o1[u], v.o2[u], r, x, len);
+                i1 += v.inc1[u].d * len;
+                i2 += v.inc2[u].d * len;
+            } else {
+                if (runA) oscRun<false>(w1_, v.o1[u], i1, v.inc1[u].d, v.pw1.v, v.pw1.d, v.g1.v, v.g1.d, wrap, x, len);
+                else i1 += v.inc1[u].d * len;
+                if (osc2On && sync_) oscRun<true>(w2_, v.o2[u], i2, v.inc2[u].d, v.pw2.v, v.pw2.d, v.g2.v, v.g2.d, wrap, x, len);
+                else if (osc2On) oscRun<false>(w2_, v.o2[u], i2, v.inc2[u].d, v.pw2.v, v.pw2.d, v.g2.v, v.g2.d, unusedWrap, x, len);
+                else i2 += v.inc2[u].d * len;
+            }
+            v.inc1[u].v = i1;
+            v.inc2[u].v = i2;
+            float pl = uPanL_[u].v, pr = uPanR_[u].v;
+            const float dpl = uPanL_[u].d, dpr = uPanR_[u].d;
+            if (st) {
+                for (int n = 0; n < len; ++n) { pl += dpl; pr += dpr; bL[n] += x[n] * pl; bR[n] += x[n] * pr; }
+            } else {
+                for (int n = 0; n < len; ++n) { pl += dpl; bL[n] += x[n] * pl; }
+            }
         }
     }
 
@@ -1752,10 +2042,11 @@ void VaSynth::renderVoice(Voice& v, float* outL, float* outR, int len) {
         double is = v.incSub.v;
         float gs = v.gSub.v;
         const float dgs = v.gSub.d;
-        for (int n = 0; n < len; ++n) {
-            is += v.incSub.d; gs += dgs;
-            float unused;
-            bM[n] += gs * v.sub.tick<Wave::Square>(is, 0.5f, unused);
+        switch (subWave_) {  // (va: always the square)
+            case Wave::Square: subLoop<Wave::Square>(v.sub, is, v.incSub.d, gs, dgs, bM, len); break;
+            case Wave::Sine: subLoop<Wave::Sine>(v.sub, is, v.incSub.d, gs, dgs, bM, len); break;
+            case Wave::Triangle: subLoop<Wave::Triangle>(v.sub, is, v.incSub.d, gs, dgs, bM, len); break;
+            case Wave::Saw: subLoop<Wave::Saw>(v.sub, is, v.incSub.d, gs, dgs, bM, len); break;
         }
     }
     v.incSub.v += v.incSub.d * len;
@@ -1822,6 +2113,7 @@ void VaSynth::renderVoice(Voice& v, float* outL, float* outR, int len) {
     for (Ramp* r : {&v.fco, &v.res, &v.pre, &v.bpg, &v.gainL, &v.gainR, &v.g1, &v.g2, &v.gSub, &v.gNoise, &v.pw1,
                     &v.pw2, &v.fm})
         r->adv(len);
+    if (wt_) for (Ramp* r : {&v.pos1, &v.pos2, &v.warp1, &v.warp2}) r->adv(len);
     v.ladL.flush(); v.ladR.flush(); v.svfL.flush(); v.svfR.flush();
 
     const bool silentSustain = v.amp.st == Env::Sustain && ampC_.sus <= 0.0f && v.amp.lv < 1e-5f;
@@ -1830,6 +2122,79 @@ void VaSynth::renderVoice(Voice& v, float* outL, float* outR, int len) {
         v.killing = false;
         v.amp.st = Env::Idle;
         v.amp.lv = 0.0f;
+    }
+}
+
+// Wavetable mode: per unison voice osc2 then osc1 (osc1's fm warp reads osc2 of the same sample, osc2's
+// reads osc1 of the previous one), each from the mip level that keeps its partials below the internal
+// Nyquist for the highest increment of this period, at its (smoothed, per-sample interpolated) position.
+// Like the va oscillators, an oscillator that is silent and modulates nothing does not run.
+void VaSynth::wavetableOscs(Voice& v, float* bL, float* bR, int len) {
+    const bool st = v.stereo;
+    const bool osc1On = !v.g1.zero(), osc2On = !v.g2.zero();
+    const bool run2 = osc2On || warp1_ == kWarpFm;
+    const bool run1 = osc1On || warp2_ == kWarpFm;
+    const wt::Table& ta = *tables_[0];
+    const wt::Table& tb = *tables_[1];
+    const float fa = static_cast<float>(ta.frames - 1), fb = static_cast<float>(tb.frames - 1);
+    const float w1max = std::max(v.warp1.v, v.warp1.v + v.warp1.d * len);
+    const float w2max = std::max(v.warp2.v, v.warp2.v + v.warp2.d * len);
+    for (int u = 0; u < unison_; ++u) {
+        float x[kCtl];
+        double i1 = v.inc1[u].v, i2 = v.inc2[u].v;
+        const double d1 = v.inc1[u].d, d2 = v.inc2[u].d;
+        const int lv1 = wt::Table::levelFor(std::max(i1, i1 + d1 * len) * warpMul(warp1_, w1max));
+        const int lv2 = wt::Table::levelFor(std::max(i2, i2 + d2 * len) * warpMul(warp2_, w2max));
+        double p1 = v.o1[u].t, p2 = v.o2[u].t;
+        float g1 = v.g1.v, g2 = v.g2.v, q1 = v.pos1.v, q2 = v.pos2.v, w1 = v.warp1.v, w2 = v.warp2.v;
+        const float dg1 = v.g1.d, dg2 = v.g2.d, dq1 = v.pos1.d, dq2 = v.pos2.d, dw1 = v.warp1.d, dw2 = v.warp2.d;
+        float y1 = v.wtLast1[u];
+        if (warp1_ == kWarpNone && warp2_ == kWarpNone) {  // plain tables (the common case): no warp dispatch
+            for (int n = 0; n < len; ++n) {
+                i1 += d1; i2 += d2; g1 += dg1; g2 += dg2; q1 += dq1; q2 += dq2;
+                float s = 0.0f;
+                if (run1) {
+                    p1 += i1;
+                    if (p1 >= 1.0) p1 -= 1.0;
+                    y1 = ta.read(lv1, q1 * fa, p1);
+                    s = g1 * y1;
+                }
+                if (run2) {
+                    p2 += i2;
+                    if (p2 >= 1.0) p2 -= 1.0;
+                    s += g2 * tb.read(lv2, q2 * fb, p2);
+                }
+                x[n] = s;
+            }
+        } else {
+            for (int n = 0; n < len; ++n) {
+                i1 += d1; i2 += d2; g1 += dg1; g2 += dg2; q1 += dq1; q2 += dq2; w1 += dw1; w2 += dw2;
+                float y2 = 0.0f;
+                if (run2) {
+                    p2 += i2;
+                    if (p2 >= 1.0) p2 -= 1.0;
+                    y2 = wtSample(tb, lv2, q2 * fb, p2, warp2_, w2, y1);
+                }
+                if (run1) {
+                    p1 += i1;
+                    if (p1 >= 1.0) p1 -= 1.0;
+                    y1 = wtSample(ta, lv1, q1 * fa, p1, warp1_, w1, y2);
+                }
+                x[n] = g1 * y1 + g2 * y2;
+            }
+        }
+        v.wtLast1[u] = y1;
+        v.o1[u].t = p1;
+        v.o2[u].t = p2;
+        v.inc1[u].v = i1;
+        v.inc2[u].v = i2;
+        float pl = uPanL_[u].v, pr = uPanR_[u].v;
+        const float dpl = uPanL_[u].d, dpr = uPanR_[u].d;
+        if (st) {
+            for (int n = 0; n < len; ++n) { pl += dpl; pr += dpr; bL[n] += x[n] * pl; bR[n] += x[n] * pr; }
+        } else {
+            for (int n = 0; n < len; ++n) { pl += dpl; bL[n] += x[n] * pl; }
+        }
     }
 }
 
@@ -1845,7 +2210,7 @@ void VaSynth::resetOscPhases(Voice& v) {
         init(v.o1[u], v.o1[u].t, w1_, v.pw1.v > 0.0f ? v.pw1.v : 0.5f);
         init(v.o2[u], v.o2[u].t, w2_, v.pw2.v > 0.0f ? v.pw2.v : 0.5f);
     }
-    init(v.sub, v.sub.t, Wave::Square, 0.5f);
+    init(v.sub, v.sub.t, subWave_, 0.5f);
 }
 
 VaSynth::Voice& VaSynth::allocate() {
@@ -1956,6 +2321,7 @@ void VaSynth::startVoice(Voice& v, int id, int note, float vel, double fromPitch
             v.o2[u].t = u == 0 ? ph2 : v.rng.uniform();
         }
         v.sub.t = 0.0;
+        std::fill(std::begin(v.wtLast1), std::end(v.wtLast1), 0.0f);
         resetOscPhases(v);
     }
     v.amp.gateOn();
@@ -2134,6 +2500,7 @@ void VaSynth::process(float* left, float* right, int frames) {
 }  // namespace
 }  // namespace va
 
-std::unique_ptr<Instrument> makeVaSynth() { return std::make_unique<va::VaSynth>(); }
+std::unique_ptr<Instrument> makeVaSynth() { return std::make_unique<va::VaSynth>(false); }
+std::unique_ptr<Instrument> makeWavetableSynth() { return std::make_unique<va::VaSynth>(true); }
 
 }  // namespace as

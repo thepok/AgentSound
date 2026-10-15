@@ -30,12 +30,12 @@ PIECES = [  # (source kind, path): a song folder with song.py + out/, or an endl
     ('composed', ROOT / 'songs' / 'pro2-piano-blues'),
     ('composed', ROOT / 'songs' / 'pro2-piano-latenight'),
     ('composed', ROOT / 'songs' / 'pro2-piano-bossa'),
-    ('generated', EJ / 'r8' / '001-a-stairway-for-christopher-waltz'),
-    ('generated', EJ / 'r8' / '002-the-other-promise-blues'),
-    ('generated', EJ / 'r8' / '003-a-bridge-for-grove'),
-    ('generated', EJ / 'r8' / '004-carmine-window'),
+    ('generated', EJ / 'r9' / '001-the-paper-window'),
+    ('generated', EJ / 'r9' / '002-the-other-promise-blues'),
+    ('generated', EJ / 'r9' / '003-leroy-at-after-hours'),
+    ('generated', EJ / 'r9' / '004-two-a-m-window'),
 ]
-ID_SEED = 'blind-jazz-piano-v8'
+ID_SEED = 'blind-jazz-piano-v9'
 SECTION_NAMES = {'intro': 'intro', 'head': 'head', 'solo': 'solo', 'out': 'head-out', 'tag': 'tag', 'end': 'ending'}
 FEELS = {'straight': 'medium 4/4', 'waltz': 'jazz waltz', 'bossa': 'bossa nova', 'ballad': 'ballad',
          'shuffle': 'medium blues, bar-piano groove'}   # (the endless 'shuffle' feel is a straight-8th groove)

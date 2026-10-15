@@ -187,6 +187,25 @@ class Compile(Tmp):
         self.assertEqual(sorted(os.path.basename(z['file']) for z in d5['instrument']['params']['samples']),
                          ['pizz.wav', 'sus.wav'])
 
+    def test_prune_keeps_blend_layers_and_borrow_neighbours(self):
+        # layers='blend' starts the neighbouring velocity layer, rrborrow the sample of a key up to 2 semitones away:
+        # the zone pruning keeps them, also when build / audition --set turns them on (song.instrument_sets)
+        zones = [{'file': f'/x/{k}_{v}.wav', 'root': k, 'lo': k, 'hi': k, 'vello': lo, 'velhi': hi}
+                 for k in (60, 61, 62, 63, 64) for v, (lo, hi) in enumerate(((0, 63), (64, 127)))]
+
+        def kept(over=None, **params):
+            s = Song('t', tempo=120)
+            a = s.section('a', bars=1)
+            s.track('x', inst.sampler(zones=zones, **params)).note(62, a.start, 1, vel=100)
+            if over:
+                cli.song_sets(s, cli.parse_sets([f'x.instrument.{k}={v}' for k, v in over.items()]))
+            return sorted(os.path.basename(z['file']) for z in s.compile()['tracks'][0]['instrument']['params']['samples'])
+
+        self.assertEqual(kept(), ['62_1.wav'])
+        self.assertEqual(kept(layers='blend'), ['62_0.wav', '62_1.wav'])
+        self.assertEqual(kept(over={'layers': 'blend'}), ['62_0.wav', '62_1.wav'])
+        self.assertEqual(kept(over={'rrborrow': 0.5}), ['60_1.wav', '61_1.wav', '62_1.wav', '63_1.wav', '64_1.wav'])
+
     def test_track_note_art_and_groove_keep_marks(self):
         s = Song('t', tempo=120)
         a = s.section('a', bars=1)

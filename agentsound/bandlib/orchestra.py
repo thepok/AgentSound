@@ -78,7 +78,13 @@ __all__ = ['DYN', 'STRINGS', 'WOODWINDS', 'BRASS', 'PERCUSSION_KEYS', 'dyn', 'dy
            # the orchestrator's desk (bandlib/scoring.py): a whole piece's parts + one dynamics map, doublings, hits
            'VEL', 'PHRASING', 'FALLBACK', 'TUTTI_ROLES', 'WINDS8_ROLES', 'UNISON_OCTAVES', 'natural_brass',
            'timpani_tuning', 'Score', 'Choir', 'bed', 'double', 'colla_parte', 'hits', 'unison', 'sing', 'swells',
-           'BED']
+           'BED',
+           # the orchestrator (bandlib/orchestration.py): the score of lines with functions, plans, rules, metrics;
+           # the instrument table
+           'FUNCTIONS', 'TEXTURES', 'RULES', 'Line', 'Block', 'OrchScore', 'Part', 'Orchestration', 'orchestrate',
+           'plan_blocks', 'orchestration_metrics', 'ROLE_TRAITS', 'role_table',
+           # the church organ's registers and swell box
+           'ORGAN_REGISTERS', 'SWELL_BOX', 'swell']
 
 SSO = 'samples/sso/Sonatina Symphonic Orchestra/'
 SSO_STR = SSO + 'Strings - Performance/'
@@ -97,8 +103,9 @@ BRASS = ('horns', 'trumpets', 'trombones', 'low_brass', 'tuba')
 
 
 def installed(pack: str) -> bool:
-    """Is the sample pack `pack` installed (assets/samples/<pack>/SOURCE.json or $AGENTSOUND_SAMPLES)?"""
-    return (library.SAMPLES / pack / 'SOURCE.json').is_file()
+    """Is the sample pack `pack` installed (assets/samples/<pack>/SOURCE.json or $AGENTSOUND_SAMPLES)? A miss inside a
+    preset is recorded (library.want): the song's compile raises unless $AGENTSOUND_PACK_FALLBACK=1."""
+    return library.want(pack)
 
 
 def _require(preset: str, *packs: str) -> None:
@@ -520,38 +527,31 @@ def _hall(song, kind: str, *, fallback: dict, bus_id: str = 'hall'):
 
 # --------------------------------------------------------------------------------------------- building
 
-def _coerce_sound(snd):
-    if callable(snd) and not isinstance(snd, (Instrument, Patch)):
-        return snd()
-    return snd
-
-
 def _build(song, preset: str, table: dict, *, without, sounds, ids, hall_kind: str, hall_fallback: dict,
            analysis: dict, notes: str, master: str = 'classical') -> Band:
-    without = set(without or ())
-    sounds = dict(sounds or {})
-    ids = dict(ids or {})
-    band = Band(song, preset, notes=notes, analysis=analysis)
-    bus_id, n = 'hall', 1            # a second band on the same song gets its own hall ('hall_<preset>')
-    while bus_id in song.buses or bus_id in song.tracks:
-        n += 1
-        bus_id = f"hall_{preset}" if n == 2 else f"hall_{preset}{n}"
-    hall, hall_desc = _hall(song, hall_kind, fallback=hall_fallback, bus_id=bus_id)
-    band.bus('hall', hall)
+    builder = bands.Builder(song, preset, bus_policy='distinct', callable_overrides=True, without=without, sounds=sounds, ids=ids,
+                            notes=notes, analysis=analysis)
+    band, sounds = builder.band, builder.sounds
+    def make_hall(bid):
+        nonlocal hall_desc
+        hall, hall_desc = _hall(song, hall_kind, fallback=hall_fallback, bus_id=bid)
+        return hall
+    hall_desc = ''
+    hall = builder.bus('hall', create=make_hall)
     info = {'articulations': {}, 'range': {}, 'sweet': {}, 'lead_ms': {}, 'kind': {}, 'mono': [], 'vibrato': {},
             'seating': {}, 'sound': {}, 'dyn': dict(DYN), 'hall': hall_desc}
     for role, r in table.items():
-        if role in without:
+        if not builder.want(role):
             continue
         custom = role in sounds
-        snd = _coerce_sound(sounds[role] if custom else r.sound)
         chain = [fx.eq({'hp.freq': r.hp, 'hp.slope': 24, 'high.freq': 6000, 'high.gain': r.shelf, **r.eq})]
         chain.append(fx.width(width=r.width, monobass=r.monobass) if r.monobass else fx.width(width=r.width))
         chain.extend(r.extra_fx)
-        t = song.track(ids.get(role, role), snd, fx=chain, pan=r.pan, gain_db=r.gain, sends={hall: r.send})
-        band.add(role, t)
+        t = builder.track(role, r.sound, fx=chain, pan=r.pan, gain_db=r.gain, sends={hall: r.send})
         sampler = getattr(t.instrument, 'type', '') == 'sampler'
         kind = r.kind
+        if kind == 'organ' and not custom:
+            t._registration = True       # (the report judges an organ by registration / swell: analysis.registration)
         if custom:
             arts = art.available(t) if sampler else []
             if kind == 'sustain' and not sampler:
@@ -841,9 +841,9 @@ def _symphony_table() -> dict:
                         sweet=('G4', 'G6'), arts=_names(_SSO_FLUTES), desc='SSO 4.0 flutes a2'),
         'oboes': _Role(_sso(SSO_WW + 'Oboes KS.sfz', _SSO_REEDS, gains={'sustain': -5.5, 'staccato': -19.7},
                             sustain=VSCO + 'OboeSusVib.sfz', fallback_gain=_FB['oboes']),
-                       pan=0.1, width=0.6, send=-4.5, shelf=-1.0, hp=200, lead_ms=50, rng=('A#3', 'G6'),
+                       pan=0.1, width=0.6, send=-4.5, shelf=-1.0, hp=200, lead_ms=50, rng=('A#3', 'F6'),
                        sweet=('D4', 'D6'), arts=_names(_SSO_REEDS), eq=_honk(-2.5, 1300),
-                       desc='SSO 4.0 oboes (sustain: the VSCO 2 CE oboe, long unlooped notes)'),
+                       desc='SSO 4.0 oboes (sustain: the VSCO 2 CE oboe, long unlooped notes; its top F6)'),
         'clarinets': _Role(_sso(SSO_WW + 'Clarinets KS.sfz', _SSO_REEDS, gains={'staccato': -8.3}),
                            pan=-0.08, width=0.6, send=-4.0, shelf=-1.0, hp=120, lead_ms=50, rng=('D3', 'F6'),
                            sweet=('D3', 'C6'), arts=_names(_SSO_REEDS), desc='SSO 4.0 clarinets a2 (sounding pitch)'),
@@ -1069,8 +1069,28 @@ _ORGANS = {
                      manual='Huvudverk'),
         'pedal': dict(stops=['Subbas 16', 'Gedakt 8'], manual='pedal', stereo='left'),
         'pedal_full': dict(stops=['Subbas 16', 'Principal 8', 'Oktava 4', 'Basun 16'], manual='pedal',
-                           stereo='left'),
+                           stereo='left'),     # (mono: the 16' reed's fundamentals stereo read low_end_not_mono)
         'desc': 'Burea Church, Sweden (Lars Palo, 3 manuals + pedal)',
+        'divisions': {'soft': 'Svallverk', 'principal': 'Huvudverk', 'full': 'Huvudverk', 'pedal': 'pedal',
+                      'pedal_full': 'pedal'},
+        # the organist's further registrations (church_organ(registers=...)): a role each, on its division
+        'registers': {
+            'flute': dict(stops=['Gedakt 8', 'Koppelflojt 4'], manual='Brostverk', stereo='flip'),
+            'positiv': dict(stops=['Gedakt 8', 'Koppelflojt 4', 'Principal 2'], manual='Brostverk', stereo='flip'),
+            'cornet': dict(stops=['Gedakt 8', 'Rorflojt 4', 'Sesquialtera II'], manual='Huvudverk', stereo='flip'),
+            'reed': dict(stops=['Krumhorn 8', 'Gedakt 8'], manual='Brostverk', stereo='flip'),   # (asis: corr -0.1)
+            'trumpet': dict(stops=['Trumpet 8', 'Gedakt 8'], manual='Huvudverk', stereo='flip'),
+            'oboe': dict(stops=['Skalmeja 8', 'Rorflojt 8'], manual='Svallverk'),
+            'strings': dict(stops=['Salicional 8'], manual='Svallverk'),
+            'swell_full': dict(stops=['Salicional 8', 'Rorflojt 8', 'Principal 4', 'Waldflojt 2', 'Scharf III',
+                                      'Skalmeja 8'], manual='Svallverk'),
+            'pedal_soft': dict(stops=['Subbas 16'], manual='pedal', stereo='left'),
+            'pedal_cantus': dict(stops=['Oktava 4', 'Trumpet 4'], manual='pedal'),   # (4' ranks: stereo, no low end)
+        },
+        'register_divisions': {'flute': 'Brostverk', 'positiv': 'Brostverk', 'cornet': 'Huvudverk',
+                               'reed': 'Brostverk', 'trumpet': 'Huvudverk', 'oboe': 'Svallverk',
+                               'strings': 'Svallverk', 'swell_full': 'Svallverk', 'pedal_soft': 'pedal',
+                               'pedal_cantus': 'pedal'},
     },
     'pitea': {
         'pack': 'lars-palo-pitea-mhs',
@@ -1081,11 +1101,41 @@ _ORGANS = {
         'pedal': dict(stops=['Subbas 16', 'Gedakt 8'], manual='pedal', stereo='left'),
         'pedal_full': dict(stops=['Subbas 16', 'Oktava 8', 'Oktava 4', 'Basun 16'], manual='pedal', stereo='left'),
         'desc': 'Pitea School of Music, Sweden (Lars Palo, 3 manuals + pedal)',
+        'divisions': {'soft': 'Svallverk', 'principal': 'Huvudverk', 'full': 'Huvudverk', 'pedal': 'pedal',
+                      'pedal_full': 'pedal'},
+        'registers': {
+            'flute': dict(stops=['Gedackt 8', 'Koppelflojt 4'], manual='Positiv'),
+            'positiv': dict(stops=['Gedackt 8', 'Principal 4', 'Waldflojt 2'], manual='Positiv'),
+            'cornet': dict(stops=['Dbl.Flojt 8', 'Cornet V'], manual='Huvudverk'),
+            'reed': dict(stops=['Cromorne 8', 'Gedackt 8'], manual='Positiv'),
+            'trumpet': dict(stops=['Trumpet 8', 'Dbl.Flojt 8'], manual='Huvudverk'),
+            'oboe': dict(stops=['Oboe 8', 'Fl.Harm. 8'], manual='Svallverk'),
+            'strings': dict(stops=['Gamba 8', 'V.Celeste 8'], manual='Svallverk'),
+            'swell_full': dict(stops=['Borduna 8', 'Gamba 8', 'Fl.Oct. 4', 'Piccolo 2', 'Mixtur V', 'Tr.Harm. 8',
+                                      'Clairon 4'], manual='Svallverk'),
+            'pedal_soft': dict(stops=['Subbas 16'], manual='pedal', stereo='left'),
+            'pedal_cantus': dict(stops=['Oktava 4', 'Clairon 4'], manual='pedal'),
+        },
+        'register_divisions': {'flute': 'Positiv', 'positiv': 'Positiv', 'cornet': 'Huvudverk', 'reed': 'Positiv',
+                               'trumpet': 'Huvudverk', 'oboe': 'Svallverk', 'strings': 'Svallverk',
+                               'swell_full': 'Svallverk', 'pedal_soft': 'pedal', 'pedal_cantus': 'pedal'},
     },
 }
 
-_ORGAN_GAIN = {'burea': {'soft': -2.0, 'principal': -11.5, 'full': -10.3, 'pedal': -1.2, 'pedal_full': -7.6},
-               'pitea': {'soft': -3.2, 'principal': -10.0, 'full': -9.3, 'pedal': -3.3, 'pedal_full': -9.5}}
+_ORGAN_GAIN = {'burea': {'soft': -2.0, 'principal': -11.5, 'full': -10.3, 'pedal': -1.2, 'pedal_full': -7.6,
+                         'flute': -3.9, 'positiv': -7.7, 'cornet': -6.9, 'reed': 3.3, 'trumpet': -0.8, 'oboe': -1.2,
+                         'strings': 7.7, 'swell_full': -6.3, 'pedal_soft': -3.0, 'pedal_cantus': -12.1},
+               'pitea': {'soft': -3.2, 'principal': -10.0, 'full': -9.3, 'pedal': -3.3, 'pedal_full': -9.5,
+                         'flute': -6.7, 'positiv': -7.6, 'cornet': -7.5, 'reed': -3.9, 'trumpet': -0.2, 'oboe': 2.6,
+                         'strings': 5.1, 'swell_full': -7.4, 'pedal_soft': -4.9, 'pedal_cantus': -7.7}}
+"""The faders (dB): the five classic roles as tuned on the church_organ demo; the registers calibrated with a chord
+(flute, positiv, strings, swell_full), a line (cornet, reed, trumpet, oboe, pedal_cantus) or a bass line (pedal_soft)
+against ORGAN_LEVELS-like targets: flute -29, positiv -27.5 (the echo of 'principal' -25), strings -31, swell_full -23
+(box open) LUFS for a 4-note chord; cornet -28, reed -28.5, trumpet -25, oboe -30, pedal_cantus -29 for a single line
+(a solo stands ~3 dB over its accompaniment); pedal_soft -31 for a bass line (measured with the same method the classic
+roles read ~1 dB over their documented levels, so the registers sit on that scale too). Then +3 dB on oboe, strings
+and swell_full from the four organ reference pieces (songs/pro-organ-*): the oboe solo sat under its flute chords, the
+strings bed ~9 dB under a reed solo, the open swell chorus 6 dB under the plenum it should approach."""
 
 _ORGAN_NOTES = """\
 Church organ (a GrandOrgue pipe organ, every pipe with its attack, sustain loop and recorded release into the church)
@@ -1101,21 +1151,64 @@ stops phase-flipped so they stay in phase). Play legato (overlap / touching note
 in the pedal, release chords together, leave the church 1-2 beats of silence after a cadence."""
 
 
-def church_organ(song, *, without=(), sounds=None, ids=None, organ: str = 'burea', tremulant: bool = False,
-                 **options) -> Band:
+ORGAN_REGISTERS = ('flute', 'positiv', 'cornet', 'reed', 'trumpet', 'oboe', 'strings', 'swell_full', 'pedal_soft',
+                   'pedal_cantus')
+"""The organist's further registrations (church_organ(registers=...)), each a role on its division (manual):
+flute (Brostverk / Positiv: Gedakt 8 + Koppelflojt 4 - the chorale prelude's accompaniment, a trio's left hand),
+positiv (+ Principal 2: the echo manual against 'principal'), cornet (Huvudverk Sesquialtera / Cornet: a cantus firmus
+solo), reed (Krumhorn / Cromorne 8: a cantus in the tenor, a trio voice), trumpet (Trumpet 8 + a flute: the trumpet
+tune), oboe (Svallverk Skalmeja / Oboe 8 + a flute: a romantic solo under the swell box), strings (Svallverk Salicional
+/ Gamba + Celeste: the meditation's bed), swell_full (the swell's chorus with mixture and reed: a toccata's crescendo in
+the box), pedal_soft (Subbas 16 alone), pedal_cantus (Oktava 4 + a 4' reed: a cantus firmus in the pedal)."""
+
+_REG_ROLE = {
+    # role -> (pan, width, hall send, high-pass Hz, eq, range, sweet spot, description)
+    'flute': (0.0, 1.0, -9.0, 60, _mud(-2.5, 330), ('C2', 'G6'), ('C3', 'C6'), "flutes 8' 4'"),
+    'positiv': (0.0, 1.0, -9.0, 60, _mud(-2.0, 330), ('C2', 'G6'), ('C3', 'C6'), "the positive chorus 8' 4' 2'"),
+    'cornet': (0.0, 1.0, -9.0, 70, {}, ('C3', 'G6'), ('G3', 'C6'), 'a cornet / sesquialtera solo'),
+    'reed': (0.0, 1.0, -9.0, 80, {}, ('C2', 'G6'), ('C3', 'C6'), 'a cromorne / krumhorn solo'),
+    'trumpet': (0.0, 1.0, -9.0, 80, {}, ('C3', 'G6'), ('C4', 'C6'), "the trumpet 8'"),
+    'oboe': (0.0, 1.0, -9.0, 80, {}, ('C3', 'G6'), ('C4', 'C6'), 'an oboe solo in the swell box'),
+    'strings': (0.0, 1.0, -9.0, 80, _mud(-2.0, 330), ('C2', 'G6'), ('C3', 'C6'), 'strings / celeste in the swell'),
+    'swell_full': (0.0, 1.0, -9.0, 80, _mud(-1.5, 330), ('C2', 'G6'), ('C3', 'C6'), 'the swell chorus + reed'),
+    'pedal_soft': (0.0, 1.0, -12.0, 20, _mud(-3.0, 280), ('C2', 'F4'), ('C2', 'C3'), "pedal Subbas 16'"),
+    'pedal_cantus': (0.0, 1.0, -12.0, 40, {}, ('C2', 'F4'), ('C3', 'C4'), "pedal 4' + a 4' reed (a cantus)"),
+}
+
+
+def church_organ(song, *, without=(), sounds=None, ids=None, organ: str = 'burea', tremulant=False,
+                 registers=(), **options) -> Band:
     """Church organ: Lars Palo GrandOrgue registrations (soft / principal / full + pedal) in a big church.
-    organ='burea' (default) or 'pitea'; tremulant=True puts the tremulant on the soft registration."""
+    organ='burea' (default) or 'pitea'; tremulant=True puts the swell's tremulant on (its roles: 'soft' and the
+    Svallverk registers) - or a tuple of roles that get it (one register's tremulant: the meditation's oboe, not
+    its strings). registers: further registrations as roles (ORGAN_REGISTERS; 'all' = every one) - each on
+    its division (band.info['division']; two roles of one division never sound at once: one manual, one
+    registration); the Svallverk roles stand in the swell box (band.info['swell']: orch.swell() opens / closes it)."""
     _unknown(options, 'church_organ', ())
     if organ not in _ORGANS:
         raise ComposeError(f"church_organ: organ must be one of {', '.join(_ORGANS)}, got {organ!r}")
+    regs = ORGAN_REGISTERS if registers == 'all' else tuple(registers or ())
+    bad = [r for r in regs if r not in ORGAN_REGISTERS]
+    if bad:
+        raise ComposeError(f"church_organ: unknown register(s) {bad}; registers: {', '.join(ORGAN_REGISTERS)}")
     o = _ORGANS[organ]
     _require('church_organ', o['pack'])
     src = 'samples/' + o['pack']
     g = _ORGAN_GAIN[organ]
+    div = dict(o['divisions'], **{r: o['register_divisions'][r] for r in regs})
+    if isinstance(tremulant, (tuple, list)):
+        bad = [r for r in tremulant if r not in div]
+        if bad:
+            raise ComposeError(f"church_organ: tremulant names roles the band has not: {bad}")
+    elif not isinstance(tremulant, bool):
+        raise ComposeError("church_organ: tremulant=True / False or a tuple of roles")
+
+    def trembles(key):
+        return key in tremulant if isinstance(tremulant, (tuple, list)) else tremulant and div[key] == 'Svallverk'
 
     def organ_role(key, **kw):
-        spec = dict(o[key])
-        if key == 'soft' and tremulant:
+        spec = dict(o[key] if key in o else o['registers'][key])
+        if trembles(key):
             spec['tremulant'] = True
         return lambda: inst.organ(src, lazy=True, **spec)
 
@@ -1136,11 +1229,19 @@ def church_organ(song, *, without=(), sounds=None, ids=None, organ: str = 'burea
                             rng=('C2', 'F4'), sweet=('C2', 'C3'), kind='organ',
                             desc=f"{o['desc']}: pedal {', '.join(o['pedal_full']['stops'])}"),
     }
+    for r in regs:
+        pan, width, send, hp, eq, rng_, sweet, what = _REG_ROLE[r]
+        table[r] = _Role(organ_role(r), pan=pan, width=width, send=send, hp=hp, gain=g[r], eq=dict(eq), rng=rng_,
+                         sweet=sweet, kind='organ',
+                         desc=f"{o['desc']}: {what} ({div[r]}: {', '.join(o['registers'][r]['stops'])})")
     band = _build(song, 'church_organ', table, without=without, sounds=sounds, ids=ids, hall_kind='church',
                   hall_fallback=dict(decay=4.0, predelay=20, lowcut=150, highcut=8000, damping=5000, width=1.3,
                                      size=1.0),
                   analysis={'profile': 'classical'}, notes=_ORGAN_NOTES)
     band.info['organ'] = organ
+    band.info['division'] = {r: div[r] for r in band.roles}
+    band.info['swell'] = [r for r in band.roles if div[r] == 'Svallverk']
+    band.info['tremulant'] = [r for r in band.roles if trembles(r)]
     return band
 
 
@@ -1198,20 +1299,67 @@ def ring(band: Band, at, length=2.0, db: float = 4.0, roles=None, back=None, bac
     return band
 
 
-def lead(clip, bpm: float, ms: float, *, long=0.75) -> Clip:
+SWELL_BOX = {'gain_db': 12.0, 'shade_db': 10.0, 'shade_hz': 1800.0}
+"""The swell box (church_organ's Svallverk roles: band.info['swell']): closed, the pipes behind its shutters sound
+gain_db quieter and their top (a high shelf at shade_hz) shade_db darker still - a real box takes ~20 dB off the top
+and ~10 off the body. swell() writes both as one lane."""
+
+
+def swell(band: Band, points, roles=None, at=0.0) -> Band:
+    """Open / close the organ's swell box: points [(beat, 0..1 open[, curve]), ...] (+ at: a beat or Section) on the
+    enclosed roles (band.info['swell'], or `roles`): the box's gain (instrument.expression: expression^2 = the
+    level, so open 1.0 = as calibrated, closed = -SWELL_BOX['gain_db']) and its shade (a named eq 'swell' added to
+    the role's chain on first use: a high shelf at SWELL_BOX['shade_hz'] down to -shade_db) follow ONE curve - the
+    organist's expression pedal: a crescendo in the box, a phrase that swells and recedes, the meditation's breath.
+        orch.swell(b, [(0, 0.2), (8, 1.0, 'smooth'), (12, 0.4, 'smooth')], at=verse)"""
+    a0 = float(getattr(at, 'start', at))
+    enclosed = band.info.get('swell') or []
+    rs = [r for r in (_roles(band, roles) if roles is not None else enclosed) if r in band.roles]
+    if roles is not None:
+        bad = [r for r in _roles(band, roles) if r not in enclosed]
+        if bad:
+            raise ComposeError(f"swell: {bad} stand outside the swell box (enclosed: {', '.join(enclosed) or 'none'})")
+    pts = []
+    for p in points:
+        if not isinstance(p, (tuple, list)) or len(p) not in (2, 3):
+            raise ComposeError(f"swell points are (beat, open 0..1[, curve]), got {p!r}")
+        o = float(p[1])
+        if not 0.0 <= o <= 1.0:
+            raise ComposeError(f"swell: the box opening must be 0..1, got {o!r}")
+        pts.append((a0 + float(getattr(p[0], 'start', p[0])), o) + ((p[2],) if len(p) == 3 else ()))
+    g, sh, hz = SWELL_BOX['gain_db'], SWELL_BOX['shade_db'], SWELL_BOX['shade_hz']
+    for r in rs:
+        t = band[r]
+        if not any(getattr(f, 'name', None) == 'swell' for f in t.fx):
+            t.add_fx(fx.eq({'high.freq': hz, 'high.gain': 0.0}, name='swell'))
+        t.automate('instrument.expression', [(b, round(10 ** (-g * (1.0 - o) / 40.0), 4)) + tuple(c)
+                                             for b, o, *c in pts])
+        t.automate('fx.swell.high.gain', [(b, round(-sh * (1.0 - o), 2)) + tuple(c) for b, o, *c in pts])
+    return band
+
+
+def lead(clip, bpm, ms: float, *, long=0.75) -> Clip:
     """Start the long notes (>= `long` beats, and every note marked with a long articulation: sustain / legato ...)
     `ms` earlier, their ends kept: slow sample attacks then SOUND on the beat. Shorts (staccato, pizzicato ...)
-    stay. Marks are kept. Positions are clamped at 0: shift a part into song time (or use perform()) so a note on a
-    section's downbeat can move early too."""
+    stay. Marks are kept. bpm: a number, a function beat -> BPM (song.tempo_at) or a TempoMap (song.tempo_map(): the
+    ms are real time before each note, exact across tempo changes and fermatas - perform() passes it). Positions are clamped at 0: shift a part into
+    song time (or use perform()) so a note on a section's downbeat can move early too."""
     c = as_clip(clip)
     if not ms:
         return c
-    d = float(ms) / 1000.0 * float(bpm) / 60.0
+    if hasattr(bpm, 'seconds_at'):                 # a TempoMap: exact through tempo changes / fermatas before
+        def early(b):
+            return max(0.0, bpm.beat_at(max(0.0, bpm.seconds_at(b) - float(ms) / 1000.0)))
+    else:
+        at = bpm if callable(bpm) else (lambda b: float(bpm))
+
+        def early(b):
+            return max(0.0, b - float(ms) / 1000.0 * float(at(b)) / 60.0)
     out = []
     for n in c:
         a = art.articulation_of(n)
         if (n.dur >= long - 1e-9 and not art.detached(n)) or (isinstance(a, str) and a in ('sustain', 'legato')):
-            start = max(0.0, n.start - d)
+            start = early(n.start)
             out.append(n._replace(start=start, dur=n.dur + (n.start - start)))
         else:
             out.append(n)
@@ -1241,68 +1389,239 @@ def rebow(clip, bpm: float, max_seconds: float = 6.0, gap_ms: float = 30.0) -> C
 
 
 def perform(band: Band, role: str, clip, at=0.0, *, shapes='auto', lo: float = 0.0, hi: float = 1.0,
-            humanize_ms: float = 8.0, seed=0, articulations='auto', short=0.5, accent_vel: int = 112,
-            glide_leaps: int | None = None, glide_ms: float = 120.0, vib: bool | dict | None = None,
-            bow_seconds: float | None = None, follow=None) -> Clip:
+            humanize_ms: float | None = None, seed=0, articulations='auto', short: float | None = None,
+            accent_vel: int = 112, glide_leaps: int | None = None, glide_ms: float = 120.0,
+            vib: bool | dict | None = None, bow_seconds: float | None = None, follow=None, rules=None,
+            style: str | None = None) -> Clip:
     """Play a part on a role the way the section / player would; returns the notes as played (in song beats: the
-    part is placed at `at` first, so a note on the section's downbeat can still start early):
-      sustaining roles: articulations by note length ('auto': short -> staccato / spiccato, vel >= accent_vel ->
-        marcato, the rest sustain, from what the role has; a name for every note; None = leave the marks), long notes
-        started band.info['lead_ms'][role] early, a section's timing (humanize_ms), and the velocities written as the
-        dynamics lane (lo + (hi - lo) x vel / 127: 40 p, 78 mf, 95 f, 115 ff) with shapes ('auto': long notes swell,
-        or SHAPES / a list / dict per note: art.expression; follow= a function beat -> level (a Score's
-        dynamics map: held notes follow a written crescendo inside them);
+    part is placed at `at` first, so a note on the section's downbeat can still start early). The performance rules
+    are tables in bandlib/ensemble.py (docs/ORCHESTRA_RULES.md: the research behind every number); rules= {table:
+    {key: value}} overrides single values, style= ('baroque' | 'classical' | 'romantic' | 'film'; default the
+    band's) scales them:
+      sustaining roles: articulations by the SOUNDING length ('auto': ensemble.ARTICULATE - short -> staccato /
+        spiccato, loud -> marcato, the rest sustain, from what the role has; short= beats: the old rule by beats; a
+        name for every note; None = leave the marks); notes written connected overlap by the family's transition
+        time (LEGATO; a repeated note and a melodic group's end get a gap); strings alternate the bow's weight
+        (BOWING), winds and brass breathe within their budget at a phrase point (BREATH), brass entries are tongued /
+        bloom (BRASS); long notes start band.info['lead_ms'][role] early (at the tempo where they are) so they SOUND
+        on the beat; the onsets move as a section in an ensemble (ENSEMBLE: seat, the leader's drift, an AR(1) own
+        deviation; humanize_ms= a number: the old triangular jitter instead); held notes before a rest are released
+        a little apart (RELEASE); the velocities become the dynamics lane (lo + (hi - lo) x vel / 127: 40 p, 78 mf,
+        95 f, 115 ff), each phrase one continuous curve with swells on long notes ('auto': ensemble.lane; or SHAPES /
+        a list / dict per note: art.expression); follow= a function beat -> level (a Score's dynamics map: held
+        notes follow a written crescendo inside them);
       solo players (string_quartet) also: legato phrases, a glide into leaps >= glide_leaps, a delayed vibrato
-        (vib: True / False / options), bow changes after bow_seconds of tied line;
+        whose depth follows the dynamics (vib: True / False / options), a bow change after bow_seconds of tied line
+        (default BOWING stroke_s);
       struck roles (timpani, percussion, harp, celesta, drums), synths and custom sounds without a dynamics lane
-        (sounds= an sf2 / synth: kind 'plain'): humanized timing, velocity = dynamics;
+        (sounds= an sf2 / synth: kind 'plain'): the ensemble's timing (sharp attacks), velocity = dynamics;
       organ roles: plain legato playing (no dynamics per note).
     Several perform() calls on one role are fine (different spans)."""
+    import random
+    from ..patterns import seed_int
+    from . import ensemble as ens
     if role not in band.roles:
         raise ComposeError(f"perform: band {band.preset!r} has no role {role!r}; roles: {', '.join(band.roles)}")
     t = band[role]
     info = band.info
     kind = info.get('kind', {}).get(role, 'sustain')
-    a0 = float(t._song._at(at))
-    bpm = t._song.tempo_at(a0)
+    song = t._song
+    a0 = float(song._at(at))
+    tm = song.tempo_map()
+    R = ens.merged(rules)
+    st = ens.style_of(band, style)
+    fam = ens.family(role, kind)
+    base = seed_int(seed)
+
+    def rng(k):                                   # one random stream per rule
+        return random.Random(base * 7919 + k)
     c0 = as_clip(clip)
     c = Clip._raw([n._replace(start=n.start + a0) for n in c0], c0.length + a0)     # in song beats
+    if not len(c):
+        return c
+    bpm0 = tm.bpm_at(min(n.start for n in c))
     if kind in ('struck', 'synth', 'organ', 'plain'):
         if isinstance(articulations, str) and articulations != 'auto':
             c = art.articulate(c, articulations)          # timpani 'hit' / 'roll'
-        if humanize_ms and kind != 'organ':
-            c = art.humanize_starts(c, bpm, humanize_ms * 0.6, seed=seed)
+        if kind != 'organ':
+            if humanize_ms is None:
+                c = ens.timing(c, tm, song, role, fam, R, rng(4), scale=st['timing'])
+            elif humanize_ms:
+                c = art.humanize_starts(c, bpm0, humanize_ms * 0.6, seed=seed)
         t.play(c, 0)
         return c
     has_arts = bool(info['articulations'].get(role))
     if articulations == 'auto':
         if has_arts:
-            c = art.auto_articulate(c, t, short=short, accent_vel=accent_vel)
+            if short is None:
+                c = ens.articulate(c, tm, info['articulations'][role], fam,
+                                   dict(R, articulate=dict(R['articulate'], accent_vel=accent_vel)))
+            else:
+                c = art.auto_articulate(c, t, short=short, accent_vel=accent_vel)
     elif articulations is not None:
         c = art.articulate(c, articulations)
     mono = role in info.get('mono', [])
     if mono:
         c = art.legato(c, overlap=0.04)
-        if bow_seconds:
-            c = art.bow_changes(c, bpm, bow_seconds)
+        bs = bow_seconds if bow_seconds is not None else (R['bowing']['stroke_s'] if fam == 'strings' else None)
+        if bs:
+            c = art.bow_changes(c, bpm0, bs, gap_ms=R['bowing']['change_ms'])
         if glide_leaps:
             c = art.glide(c, glide_ms, where=art.leaps(int(glide_leaps)))
-    c = lead(c, bpm, info.get('lead_ms', {}).get(role, 0.0))
-    if humanize_ms:
-        c = art.humanize_starts(c, bpm, humanize_ms, seed=seed)
+    else:
+        c = ens.connect(c, tm, fam, R, rng(1))
+    if fam == 'strings':
+        c = ens.bow(c, R)
+    if fam in ('woodwinds', 'brass', 'horns'):
+        c, _ = ens.breathe(c, tm, role, R, rng(2), _bar_phase(song))
+    c, entry = ens.entries(c, fam, R)
+    c, released = ens.release(c, tm, R, rng(3))
+    pre = list(c)
+    c = lead(c, tm, info.get('lead_ms', {}).get(role, 0.0))
+    if humanize_ms is None:
+        c = ens.timing(c, tm, song, role, fam, R, rng(4), solo=mono, scale=st['timing'])
+    elif humanize_ms:
+        c = art.humanize_starts(c, bpm0, humanize_ms, seed=seed)
+    played = list(c)
+    if len(played) == len(pre):                   # the flags follow the notes to where they are played
+        def moved(keys):
+            return {(round(q.start, 4), q.pitch) for p_, q in zip(pre, played)
+                    if (round(p_.start, 4), p_.pitch) in keys}
+        entry, released = moved(entry), moved(released)
     t.play(c, 0)
-    if shapes is not None and getattr(t.instrument, 'type', '') == 'sampler':
-        long = max(2.0, 2.5 * bpm / 60.0)       # 'auto' swells notes of 2.5 s and more (a messa di voce)
-        art.expression(t, c, 0, shapes, lo=lo, hi=hi, accent_vel=accent_vel, long=long, follow=follow)
+    sampler = getattr(t.instrument, 'type', '') == 'sampler'
+    if shapes is not None and sampler:
+        if isinstance(shapes, str) and shapes == 'auto':
+            pts = ens.lane(c, tm, fam, R, rng(5), lo=lo, hi=hi, accent_vel=accent_vel, follow=follow, entry=entry,
+                           released=released, style=st)
+            if pts:
+                t.automate(art._track_param(t, None), pts)
+        else:
+            long = max(2.0, 2.5 * bpm0 / 60.0)
+            art.expression(t, c, 0, shapes, lo=lo, hi=hi, accent_vel=accent_vel, long=long, follow=follow)
     depth = info.get('vibrato', {}).get(role, 0.0)
     if vib is None:
         vib = bool(depth) and mono
-    if vib and getattr(t.instrument, 'type', '') == 'sampler':
+    if vib and sampler:
+        V = R['vibrato']
         opts = dict(vib) if isinstance(vib, dict) else {}
         opts.setdefault('depth', depth or 12.0)
         opts.setdefault('seed', seed)
+        opts.setdefault('rate', V['rate_hz'])
+        opts.setdefault('grow', V['grow_s'])
+        if 'delay' not in opts:
+            d_lo, d_hi = V['delay_s']
+            opts['delay'] = d_lo + (d_hi - d_lo) * rng(6).random()
+        if 'depth_of' not in opts:
+            d0 = opts['depth']
+            opts['depth_of'] = lambda n: ens.vibrato_depth(d0, lo + (hi - lo) * n.vel / 127.0, R, st)
+        opts.setdefault('bpm', bpm0)
         art.vibrato(t, c, 0, **opts)
     return c
+
+
+def _bar_phase(song):
+    """beat -> where it falls in its bar (0..1, the section's meter); 0 outside the sections."""
+    secs = list(song.sections)
+
+    def phase(b: float) -> float:
+        for sec in secs:
+            if sec.start - 1e-6 <= b < sec.end - 1e-6:
+                return ((b - sec.start) % sec.beats_per_bar) / sec.beats_per_bar
+        return 0.0
+    return phase
+
+
+# --------------------------------------------------------------------------------------------- the instrument table
+
+ROLE_TRAITS = {
+    # the orchestrator's instrument table (bandlib/orchestration.py), next to each preset's range / sweet spot:
+    # family; agility 0..1 (fast notes: 8ths and quicker lines); power (what the section adds to a tutti, ~a string
+    # section line = 1); the functions it is good at {function: weight} (a texture's pick is weighted by them); its
+    # doubling partners (unison / octave colours that blend with it); breath (a wind: phrases need breaths)
+    'violins1': {'family': 'strings', 'agility': 0.9, 'power': 1.0, 'breath': False,
+                 'functions': {'melody': 1.0, 'counter': 0.6, 'harmony': 0.6, 'ostinato': 0.7, 'colour': 0.6,
+                               'voice': 1.0, 'doubling': 1.0, 'pedal': 0.4},
+                 'partners': ('violins2', 'flutes', 'oboes', 'choir')},
+    'violins2': {'family': 'strings', 'agility': 0.9, 'power': 0.9, 'breath': False,
+                 'functions': {'melody': 0.6, 'counter': 0.7, 'harmony': 1.0, 'inner': 1.0, 'ostinato': 1.0,
+                               'colour': 0.6, 'voice': 1.0, 'doubling': 1.0, 'pedal': 0.5},
+                 'partners': ('violins1', 'violas', 'clarinets')},
+    'violas': {'family': 'strings', 'agility': 0.8, 'power': 0.8, 'breath': False,
+               'functions': {'melody': 0.4, 'counter': 0.8, 'harmony': 1.0, 'inner': 1.0, 'ostinato': 1.0,
+                             'colour': 0.4, 'voice': 1.0, 'doubling': 0.8, 'pedal': 0.6},
+               'partners': ('violins2', 'clarinets', 'horns')},
+    'cellos': {'family': 'strings', 'agility': 0.75, 'power': 0.9, 'breath': False,
+               'functions': {'melody': 0.8, 'counter': 1.0, 'harmony': 0.7, 'bass': 1.0, 'ostinato': 0.8,
+                             'voice': 1.0, 'doubling': 0.8, 'pedal': 0.8},
+               'partners': ('basses', 'bassoons', 'horns', 'violas')},
+    'basses': {'family': 'strings', 'agility': 0.4, 'power': 0.9, 'breath': False,
+               'functions': {'bass': 1.0, 'pedal': 1.0, 'doubling': 0.6, 'voice': 0.5},
+               'partners': ('cellos', 'bassoons', 'tuba')},
+    'flutes': {'family': 'woodwinds', 'agility': 1.0, 'power': 0.5, 'breath': True,
+               'functions': {'melody': 1.0, 'counter': 0.6, 'colour': 1.0, 'harmony': 0.5, 'voice': 0.8,
+                             'doubling': 1.0},
+               'partners': ('violins1', 'oboes', 'clarinets')},
+    'oboes': {'family': 'woodwinds', 'agility': 0.8, 'power': 0.55, 'breath': True,
+              'functions': {'melody': 1.0, 'counter': 0.7, 'harmony': 0.6, 'voice': 0.8, 'doubling': 0.8},
+              'partners': ('violins1', 'flutes', 'clarinets')},
+    'clarinets': {'family': 'woodwinds', 'agility': 1.0, 'power': 0.5, 'breath': True,
+                  'functions': {'melody': 0.9, 'counter': 0.8, 'harmony': 0.9, 'inner': 0.9, 'colour': 0.7,
+                                'voice': 0.8, 'doubling': 0.8},
+                  'partners': ('violas', 'flutes', 'oboes', 'violins2')},
+    'bassoons': {'family': 'woodwinds', 'agility': 0.7, 'power': 0.5, 'breath': True,
+                 'functions': {'melody': 0.4, 'counter': 0.7, 'harmony': 0.8, 'bass': 0.8, 'voice': 0.7,
+                               'doubling': 0.8},
+                 'partners': ('cellos', 'horns', 'clarinets')},
+    'horns': {'family': 'brass', 'agility': 0.45, 'power': 1.6, 'breath': True,
+              'functions': {'melody': 0.8, 'counter': 0.9, 'harmony': 1.0, 'pedal': 0.8, 'doubling': 0.9,
+                            'voice': 0.6},
+              'partners': ('cellos', 'bassoons', 'violas', 'trombones')},
+    'trumpets': {'family': 'brass', 'agility': 0.5, 'power': 2.0, 'breath': True,
+                 'functions': {'melody': 0.5, 'harmony': 1.0, 'doubling': 0.6},
+                 'partners': ('horns', 'trombones', 'violins1')},
+    'trombones': {'family': 'brass', 'agility': 0.35, 'power': 2.0, 'breath': True,
+                  'functions': {'harmony': 1.0, 'bass': 0.5, 'doubling': 0.5},
+                  'partners': ('horns', 'tuba', 'trumpets')},
+    'tuba': {'family': 'brass', 'agility': 0.25, 'power': 1.6, 'breath': True,
+             'functions': {'bass': 1.0, 'pedal': 0.7, 'doubling': 0.5},
+             'partners': ('basses', 'trombones')},
+    'low_brass': {'family': 'brass', 'agility': 0.25, 'power': 1.8, 'breath': True,
+                  'functions': {'bass': 0.8, 'harmony': 0.6, 'pedal': 0.7, 'doubling': 0.5},
+                  'partners': ('tuba', 'trombones')},
+    'harp': {'family': 'struck', 'agility': 1.0, 'power': 0.4, 'breath': False,
+             'functions': {'colour': 1.0, 'ostinato': 0.8, 'harmony': 0.4, 'bass': 0.3},
+             'partners': ('flutes', 'violins1', 'celesta')},
+    'celesta': {'family': 'struck', 'agility': 1.0, 'power': 0.3, 'breath': False,
+                'functions': {'colour': 1.0, 'doubling': 0.8, 'melody': 0.3},
+                'partners': ('flutes', 'harp', 'violins1')},
+    'timpani': {'family': 'struck', 'agility': 0.6, 'power': 1.2, 'breath': False,
+                'functions': {'pedal': 0.6, 'colour': 0.5, 'bass': 0.2},
+                'partners': ('basses', 'tuba')},
+    'percussion': {'family': 'struck', 'agility': 0.8, 'power': 1.0, 'breath': False,
+                   'functions': {'colour': 1.0}, 'partners': ()},
+    'drums': {'family': 'struck', 'agility': 0.6, 'power': 1.6, 'breath': False,      # (film: the taiko ensemble)
+              'functions': {'colour': 1.0, 'ostinato': 0.6}, 'partners': ('timpani',)},
+    'choir': {'family': 'choir', 'agility': 0.3, 'power': 1.2, 'breath': True,
+              'functions': {'harmony': 1.0, 'melody': 0.5, 'doubling': 0.7, 'pedal': 0.5},
+              'partners': ('violins1', 'violins2', 'horns')},
+}
+"""The orchestrator's instrument table, per role name (the same names in every orchestra preset): family, agility,
+power, the functions it suits (weights multiplied into a texture's picks), doubling partners, breath. Range and
+sweet spot are the preset's own (role_table(preset), band.info['range'] / ['sweet'])."""
+
+_PRESET_TABLES = {'symphony_orchestra': lambda: _symphony_table(), 'film_orchestra': lambda: _film_table(False),
+                  'chamber_orchestra': lambda: _chamber_table()}
+
+
+def role_table(preset: str) -> dict:
+    """{role: {'range': (lo, hi), 'sweet': (lo, hi), 'kind', 'arts'}} of an orchestra preset WITHOUT building it (no
+    tracks, no samples read): what the orchestrator needs before the band exists (it builds only the roles a piece
+    uses)."""
+    if preset not in _PRESET_TABLES:
+        raise ComposeError(f"role_table: {preset!r} is no orchestra preset with sections ({', '.join(_PRESET_TABLES)})")
+    return {r: {'range': t.rng, 'sweet': t.sweet, 'kind': t.kind, 'arts': tuple(t.arts)}
+            for r, t in _PRESET_TABLES[preset]().items()}
 
 
 # --------------------------------------------------------------------------------------------- registration
@@ -1339,3 +1658,7 @@ bands.register('church_organ', church_organ, genre='orchestra',
 # the orchestrator's desk: Score (parts + one dynamics map, perform), doublings, hits, brass, unison, beds, the choir
 from .scoring import (BED, FALLBACK, PHRASING, TUTTI_ROLES, UNISON_OCTAVES, VEL, WINDS8_ROLES, Choir,  # noqa: E402
                       Score, bed, colla_parte, double, hits, natural_brass, sing, swells, timpani_tuning, unison)
+# the orchestrator: the polyphonic score of lines with functions, the orchestration plans, the metrics
+from .orchestration import (FUNCTIONS, RULES, TEXTURES, Block, Line, OrchScore, Orchestration,  # noqa: E402
+                            Part, orchestrate, plan_blocks)
+from .orchestration import metrics as orchestration_metrics  # noqa: E402

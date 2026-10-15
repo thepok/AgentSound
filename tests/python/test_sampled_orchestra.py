@@ -18,6 +18,7 @@ from agentsound import articulation as art  # noqa: E402
 from agentsound.cli import CliError, audition_hint  # noqa: E402
 from agentsound.patches import Instrument, Patch, _levelling, inst  # noqa: E402
 from agentsound.patches import sampled_orchestra as orch  # noqa: E402
+from agentsound.patches import sampled_sections as sec  # noqa: E402
 from agentsound.theory import note  # noqa: E402
 
 POST_CALLS = []
@@ -208,6 +209,100 @@ class TestWithSamples(unittest.TestCase):
         raw.expand()
         diff = [a.get('gain', 0) - b.get('gain', 0) for a, b in zip(levelled.params['samples'], raw.params['samples'])]
         self.assertTrue(any(abs(d) > 0.5 for d in diff))
+
+
+class TestSections(unittest.TestCase):
+    """The symphonic sections (agentsound/patches/sampled_sections.py): five string sections, woodwinds a2 / a3, muted
+    brass a3 built from solo recordings; their own levelling table."""
+
+    def _layers(self, p):
+        ins = p.instrument
+        return [ly.instrument for ly in ins.params['layers']] if ins.type == 'stack' else [ins]
+
+    def test_every_patch_registers_lazily(self):
+        self.assertEqual(set(sec.PATCHES), {
+            'sampled/violins_1', 'sampled/violins_2', 'sampled/violas', 'sampled/celli', 'sampled/double_basses',
+            'sampled/flutes', 'sampled/oboes', 'sampled/clarinets', 'sampled/bassoons', 'sampled/horns_muted',
+            'sampled/trumpets_muted'})
+        self.assertFalse(set(sec.PATCHES) & set(orch.PATCHES))
+        for name in sec.PATCHES:
+            p = patches.get(name)
+            for ins in self._layers(p):
+                self.assertEqual(ins.type, 'sampler', name)
+                self.assertIsNotNone(ins.lazy, f"{name}: must not read samples at import")
+                self.assertTrue(ins.lazy.get('post'), f"{name}: levelled")
+            self.assertTrue(any(f.type == 'eq' for f in p.fx), name)
+            self.assertTrue(p.sends, name)
+            self.assertIn('Measured -18.0 LUFS', p.notes, name)
+            self.assertIn('License', p.notes, name)
+            audition_hint(p)
+
+    def test_string_sections_play_every_articulation(self):
+        for name in ('sampled/violins_1', 'sampled/violins_2', 'sampled/violas', 'sampled/celli',
+                     'sampled/double_basses'):
+            progs = patches.get(name).instrument.lazy['programs']
+            self.assertEqual(list(progs), ['sustain', 'staccato', 'pizzicato', 'tremolo', 'marcato', 'col legno'])
+        self.assertLess(patches.get('sampled/violins_1').pan, 0)          # seated: violins left, basses right
+        self.assertGreater(patches.get('sampled/double_basses').pan, patches.get('sampled/celli').pan)
+
+    def test_own_level_table(self):
+        self.assertNotEqual(sec.LEVEL_TABLE, orch.LEVEL_TABLE)
+        table = json.loads(sec.LEVEL_TABLE.read_text(encoding='utf-8'))
+        self.assertTrue(table)
+        for name in sec.CALIBRATION:
+            for ins in self._layers(patches.get(name)):
+                self.assertEqual(ins.lazy.get('post'), ['agentsound.patches.sampled_sections:_fix'], name)
+
+    def test_a3_players_are_different_recordings(self):
+        """The muted brass a3: three players on three recordings of one written note, retuned to it."""
+        p = patches.get('sampled/horns_muted')
+        if not installed({'vsco2-ce'}):
+            self.skipTest('vsco2-ce not installed')
+        players = []
+        for ly in p.instrument.params['layers']:
+            st = ly.params.get('transpose', 0)
+            self.assertAlmostEqual(ly.instrument.params['tune'], -100 * st, delta=10)
+            players.append((st, Instrument.coerce(ly.instrument).expand().params['samples']))
+        self.assertEqual(len(players), 3)
+        distinct = 0
+        keys = range(note('C#3'), note('C#5') + 1)
+        for k in keys:
+            fs = [{z['file'] for z in zs if z['lo'] <= k + st <= z['hi']} for st, zs in players]
+            self.assertTrue(all(fs), k)                              # every player sounds over the range
+            distinct += not (fs[0] & fs[1] or fs[0] & fs[2] or fs[1] & fs[2])
+        self.assertGreater(distinct / len(keys), 0.7)
+
+    def test_compile_every_patch(self):
+        done = 0
+        for name in sec.PATCHES:
+            p = patches.get(name)
+            packs = set().union(*(packs_of(Patch('x', instrument=i)) for i in self._layers(p)))
+            if not installed(packs):
+                continue
+            with self.subTest(patch=name):
+                s = Song('t', tempo=100, seed=1)
+                a = s.section('a', bars=2)
+                t = s.track('p', p)
+                arts = art.available(t) or [None]
+                lo, hi = {'sampled/double_basses': (28, 55), 'sampled/bassoons': (36, 60),
+                          'sampled/celli': (40, 64), 'sampled/violas': (50, 72),
+                          'sampled/horns_muted': (52, 70), 'sampled/trumpets_muted': (64, 80)}.get(name, (64, 84))
+                notes = [art.note(i * 0.5, 0.45, (lo + hi) // 2, 90, n) for i, n in enumerate(arts)]
+                notes += [art.note(len(arts) * 0.5, 0.45, lo, 90, arts[0]), art.note(len(arts) * 0.5 + 0.5, 0.45, hi,
+                                                                                     90, arts[0])]
+                from agentsound.patterns import Clip
+                t.play(Clip._raw(notes, 8), a)
+                r = s.compile()
+                tr = next(x for x in r['tracks'] if x['id'] == 'p')
+                ins = tr['instrument']
+                subs = [ly['instrument'] for ly in ins['params']['layers']] if ins['type'] == 'stack' else [ins]
+                for sub in subs:
+                    self.assertTrue(sub['params']['samples'], name)
+                    for z in sub['params']['samples']:
+                        self.assertTrue(Path(z['file']).is_file(), z['file'])
+                done += 1
+        if not done:
+            self.skipTest('no sample pack of the sections installed')
 
 
 if __name__ == '__main__':

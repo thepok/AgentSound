@@ -46,6 +46,8 @@ test's tells.
 """
 from __future__ import annotations
 
+from collections import namedtuple
+from copy import deepcopy
 import random
 import re
 from dataclasses import dataclass, field
@@ -54,8 +56,8 @@ from ..patterns import Clip
 from ..theory import (ComposeError, Key, available_tensions, chord, chord_kind, chord_scale, clash, guide_tones, note,
                       note_name, spell_above)
 from .genres import (BLOCKS, BRIDGE_ENDS, BRIDGE_SHIFT, CELLS, CHART_VARIANTS, COLOURS, CONTOURS, DEVELOP_RHYTHM,
-                     ENDINGS, FEEL_FORMS, FORMS, END_STYLES, INTRO_LINES, INTRO_TONIC, INTROS, PEAK_PART, PHRASE_ENDS,
-                     JAZZ_TITLES, SECOND_CHORUS, TAG_APPROACH, TAG_LINES, Genre, _land_index)
+                     ENDINGS, FEEL_FORMS, FORMS, END_STYLES, INTRO_LINES, INTRO_TONIC, INTROS, OUT_PARTS, PEAK_PART,
+                     PHRASE_ENDS, JAZZ_TITLES, SECOND_CHORUS, TAG_APPROACH, TAG_LINES, Genre, _land_index)
 
 ROMAN = {'I': 0, 'II': 2, 'III': 4, 'IV': 5, 'V': 7, 'VI': 9, 'VII': 11}
 ABSTRACT = ('M', 'm', '7', 'ø', 'o', 'sus')
@@ -156,7 +158,10 @@ def chord_name(t_pc: int, off: int, q: str, sharps: bool) -> str:
         return sym
     c = chord(sym)
     iv = c.intervals[min(INVERSIONS[inv], len(c.intervals) - 1)]
-    return f"{sym}/{spell_above(root, iv, {'3': 2, '5': 4, '7': 6}[inv])}"
+    steps = {'3': 2, '5': 4, '7': 6}[inv]
+    if inv == '3' and iv == 5:                         # (a sus chord's '3rd' is its 4th: Bb7sus4/Eb, not /D#)
+        steps = 3
+    return f"{sym}/{spell_above(root, iv, steps)}"
 
 
 def spell(pc_: int, sharps: bool, offset: int = 0) -> str:
@@ -195,11 +200,44 @@ def set_plan(genre: Genre, n: int, seed: int, mood: str | None = None, prev_key:
     moods = {mood: genre.moods[mood]} if mood else genre.moods
     out, prev_feel = [], None
     prev_pc = Key(prev_key).tonic % 12 if prev_key else None
+    drng = random.Random(f"set-draws:{genre.name}:{seed}")     # (the set-level draws: their own dice)
     for k in range(n):
         e = arc_at(S['curve'], k / (n - 1) if n > 1 else 0.0)
         slot = _slot(genre, e, rng, moods, prev_feel, prev_pc)
+        slot.update(set_draws(genre, drng, history=out))
         out.append(slot)
         prev_feel, prev_pc = slot['feel'], Key(slot['key']).tonic % 12
+    return out
+
+
+BLOCK_PINS = ('hook', 'open', 'build')
+"""The harmony block kinds a genre's plan['set'] may pin per set slot ({mode: {block: weight}}: compose takes its
+mode's)."""
+
+
+def set_draws(genre: Genre, rng: random.Random, prev: dict | None = None, history: list | None = None) -> dict:
+    """The genre's set-level draws (genre.plan['set'] {key: {choice: weight}}: the arrangement's layout, the climax
+    kind, the melody's register shift, the chorus's chord block - HUMAN_FEEDBACK 2026-10-12: a set must vary, not
+    only a piece) for one slot: each drawn by weight, never a choice of the last plan['set_memory'][key] slots
+    (default 1: the slot before's; `history` the slots so far, else [prev]) - a budget over the set. A key whose
+    weights are per mode ({'major': {choice: weight}, 'minor': ...}: the chorus's 'hook' block) draws one choice per
+    mode ({mode: choice}; compose takes its mode's). The slot pins them for every best-of-N candidate (the score
+    cannot collapse a set onto its safest choice); compose() draws them itself without a set plan (the teacher
+    export)."""
+    hist = list(history) if history is not None else [prev] if prev else []
+    mem = genre.plan.get('set_memory') or {}
+    out = {}
+    for k, w in sorted((genre.plan.get('set') or {}).items()):
+        recent = hist[max(0, len(hist) - mem.get(k, 1)):]
+        if all(isinstance(x, dict) for x in w.values()):
+            out[k] = {}
+            for m, wm in sorted(w.items()):
+                used = {(h.get(k) or {}).get(m) for h in recent}
+                out[k][m] = _pick(rng, {v: x for v, x in wm.items() if v not in used} or wm)
+            continue
+        used = {h.get(k) for h in recent}
+        cand = {v: x for v, x in w.items() if v not in used} or w
+        out[k] = _pick(rng, cand)
     return out
 
 
@@ -245,6 +283,9 @@ def mix_plan(genres_: list, n: int, seed: int, prev_key: str | None = None, weig
         gname = _pick(rng, cand)
         g = next(x for x in gs if x.name == gname)
         slot = dict(_slot(g, e, rng, g.moods, prev_feel, prev_pc), genre=gname)
+        if g.plan.get('set'):                          # (the genre's set-level draws, against its own last slot)
+            slot.update(set_draws(g, random.Random(f"set-draws:{gname}:{seed}:{k}"),
+                                  next((x for x in reversed(out) if x['genre'] == gname), None)))
         out.append(slot)
         prev_g, prev_feel, prev_pc = gname, slot['feel'], Key(slot['key']).tonic % 12
     return out
@@ -254,10 +295,19 @@ def describe_set(plan: list[dict]) -> str:
     """The set plan, one line per tune (the energy as a bar)."""
     return '\n'.join(f"  {k + 1:>2}. energy {p['energy']:.2f} {'#' * round(p['energy'] * 20):<20} {p['feel']:<8} "
                      f"{p['tempo']:>3} BPM  {p['key']:<9} {p['mood']}" + (f"  ({p['genre']})" if p.get('genre') else '')
+                     + (f"  {p['layout']}" if 'layout' in p else '') + (f" / {p['climax']}" if 'climax' in p else '')
+                     + (f" / {p['shift']:+d}" if 'shift' in p else '')
                      for k, p in enumerate(plan))
 
 
 # ------------------------------------------------------------------------------------------------ chord helpers
+
+class RaisedPcs(set):
+    """A key's pitch classes, flagged: a plain major triad over the key's minor 3rd takes the key's scale with its
+    raised 3rd, and a triad's 6th is no core tone (ChordInfo; compose passes them for a genre with
+    melody['raised_v'])."""
+    raised = True
+
 
 class ChordInfo:
     """What the melody may do over one chord: core tones (1 3 5 7 / 6), safe tensions, the chord scale (pcs).
@@ -283,12 +333,21 @@ class ChordInfo:
             core |= {8}
         g3, g7 = guide_tones(c)
         core |= {(g - root) % 12 for g in (g3, g7) if g is not None}
+        if getattr(key_pcs, 'raised', False) and 9 not in ints:
+            core -= {9}           # (a genre's melody['raised_v'] - new-age round r9: the jazz reading of a triad as
+            #                       a 6th chord put held 6ths on its downbeats, F# over A in D minor, A over C)
         self.core = {(root + i) % 12 for i in core}
         avail = {(root + i) % 12 for i in available_tensions(c)}
         scale = {(root + i) % 12 for i in chord_scale(c)}
         if key_pcs and self.core <= set(key_pcs):
             avail &= set(key_pcs)
             scale &= set(key_pcs)
+        elif getattr(key_pcs, 'raised', False) and ints == {0, 4, 7} and (root + 3) % 12 in key_pcs:
+            # a plain major triad over the key's minor 3rd (V in minor, a secondary V without its 7th): the key's
+            # scale with its raised 3rd (E in A minor: phrygian dominant - new-age round r7: C#, D#, F# over E in A
+            # minor from E's own major scale; a genre's melody['raised_v'], RaisedPcs)
+            scale = (set(key_pcs) - {(root + 3) % 12}) | self.core
+            avail &= scale
         self.tensions = (avail | {p % 12 for p in c.pcs}) - self.core
         self.scale = scale | self.core | self.tensions
         self.root = root
@@ -374,6 +433,8 @@ class _Ctx:
     rng: random.Random
     used: dict | None = None             # pitch -> attacks in the current 4-bar phrase (circling one pitch)
     lead: list | None = None             # [the last strong pitch]: the guide-tone line the strong notes follow
+    repeat: tuple = (0.7, 0.0)           # the cost of repeating the note before (strong / landing notes, weak ones)
+    chromatic: float = 0.3               # the chance of a half-step-below approach note (genre melody 'chromatic')
 
 
 def _choose(ci: ChordInfo, target: int, prev: int | None, kind: str, ctx: _Ctx, land_pcs=None, also=(),
@@ -396,8 +457,8 @@ def _choose(ci: ChordInfo, target: int, prev: int | None, kind: str, ctx: _Ctx, 
         if prev is not None:
             leap = abs(c - prev)
             cost += max(0, leap - 7) * 2.0
-            if c == prev and kind != 'weak':
-                cost += 0.7
+            if c == prev:
+                cost += ctx.repeat[kind == 'weak']
         if kind != 'weak':                                # the guide-tone line first: 3rds / 7ths, moving by step
             cost -= 0.5 * (c % 12 in ci.guide)
             if ctx.lead and ctx.lead[0] is not None:
@@ -462,7 +523,7 @@ def _fit(events, deltas, ctx: _Ctx, prev: int | None, *, first=None, land=None, 
         nst, ndu, np_ = out[i + 1]
         if du <= 0.5 and not events[i][2] and abs(st + du - nst) < 1e-6 and events[i + 1][2] \
                 and abs(nst - round(nst)) < 1e-6 and np_ % 12 in ctx.harm.under(nst, ndu).core \
-                and ctx.rng.random() < 0.3 and ctx.lo <= np_ - 1:
+                and ctx.rng.random() < ctx.chromatic and ctx.lo <= np_ - 1:
             out[i] = (st, du, np_ - 1)
     return out
 
@@ -562,7 +623,9 @@ def _ending_cell(cells: dict, kind: str, rng: random.Random, bar8: int) -> tuple
     one anticipating it an 8th early (or a downbeat cell whose landing moves an 8th earlier), 'pickup' the landing held
     shorter and two 8ths at the cell's end leading into the next phrase, 'lh' the landing a dotted quarter at most and
     the right hand resting (the left hand's answer has the bar), 'breath' the landing held, then half a bar of
-    silence (it rings: the phrase breathes before the next)."""
+    silence (it rings: the phrase breathes before the next), 'tail' the landing held a dotted quarter (a waltz: a
+    quarter), then two notes stepping away from it and a quarter's rest (the phrase answers itself - blind round 7:
+    one-note landing bars every other bar)."""
     names = sorted(cells)
 
     def at(n):
@@ -583,7 +646,36 @@ def _ending_cell(cells: dict, kind: str, rng: random.Random, bar8: int) -> tuple
         c[i:] = [3, -(rest - 3)]
     elif kind == 'breath' and rest >= 6:
         c[i:] = [rest - 4, -4]
+    elif kind == 'tail' and rest >= 6:
+        c[i:] = [rest - 5, 1, 2, -2] if rest >= 7 else [rest - 4, 1, 1, -2]
     return tuple(c)
+
+
+def _cell_ending(cell, kind: str, bar8: int) -> tuple | None:
+    """A phrase ending GROWN FROM THE HOOK (blind round 7: heads that pad with one-note bars and never grow from one
+    cell): the hook cell's first bar (its rhythm), then the landing on the next downbeat as the ending `kind` wants
+    (genres.PHRASE_ENDS: down - held; breath - half a bar, then silence; lh - short, the left hand answers; pickup -
+    two 8ths into the next phrase; antic - an 8th early). None when the first bar holds fewer than two notes."""
+    head, s = [], 0
+    for x in cell:
+        if s + abs(x) >= bar8:
+            r = bar8 - s
+            if r:
+                head.append(r if x > 0 else -r)
+            s = bar8
+            break
+        head.append(x)
+        s += abs(x)
+    if s < bar8:
+        head.append(-(bar8 - s))
+    if sum(1 for x in head if x > 0) < 2:
+        return None
+    if kind == 'antic' and head[-1] >= 2:
+        return tuple(head[:-1] + [head[-1] - 1, bar8 - 1, -2])
+    land = {'breath': [bar8 // 2, -(bar8 - bar8 // 2)], 'lh': [3, -(bar8 - 3)],
+            'pickup': [bar8 - 3, -1, 1, 1],
+            'tail': [bar8 - 5, 1, 2, -2] if bar8 >= 7 else [bar8 - 4, 1, 1, -2]}.get(kind, [bar8 - 2, -2])
+    return tuple(head + land)
 
 
 def _vary_cell(cell, how: str, bar8: int) -> tuple:
@@ -647,13 +739,26 @@ def _appoggiatura(notes, harm: Harm, meter: int, a: float, b: float, lo: int, hi
         notes[i] = (notes[i][0], notes[i][1], x)
 
 
-def _style_issues(notes, meter: int, beats: float, skip=(), span: int = 0) -> list[str]:
+def _style_issues(notes, meter: int, beats: float, skip=(), span: int = 0, lands=None,
+                  pads: float = 0.125) -> list[str]:
     """The writing rules of a head part (blind rounds 4-5), checked like melody_issues but weighed lower: a rhythm
     cell (a bar of 3+ notes) at most twice per 8 bars, a plainer bar (2 notes: half + half, a waltz's half + quarter)
     three times (bars in `skip` - a riff's repeat - left out); per 4-bar phrase no pitch struck more than about a third
     of the time (max(2, 30 %)) and a range of a 4th+ (no circling one pitch); the part's whole range at least `span`
-    semitones (an A: an octave - blind round 5: an A inside A4-Eb5)."""
+    semitones (an A: an octave - blind round 5: an A inside A4-Eb5). lands= the bars where a phrase lands (a set of
+    bar indices): the other bars may strike one note or none in `pads` of them at most (blind round 7: heads padding
+    with a one-note bar every other bar)."""
     out = []
+    if lands is not None:
+        per = [0] * int(round(beats / meter))
+        for s_, _, _ in notes:
+            b_ = int((s_ + 1e-6) // meter)
+            if 0 <= b_ < len(per):
+                per[b_] += 1
+        free = [b_ for b_ in range(len(per)) if b_ not in lands and b_ not in skip]
+        thin = [b_ for b_ in free if per[b_] <= 1]
+        for b_ in thin[int(pads * len(free) + 1e-6):]:
+            out.append(f"bar {b_ + 1}: one note or none (a pad)")
     if span and notes and max(n[2] for n in notes) - min(n[2] for n in notes) < span:
         out.append(f"range {max(n[2] for n in notes) - min(n[2] for n in notes)} under {span}")
     rs = _bar_rhythms(notes, meter, beats)
@@ -748,6 +853,10 @@ class Tune:
     solo_charts: list = field(default_factory=list)   # a blues: the head chorus (part) each solo chorus plays
     end_kind: str = 'roll'               # the final chord's style (genres.END_STYLES)
     second: str | None = None            # a blues head's second chorus variation (genres.SECOND_CHORUS)
+    out_parts: list = field(default_factory=list)   # the head out's parts (genres.OUT_PARTS; [] = FORMS' 'out')
+    reharm_in: str = 'both'              # where the reharm sounds: 'both' (last solo chorus + head out) / 'out'
+    arrange: dict = field(default_factory=dict)   # the set-level draws (genre.plan['set']: layout / climax kind /
+    #                                               register shift; composer.set_draws) the players read
 
     def part_level(self, part: str) -> float:
         """The mean arc level of a part (0.5 when the tune has no plan)."""
@@ -815,8 +924,9 @@ class Tune:
                 'tag': {'kind': self.tag.get('kind'), 'changes': self.changes_str(changes=self.tag['changes'])}
                 if self.tag else None, 'shout': self.shout, 'dynamics': self.dynamics, 'solo_shape': self.solo_shape,
                 'double': self.double, 'solo_charts': list(self.solo_charts), 'end_kind': self.end_kind,
-                'second': self.second,
-                'tag_approach': (self.tag or {}).get('approach')}
+                'second': self.second, 'out_parts': list(self.out_parts), 'reharm_in': self.reharm_in,
+                'tag_approach': (self.tag or {}).get('approach'), 'tag_frame': (self.tag or {}).get('frame'),
+                **({'arrange': dict(self.arrange)} if self.arrange else {})}
 
 
 # ------------------------------------------------------------------------------------------------ titles
@@ -880,6 +990,42 @@ def phrase_plans(genre: Genre, meter: int) -> dict:
     return base
 
 
+def _sus_budget(changes: dict, order: list, H: dict, t_pc: int, sharps: bool, minor: bool,
+                rng: random.Random) -> dict:
+    """A tune's dominant arrivals spelled more than one way (a genre's harmony 'sus_budget' {kept: weight} and
+    'sus_swap' {'7' / 'ii' / 'IV': weight}; new-age round r10: every phrase of a minor piece closing Vsus4 - V,
+    eleven times in 60 bars): of the dominant's sus4 chords (Vsus4 - V, or a lone Vsus4) a drawn number stays, each
+    other one becomes V7 (the pair merged), ii - V or IV - V (the sus4's span the predominant's)."""
+    dom = (t_pc + 7) % 12
+    spots = [(p, i) for p in order for i, (sym, _) in enumerate(changes[p])
+             if 'sus4' in sym and chord(sym).root % 12 == dom]
+    keep = set(rng.sample(spots, min(len(spots), _pick(rng, H['sus_budget']))))
+    out = {}
+    for p in order:
+        items, new, i = changes[p], [], 0
+        while i < len(items):
+            sym, b = items[i]
+            if (p, i) not in spots or (p, i) in keep:
+                new.append((sym, b))
+                i += 1
+                continue
+            nxt = items[i + 1] if i + 1 < len(items) else None
+            pair = nxt is not None and 'sus' not in nxt[0] and chord(nxt[0]).root % 12 == dom
+            how = _pick(rng, H.get('sus_swap') or {'7': 1.0})
+            v = spell(dom, sharps, 7)
+            if new and how != '7' and chord(new[-1][0]).root % 12 == (t_pc + (2 if how == 'ii' else 5)) % 12:
+                how = '7'                              # (no ii - ii - V)
+            if how == '7' or not pair:
+                new.append((v + '7', b + (nxt[1] if pair else 0.0)))
+            elif how == 'ii':
+                new += [(spell(t_pc + 2, sharps, 2) + ('m7b5' if minor else 'm7'), b), nxt]
+            else:
+                new += [(spell(t_pc + 5, sharps, 5) + ('m' if minor else ''), b), nxt]
+            i += 2 if pair else 1
+        out[p] = new
+    return out
+
+
 def _choose_from(rng, table: dict, avoid=()):
     names = [n for n in table if n not in avoid] or list(table)
     return rng.choice(sorted(names))
@@ -931,7 +1077,7 @@ def compose(genre: Genre, seed: int, mood: str | None = None, swing: float | boo
     key = f"{tonic} {mode}"
     sharps = tonic in _SHARP_KEYS[mode]
     t_pc = Key(key).tonic % 12
-    key_pcs = set(Key(key).pcs)
+    key_pcs = (RaisedPcs if genre.melody.get('raised_v') else set)(Key(key).pcs)
     lo_t, hi_t = F['tempo']
     tempo = int(plan['tempo']) if plan.get('tempo') else \
         int(round(min(hi_t, max(lo_t, rng.uniform(lo_t, hi_t) + M.get('tempo', 0)))))
@@ -949,6 +1095,16 @@ def compose(genre: Genre, seed: int, mood: str | None = None, swing: float | boo
     # ---- the plan: a level per two-bar phrase from the form's tension curve (+ the tune's energy), the climax phrase
     order = list(FD['parts'])
     PL = phrase_plans(genre, meter)
+    # a genre's plan['phrase_variants'] {'common' / 'waltz': {part kind: [(plan, weight)]}}: the period plan per part
+    # kind drawn per tune (new-age audit 2026-10-13: one plan per kind in every piece - the A always peaking in its
+    # third phrase, the chorus breathing every 4 bars)
+    PV = (genre.plan.get('phrase_variants') or {}).get('waltz' if meter == 3 else 'common') or {}
+    if PV:
+        PL = dict(PL)
+        for kind_ in sorted(PV):
+            i_ = _pick(random.Random(f"phrases:{genre.name}:{seed}:{kind_}"),
+                       {i: w for i, (_, w) in enumerate(PV[kind_])})
+            PL[kind_] = PV[kind_][i_][0]
     plans = {p: PL['blues' if form == 'blues' else p[0]] for p in order}
     curve = genre.arc['forms'][form]
     bias = (energy - 0.5) * genre.arc['set'].get('energy_bias', 0.0)
@@ -964,6 +1120,10 @@ def compose(genre: Genre, seed: int, mood: str | None = None, swing: float | boo
 
     # where the single climax goes (PEAK_PART, drawn): the form's last section, or where its tension curve peaks
     peak_last = form == 'AABA' and _pick(random.Random(f"peak:{genre.name}:{seed}"), PEAK_PART) == 'last'
+    # a genre's melody['restate'] {units: weight}: how many 2-bar units a later A restates (drawn per tune; new-age
+    # round r2: A2 = A1's first 6 bars, the references leave the theme after 2-4)
+    keep_units = _pick(random.Random(f"restate:{genre.name}:{seed}"), genre.melody['restate']) \
+        if genre.melody.get('restate') and form != 'blues' else None
 
     def copied(p, u):
         # a theme is RESTATED: every later A plays the A1 note for note (re-fitted where its changes differ) up to its
@@ -973,9 +1133,19 @@ def compose(genre: Genre, seed: int, mood: str | None = None, swing: float | boo
             return False
         if peak_last and p == order[-1]:
             return u < max(1, len(plans[p]) // 2 - 1)      # (its first phrase: room to climb to the peak)
-        return u not in fresh if form == 'blues' else u < len(plans[p]) - stretch
+        return u not in fresh if form == 'blues' else \
+            u < min(len(plans[p]) - stretch, keep_units if keep_units is not None else len(plans[p]))
+
+    # a genre's melody['half_line'] {part kind: share}: an inner half cadence of that part kind runs on as a rising line
+    # (drawn per tune and unit; new-age round r5: a lone held note in every chorus's 4th bar)
+    HL = genre.melody.get('half_line') or {}
+    hl_rng = random.Random(f"half-line:{genre.name}:{seed}")
+    half_line = {(p, u) for p in order if p[0] in HL for u, (r_, _) in enumerate(plans[p])
+                 if r_ == 'half' and u < len(plans[p]) - 1 and hl_rng.random() < HL[p[0]]}
 
     def role_of(p, u):                       # a rewritten 'again' unit of a blues' second chorus: its own material
+        if (p, u) in half_line:
+            return 'line', 'rise'
         role, shape_ = plans[p][u]
         if role == 'again' and p != order[0] and not copied(p, u):
             return ('develop', None) if shape_ == 0 else ('half', 'fall')
@@ -993,6 +1163,26 @@ def compose(genre: Genre, seed: int, mood: str | None = None, swing: float | boo
         cands = [c for c in cands if c[3] == order[-1]] or cands
         cands = [c for c in cands if -c[2] > len(plans[order[-1]]) // 2] or cands     # (room to climb to it)
     climax_part, climax_unit = max(cands)[3:]
+    # a genre's (or mood's) melody 'climax_parts' {part: weight}: where the head's climax goes is drawn per tune - the
+    # part, then its phrase weighted by the curve's level (the learned generator's finding 2026-10-12: every new-age
+    # climax in part C bar 4-5, 87-91 % of the head - the curve's maximum alone)
+    cparts = M.get('climax_parts', genre.melody.get('climax_parts'))
+    if cparts and not vary and not peak_last:
+        crng = random.Random(f"climax-part:{genre.name}:{seed}")
+        have = {p: w for p, w in sorted(cparts.items()) if w > 0 and any(c[3] == p for c in cands)}
+        if have:
+            want = _pick(crng, have)
+            pool = sorted(c for c in cands if c[3] == want)
+            climax_part, climax_unit = _pick(crng, {(c[3], c[4]): max(1e-3, c[0]) ** 2 for c in pool})
+
+    # the set-level draws (genre.plan['set']: layout / climax kind / register shift / the chorus's block) - a set
+    # plan's pins, else drawn here with their own dice (set_draws); the hook block (per mode) is the harmony's, not
+    # the players' (Tune.arrange keeps the others)
+    arrange = {k: plan.get(k, v) for k, v in set_draws(genre, random.Random(f"set-draws:{genre.name}:{seed}")).items()}
+    block_pins = {}
+    for k_ in BLOCK_PINS:                              # (the set's chord blocks: the harmony's, not the players')
+        v_ = arrange.pop(k_, None)
+        block_pins[k_] = v_.get(mode) if isinstance(v_, dict) else v_
 
     # ---- the changes: blocks per part
     blocks: dict = {}
@@ -1005,6 +1195,8 @@ def compose(genre: Genre, seed: int, mood: str | None = None, swing: float | boo
             for k in FD['blocks'][p_]:
                 n = drawn[k][0] if k == 'open' and k in drawn else \
                     _choose_from(rng, B[k], avoid=drawn.get(k, ()))
+                if block_pins.get(k) in B[k] and not (k == 'open' and len(drawn.get(k, ())) > 0):
+                    n = block_pins[k]                  # (the set's draw: rng thrown as before, the pin wins)
                 drawn.setdefault(k, []).append(n)
                 bl.append((k, n))
             blocks[p_] = bl
@@ -1044,6 +1236,9 @@ def compose(genre: Genre, seed: int, mood: str | None = None, swing: float | boo
                                       blues=form == 'blues', after=nxt, colours=genre.harmony['colours'])
             out += coloured[ck]
         changes[p] = [(chord_name(t_pc, off, q, sharps), b * meter * stretch) for off, q, b in out]
+    if genre.harmony.get('sus_budget'):
+        changes = _sus_budget(changes, order, genre.harmony, t_pc, sharps, mode == 'minor',
+                              random.Random(f"sus:{genre.name}:{seed}"))
     solo_charts = []
     if form == 'blues':
         # the head's second chorus ends another way (its second ending: a turnaround / the cadence before it played
@@ -1068,16 +1263,26 @@ def compose(genre: Genre, seed: int, mood: str | None = None, swing: float | boo
             raise ComposeError(f"internal: part {p} has {bars:g} bars, the form wants {FD['bars'] * stretch}")
 
     # ---- the melody: the notes fill the plan (every unit's centre / ceiling from its level)
+    # (the register shift moves the whole line, and so the climax pitch)
+    sh = int(arrange.get('shift', 0))
     reg = M.get('register', genre.melody['register'])
-    lo, hi = note(reg[0]), note(reg[1])
-    peak = note(genre.melody.get('peak', reg[1]))
-    center = note(genre.melody.get('center', note_name((lo + hi) // 2)))
+    lo, hi = note(reg[0]) + sh, note(reg[1]) + sh
+    peak = note(M.get('peak', genre.melody.get('peak', reg[1]))) + sh   # (a mood may move the centre / peak too)
+    center = note(M.get('center', genre.melody.get('center', note_name((lo - sh + hi - sh) // 2)))) + sh
     fam = CELLS[F['cells']]
     mrng = random.Random(rng.random())
-    motif_cell = fam['motif'][_choose_from(mrng, fam['motif'])]
+    # a genre's melody['openings'] {motif cell: weight} (default 1): how the theme and the chorus open, drawn by
+    # weight (new-age round r10: a chorus on three empty beats and a beat-4 pickup in three of four pieces)
+    OW = genre.melody.get('openings')
+
+    def opening(avoid=()):
+        if not OW:
+            return _choose_from(mrng, fam['motif'], avoid=avoid)
+        return _pick(mrng, {k: OW.get(k, 1.0) for k in sorted(fam['motif']) if k not in avoid}
+                     or {k: OW.get(k, 1.0) for k in sorted(fam['motif'])})
+    motif_cell = fam['motif'][opening()]
     line_cell = fam['line'][_choose_from(mrng, fam['line'])]
-    contrast_cell = fam['motif'][_choose_from(mrng, fam['motif'], avoid=[k for k, v in fam['motif'].items()
-                                                                          if v == motif_cell])]
+    contrast_cell = fam['motif'][opening(avoid=[k for k, v in fam['motif'].items() if v == motif_cell])]
     motif_shape = _pick(mrng, {'arch': 3, 'rise': 2, 'valley': 1, 'fall': 1})
     n_motif = sum(1 for x in motif_cell if x > 0)
     steps = genre.melody.get('steps')                    # the contour's move sizes (STEPS; a singable genre: steps)
@@ -1090,7 +1295,11 @@ def compose(genre: Genre, seed: int, mood: str | None = None, swing: float | boo
     hook_seq = random.Random(f"hook-seq:{genre.name}:{seed}").random() < genre.melody.get('hook_seq', 0.0)
     arng = random.Random(f"arc:{genre.name}:{seed}")           # the plan's own dice (the rest of the tune unchanged)
     # the bridge's counter-motif: its own rhythm, the hook's contour turned upside down, one for the whole tune
-    counter_deltas = [-d for d in _contour(sum(1 for x in contrast_cell if x > 0), motif_shape, arng, steps)]
+    # (a genre's melody['counter'] {'mirror' / 'own': weight}: the hook's shape upside down, or a shape of its own)
+    cshape = motif_shape
+    if genre.melody.get('counter') and _pick(arng, genre.melody['counter']) == 'own':
+        cshape = _pick(arng, {'arch': 3, 'rise': 2, 'valley': 1, 'fall': 1})
+    counter_deltas = [-d for d in _contour(sum(1 for x in contrast_cell if x > 0), cshape, arng, steps)]
     counter_off = arng.choice([1, 2, 3])
     b_line_cell = fam['line'][_choose_from(arng, fam['line'], avoid=[k for k, v in fam['line'].items()
                                                                       if v == line_cell])]
@@ -1170,7 +1379,8 @@ def compose(genre: Genre, seed: int, mood: str | None = None, swing: float | boo
                 starts.append(len(notes))
                 if u % 2 == 0:
                     used = {}                    # a 4-bar phrase's pitches (circling one pitch is a tell)
-                ctx = _Ctx(harm, meter, lo, u_hi(p, u), prng, used, lead)
+                ctx = _Ctx(harm, meter, lo, u_hi(p, u), prng, used, lead,
+                           tuple(genre.melody.get('repeat', (0.7, 0.0))), genre.melody.get('chromatic', 0.3))
                 lv = levels[p][u]
                 restate = copied(p, u)
                 if restate or role == 'again':
@@ -1190,7 +1400,14 @@ def compose(genre: Genre, seed: int, mood: str | None = None, swing: float | boo
                     final = role == 'land' and last_part
                     ends = BRIDGE_ENDS if p[0] == 'B' and u == len(plan_p) - 1 and form != 'verse' else \
                         genre.melody.get('ends', PHRASE_ENDS)
-                    cell = _ending_cell(fam['land'], 'down' if final else _pick(prng, ends), prng, 2 * meter)
+                    e_kind = 'down' if final else _pick(prng, ends)
+                    # (a half cadence of an A grows from the hook: its cell's first bar, then the landing - drawn,
+                    # genre.melody['half_cell'] of them)
+                    grown = _cell_ending(_vary_cell(motif_cell, _pick(prng, {'same': 1.0, 'displace': 1.0}),
+                                                    2 * meter), e_kind, 2 * meter) \
+                        if role == 'half' and p[0] == 'A' and genre.melody.get('half_cell') and \
+                        prng.random() < genre.melody['half_cell'] else None
+                    cell = grown or _ending_cell(fam['land'], e_kind, prng, 2 * meter)
                     li = _land_index(cell, 2 * meter)
                     ev = _events(cell, t0, meter)
                     land_at = ev[sum(1 for x in cell[:li] if x > 0)]
@@ -1200,7 +1417,12 @@ def compose(genre: Genre, seed: int, mood: str | None = None, swing: float | boo
                     if goals and abs(goal - goals[-1]) < 2:
                         goal += prng.choice((-3, 3))
                     goals.append(goal)
-                    out = _fit(ev, _contour(len(ev), shape or 'fall', prng, steps), ctx, prev, first=toward(prev, p, u, -2, 3),
+                    dl = _contour(len(ev), shape or 'fall', prng, steps)
+                    if grown:                    # the hook's intervals (now and then turned over), then the landing
+                        k_ = min(len(ev) - 1, n_motif)
+                        sgn = -1 if prng.random() < 0.35 else 1
+                        dl = [sgn * d for d in motif_deltas[:k_]] + dl[k_:]
+                    out = _fit(ev, dl, ctx, prev, first=toward(prev, p, u, -2, 3),
                                land=ev.index(land_at), land_pcs=pcs, goal=goal)
                 elif role in ('motif', 'develop', 'answer'):
                     # the hook's rhythm, developed in a 'develop' / 'answer' phrase (DEVELOP_RHYTHM, drawn)
@@ -1218,13 +1440,17 @@ def compose(genre: Genre, seed: int, mood: str | None = None, swing: float | boo
                     if role != 'answer' and hook_seq:
                         out = _sequenced(out, harm, meter, t0, ctx.lo, ctx.hi)
                 elif role == 'contrast':
-                    ev = _events(bridge_cell, t0, meter)
-                    k_ = sum(1 for r_, _ in plan_p[:u] if r_ == 'contrast')       # its return: sequenced
+                    k_ = sum(1 for r_, _ in plan_p[:u] if r_ == 'contrast')       # its return: sequenced, its
+                    rc = _vary_cell(bridge_cell, _pick(prng, genre.melody['bridge_return']), 2 * meter) \
+                        if k_ and genre.melody.get('bridge_return') else bridge_cell      # rhythm varied
+                    ev = _events(rc, t0, meter)
                     first = u_center(p, u) + counter_off
                     if k_:
                         first = _scale_step(first, (1 if k_ % 2 else -1) * (1 + k_ // 2),
                                             harm.under(ev[0][0], ev[0][1]).scale)
                     out = _fit(ev, counter_deltas, ctx, prev, first=first)
+                    if hook_seq:                 # (its own cell sequenced along the bridge's root motion)
+                        out = _sequenced(out, harm, meter, t0, ctx.lo, ctx.hi)
                 else:                                            # line: its density and direction from the plan
                     lo_c, hi_c = genre.arc['targets']['cells']
                     own = b_line_cell if p[0] == 'B' else line_cell
@@ -1276,6 +1502,11 @@ def compose(genre: Genre, seed: int, mood: str | None = None, swing: float | boo
                      for j in range(starts[u], starts[u + 1] if u + 1 < len(starts) else len(notes))}
             if peak_at is not None:
                 fixed.add(peak_at)
+            # (a genre's melody['plain_head']: the first notes of every hook statement stay chord tones - new-age
+            # round r5: the theme's head on non-chord tones, G over Dm)
+            for u in range(len(plan_p)):
+                if role_of(p, u)[0] == 'motif' and u < len(starts):
+                    fixed.update(range(starts[u], starts[u] + genre.melody.get('plain_head', 0)))
             for k in range(int(round(harm.length / ph))):
                 us = (2 * k, 2 * k + 1)
                 if all(copied(p, x) or role_of(p, x)[0] == 'again' for x in us if x < len(plan_p)) \
@@ -1297,7 +1528,10 @@ def compose(genre: Genre, seed: int, mood: str | None = None, swing: float | boo
             elif any(n[2] > under for n in notes):
                 issues.append('over the climax')
             # the style rules weigh less than the hard ones (a clash): the best attempt keeps the hard rules
-            soft = _style_issues(notes, meter, harm.length, riff_bars, span=12 if p[0] == 'A' else 0)
+            lands = {2 * u + 1 for u in range(len(plan_p)) if role_of(p, u)[0] in ('land', 'half')} \
+                if 'pads' in genre.melody else None
+            soft = _style_issues(notes, meter, harm.length, riff_bars, span=12 if p[0] == 'A' else 0, lands=lands,
+                                 pads=genre.melody.get('pads', 0.125))
             score = len(issues) + 0.3 * len(soft)
             if score < best_n:
                 best, best_n = notes, score
@@ -1325,9 +1559,14 @@ def compose(genre: Genre, seed: int, mood: str | None = None, swing: float | boo
     # part (drawn: the slot is not always the last cadence) - in the last solo chorus and the head out alike, the
     # melody given a colour of the substitute (perform: the 'v' parts); a blues: its last chorus
     srng = random.Random(f"solo-changes:{genre.name}:{seed}")
+    # the head out's parts (OUT_PARTS, a jazz plan's: drawn - the whole head, from the bridge, the last A)
+    out_parts = list(_pick(random.Random(f"out-parts:{genre.name}:{seed}"), OUT_PARTS[form])) \
+        if genre.plan.get('solo') and form in OUT_PARTS else list(FD['out'])
+    reharm_in = _pick(random.Random(f"reharm-in:{genre.name}:{seed}"),
+                      (genre.plan.get('solo') or {}).get('reharm_in') or {'both': 1.0})
     solo_changes, out_melody = {}, {}
     if genre.plan.get('solo') and srng.random() < genre.plan['solo'].get('reharm', 0.5):   # (a jazz plan's reharm)
-        rp = last if form == 'blues' else srng.choice(list(FD['out']))
+        rp = last if form == 'blues' else srng.choice(out_parts)
         fp = final_pcs if rp == last else None
         ch = reharm(changes[rp], t_pc, sharps, meter * stretch, srng)
         mel = _new_note(melody[rp], changes[rp], ch, meter, lo, under, key_pcs, fp) if ch else None
@@ -1349,7 +1588,7 @@ def compose(genre: Genre, seed: int, mood: str | None = None, swing: float | boo
                 {k: v['weight'] for k, v in plans_d.items() if not sh.get('dynamics') or k in sh['dynamics']})
     shout = bool(plans_d[dyn].get('shout'))
     if shout or plans_d[dyn].get('out_peak'):          # (a plan with its peak in the head out: its top note too)
-        sp = FD['out'][0]
+        sp = out_parts[0]
         lifted = _lift(out_melody.get(sp, melody[sp]), Harm(solo_changes.get(sp, changes[sp]), key_pcs), top, meter,
                        lo)
         if lifted:
@@ -1370,7 +1609,7 @@ def compose(genre: Genre, seed: int, mood: str | None = None, swing: float | boo
                 out_melody=out_melody, shout=shout, dynamics=dyn, solo_shape=solo_shape, double=double,
                 solo_charts=solo_charts, end_kind=_pick(random.Random(f"end:{genre.name}:{seed}"),
                                                      genre.plan.get('end_styles', END_STYLES)),
-                second=vary,
+                second=vary, out_parts=out_parts, reharm_in=reharm_in, arrange=arrange,
                 climax={'part': climax_part, 'unit': climax_unit, 'beat': climax_pitch[0],
                         'pitch': climax_pitch[1]} if climax_pitch else {})
 
@@ -1400,17 +1639,41 @@ def frame(changes_a1, mel_a1, mode: str, t_pc: int, sharps: bool, meter: int, st
             ch += [(chord_name(t_pc, off, q, sharps), b * bar) for off, q, b in parse_block(tok)]
     # the tag's last half bar leads into the end chord (TAG_APPROACH, drawn: the dice after the intro's)
     approach = _pick(random.Random(f"{kind}:{rng.random()}"), H.get('tag_approach', TAG_APPROACH))
+    # what the tag plays (H['tag_frames'], drawn - a genre without them reprises the intro): the intro's vamp, another
+    # vamp, or the A's last four bars (the classic tag)
+    frng = random.Random(f"tag-frame:{kind}:{approach}:{changes_a1}")
+    tag_frame = _pick(frng, H['tag_frames']) if H.get('tag_frames') else 'reprise'
+    base = ch
+    if tag_frame == 'vamp':
+        other = {k: w for k, (blk, w) in table.items() if k != kind and 'head:' not in blk
+                 and (on_tonic or k not in H.get('intro_tonic', ()))}
+        if other:
+            base = [(chord_name(t_pc, off, q, sharps), b * bar) for off, q, b in
+                    parse_block(table[_pick(frng, other)][0])]
+        else:
+            tag_frame = 'reprise'
+    elif tag_frame == 'turnaround':
+        total = _beats(changes_a1)
+        base = _slice_changes(changes_a1, total - 4 * bar, total) if total >= 4 * bar - 1e-6 else ch
+        if abs(_beats(base) - 4 * bar) > 1e-6:
+            base, tag_frame = ch, 'reprise'
     v_, bvi = t_pc + 7, t_pc + 8
 
     def nm(off, q):
         return spell(t_pc + off, sharps, off) + q
     via = {'tritone': [(nm(1, '7#11'), 1.0)], 'backdoor': [(nm(10, '9'), 1.0)], 'plagal': [(nm(5, 'm6'), 1.0)],
            'deceptive': [(nm(7, '7b9'), 0.5), (nm(8, 'maj7#11'), 0.5)], 'cold': [(nm(7, '7alt'), 1.0)],
-           'sus': [(nm(7, 'sus4'), 0.5), (nm(7, ''), 0.5)]}[approach]
-    s_, b_ = ch[-1]
-    keep = b_ > bar / 2 + 1e-6 and chord(s_).root % 12 != chord(via[0][0]).root % 12
-    span = bar / 2 if keep else b_
-    tag_ch = ch[:-1] + ([(s_, b_ - bar / 2)] if keep else []) + [(sym_, f * span) for sym_, f in via]
+           'sus': [(nm(7, 'sus4'), 0.5), (nm(7, ''), 0.5)], 'IV': [(nm(5, ''), 1.0)],
+           'ii': [(nm(2, 'm7'), 0.5), (nm(7, 'sus4'), 0.5)], 'IV_iv': [(nm(5, ''), 0.5), (nm(5, 'm6'), 0.5)],
+           'vi': [(nm(9, 'm7'), 0.5), (nm(7, 'sus4'), 0.5)]}[approach]
+    if mode == 'minor' and approach in ('ii', 'vi'):  # (the minor key's own degrees - new-age round r11: Am7 Gsus4
+        via = [((nm(2, 'm7b5') if approach == 'ii' else nm(8, 'maj7')), 0.5), (nm(7, 'sus4'), 0.5)]  # in C minor)
+    s_, b_ = base[-1]
+    ap = H.get('tag_span', 0.5) * bar                  # (the approach's length: half a bar, a genre's whole bar)
+    keep = b_ > ap + 1e-6 and chord(s_).root % 12 not in {chord(x).root % 12 for x, _ in via}   # (round r6: no
+    # 'Vsus4 | ii Vsus4' split bar - the approach takes the whole held chord when it returns to its root)
+    span = ap if keep else b_
+    tag_ch = base[:-1] + ([(s_, b_ - ap)] if keep else []) + [(sym_, f * span) for sym_, f in via]
     L = 4 * bar
     units = [[(s - k * ub, d, p) for s, d, p in mel_a1 if k * ub - 1e-6 <= s < (k + 1) * ub - 1e-6] for k in (0, 1)]
     pitches = [p for u in units for _, _, p in u] or [top - 12]
@@ -1423,10 +1686,10 @@ def frame(changes_a1, mel_a1, mode: str, t_pc: int, sharps: bool, meter: int, st
     # the lines over the vamps (INTRO_LINES / TAG_LINES, drawn): a fragment of the hook developed - augmented,
     # sequenced, its contour turned - never the head's bars copied onto new chords (blind round 5); the riff vamp
     # plays the hook itself
-    lines = {'intro': 'hook' if kind == 'riff' else _pick(rng, INTRO_LINES),
-             'tag': _pick(random.Random(f"tag-line:{rng.random()}"), TAG_LINES)}
+    lines = {'intro': 'hook' if kind == 'riff' else _pick(rng, H.get('intro_lines', INTRO_LINES)),
+             'tag': _pick(random.Random(f"tag-line:{rng.random()}"), H.get('tag_lines', TAG_LINES))}
 
-    def develop_line(how):
+    def develop_line(how, name_='intro'):
         n = max(2, int(round(L / ub)))
         if how == 'augment':                           # the first bar twice as slow, again a step up ..., landed
             a = [(s * 2, d * 2, p) for s, d, p in [(s - cell[0][0], d, p) for s, d, p in cell]]
@@ -1444,6 +1707,18 @@ def frame(changes_a1, mel_a1, mode: str, t_pc: int, sharps: bool, meter: int, st
                 else:
                     out_ += [(s + o, d, p + 2 * ph) for s, d, p in (frag if ph < 2 else frag[:2])]
             return out_
+        if how == 'head':                              # the hook's head (its first two bars) and its echo: the
+            # intro plays the echo (its first bar a third up), the interlude the head; the tag the head, then the
+            # head again in the home register over the approach (refitted) - the last note held under a bar (round
+            # r1: an octave-low echo with a 5-beat hold was the stock ending; r2: a silent right hand over it)
+            h = [(s - hook[0][0] + (hook[0][0] % 1.0), d, p) for s, d, p in hook]
+            # (round r4: the intro's echo of one bar after the left hand's bars read as two placeholder notes - it
+            # sings the whole head a third up)
+            echo = [(s + ub, d, p + (4 if name_ == 'intro' else 0)) for s, d, p in h if s < ub - 1e-6]
+            if echo:
+                s, d, p = echo[-1]
+                echo[-1] = (s, min(L - s, meter - 0.5), p)
+            return [n for n in h if n[0] < ub - 1e-6] + echo
         # 'answer': the hook's rhythm with its contour turned (from its last note), then its fragment augmented
         f0, l0 = hook[0][2], hook[-1][2]
         out_ = [(s, d, l0 + (f0 - p)) for s, d, p in hook]
@@ -1458,7 +1733,7 @@ def frame(changes_a1, mel_a1, mode: str, t_pc: int, sharps: bool, meter: int, st
         if how == 'hook':                            # the riff: the hook alone, an octave low
             notes = [(s + k * ub, d, p) for k in range(int(round(L / ub))) for s, d, p in units[k % 2]]
         else:
-            notes = develop_line(how) if hook else []
+            notes = develop_line(how, name) if hook else []
         notes = sorted((s, d, p + reg(s)) for s, d, p in notes)
         while notes and max(p for _, _, p in notes) >= top:      # (a sequence climbing over the head's top: lower)
             notes = [(s, d, p - 12) for s, d, p in notes]
@@ -1471,7 +1746,7 @@ def frame(changes_a1, mel_a1, mode: str, t_pc: int, sharps: bool, meter: int, st
                 stop = L - span + 0.5
                 notes = [n for n in notes if n[0] < stop - 0.25] or notes[:1]
                 notes = [(s, min(d, stop - s), p) for s, d, p in notes]
-            else:
+            elif how != 'head':                      # (the head's echo breathes before the end chord)
                 s, d, p = notes[-1]
                 notes[-1] = (s, L - s, p)
         if name == 'intro' and notes:
@@ -1479,7 +1754,7 @@ def frame(changes_a1, mel_a1, mode: str, t_pc: int, sharps: bool, meter: int, st
             notes[-1] = (s, max(0.5, min(d, L - 0.5 - s)), p)    # a breath before the head
         ps = [p for _, _, p in notes] or [top - 12]
         out[name] = {'kind': kind, 'line': lines[name], 'changes': changes,
-                     'approach': approach if name == 'tag' else None,
+                     'approach': approach if name == 'tag' else None, 'frame': tag_frame if name == 'tag' else None,
                      'melody': _refit(notes, Harm(changes, key_pcs), meter, min(ps) - 2, max(ps) + 2,
                                       release=False)}
     return out['intro'], out['tag']
@@ -1751,6 +2026,16 @@ def shape(tune, song=None, genre: Genre | None = None) -> dict:
     # the parts' mean register follows the arc: the tensest part sits highest, the register rises with the level
     r_parts = _corr(pl, pp)
     follows = pp[pl.index(max(pl))] == max(pp) and (r_parts is None or r_parts > 0)
+    from .genres import get as _get
+    g_ = genre or (_get(tune.genre) if getattr(tune, 'genre', None) else None)
+    if not follows and cl and g_ is not None and g_.melody.get('climax_parts') and cl.get('part') in tune.parts:
+        # (a drawn climax part - melody['climax_parts']: the part holding the climax may sit highest instead, the
+        # register still rising with the level over the others)
+        k_ = tune.parts.index(cl['part'])
+        rest = [(a, b) for i, (a, b) in enumerate(zip(pl, pp)) if i != k_]
+        r_rest = _corr([a for a, _ in rest], [b for _, b in rest])
+        follows = pp[k_] == max(pp) and (r_rest is None or r_rest > 0) and \
+            pp[pl.index(max(pl))] == max(b for _, b in rest)
     out = {'climax': climax, 'hook': {'notes': len(hook), 'head': head_hits, 'tag': tag_hits},
            'arc': {'part_pitch_r': r_parts, 'follows': follows, 'phrase_pitch_r': _corr(lv, pitch),
                    'phrase_density_r': _corr(lv, dens), 'parts': per_part}}
@@ -1819,6 +2104,50 @@ def _clusters(notes, tol: float = 0.1) -> list:
     return out
 
 
+class NoteView(namedtuple('_NoteView', 'song melody accompaniment sections secs m rh lh cl lcl energies')):
+    """Immutable note snapshot with explicit hands, cached onset groups and energies.
+
+    Retain track/note summation order; window origins belong to the metrics. Section
+    references and source-song metadata are read only during measurement.
+    """
+    __slots__ = ()
+
+    def __new__(cls, song, melody='piano', accompaniment=('comp',)):
+        from types import MappingProxyType
+        accompaniment = tuple(accompaniment)
+        rh = tuple((n.start, n.dur, n.pitch, n.vel) for n in song.tracks[melody]._notes)
+        lh = tuple((n.start, n.dur, n.pitch, n.vel) for name in accompaniment if name in song.tracks
+                   for n in song.tracks[name]._notes)
+        sections = tuple(song.sections)
+        return super().__new__(cls, song, melody, accompaniment, sections,
+                               MappingProxyType({x.name: x for x in sections}), float(song.beats_per_bar),
+                               rh, lh, tuple(_clusters(rh)), tuple(_clusters(lh)),
+                               tuple((n[0], (n[3] / 127.0) ** 2.5) for n in rh + lh))
+
+    @staticmethod
+    def of(song):
+        return song if isinstance(song, NoteView) else NoteView(song)
+
+    def db(self, spans):
+        """Note energy per bar over a union of spans (overlaps count each note once)."""
+        import math
+        e = sum(e for t, e in self.energies if any(a - 1e-6 <= t < b - 1e-6 for a, b in spans))
+        return 10 * math.log10(max(e, 1e-4) / max(1e-9, sum(b - a for a, b in spans) / self.m))
+
+    def onsets(self, a, b, notes=None):
+        return [c for c in (self.cl if notes is None else notes) if a - 1e-6 <= c[0] < b - 1e-6]
+
+    def dynamics(self, origin, end):
+        """2-bar energy spread and loudest 4-bar centre, normalized to this origin."""
+        m, span = self.m, max(1e-9, end - origin)
+        w2 = sorted(self.db([(a, a + 2 * m)]) for a in
+                    (origin + k * 2 * m for k in range(int(span // (2 * m)))))
+        spread = w2[min(len(w2) - 1, int(0.95 * len(w2)))] - w2[int(0.1 * len(w2))] if w2 else 0.0
+        w4 = [(self.db([(a, a + 4 * m)]), a) for a in
+              (origin + k * m for k in range(max(1, int(span // m) - 3)))]
+        return round(spread, 1), round((max(w4)[1] + 2 * m - origin) / span, 2) if w4 else None
+
+
 def tells(song, tune=None) -> dict:
     """The blind test's tells (songs/_blind/ROUNDS.md) measured on a performance: a Song with a 'piano' (right hand)
     and optionally a 'comp' (left hand) track and 'head' / 'solo' sections (endless.song(tune), or a composed piece).
@@ -1850,14 +2179,12 @@ def tells(song, tune=None) -> dict:
                        half of its melody note for note); cell_max: the most common bar rhythm's share of the head's
                        bars;
                        quarter_runs: runs of 4+ on-beat quarter notes in the head melody"""
-    m = float(song.beats_per_bar)
-    rh = [(n.start, n.dur, n.pitch, n.vel) for n in song.tracks['piano']._notes]
-    lh = [(n.start, n.dur, n.pitch, n.vel) for n in song.tracks['comp']._notes] if 'comp' in song.tracks else []
-    head, solo = song['head'], song['solo']
-    cl = _clusters(rh)
+    view = NoteView.of(song)
+    m, rh, lh = view.m, view.rh, view.lh
+    head, solo = view.secs['head'], view.secs['solo']
+    cl = view.cl
 
-    def within(a, b):
-        return [c for c in cl if a - 1e-6 <= c[0] < b - 1e-6]
+    within = view.onsets
 
     def sounding(notes, a, b):                       # an attack in the bar (what a reader of the notation sees)
         return any(a - 1e-6 <= n[0] < b - 1e-6 for n in notes)
@@ -1956,11 +2283,12 @@ def tells(song, tune=None) -> dict:
                     break
             q += ok
         out['quotes'] = q
-    out.update(_tells_r2(song, tune, rh, lh, cl, m))
-    out.update(_tells_r3(song, tune, rh, lh, cl, m))
-    out.update(_tells_r4(song, tune, rh, lh, cl, m))
-    out.update(_tells_r5(song, tune, rh, lh, cl, m))
-    out.update(_tells_r6(song, tune, rh, lh, cl, m))
+    out.update(_tells_r2(view, tune))
+    out.update(_tells_r3(view, tune))
+    out.update(_tells_r4(view, tune))
+    out.update(_tells_r5(view, tune))
+    out.update(_tells_r6(view, tune))
+    out.update(_tells_r7(view, tune))
     return out
 
 
@@ -2014,14 +2342,13 @@ def _slice_changes(changes, a: float, b: float) -> list:
     return out
 
 
-def _tells_r2(song, tune, rh, lh, cl, m) -> dict:
+def _tells_r2(view, tune) -> dict:
     """The round-2 measures of tells() (see its docstring)."""
-    import math
-    secs = {s.name: s for s in song.sections}
-    head, solo = secs['head'], secs['solo']
-    out_sec = secs.get('out')
-    end0 = secs['end'].start if 'end' in secs else max(n[0] + n[1] for n in rh)
-    piece0 = song.sections[0].start
+    m, rh, lh, cl = view.m, view.rh, view.lh, view.cl
+    head, solo = view.secs['head'], view.secs['solo']
+    out_sec = view.secs.get('out')
+    end0 = view.secs['end'].start if 'end' in view.secs else max(n[0] + n[1] for n in rh)
+    piece0 = view.sections[0].start
     span = max(1e-9, end0 - piece0)
     # the head's 5-attack shapes
     line = [(t, top[2]) for t, top, _ in cl if head.start - 1e-6 <= t < head.end - 1e-6]
@@ -2034,15 +2361,7 @@ def _tells_r2(song, tune, rh, lh, cl, m) -> dict:
     # the solo's durations
     durs = [max(1, round(top[1] * 12)) for t, top, _ in cl if solo.start - 1e-6 <= t < solo.end - 1e-6]
     # loudness from the notes: 2-bar windows (range) and 4-bar windows (the peak)
-    allnotes = rh + lh
-
-    def energy(a, b):
-        e = sum((n[3] / 127.0) ** 2.5 for n in allnotes if a - 1e-6 <= n[0] < b - 1e-6)
-        return 10 * math.log10(max(e, 1e-4) / ((b - a) / m))
-    w2 = sorted(energy(a, a + 2 * m) for a in [piece0 + k * 2 * m for k in range(int(span // (2 * m)))])
-    rng_ = (w2[min(len(w2) - 1, int(0.95 * len(w2)))] - w2[int(0.1 * len(w2))]) if w2 else 0.0
-    w4 = [(energy(a, a + 4 * m), a) for a in [piece0 + k * m for k in range(max(1, int(span // m) - 3))]]
-    peak_x = ((max(w4)[1] + 2 * m) - piece0) / span if w4 else None
+    rng_, peak_x = view.dynamics(piece0, end0)
     top = max((n for n in rh if n[0] < end0), key=lambda n: (n[2], -n[0]), default=None)
     # the left hand's silent bars
     lh_sil = 0
@@ -2106,7 +2425,7 @@ def _lines(cl, a: float, b: float) -> list:
     return [r for r in out if len(r) >= 4]
 
 
-def _tells_r3(song, tune, rh, lh, cl, m) -> dict:
+def _tells_r3(view, tune) -> dict:
     """The round-3 measures of tells() (the shared players' tells):
       vel_onoff     in the 8th / 16th lines (_lines) the mean velocity of the on-beat tops - the off-beat ones
                     (composed ~1, round 3 +7..+14); vel_zigzag: share of turns among neighbouring velocity steps (a
@@ -2130,18 +2449,14 @@ def _tells_r3(song, tune, rh, lh, cl, m) -> dict:
       with tune=:   intro_kind (the vamp), intro_line (how its melody was made), cell_run (the longest run of one
                     bar rhythm in the intro / tag melody), reharm_at (the reharm's part and chord index from its
                     end, or None), shout, dynamics (the drawn plan)"""
+    m, rh, lh, cl = view.m, view.rh, view.lh, view.cl
     import math
-    secs = {s.name: s for s in song.sections}
-    head, solo, out_sec = secs['head'], secs['solo'], secs.get('out')
+    head, solo, out_sec = view.secs['head'], view.secs['solo'], view.secs.get('out')
     body = [x for x in (head, solo, out_sec) if x is not None]
     beats_in = 3 if abs(m - 3) < 1e-6 else 2 if abs(m - 4) < 1e-6 else 1      # strong beats: 1 and 3 (waltz: 1)
-    changes = sorted({round(s_.start + t, 6) for s_ in song.sections if s_.prog is not None for t, _, _ in s_.prog})
+    changes = sorted({round(s_.start + t, 6) for s_ in view.sections if s_.prog is not None for t, _, _ in s_.prog})
 
-    def chord_at(t):
-        for s_ in song.sections:
-            if s_.start - 1e-6 <= t < s_.end - 1e-6 and s_.prog is not None and s_.prog.length > 0:
-                return s_.prog.at(min(t - s_.start, s_.prog.length - 1e-6))
-        return None
+    chord_at = _chord_fn(view)
     # ---- velocity in the lines
     on, off, steps, turns, jumps, rep, pairs, n_lines = [], [], 0, 0, 0, 0, 0, 0
     for sec in body:
@@ -2216,13 +2531,9 @@ def _tells_r3(song, tune, rh, lh, cl, m) -> dict:
     res['empty_64'] = round(sum(1 for k in range(nb) if not any(
         solo.start + k * m - 1e-6 <= n[0] < solo.start + (k + 1) * m - 1e-6 for n in rh)) * 64 / max(1, nb), 1)
     # ---- the dynamic plan from the notes
-    allnotes = rh + lh
-
-    def db(sec):
-        e = sum((n[3] / 127.0) ** 2.5 for n in allnotes if sec.start - 1e-6 <= n[0] < sec.end - 1e-6)
-        return 10 * math.log10(max(e, 1e-4) / (sec.length / m))
-    res['solo_db'] = round(db(solo) - db(head), 1)
-    res['out_db'] = round(db(out_sec) - db(head), 1) if out_sec is not None else None
+    head_db = view.db([(head.start, head.end)])
+    res['solo_db'] = round(view.db([(solo.start, solo.end)]) - head_db, 1)
+    res['out_db'] = round(view.db([(out_sec.start, out_sec.end)]) - head_db, 1) if out_sec is not None else None
     # ---- ornaments: two-key alternations and runs
     figs = []
     i = 0
@@ -2249,12 +2560,12 @@ def _tells_r3(song, tune, rh, lh, cl, m) -> dict:
         b0 = math.floor(t / m) * m
         vs = [c[1][3] for c in cl if b0 - 1e-6 <= c[0] < b0 + m - 1e-6]
         loud += bool(vs) and sum(vs) / len(vs) >= 100
-    intro = secs.get('intro')
+    intro = view.secs.get('intro')
     res.update(orn=len(figs), orn_chorus=max((sum(1 for t in figs if a <= t < b) for a, b in chor), default=0),
                orn_loud=loud, orn_intro_end=sum(1 for t in figs if intro is not None and
                                                 intro.end - m - 1e-6 <= t < intro.end))
     # ---- the left hand
-    in_body = [c for c in _clusters(lh) if any(s_.start - 1e-6 <= c[0] < s_.end - 1e-6 for s_ in body)]
+    in_body = [c for c in view.lcl if any(s_.start - 1e-6 <= c[0] < s_.end - 1e-6 for s_ in body)]
     bars_body = sum(s_.length for s_ in body) / m
     multi = [c for c in in_body if c[2] >= 2]
     rootless_ = 0
@@ -2306,16 +2617,16 @@ def licks(cl, a: float, b: float) -> list:
     return out
 
 
-def _chord_fn(song):
+def _chord_fn(view):
     def chord_at(t):
-        for s_ in song.sections:
+        for s_ in view.sections:
             if s_.start - 1e-6 <= t < s_.end - 1e-6 and s_.prog is not None and s_.prog.length > 0:
                 return s_.prog.at(min(t - s_.start, s_.prog.length - 1e-6))
         return None
     return chord_at
 
 
-def _tells_r4(song, tune, rh, lh, cl, m) -> dict:
+def _tells_r4(view, tune) -> dict:
     """The round-4 measures of tells():
       solo lines (_lines)  dir_run: mean length (notes) of the one-direction stretches, dir_run_max; ct_run5: stretches
                     of 5+ chord tones in one direction per 32 solo bars; onbeat_ct: share of the lines' on-beat tops
@@ -2338,9 +2649,9 @@ def _tells_r4(song, tune, rh, lh, cl, m) -> dict:
       chart_vars    chart variants: the distinct changes a part label is played with over head / solo / head out,
                     minus one per label
       solo_shape, double, tag_approach, end_kind, feel_form (the drawn plan, when the tune has it)"""
-    secs = {s.name: s for s in song.sections}
-    head, solo, out_sec = secs['head'], secs['solo'], secs.get('out')
-    chord_at = _chord_fn(song)
+    m, rh, lh, cl = view.m, view.rh, view.lh, view.cl
+    head, solo, out_sec = view.secs['head'], view.secs['solo'], view.secs.get('out')
+    chord_at = _chord_fn(view)
     nb = int(round(solo.length / m))
     res: dict = {}
     # ---- the solo's lines
@@ -2538,7 +2849,7 @@ def _arp_bar(tops, chord_at, least: int = 4) -> bool:
     return sum(d >= 3 for d in ds) >= 0.6 * len(ds)
 
 
-def _tells_r5(song, tune, rh, lh, cl, m) -> dict:
+def _tells_r5(view, tune) -> dict:
     """The round-5 measures of tells() (the composer judge's advice, in his order):
       arp5          share of solo bars that are a pure chord arpeggio (_arp_bar: 4+ attacks, all tones of the written
                     chord, mostly 3rds+; the judge: <= ~1 in 4); ct_bars: share of its bars of 4+ attacks with 85 %+
@@ -2564,11 +2875,11 @@ def _tells_r5(song, tune, rh, lh, cl, m) -> dict:
       a_range       (tune=) the smallest melody range (semitones) of an A section (a blues: a chorus); a_range_mean
       solo_end      1 when the solo's last attack is a chord tone of the next section's first chord, or steps into
                     the next section's first note on one - and not the end of a chromatic run"""
+    m, rh, lh, cl = view.m, view.rh, view.lh, view.cl
     import math
     from ..theory import chord_scale as _cscale
-    secs = {s.name: s for s in song.sections}
-    head, solo, out_sec = secs['head'], secs['solo'], secs.get('out')
-    chord_at = _chord_fn(song)
+    head, solo, out_sec = view.secs['head'], view.secs['solo'], view.secs.get('out')
+    chord_at = _chord_fn(view)
     nb = int(round(solo.length / m))
     res: dict = {}
     sc = [c for c in cl if solo.start - 1e-6 <= c[0] < solo.end - 1e-6]
@@ -2599,7 +2910,7 @@ def _tells_r5(song, tune, rh, lh, cl, m) -> dict:
     res['ph_cross'] = round(sum(math.floor((p[0][0] - solo.start) / m + 1e-6) !=
                                 math.floor((p[-1][0] - solo.start) / m + 1e-6) for p in phrases) / max(1, len(phrases)), 2)
     # ---- 2: one onset pattern per 32 bars
-    piece0, end0 = song.sections[0].start, (secs['end'].start if 'end' in secs else max(n[0] for n in rh) + m)
+    piece0, end0 = view.sections[0].start, (view.secs['end'].start if 'end' in view.secs else max(n[0] for n in rh) + m)
     pats = []
     for k in range(int(round((end0 - piece0) / m))):
         a = piece0 + k * m
@@ -2617,7 +2928,7 @@ def _tells_r5(song, tune, rh, lh, cl, m) -> dict:
     body = [x for x in (head, solo, out_sec) if x is not None]
     chrom = bad = 0
     cs = [c for c in cl if any(s_.start - 1e-6 <= c[0] < s_.end - 1e-6 for s_ in body)]
-    changes = sorted({round(s_.start + t, 6) for s_ in song.sections if s_.prog is not None for t, _, _ in s_.prog})
+    changes = sorted({round(s_.start + t, 6) for s_ in view.sections if s_.prog is not None for t, _, _ in s_.prog})
     for j, (t, top, size) in enumerate(cs):
         # a note struck a hair early (the touch) or anticipating a change by up to an 8th belongs to the next chord
         ant = next((x for x in changes if t < x <= t + 0.55 and t + top[1] > x + 0.1), None)
@@ -2640,11 +2951,6 @@ def _tells_r5(song, tune, rh, lh, cl, m) -> dict:
     res['chrom'] = round(chrom * 32 / max(1, body_bars), 2)
     res['chrom_bad'] = round(bad * 32 / max(1, body_bars), 2)
     # ---- 5: the solo's intensity arc
-    allnotes = rh + lh
-
-    def db(spans):
-        e = sum((n[3] / 127.0) ** 2.5 for n in allnotes if any(a - 1e-6 <= n[0] < b - 1e-6 for a, b in spans))
-        return 10 * math.log10(max(e, 1e-4) / max(1e-9, sum(b - a for a, b in spans) / m))
 
     def vel(spans):
         vs = [c[1][3] for c in cl if c[1][1] >= 0.12 and any(a - 1e-6 <= c[0] < b - 1e-6 for a, b in spans)]
@@ -2654,9 +2960,9 @@ def _tells_r5(song, tune, rh, lh, cl, m) -> dict:
     segs = [(solo.start + k * ch_beats, solo.start + (k + 1) * ch_beats) for k in range(n_ch)] if n_ch >= 2 else \
         [(solo.start, solo.start + solo.length / 2), (solo.start + solo.length / 2, solo.end)]
     hs = [(head.start, head.end)]
-    res['solo_db2'] = round(db(segs[1:]) - db(hs), 1)
+    res['solo_db2'] = round(view.db(segs[1:]) - view.db(hs), 1)
     res['solo_vel2'] = round(vel(segs[1:]) - vel(hs), 1)
-    dbs = [db([s_]) for s_ in segs]
+    dbs = [view.db([s_]) for s_ in segs]
     res['solo_last_peak'] = int(dbs[-1] >= max(dbs) - 0.05)
     run = best = 0
     for k, b in enumerate(bars):            # (a traded bar's comping chord is not a single note)
@@ -2747,7 +3053,7 @@ def _tells_r5(song, tune, rh, lh, cl, m) -> dict:
     return res
 
 
-def _tells_r6(song, tune, rh, lh, cl, m) -> dict:
+def _tells_r6(view, tune) -> dict:
     """The round-6 measures of tells() (four composer / pianist judges and a statistician, 8/8, against the pro2
     references; the r6 breath fix overshot in the solo and the form's end):
       solo continuity   solo_att / head_att: right-hand attacks per bar (refs: solo 4.3-6.2), dens_ratio solo / head
@@ -2781,14 +3087,13 @@ def _tells_r6(song, tune, rh, lh, cl, m) -> dict:
                     intro + tag
       gestures          scoops: quick 4-note groups (onsets <= 0.2 beat apart) in the head out's last two bars; end_kind
                     the final chord's style (tune=)"""
+    m, rh, lh, cl = view.m, view.rh, view.lh, view.cl
     import statistics as st
-    secs = {s.name: s for s in song.sections}
-    head, solo, out_sec = secs['head'], secs['solo'], secs.get('out')
+    head, solo, out_sec = view.secs['head'], view.secs['solo'], view.secs.get('out')
     body = [x for x in (head, solo, out_sec) if x is not None]
     res: dict = {}
 
-    def onsets(a, b, notes=cl):
-        return [c for c in notes if a - 1e-6 <= c[0] < b - 1e-6]
+    onsets = view.onsets
     hb = head.length / m
     sb = solo.length / m
     res['head_att'] = round(len(onsets(head.start, head.end)) / hb, 2)
@@ -2810,7 +3115,7 @@ def _tells_r6(song, tune, rh, lh, cl, m) -> dict:
     res['sil_ch'] = round(sum(sil) / n_ch, 2)
     res['sil_ch_max'] = max(sil)
     res['sil_cad'] = cad
-    lcl = _clusters(lh)
+    lcl = view.lcl
     both = 0
     for sec in body:
         for k in range(int(round(sec.length / m))):
@@ -2844,15 +3149,9 @@ def _tells_r6(song, tune, rh, lh, cl, m) -> dict:
     vs = sorted(c[1][3] for c in cl if any(s_.start - 1e-6 <= c[0] < s_.end - 1e-6 for s_ in body))
     res['vel_p10'] = vs[int(0.1 * (len(vs) - 1))] if vs else None
     # ---- the form's dynamics
-    import math
-    allnotes = rh + lh
-
-    def db(spans):
-        e = sum((n[3] / 127.0) ** 2.5 for n in allnotes if any(a - 1e-6 <= n[0] < b - 1e-6 for a, b in spans))
-        return 10 * math.log10(max(e, 1e-4) / max(1e-9, sum(b - a for a, b in spans) / m))
-    frame_end = [(x.start, x.end) for x in song.sections if x.name in ('tag', 'end')]
-    res['end_db'] = round(db(frame_end) - db([(x.start, x.end) for x in body]), 1) if frame_end else None
-    end = secs.get('end')
+    frame_end = [(x.start, x.end) for x in view.sections if x.name in ('tag', 'end')]
+    res['end_db'] = round(view.db(frame_end) - view.db([(x.start, x.end) for x in body]), 1) if frame_end else None
+    end = view.secs.get('end')
     if end is not None:
         lh_end = [n for n in lh if n[0] >= end.start - 0.3]
         tf = min((n[0] for n in lh_end), default=end.start)
@@ -2863,7 +3162,7 @@ def _tells_r6(song, tune, rh, lh, cl, m) -> dict:
     end0 = end.start if end is not None else max(n[0] for n in rh) + m
     pre = [n for n in rh if n[0] < end0 - 0.25]
     top = max(pre, key=lambda n: (n[2], -n[0]))
-    tsec = next((x for x in song.sections if x.start - 1e-6 <= top[0] < x.end - 1e-6), None)
+    tsec = next((x for x in view.sections if x.start - 1e-6 <= top[0] < x.end - 1e-6), None)
     res['top_sec'] = tsec.name if tsec else None
     res['top_solo_end'] = int(solo.end - 16 * m - 1e-6 <= top[0] < solo.end)
     h_top = max((n[2] for n in rh if head.start - 1e-6 <= n[0] < head.end - 1e-6), default=0)
@@ -2896,7 +3195,7 @@ def _tells_r6(song, tune, rh, lh, cl, m) -> dict:
             return sorted((round(s - z, 3), q) for s, _, q in tune.melody[p] if s >= z - 2 * tune.meter - 1e-6)
         res['a_ends'] = int(tail(a1, z1) != tail(a2, z2))
     # ---- the reharms: the downbeat melody on a substituted chord
-    chord_at = _chord_fn(song)
+    chord_at = _chord_fn(view)
     base = {}
     for p in head.parts:
         t = 0.0
@@ -2923,10 +3222,10 @@ def _tells_r6(song, tune, rh, lh, cl, m) -> dict:
                 t += d
     res['reharm_col'] = round(col / n_sub, 2) if n_sub else None
     # ---- literal cell loops over changing chords
-    total = int(round((end0 - song.sections[0].start) / m))
+    total = int(round((end0 - view.sections[0].start) / m))
     sigs = []
     for k in range(total):
-        a = song.sections[0].start + k * m
+        a = view.sections[0].start + k * m
         on = onsets(a, a + m)
         c = chord_at(a + 1e-3)
         sigs.append((tuple((round((x[0] - a) * 12), x[1][2]) for x in on) if len(on) >= 3 else None,
@@ -2968,7 +3267,7 @@ def _tells_r6(song, tune, rh, lh, cl, m) -> dict:
     res['lh_jump'] = jumps
     # ---- the frame: a held note over changing chords, the hook stated
     hold = 0
-    for x in song.sections:
+    for x in view.sections:
         if x.name not in ('intro', 'tag') or x.prog is None:
             continue
         fx_ = onsets(x.start, x.end)
@@ -2985,7 +3284,7 @@ def _tells_r6(song, tune, rh, lh, cl, m) -> dict:
     res['frame_hold'] = hold
     if tune is not None and len(tune.motif) >= 3:
         fr = [n for n in rh if any(x.name in ('intro', 'tag') and x.start - 1e-6 <= n[0] < x.end - 1e-6
-                                   for x in song.sections)]
+                                   for x in view.sections)]
         res['frame_hook'] = len(hook_matches(top_line(fr, tol=0.08), sorted(tune.motif), scales=(1.0, 2.0),
                                              share=0.8, contour=0.75, tol=0.2))
     # ---- shared gestures
@@ -3006,6 +3305,135 @@ def _tells_r6(song, tune, rh, lh, cl, m) -> dict:
     return res
 
 
+def _tells_r7(view, tune) -> dict:
+    """The round-7 measures of tells() (three composer judges 5/8 5/8 7/8, the statistician 8/8; ROUNDS.md 'Round 7'):
+      licks         lick_near: solo windows of 5 top-line attacks whose pitches (as struck, not transposed) recur in a
+                    window starting within the 4 bars before, per 32 solo bars (round 7: a chromatic D-Eb-F-F#-G cell
+                    4x in 4 bars); lick_max: the most uses of one such 5-note cell in the solo
+      16ths         run16: the longest run of solo bars in 16th motion (4+ steps of a 16th or less, half the bar's
+                    steps); solo16: the share of the solo's bars in 16ths (round 7: a bossa solo in 16ths for 7 bars)
+      head pads     head_one: share of the head's bars with one right-hand attack or none; head_alt: the longest run of
+                    head bars alternating 2+ attacks / one or none ("a one-note bar every other bar")
+      bridge        bridge_one: share of the bridge's bars (the head's B) with one attack or none (no B: None)
+      quotes        head_quote: solo windows of 6 top-line attacks equal to a window of the head's (pitches and onset
+                    gaps: the head pasted into the solo); open_quote: (tune=) 1 when the hook is stated in the solo's
+                    first two bars
+      touch         vel_pitch: share of the solo's steps (attacks a beat or less apart, both pitch and velocity moving)
+                    whose velocity moves with the pitch (round 7: 74-84 %, the references ~50-60 %); climb_step: the
+                    largest bar-to-bar rise of the loudest top velocity over the 4 bars into the piece's highest note
+                    (a step instead of a ladder); lh_over: share of the body's bars (both hands striking) where the
+                    left hand's loudest attack is louder than the right hand's loudest
+      skeleton      (per tune; the set's spread is the tell) out_from: the share of the head the head out skips
+                    (0: all of it, 0.5: its second half); tag_intro: 1 when the tag opens on the intro's first chord;
+                    out_reharm: 1 when the head out plays a substituted part"""
+    m, cl = view.m, view.cl
+    head, solo, out_sec = view.secs['head'], view.secs['solo'], view.secs.get('out')
+    onsets = view.onsets
+    res: dict = {}
+    sc = onsets(solo.start, solo.end)
+    nb = max(1, int(round(solo.length / m)))
+    # ---- licks: one 5-note cell (its pitches as struck) again within 4 bars
+    ps = [(c[0], c[1][2]) for c in sc]
+    wins = [(ps[i][0], tuple(p for _, p in ps[i:i + 5]), i) for i in range(len(ps) - 4)]
+    near = 0
+    count: dict = {}
+    for t, sig, i in wins:
+        count[sig] = count.get(sig, 0) + 1
+        if any(s2 == sig and t - t2 <= 4 * m + 1e-6 and i - j >= 5 for t2, s2, j in wins if j < i):
+            near += 1
+    res['lick_near'] = round(near * 32 / nb, 2)
+    res['lick_max'] = max(count.values(), default=0)
+    # ---- 16th motion
+    sixteen = []
+    for k in range(nb):
+        a = solo.start + k * m
+        ts = [c[0] for c in onsets(a, a + m)]
+        gaps = [y - x for x, y in zip(ts, ts[1:])]
+        fast = sum(g <= 0.3 for g in gaps)
+        sixteen.append(fast >= 4 and fast >= 0.5 * len(gaps))
+    run = best = 0
+    for x in sixteen:
+        run = run + 1 if x else 0
+        best = max(best, run)
+    res['run16'] = best
+    res['solo16'] = round(sum(sixteen) / nb, 2)
+    # ---- the head: one-note bars, every other bar
+    hb = int(round(head.length / m))
+    per = [len(onsets(head.start + k * m, head.start + (k + 1) * m)) for k in range(hb)]
+    res['head_one'] = round(sum(x <= 1 for x in per) / max(1, hb), 2)
+    run = best = 0
+    for x, y in zip(per, per[1:]):
+        run = run + 1 if (x <= 1) != (y <= 1) else 0
+        best = max(best, run)
+    res['head_alt'] = best + 1 if best else 0
+    bp = [p for p in head.parts if p.name[0] == 'B']
+    if bp and len({p.name[0] for p in head.parts}) > 1:
+        bb = [len(onsets(p.start + k * m, p.start + (k + 1) * m)) for p in bp for k in range(int(round(p.length / m)))]
+        res['bridge_one'] = round(sum(x <= 1 for x in bb) / max(1, len(bb)), 2)
+    else:
+        res['bridge_one'] = None
+    # ---- the head pasted into the solo
+    hl = onsets(head.start, head.end)
+
+    def sig6(cs, i):
+        w = cs[i:i + 6]
+        return tuple(c[1][2] for c in w) + tuple(round((y[0] - x[0]) * 12) for x, y in zip(w, w[1:]))
+    hs = {sig6(hl, i) for i in range(len(hl) - 5)}
+    q, i = 0, 0
+    while i < len(sc) - 5:
+        if sig6(sc, i) in hs:
+            q += 1
+            i += 6
+        else:
+            i += 1
+    res['head_quote'] = q
+    if tune is not None and len(tune.motif) >= 3:
+        first = top_line([n for n in view.rh if solo.start - 1e-6 <= n[0] < solo.start + 2 * m], tol=0.08)
+        res['open_quote'] = int(bool(hook_matches(first, sorted(tune.motif), scales=(1.0,), share=0.8, contour=0.75,
+                                                  tol=0.2)))
+    # ---- touch: velocity with the pitch, the climb into the peak, the left hand over the melody
+    same = tot = 0
+    for x, y in zip(sc, sc[1:]):
+        if y[0] - x[0] > 1.0 + 1e-6:
+            continue
+        dp, dv = y[1][2] - x[1][2], y[1][3] - x[1][3]
+        if dp and dv:
+            tot += 1
+            same += _sign(dp) == _sign(dv)
+    res['vel_pitch'] = round(same / tot, 2) if tot else None
+    end = view.secs.get('end')
+    end0 = end.start if end is not None else max(n[0] for n in view.rh) + m
+    pre = [n for n in view.rh if n[0] < end0 - 0.25]
+    top = max(pre, key=lambda n: (n[2], -n[0]))
+    kb = int((top[0] + 1e-6) // m)
+    bv = [max((c[1][3] for c in onsets((kb - j) * m, (kb - j + 1) * m)), default=None) for j in (4, 3, 2, 1)]
+    bv = [v for v in bv if v is not None] + [top[3]]
+    res['climb_step'] = max((y - x for x, y in zip(bv, bv[1:])), default=0)
+    lcl = view.lcl
+    over = n_b = 0
+    for sec in [x for x in (head, solo, out_sec) if x is not None]:
+        for k in range(int(round(sec.length / m))):
+            a = sec.start + k * m
+            r_, l_ = onsets(a, a + m), onsets(a, a + m, lcl)
+            if r_ and l_:
+                n_b += 1
+                over += max(c[1][3] for c in l_) > max(c[1][3] for c in r_)
+    res['lh_over'] = round(over / max(1, n_b), 2)
+    # ---- the skeleton
+    if out_sec is not None and out_sec.parts:
+        names = [p.name.rstrip('v') for p in head.parts]
+        first = out_sec.parts[0].name.rstrip('v')
+        res['out_from'] = round(names.index(first) / len(names), 2) if first in names else None
+        res['out_reharm'] = int(any(p.name.endswith('v') for p in out_sec.parts))
+    intro, tag = view.secs.get('intro'), view.secs.get('tag')
+    if intro is not None and tag is not None and intro.prog is not None and tag.prog is not None \
+            and intro.prog.items and tag.prog.items:
+        c0, c1 = intro.prog.items[0][0], tag.prog.items[0][0]
+        res['tag_intro'] = int(c0 is not None and c1 is not None and c0.root % 12 == c1.root % 12
+                               and tuple(c0.intervals) == tuple(c1.intervals))
+    return res
+
+
 FRAME_SECTIONS = ('intro', 'tag', 'end', 'coda', 'inter')
 """A piano arrangement's frame sections (breath / piano_tells measure the others: the body)."""
 
@@ -3014,11 +3442,12 @@ def phrase_rests(song) -> float:
     """Share of the 4-bar phrase ends (counted from every body section's start; a waltz: 8 bars) where the right hand
     breathes: a beat or more between its last onset before the phrase boundary (within two bars) and its first after
     it - the singer's breath at every phrase end (letters-to-the-morning: every one)."""
-    m = float(song.beats_per_bar)
-    ons = sorted({round(n.start, 3) for n in song.tracks['piano']._notes})
+    view = NoteView.of(song)
+    m = view.m
+    ons = sorted({round(n[0], 3) for n in view.rh})
     span = (8 if abs(m - 3) < 1e-6 else 4) * m
     hit = tot = 0
-    for sec in song.sections:
+    for sec in view.sections:
         if sec.name in FRAME_SECTIONS:
             continue
         k = sec.start + span
@@ -3043,48 +3472,305 @@ def lh_variety(song) -> dict:
             'all_figures': len({f for v in figs.values() for f in v}) if figs else len(set(vals)), 'plan': lh}
 
 
-def piano_tells(song, tune=None) -> dict:
+def piano_tells(song, tune=None, *, breath_metrics=None) -> dict:
     """The tells of a through-composed piano piece (perform.build_piano; what made generated tunes sound generated,
     songs/_blind/ROUNDS.md, plus the user's 'breathe' / 'a moving player'):
       hook        statements of the hook's shape in the performed right hand's top line (hook_matches, rubato
                   tolerant) and in how many body sections
       phrase_rests  share of phrase ends with a breath (phrase_rests)
       lh          left-hand figure variety (lh_variety)
-      climax_x / climax_single  where the piece's highest right-hand note sits (0..1 of the music before the final
-                  chord) and whether it is struck once; peak_x: the loudest 4-bar window's centre (0..1)
+      climax_x / climax_single  where the piece's highest right-hand note in its body (not the intro / coda / tag)
+                  sits (0..1 of the music before the final chord) and whether it is struck once; peak_x: the loudest 4-bar window's centre (0..1)
       quiet1 / att_cv4 / rest_bar / long_share  the breath measures (breath)
       dyn_range   the note-energy spread per 2-bar window (dB, 10-95 %)"""
-    import math
-    m = float(song.beats_per_bar)
-    rh = [(n.start, n.dur, n.pitch, n.vel) for n in song.tracks['piano']._notes]
-    lh = [(n.start, n.dur, n.pitch, n.vel) for n in song.tracks['comp']._notes] if 'comp' in song.tracks else []
-    secs = {s.name: s for s in song.sections}
-    end0 = secs['end'].start if 'end' in secs else max(n[0] for n in rh)
-    body = [x for x in song.sections if x.name not in FRAME_SECTIONS]
+    view = NoteView.of(song)
+    song = view.song
+    m, rh, lh = view.m, view.rh, view.lh
+    end0 = view.secs['end'].start if 'end' in view.secs else max(n[0] for n in rh)
+    body = [x for x in view.sections if x.name not in FRAME_SECTIONS]
     out: dict = {}
     if tune is not None and len(tune.motif) >= 3:
         line = top_line([n for n in rh if n[0] < end0], tol=0.08)
         hits = hook_matches(line, sorted(tune.motif), scales=(1.0,), share=0.8, contour=0.75, tol=0.2)
         out['hook'] = len(hits)
         out['hook_sections'] = len({x.name for t, _ in hits for x in body if x.start - 0.5 <= t < x.end})
-    out['phrase_rests'] = phrase_rests(song)
+    out['phrase_rests'] = phrase_rests(view)
     out['lh'] = lh_variety(song)
     before = [n for n in rh if n[0] < end0 - 0.25]     # (the final chord's roll may start a hair before 'end')
+    # (the climax is the body's: a high bell figure in the intro - letters-to-the-morning's G#6 - is not it)
+    before = [n for n in before if any(x.start - 1e-6 <= n[0] < x.end - 1e-6 for x in body)] or before
     top = max(n[2] for n in before)
     tops = [n for n in before if n[2] == top]
     out['climax_x'] = round(tops[0][0] / max(1e-9, end0), 2)
     out['climax_single'] = len({round(n[0], 1) for n in tops}) == 1
-    allnotes = rh + lh
-
-    def energy(a, b):
-        e = sum((n[3] / 127.0) ** 2.5 for n in allnotes if a - 1e-6 <= n[0] < b - 1e-6)
-        return 10 * math.log10(max(e, 1e-4) / ((b - a) / m))
-    w4 = [(energy(a, a + 4 * m), a) for a in [k * m for k in range(max(1, int(end0 // m) - 3))]]
-    out['peak_x'] = round((max(w4)[1] + 2 * m) / end0, 2) if w4 else None
-    w2 = sorted(energy(a, a + 2 * m) for a in [k * 2 * m for k in range(int(end0 // (2 * m)))])
-    out['dyn_range'] = round(w2[min(len(w2) - 1, int(0.95 * len(w2)))] - w2[int(0.1 * len(w2))], 1) if w2 else 0.0
-    b = breath(song)
+    out['dyn_range'], out['peak_x'] = view.dynamics(0.0, end0)
+    b = breath(view) if breath_metrics is None else breath_metrics
     out.update({k: b[k] for k in ('quiet1', 'att_cv4', 'rest_bar', 'long_share', 'lh_still', 'ph_vel')})
+    return out
+
+
+def newage_tells(song) -> dict:
+    """The new-age blind rounds' tells (songs/_blind/ROUNDS.md "New-age"), measured on a performance whose chord
+    timeline is song.endless_timeline [(beat, beats, chord symbol)] (perform.build_piano; a written piece sets it from
+    its chart) - without one the chord measures are left out:
+      rep_pitch     share of the right hand's top-line steps (inside a phrase: under 2 beats apart) that repeat the
+                    pitch (round N0: repeated-note pickups, one-pitch codas)
+      block_copy / climax_copy  how much of a body section repeats an earlier one bar for bar (the same top-line
+                    pitches over the same chords; the max over the earlier sections), the mean over the body
+                    sections after the first / for the climax section (round N0: the climax = B1 louder, A4 = A2)
+      climax_chart  share of the climax's bars on the same chords as an earlier body section's same bar (the max
+                    over the sections; round r3: the climax on A1's chart cell for cell)
+      final_jump    semitones from the last melody note to the final chord's top (round N0: a top two octaves over
+                    the line); final_top: 1 when that final chord holds the piece's highest note
+      frame_pitches distinct right-hand pitches in the intro / interlude / coda before the final chord (round N0:
+                    two- or three-note scraps)
+      chords_n / chord_rep4  distinct chord symbols, and the share of 4-chord windows heard before (the same
+                    loop everywhere)
+      ret_tonic     1 when the last body section before the coda closes on the tonic (the references end their
+                    last return deceptively)
+      a1_range      the first body section's top-line range (semitones)
+      a1_copy       share of the later body bars (3+ onsets) whose top line is the first body section's same bar at
+                    any transposition (round r2: the climax / A4 = A1 an octave up note for note)
+      climax_lift   the climax section's mean top-line pitch over the first body section's (round r1: the generated
+                    climax +5-7 semitones, the references +9-14)
+      peak_holes    bars without a right-hand onset in the climax and the section before it (round r1: rests at
+                    the peak)
+      off_chord32   top-line notes outside the chord's scale / tones / tensions per 32 body bars
+      long_holds    top-line notes held 4+ beats before the final chord (round r1: 4.5-7 beat holds)
+      ph_vspread    the top line's velocity spread (p90 - p10) inside a 4-bar phrase of a body section, the mean
+                    (round r3: 6.5-7 dB within a phrase, the references 8.7-9.6)
+      vel_jump12    share of the bar-to-bar steps inside a body section whose mean top-line velocity moves 12+
+                    (round r4: the chorus jumping v64 -> v111 in two bars, peaks dropped onto notes)"""
+    view = NoteView.of(song)
+    song = view.song
+    m = view.m
+    out: dict = {}
+    line = top_line(view.rh, tol=0.08)
+    steps = [(a, b) for a, b in zip(line, line[1:]) if b[0] - a[0] < 2.0]
+    out['rep_pitch'] = round(sum(a[2] == b[2] for a, b in steps) / max(1, len(steps)), 3)
+    # the final chord: the last right-hand onset group
+    cl = view.cl
+    if len(cl) >= 2:
+        last_t = cl[-1][0]
+        prev = [n for n in line if n[0] < last_t - 0.25]
+        out['final_jump'] = cl[-1][1][2] - prev[-1][2] if prev else 0
+        out['final_top'] = int(cl[-1][1][2] >= max(n[2] for n in view.rh))
+    else:
+        last_t = float('inf')
+    frames = [x for x in view.sections if x.name in FRAME_SECTIONS and x.name != 'end']
+    out['frame_pitches'] = len({n[2] for n in line if n[0] < last_t - 0.25
+                                and any(x.start - 1e-6 <= n[0] < x.end - 1e-6 for x in frames)})
+    tl = getattr(song, 'endless_timeline', None)
+    if not tl:
+        return out
+    tl = sorted(tl)
+
+    def chords_in(a, z):
+        return tuple(sym for t, b, sym in tl if t < z - 1e-6 and t + b > a + 1e-6)
+
+    def sig(a):                                          # one bar: its top-line pitches + its chords
+        return tuple(n[2] for n in line if a - 0.25 <= n[0] < a + m - 0.25), chords_in(a, a + m)
+    body = [x for x in view.sections if x.name not in FRAME_SECTIONS]
+    bars = {x.name: [sig(x.start + k * m) for k in range(int(round((x.end - x.start) / m)))] for x in body}
+    copies = {}
+    for i, x in enumerate(body):
+        best = 0.0
+        for y in body[:i]:
+            n = min(len(bars[x.name]), len(bars[y.name]))
+            same = sum(1 for k in range(n) if bars[x.name][k] == bars[y.name][k] and bars[x.name][k][0])
+            best = max(best, same / max(1, len(bars[x.name])))
+        copies[x.name] = best
+    later = [copies[x.name] for x in body[1:]]
+    out['block_copy'] = round(sum(later) / max(1, len(later)), 3)
+    peak = 'climax' if 'climax' in copies else max(body, key=lambda x: max(
+        [n[2] for n in line if x.start <= n[0] < x.end] or [0])).name
+    out['climax_copy'] = round(copies.get(peak, 0.0), 3)
+    pk_i = next((i for i, x in enumerate(body) if x.name == peak), 0)
+    chart = 0.0                                          # round r3: the climax on an earlier section's chart
+    for y in body[:pk_i]:
+        n = min(len(bars[peak]), len(bars[y.name]))
+        chart = max(chart, sum(bars[peak][k][1] == bars[y.name][k][1] for k in range(n)) / max(1, len(bars[peak])))
+    out['climax_chart'] = round(chart, 3)
+    seq = [sym for _, _, sym in tl]
+    seq = [s for i, s in enumerate(seq) if i == 0 or s != seq[i - 1]]
+    out['chords_n'] = len(set(seq))
+    wins = [tuple(seq[i:i + 4]) for i in range(len(seq) - 3)]
+    out['chord_rep4'] = round(sum(w in wins[:i] for i, w in enumerate(wins)) / max(1, len(wins)), 3)
+    # the last return: the last body section before the frame sections at the end
+    ret = body[-1] if body else None
+    if ret is not None:
+        ch = chords_in(ret.end - 1.0, ret.end)
+        k = Key(song.key.name if hasattr(song.key, 'name') else str(song.key))
+        c = chord(ch[-1]) if ch else None
+        out['ret_tonic'] = int(c is not None and c.root % 12 == k.tonic % 12 and (c.bass is None or
+                                                                                  c.bass == c.root % 12))
+    # round r1: the climax barely above the theme, holes in the build / climax, off-chord neighbours, long holds
+    first = body[0] if body else None
+    pk = next((x for x in body if x.name == peak), None)
+
+    def mean_top(x):
+        ps = [n[2] for n in line if x.start - 1e-6 <= n[0] < x.end - 1e-6]
+        return sum(ps) / len(ps) if ps else None
+    if first is not None:
+        ps = [n[2] for n in line if first.start - 1e-6 <= n[0] < first.end - 1e-6]
+        out['a1_range'] = max(ps) - min(ps) if ps else 0
+
+        def shape(a):                                    # one bar's top line at any transposition: its steps (the
+            ns = [n for n in line if a - 0.25 <= n[0] < a + m - 0.25]       # onsets are played - rubato)
+            return tuple(b[2] - a_[2] for a_, b in zip(ns, ns[1:]))
+        a1 = [shape(first.start + k * m) for k in range(int(round((first.end - first.start) / m)))]
+        hits = tot = 0
+        for x in body[1:]:
+            for k in range(int(round((x.end - x.start) / m))):
+                sh = shape(x.start + k * m)
+                if len(sh) >= 2:
+                    tot += 1
+                    hits += k < len(a1) and sh == a1[k]
+        out['a1_copy'] = round(hits / max(1, tot), 3)
+    if first is not None and pk is not None and pk is not first and mean_top(first) and mean_top(pk):
+        out['climax_lift'] = round(mean_top(pk) - mean_top(first), 1)
+    i_pk = body.index(pk) if pk is not None else -1
+    holes = 0
+    for x in body[max(0, i_pk - 1):i_pk + 1] if i_pk >= 0 else []:
+        for k_ in range(int(round((x.end - x.start) / m))):
+            a = x.start + k_ * m
+            holes += not any(a - 0.25 <= n[0] < a + m - 0.25 for n in line)
+    out['peak_holes'] = holes
+    from ..theory import chord_scale as _cscale
+
+    def chord_at(t):
+        for t0, b, sym in tl:
+            if t0 - 1e-6 <= t < t0 + b - 1e-6:
+                return chord(sym)
+        return None
+    off = 0
+    body_beats = sum(x.end - x.start for x in body)
+    for n in line:
+        if n[1] < 0.12 or not any(x.start - 1e-6 <= n[0] < x.end - 1e-6 for x in body):
+            continue
+        c = chord_at(n[0] + 0.06)
+        if c is None:
+            continue
+        own = set(_cscale(c)) | {i % 12 for i in c.intervals} | set(available_tensions(c))
+        off += (n[2] - c.root) % 12 not in own
+    out['off_chord32'] = round(off * 32 * m / max(1.0, body_beats), 2)
+    out['long_holds'] = sum(1 for n in line if n[1] >= 4.0 and n[0] < last_t - 0.25)
+    spreads = []                                         # round r3: one dynamic per phrase
+    for x in body:
+        for k_ in range(0, int(round((x.end - x.start) / m)) - 3, 4):
+            vs = sorted(n[3] for n in line if x.start + k_ * m - 1e-6 <= n[0] < x.start + (k_ + 4) * m - 1e-6)
+            if len(vs) >= 5:
+                spreads.append(vs[int(0.9 * (len(vs) - 1))] - vs[int(0.1 * (len(vs) - 1))])
+    if spreads:
+        out['ph_vspread'] = round(sum(spreads) / len(spreads), 1)
+    jumps = []                                           # round r4: dynamic peaks dropped onto single notes
+    for x in body:
+        row = []
+        for k_ in range(int(round((x.end - x.start) / m))):
+            a = x.start + k_ * m
+            vs = [n[3] for n in line if a - 0.25 <= n[0] < a + m - 0.25]
+            row.append(sum(vs) / len(vs) if vs else None)
+        jumps += [abs(b - a) >= 12 for a, b in zip(row, row[1:]) if a is not None and b is not None]
+    if jumps:
+        out['vel_jump12'] = round(sum(jumps) / len(jumps), 3)
+    return out
+
+
+BLOOM_RUN = {'ioi': 0.6, 'step': (1, 9), 'span': 24, 'group': 0.06}
+"""bloom_tells' continuous figure: onsets at most `ioi` beats apart (8ths or faster), each step `step` semitones in
+one direction, spanning `span`+ semitones (two octaves) with notes of both hands; onsets within `group` beats are
+one moment (the hands' asynchrony)."""
+
+
+def bloom_tells(song) -> dict:
+    """The bloom and the flow (HUMAN_FEEDBACK 2026-10-15: "no blossoming where the tempo gets faster and more
+    happens; they ripple along; bass and lead always very clearly separated; nothing played across the whole
+    keyboard like Für Elise"), measured on a performance's notes and its tempo map:
+      tempo_push    the tempo the fastest body section holds (its beats' median: past its ritardando and fermata)
+                    over the first body section's: a bloom pushing forward > 1, a piece that never presses ~1
+      climax_tempo  the mean tempo of the section holding the body's top note over the first body section's (the
+                    measured new-age pieces: 0.89-0.93 - every climax slower than the theme)
+      rh_peak_den   right-hand onsets per beat in the body's densest 4-bar window (a melody that never moves
+                    faster than 8ths stays under ~1.7)
+      flow32        continuous figures per 32 body bars (BLOOM_RUN: one direction, 8ths or faster, two octaves+)
+                    whose notes come from both hands - a figure passing between the hands (Für Elise's A section)
+      hand_meet     share of the body bars where the left hand's top reaches the right hand's lowest note (within
+                    a whole step, or above it): the hands share a register instead of a fixed split"""
+    import statistics as st
+    view = NoteView.of(song)
+    song, m = view.song, view.m
+    body = [x for x in view.sections if x.name not in FRAME_SECTIONS]
+    out: dict = {}
+    if not body:
+        return out
+    try:
+        tm = song.tempo_map()
+    except Exception:                                   # (a song without notes placed: no tempo measure)
+        tm = None
+    if tm is not None:
+        def bpm_over(a, b):
+            return 60.0 * (b - a) / max(1e-9, tm.seconds_at(b) - tm.seconds_at(a))
+
+        def held(x):                                    # (the tempo a section holds: its beats' median)
+            return st.median(bpm_over(x.start + k, x.start + k + 1) for k in range(max(1, int(x.end - x.start))))
+        out['tempo_push'] = round(max(held(x) for x in body) / held(body[0]), 3)
+        top = max(view.rh, key=lambda n: (n[2], -n[0]), default=None)
+        sec = next((x for x in body if top and x.start - 1e-6 <= top[0] < x.end - 1e-6), None)
+        if sec is not None:
+            out['climax_tempo'] = round(bpm_over(sec.start, sec.end) / bpm_over(body[0].start, body[0].end), 3)
+    dens = []
+    for x in body:
+        nb = int(round((x.end - x.start) / m))
+        for k in range(max(1, nb - 3)):
+            a, z = x.start + k * m, x.start + min(nb, k + 4) * m
+            dens.append(len(view.onsets(a, z)) / max(1e-9, z - a))
+    out['rh_peak_den'] = round(max(dens), 2)
+    # the continuous figures: a longest-path walk over the onset moments of both hands
+    R = BLOOM_RUN
+    notes = sorted([(n[0], n[2], 0) for n in view.rh] + [(n[0], n[2], 1) for n in view.lh])
+    notes = [n for n in notes if any(x.start - 1e-6 <= n[0] < x.end - 1e-6 for x in body)]
+    moments: list = []
+    for n in notes:
+        if moments and n[0] - moments[-1][0][0] < R['group']:
+            moments[-1].append(n)
+        else:
+            moments.append([n])
+    runs = []
+    best: dict = {}                                     # (moment, index, direction) -> (start t, start pitch, hands)
+    for i, mo in enumerate(moments):
+        for j, n in enumerate(mo):
+            for d in (1, -1):
+                cand = [(n[0], n[1], 1 << n[2])]
+                for i0 in (i - 1, i - 2):
+                    if i0 < 0 or n[0] - moments[i0][0][0] > R['ioi']:
+                        continue
+                    for j0, p in enumerate(moments[i0]):
+                        step = (n[1] - p[1]) * d
+                        if R['step'][0] <= step <= R['step'][1] and (i0, j0, d) in best:
+                            t0, p0, h = best[(i0, j0, d)]
+                            cand.append((t0, p0, h | (1 << n[2])))
+                t0, p0, h = max(cand, key=lambda c: (abs(n[1] - c[1]), -c[0]))
+                best[(i, j, d)] = (t0, p0, h)
+                if abs(n[1] - p0) >= R['span'] and h == 3:
+                    runs.append((t0, n[0]))
+    merged = []
+    for a, z in sorted(runs):
+        if merged and a <= merged[-1][1] + 1e-6:
+            merged[-1][1] = max(merged[-1][1], z)
+        else:
+            merged.append([a, z])
+    bars = sum(int(round((x.end - x.start) / m)) for x in body)
+    out['flow32'] = round(len(merged) * 32 / max(1, bars), 2)
+    meet = tot = 0
+    for x in body:
+        for k in range(int(round((x.end - x.start) / m))):
+            a, z = x.start + k * m - 0.05, x.start + (k + 1) * m - 0.05
+            r = [n[2] for n in view.rh if a <= n[0] < z]
+            lh = [n[2] for n in view.lh if a <= n[0] < z]
+            if r and lh:
+                tot += 1
+                meet += max(lh) >= min(r) - 2
+    out['hand_meet'] = round(meet / max(1, tot), 2)
     return out
 
 
@@ -3108,13 +3794,11 @@ def breath(song) -> dict:
       ph_reg / ph_vel / ph_den  the mean change from one phrase to the next of its mean pitch (semitones), mean
                     velocity and onsets per beat (contrast between phrases)"""
     import statistics as st
-    m = float(song.beats_per_bar)
-    secs = {s.name: s for s in song.sections}
-    body = [secs[k] for k in ('head', 'solo', 'out') if k in secs] or \
-        [x for x in song.sections if x.name not in FRAME_SECTIONS]      # (a piano arrangement: its sections)
-    rh = [(n.start, n.dur, n.pitch, n.vel) for n in song.tracks['piano']._notes]
-    lh = [(n.start, n.dur, n.pitch, n.vel) for n in song.tracks['comp']._notes] if 'comp' in song.tracks else []
-    cl, lcl = _clusters(rh), _clusters(lh)
+    view = NoteView.of(song)
+    m = view.m
+    body = [view.secs[k] for k in ('head', 'solo', 'out') if k in view.secs] or \
+        [x for x in view.sections if x.name not in FRAME_SECTIONS]      # (a piano arrangement: its sections)
+    cl, lcl = view.cl, view.lcl
     res: dict = {'att_bar': {}, 'att_sd': {}}
     gaps_in = total = rest_max = 0.0
     q_sec: dict = {}
@@ -3124,7 +3808,7 @@ def breath(song) -> dict:
         a0, z0 = sec.start, sec.end
         nb = max(1, int(round((z0 - a0) / m)))
         n_bars += nb
-        on = [c for c in cl if a0 - 1e-6 <= c[0] < z0 - 1e-6]
+        on = view.onsets(a0, z0)
         per = [sum(1 for c in on if a0 + k * m - 1e-6 <= c[0] < a0 + (k + 1) * m - 1e-6) for k in range(nb)]
         res['att_bar'][sec.name] = round(sum(per) / nb, 2)
         res['att_sd'][sec.name] = round(st.pstdev(per), 2) if nb > 1 else 0.0
@@ -3178,3 +3862,132 @@ def breath(song) -> dict:
     for k, xs in (('ph_reg', pm), ('ph_vel', pv), ('ph_den', pd)):
         res[k] = round(st.mean(abs(b - a) for a, b in zip(xs, xs[1:])), 2) if len(xs) > 1 else 0.0
     return res
+
+
+# ------------------------------------------------------------------------------------------------ the score
+
+HANDS = (('piano', 'comp'), ('rh', 'lh'), ('melody', 'accomp'))
+"""The (right hand, left hand) track names score() looks for (the endless / pro songs, the etudes)."""
+
+
+def score_style(song=None, tune=None, genre: Genre | None = None) -> str:
+    """The score table's style: the genre's (or the tune's genre's) style; else 'jazz' for a song with a solo
+    section, 'new-age' for any other piano piece."""
+    from .genres import get
+    if genre is None and tune is not None and getattr(tune, 'genre', None):
+        genre = get(tune.genre)
+    if genre is not None:
+        return genre.style
+    if song is not None and getattr(song, 'organ_voices', None):     # (played by the organist)
+        return 'organ'
+    if song is not None and getattr(song, 'orch_scores', None):      # (an orchestra through orch.Score)
+        return 'orchestra'
+    return 'jazz' if song is not None and 'solo' in {s.name for s in song.sections} else 'new-age'
+
+
+def score_metrics(song, tune=None, style: str = 'jazz') -> dict:
+    """Every notes-level measure the score can weigh, flat {name: number} (no audio): for 'jazz' tells() (rounds 1-6)
+    + breath() + phrase_rests(), for the through-composed styles piano_tells() + breath(); for both the body's
+    coupling (humanize.body_stats 'heard': faster where louder) and - with a tune - the lead sheet's own checks:
+    mel_issues (melody_issues per part: clashes on strong / long notes, notes held into a chord they do not fit,
+    leaps over an octave, unrecovered leaps), mel_style (_style_issues: a rhythm cell over-used, a pitch circled) and
+    shape()'s arc: arc_pitch_r / arc_dens_r (the 2-bar phrases' pitch / notes against the plan's level), hook_head /
+    hook_tag (the hook's statements in the head / the tag)."""
+    from ..humanize import body_stats
+    if style == 'organ':                                # (the organ: its own tells - endless/organ.py)
+        from .organ import organ_metrics
+        return organ_metrics(song, tune)
+    if style == 'orchestra':                            # (the orchestra: the melodic layer on its reduction + the
+        from .orchestra import orchestra_metrics        # orchestration - endless/orchestra.py)
+        return orchestra_metrics(song, tune)
+    rh_name, lh_name = next(((a, b) for a, b in HANDS if a in song.tracks), (None, None))
+    if rh_name is None:
+        raise ComposeError(f"score: no right-hand track ({' / '.join(a for a, _ in HANDS)}) in the song")
+    view = NoteView(song, melody=rh_name, accompaniment=(lh_name,))
+    b = breath(view)
+    if style == 'jazz':
+        raw = dict(tells(view, tune))
+        raw.update({k: b[k] for k in ('quiet1', 'att_cv4', 'orn32', 'ph_vel', 'ph_den', 'long_share')})
+        raw['phrase_rests'] = phrase_rests(view)
+    else:
+        raw = dict(piano_tells(view, tune, breath_metrics=b))
+        lh = raw.pop('lh', None) or {}
+        if getattr(song, 'endless_lh', None):      # (perform records the figures; a hand-written song: none)
+            raw['lh_distinct'], raw['lh_figures'] = lh.get('distinct'), lh.get('all_figures')
+        raw.update({k: b[k] for k in ('orn32', 'ph_reg', 'ph_den', 'rest_half', 'rest_max')})
+        raw['att_bar'] = round(sum(b['att_bar'].values()) / max(1, len(b['att_bar'])), 2)
+        if style == 'new-age':                          # the new-age blind rounds' tells (the other styles: as before)
+            raw.update(newage_tells(view))
+            raw.update(bloom_tells(view))                # (the bloom: HUMAN_FEEDBACK 2026-10-15)
+    try:
+        raw['body_heard'] = body_stats(deepcopy(song), rh_name)['coupling'].get('heard')
+    except Exception:                                   # (a track without a played body: no body measure)
+        raw['body_heard'] = None
+    if tune is not None and getattr(tune, 'melody', None):
+        kp = set(Key(tune.key).pcs)
+        mi = ms = 0
+        for p in tune.parts:
+            notes = tune.melody[p]
+            if notes:
+                harm = Harm(tune.changes[p], kp)
+                mi += len(melody_issues(notes, harm, 0, 127, meter=tune.meter))
+                ms += len(_style_issues(notes, tune.meter, harm.length))
+        raw['mel_issues'], raw['mel_style'] = mi, ms
+        try:                                            # the lead sheet's long-range shape (shape(): the arc)
+            sh = shape(tune)
+            raw['arc_pitch_r'] = sh['arc']['phrase_pitch_r']
+            raw['arc_dens_r'] = sh['arc']['phrase_density_r']
+            raw['hook_head'] = sh['hook']['head']
+            raw['hook_tag'] = sh['hook']['tag']
+        except (KeyError, ValueError, ZeroDivisionError, ComposeError):
+            pass
+    return {k: int(v) if isinstance(v, bool) else v for k, v in raw.items()
+            if isinstance(v, (int, float)) and not (isinstance(v, float) and v != v)}
+
+
+def score(song, tune=None, genre: Genre | None = None, metrics: dict | None = None, table: dict | None = None,
+          style: str | None = None) -> dict:
+    """ONE quality number 0-100 for a piano performance from the notes alone (no audio): score_metrics() weighed by
+    the style's table genres.SCORES[style] {metric: (lo, hi, weight, hard[, unit])} - the target range measured on
+    the composed references (songs/_blind/ROUNDS.md; provisional where the table says so). A metric inside its range
+    scores 1, outside 1 / (1 + d^2) with d the distance in units (the range's width unless the entry gives one); the
+    score is the weighted mean x 100; a 'hard' metric outside its range scales it into 0 .. SCORE_HARD_CAP x its
+    sub-score (the worst one: an octave wrap, a verbatim repeat over another chord, a silent cadence bar ... can never
+    be outweighed - and the capped tunes keep their order).
+    metrics: score_metrics() already measured (song may then be None); table: another {metric: spec} table (a
+    learned one, a subset); style: the table's style (default: score_style()). Returns {'score', 'style', 'mean'
+    (before the cap), 'hard' (the
+    capping metrics), 'parts': {metric: (value, sub, weight)}, 'worst': the 5 that cost the most points
+    [{'metric', 'value', 'lo', 'hi', 'sub', 'lost'}], 'missing': table metrics not measured}.
+    What it cannot see: the audio (the mix, the piano's sound, clicks - the render gate's job) and taste (whether
+    the tune is memorable); it rewards closeness to OUR references - the user's ears and the blind judges stay the
+    final check."""
+    from .genres import SCORE_HARD_CAP, SCORES
+    style = style or score_style(song, tune, genre)
+    table = table if table is not None else SCORES[style]
+    m = metrics if metrics is not None else score_metrics(song, tune, style)
+    parts, lost, missing, hard = {}, {}, [], []
+    num = den = 0.0
+    cap = 100.0
+    for k, spec in table.items():
+        lo, hi, w, is_hard = spec[:4]
+        v = m.get(k)
+        if v is None:
+            missing.append(k)
+            continue
+        unit = spec[4] if len(spec) > 4 else ((hi - lo) or 1.0)
+        d = max(lo - v, v - hi, 0.0) / unit
+        sub = 1.0 / (1.0 + d * d)
+        parts[k] = (v, round(sub, 3), w)
+        num += w * sub
+        den += w
+        lost[k] = w * (1.0 - sub)
+        if is_hard and sub < 1.0:
+            hard.append(k)
+            cap = min(cap, SCORE_HARD_CAP * sub)
+    mean = 100.0 * num / den if den else 0.0
+    worst = sorted((k for k in lost if lost[k] > 1e-9), key=lambda k: (k not in hard, -lost[k]))[:5]
+    return {'score': round(mean * cap / 100.0, 1), 'style': style, 'mean': round(mean, 1), 'hard': hard,
+            'parts': parts, 'missing': missing,
+            'worst': [{'metric': k, 'value': parts[k][0], 'lo': table[k][0], 'hi': table[k][1], 'sub': parts[k][1],
+                       'lost': round(100.0 * lost[k] / den, 1)} for k in worst]}

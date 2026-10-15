@@ -21,8 +21,9 @@ Presets (roles):
   jazz_ballad   piano, comp, bass, drums, sax                   pedal(), brush stirs, bass='pizz' | 'arco', chamber
   bossa         guitar, piano, bass, drums, rim, shaker, sax    straight 8ths: nylon guitar, cross-stick, egg shaker
 
-Every role plays the best installed pack and falls back to GeneralUser GS (never an error at import or build unless
-strict=True): piano = Salamander Grand (SFZ, release samples) > its SoundFont > GeneralUser 'Grand Piano'; bass =
+Every role plays the best installed pack and falls back to GeneralUser GS (strict=True raises at build; otherwise the
+song's compile raises PackMissingError naming the missing packs unless $AGENTSOUND_PACK_FALLBACK=1): piano =
+Salamander Grand (SFZ, release samples) > its SoundFont > GeneralUser 'Grand Piano'; bass =
 Meatbass pizz (4 layers x 5 takes: no two walking notes alike) > D. Smolken pizz > GeneralUser 'Acoustic Bass';
 drums = Swirly Drums brush kit (stirs, taps, digs) > GeneralUser 'Brush' kit; sax = MTG tenor (legato player, soft /
 loud x 3 takes) > FreePats tenor (SFZ, legato) > GeneralUser 'Tenor Sax'; guitar = FreePats nylon > GeneralUser
@@ -55,6 +56,8 @@ Options (on top of bands.make's without= / sounds= / ids=):
           drive down, the sung tracks 3 dB lower (VOCAL_LEAD, VOCAL_LEAD_DB; band.info['lead'])
   duck    (quartet, bossa) False: no 1.5 dB sidechain of the comping / guitar under the sax
   bass    (ballad) 'pizz' (default) or 'arco'
+  voicing (trio) 'club' (default) or 'smooth': solo_piano's softened grand over the trio, every send up, the piano
+          on the plate, no presence lift on the master (SMOOTH_TRIO; the endless jazz-trio sound)
 """
 
 from __future__ import annotations
@@ -76,8 +79,9 @@ __all__ = ['SOUNDS', 'SPACES', 'PLATES', 'MASTER_GAIN', 'DRUM_TRIM', 'GM_KIT', '
 # ------------------------------------------------------------------------------------------------ sounds
 
 def installed(pack: str) -> bool:
-    """Is sample pack `pack` installed (python -m agentsound samples)?"""
-    return (library.SAMPLES / pack / 'SOURCE.json').is_file()
+    """Is sample pack `pack` installed (python -m agentsound samples)? A miss inside a preset is recorded
+    (library.want): the song's compile raises unless $AGENTSOUND_PACK_FALLBACK=1."""
+    return library.want(pack)
 
 
 def _patch(name: str, **params) -> Patch:
@@ -95,7 +99,7 @@ class _Opt:
         self.pack, self.make, self.desc, self.trim, self.credit, self.hints = pack, make, desc, trim, credit, hints
 
     def available(self) -> bool:
-        return self.pack is None or installed(self.pack)
+        return self.pack is None or library.has(self.pack)
 
 
 GM_KIT = {'kick': 36, 'rim': 37, 'tap': 38, 'hat_foot': 44, 'hat': 42, 'ride': 51}
@@ -226,7 +230,10 @@ def _pick(role: str, strict: bool) -> _Opt:
         raise ComposeError(f"band role {role!r} wants the sample pack {opts[0].pack!r} ({opts[0].desc}); install it "
                            f"with `python -m agentsound samples fetch {opts[0].pack}` (or leave strict=False: "
                            f"{next(o for o in opts if o.available()).desc})")
-    return next(o for o in opts if o.available())
+    got = next(o for o in opts if o.available())
+    for o in opts[:opts.index(got)]:          # the better ones that are missing: compile raises / reports them
+        library.record(o.pack, got.desc)
+    return got
 
 
 def _place(snd, pan: float):
@@ -284,16 +291,18 @@ PLATES = {
 """plate= -> (pack, return patch, convolver params); a missing pack falls back to the algorithmic plate."""
 
 
-def _return(s, bid: str, table: dict, which: str, what: str, strict: bool, fallback, fallback_desc: str):
+def _return(builder, bid: str, table: dict, which: str, what: str, strict: bool, fallback, fallback_desc: str):
     if which not in table:
         raise ComposeError(f"{what} must be one of {', '.join(table)}" + (' or None' if what == 'plate' else '')
                            + f", got {which!r}")
     pack, patch, params = table[which]
-    if patch is not None and installed(pack):
-        return s.bus(bid, _patches.get(patch).but(**params)), patch + (f" ({which})" if what == 'space' else '')
+    if patch is not None and library.has(pack):
+        return builder.bus(bid, _patches.get(patch).but(**params)), patch + (f" ({which})" if what == 'space' else '')
     if patch is not None and strict:
         raise ComposeError(f"{what} {which!r} needs the IR pack {pack!r}: `python -m agentsound samples fetch {pack}`")
-    return s.bus(bid, fallback), fallback_desc
+    if patch is not None:
+        library.record(pack, fallback_desc)
+    return builder.bus(bid, fallback), fallback_desc
 
 
 def _algo_room():
@@ -368,6 +377,29 @@ SOLO_PIANO = {
 }
 
 
+SMOOTH_TRIO = {
+    # the grand: solo_piano's (sound role 'grand': hammers fully softened, the 'tame' presence cut on the loudest
+    # notes, a 3.3 kHz dip instead of the club chain's +1 dB at 3.2 kHz, no 11 kHz air) with the club chain's
+    # low-mid cut (an upright under it: the right hand -5 dB at 310 Hz) and a gentler top shelf (+3 dB, not +5)
+    'eq': {'hp.freq': 45, 'low.freq': 160, 'low.gain': -2.0, 'peak1.freq': 310, 'peak1.gain': -5.0, 'peak1.q': 0.7,
+           'peak2.freq': 3300, 'peak2.gain': -2.5, 'peak2.q': 0.8, 'high.freq': 6500, 'high.gain': 3.0},
+    'comp_eq': {'hp.freq': 90, 'peak1.gain': -4.0},     # the left hand clears the bass's octave (as the club chain)
+    'tame': SOLO_PIANO['tame'],
+    # the room: the same salon (a believable club), every send up 1-2.5 dB, and the piano's long tail on the plate
+    # letters-to-the-morning sings in (the algorithmic 1.9 s plate: 28 ms pre-delay - the attack stays clear -,
+    # high-passed at 280 Hz - no low-mid wash over the upright -, damped above 6 kHz) 11.5 dB louder than the club
+    # trio's -24 (the 224XL rich plate read as lush, but its pack's licence is unclear) - (room, plate) dB per role
+    'sends': {'piano': (-9.0, -12.5), 'comp': (-10.0, -18.0), 'bass': -16.0, 'drums': -9.0},
+    'piano_gain': 7.3,     # the club fader (6.5) + 0.8 dB: the fully softened hammers' loud layers read quieter
+    'plate': 'algorithmic',
+    # the master: the club master without its presence lift (+1.5 dB at 3.8 kHz) and with less air
+    'master_eq': {'peak3.gain': 0.0, 'high.gain': 0.6},
+}
+"""jazz_trio voicing='smooth' (user 2026-10-10, the endless jazz trio: "a very smooth piano ... the normal ones maybe
+simply too dry"): the softened grand of solo_piano / letters-to-the-morning over the trio, a wetter club with a long
+pre-delayed plate on the piano, no presence lift on the master."""
+
+
 LOFI = {
     # the piano (the Osiris una-corda grand): its two velocity layers evened into one smooth response (measured: C4 / G4
     # fell 4 dB from velocity 60 to 68 - the soft layer's top is louder than the loud layer's bottom - which flattened a
@@ -397,6 +429,9 @@ LOFI = {
              'comp': dict(depth=4.0, attack=4, hold=40, release=200)},
     # the vinyl bed: the crackle band-limited (300 Hz - 4.5 kHz: no rumble, no sharp clicks), far under the music
     'vinyl_eq': {'hp.freq': 300, 'hp.slope': 24, 'lp.freq': 4500, 'lp.slope': 24},
+    # the pops tamed like the ear wants them: a near-instant 20:1 squash of the transients, the surface bed stays
+    'vinyl_tame': dict(threshold=-30, ratio=8, knee=6, attack=1, release=120, detector='peak'),
+    'vinyl_gain': -12.5,  # the bed's fader (-5 -> -8 -> -9.5 -> -12.5: the user found the crackle too loud four times; a sparse click bed reads quiet in RMS but the ear hears its peaks)
     'master': {
         'eq': {'hp.freq': 40, 'hp.slope': 24, 'peak1.freq': 380, 'peak1.gain': -1.0, 'peak1.q': 0.6,
                'peak3.freq': 3200, 'peak3.gain': -1.0, 'peak3.q': 0.8, 'high.freq': 9000, 'high.gain': -2.0},
@@ -466,15 +501,16 @@ def lofi_crackle(band, start: float, end: float, *, tail: float = 0.0, seed=0, v
     band['vinyl'].play(Clip._raw(out, end + tail - start), start)
 
 
-def _solo_chain(opt, comp: bool = False) -> list:
+def _solo_chain(opt, comp: bool = False, table: dict = SOLO_PIANO) -> list:
     """solo_piano's grand: the Salamander chain's eq without its presence lift (a dip at 3.3 kHz instead), a
     'tame' de-esser in split mode at 2.5 kHz (a dynamic presence cut: only the loud, bright notes lose up to 8 dB
     above 2.5 kHz - the soft ones keep their clarity), the soft attack compressor and tape. The left hand keeps its
-    lows (no bass player: hp 60 Hz)."""
+    lows (no bass player: hp 60 Hz). table: SOLO_PIANO, or SMOOTH_TRIO (jazz_trio voicing='smooth': the same grand
+    over a bass player)."""
     if opt is not None and opt.hints.get('piano') == 'generaluser':
         return _piano_chain(opt, comp)
-    eq = dict(SOLO_PIANO['eq'], **(SOLO_PIANO['comp_eq'] if comp else {}))
-    return [fx.deesser(**SOLO_PIANO['tame']), fx.eq(eq), *([] if comp else [fx.compressor(**SOFT_PIANO['attack'])]),
+    eq = dict(table['eq'], **(table['comp_eq'] if comp else {}))
+    return [fx.deesser(**table['tame']), fx.eq(eq), *([] if comp else [fx.compressor(**SOFT_PIANO['attack'])]),
             fx.tape(**{**SOFT_PIANO['tape'], **({'bump': 0.0} if comp else {})})]
 
 
@@ -607,7 +643,7 @@ leiser" - after nowhere-to-be the second voice that ended at a -3 dB trim: in vo
 band). Applied at compile (the singer makes its tracks after the band), once per track, logged in band.info."""
 
 
-class _Builder:
+class _Builder(bands.Builder):
     """Shared plumbing of the jazz presets: option checks, the returns, a sound per role (sounds= overrides keep the
     role's chain), ids, without=, placement, credits, the master."""
 
@@ -616,30 +652,24 @@ class _Builder:
         if bad:
             raise ComposeError(f"band {preset!r}: unknown option(s) {', '.join(sorted(bad))}; options: "
                                f"{', '.join(_COMMON + extra)}")
-        self.s, self.preset, self.options = song, preset, options
-        self.without = set(options.get('without') or ())
-        self.sounds = dict(options.get('sounds') or {})
-        self.ids = dict(options.get('ids') or {})
+        super().__init__(song, preset, bus_policy='new', without=options.get('without'),
+                         sounds=options.get('sounds'), ids=options.get('ids'), notes=notes,
+                         analysis={'profile': 'jazz'})
+        self.options = options
         self.strict = bool(options.get('strict', False))
-        self.band = bands.Band(song, preset, notes=notes, analysis={'profile': 'jazz'})
         self.band.info.update(sounds={}, credits=[])
-        self.room, self.band.info['room'] = _return(song, 'room', SPACES, options.get('space', space), 'space',
+        self.room, self.band.info['room'] = _return(self, 'room', SPACES, options.get('space', space), 'space',
                                                     self.strict, _algo_room(), 'algorithmic room 1.2 s')
-        self.band.bus('room', self.room)
         self.plate = None
         pl = options.get('plate', plate)
         if pl is not None:
-            self.plate, self.band.info['plate'] = _return(song, 'plate', PLATES, pl, 'plate', self.strict,
+            self.plate, self.band.info['plate'] = _return(self, 'plate', PLATES, pl, 'plate', self.strict,
                                                           _algo_plate(), 'algorithmic plate 1.9 s')
-            self.band.bus('plate', self.plate)
-
-    def wants(self, role: str) -> bool:
-        return role not in self.without
 
     def hands(self, feel, role: str) -> dict:
         """The pianist's body (humanize body=, the feel's profile): the right hand ('piano') leads, the left hand
         ('comp') moves with it - one body, two hands."""
-        if role == 'comp' and self.wants('piano'):
+        if role == 'comp' and self.want('piano'):
             return {'body': feel.body, 'lead': self.ids.get('piano', 'piano')}
         return {'body': feel.body}
 
@@ -673,15 +703,9 @@ class _Builder:
         sends, groove and humanize; recorded on the Band. Returns (track, option or None)."""
         snd, opt, desc = self.sound(role, sound_role)
         snd, track_pan = _place(snd, pan)
-        t = self.s.track(self.ids.get(role, role), snd, fx=chain(opt),
-                         gain_db=gain_db + (opt.trim if opt is not None else 0.0), pan=track_pan, sends=sends)
-        if groove is not None:
-            t.groove(groove)
-        if isinstance(humanize, dict):
-            t.humanize(**humanize)
-        elif humanize is not None:
-            t.humanize(*humanize)
-        self.band.add(role, t)
+        t = self.add_track(role, snd, fx=chain(opt),
+                           gain_db=gain_db + (opt.trim if opt is not None else 0.0), pan=track_pan,
+                           sends=sends, groove=groove, humanize=humanize)
         self.band.info['sounds'][role] = desc
         return t, opt
 
@@ -695,7 +719,7 @@ class _Builder:
                               stir=(1.9, 0.8) if swirly else (1.0, 1.0))
 
     def sax(self, *, gain=1.7, room=-9, plate=-11):
-        if not self.wants('sax'):
+        if not self.want('sax'):
             return None
         t, opt = self.track('sax', _sax_chain, gain_db=gain, pan=_PLACE['sax'], sends=self.sends(room, plate))
         if opt is not None:
@@ -752,21 +776,26 @@ piano and the horn: the brushes now sit ~14-16 dB (RMS) under the lead in every 
 
 
 def _rhythm_section(bb: _Builder, feel, *, piano_sends=(-11.5, -24), comp_send=-12, bass_send=-18, drum_send=-10,
-                    piano_gain=6.5, comp_gain=1.5, bass_gain=-5.0, drum_gain=1.5, bass_role='bass', bass_sub=-5.0):
+                    piano_gain=6.5, comp_gain=1.5, bass_gain=-5.0, drum_gain=1.5, bass_role='bass', bass_sub=-5.0,
+                    grand=None):
     """piano + comp + bass + drums of the trio / quartet / ballad (gains: measured on their demos; the drums get
-    DRUM_TRIM on top)."""
+    DRUM_TRIM on top). comp_send: the room dB or (room, plate). grand: a _solo_chain table (SMOOTH_TRIO) - both
+    hands play the 'grand' sound role through it instead of the club chain."""
     bb.band.info['feel'] = feel
-    if bb.wants('piano'):
-        bb.track('piano', _piano_chain, gain_db=piano_gain, pan=_PLACE['piano'], sends=bb.sends(*piano_sends),
-                 groove=feel.groove('piano'), humanize=bb.hands(feel, 'piano'))
-    if bb.wants('comp'):
-        bb.track('comp', lambda o: _piano_chain(o, comp=True), gain_db=comp_gain, pan=_PLACE['comp'],
-                 sends=bb.sends(comp_send), groove=feel.groove('comp'), humanize=bb.hands(feel, 'comp'))
-    if bb.wants('bass'):
+    chain = _piano_chain if grand is None else (lambda o, comp=False: _solo_chain(o, comp, grand))
+    role = None if grand is None else 'grand'
+    if bb.want('piano'):
+        bb.track('piano', chain, sound_role=role, gain_db=piano_gain, pan=_PLACE['piano'],
+                 sends=bb.sends(*piano_sends), groove=feel.groove('piano'), humanize=bb.hands(feel, 'piano'))
+    if bb.want('comp'):
+        bb.track('comp', lambda o: chain(o, comp=True), sound_role=role, gain_db=comp_gain, pan=_PLACE['comp'],
+                 sends=bb.sends(*(comp_send if isinstance(comp_send, tuple) else (comp_send,))),
+                 groove=feel.groove('comp'), humanize=bb.hands(feel, 'comp'))
+    if bb.want('bass'):
         bb.track('bass', lambda o: _bass_chain(o, arco=bass_role == 'arco', sub=bass_sub), sound_role=bass_role,
                  gain_db=bass_gain, pan=_PLACE['bass'], sends=bb.sends(bass_send), groove=feel.groove('bass'),
                  humanize=(3, 4))
-    if bb.wants('drums'):
+    if bb.want('drums'):
         _, opt = bb.track('drums', lambda o: _drum_chain(), gain_db=drum_gain + DRUM_TRIM, pan=_PLACE['drums'],
                           sends=bb.sends(drum_send), groove=feel.groove('drums'), humanize=(2, 4))
         bb.drums(opt)
@@ -800,10 +829,23 @@ Automate: velocities per chorus (the arc: LRA 5+ LU), send.room up on the last c
 
 def jazz_trio(song, *, without=(), sounds=None, ids=None, **options):
     """New York club piano trio: grand piano (right hand + comping), upright bass, brushes, one wooden room."""
-    bb = _Builder(song, 'jazz_trio', dict(options, without=without, sounds=sounds, ids=ids), (), _TRIO_NOTES,
-                  'salon', 'algorithmic')
-    _rhythm_section(bb, _swing_feel(song, options))
-    return bb.finish()
+    voicing = options.get('voicing', 'club')
+    if voicing not in ('club', 'smooth'):
+        raise ComposeError(f"band 'jazz_trio': voicing must be 'club' or 'smooth', got {voicing!r}")
+    sm = SMOOTH_TRIO if voicing == 'smooth' else None
+    bb = _Builder(song, 'jazz_trio', dict(options, without=without, sounds=sounds, ids=ids), ('voicing',),
+                  _TRIO_NOTES, 'salon', sm['plate'] if sm else 'algorithmic')
+    bb.band.info['voicing'] = voicing
+    if sm is None:
+        _rhythm_section(bb, _swing_feel(song, options))
+        return bb.finish()
+    S = sm['sends']
+    _rhythm_section(bb, _swing_feel(song, options), piano_sends=S['piano'], comp_send=S['comp'],
+                    bass_send=S['bass'], drum_send=S['drums'], piano_gain=sm['piano_gain'], grand=sm)
+    band = bb.finish()
+    if band.info.get('master_gain') is not None:        # the preset's own master chain (not a kept song master)
+        song.master.fx['eq'].set(**sm['master_eq'])
+    return band
 
 
 _SOLO_NOTES = """\
@@ -826,10 +868,10 @@ def solo_piano(song, *, without=(), sounds=None, ids=None, **options):
     bb.band.analysis['profile'] = 'piano'
     feel = _swing_feel(song, options)
     bb.band.info['feel'] = feel
-    if bb.wants('piano'):
+    if bb.want('piano'):
         bb.track('piano', _solo_chain, sound_role='grand', gain_db=4.5, pan=-0.35, sends=bb.sends(-9, -14),
                  groove=feel.groove('piano'), humanize=bb.hands(feel, 'piano'))
-    if bb.wants('comp'):
+    if bb.want('comp'):
         bb.track('comp', lambda o: _solo_chain(o, comp=True), sound_role='grand', gain_db=4.5, pan=-0.1,
                  sends=bb.sends(-10), groove=feel.groove('comp'), humanize=bb.hands(feel, 'comp'))
     return bb.finish()
@@ -857,21 +899,21 @@ def lofi_piano(song, *, without=(), sounds=None, ids=None, **options):
     bb.band.analysis['profile'] = 'piano'
     feel = _swing_feel(song, options)
     bb.band.info['feel'] = feel
-    if bb.wants('piano'):
+    if bb.want('piano'):
         bb.track('piano', _lofi_chain, sound_role='felt', gain_db=1.0, pan=-0.15, sends=bb.sends(-6.5),
                  groove=feel.groove('piano'), humanize=bb.hands(feel, 'piano'))
-    if bb.wants('comp'):
+    if bb.want('comp'):
         bb.track('comp', lambda o: _lofi_chain(o, comp=True), sound_role='felt', gain_db=-1.0, pan=-0.05,
                  sends=bb.sends(-7.5), groove=feel.groove('comp'), humanize=bb.hands(feel, 'comp'))
-    if bb.wants('drums'):
+    if bb.want('drums'):
         t, _ = bb.track('drums', lambda o: _lofi_drum_chain(), sound_role='lofi_kit', gain_db=-8.5, pan=0.1,
                         sends=bb.sends(-16))
         for role in ('piano', 'comp'):
             if role in bb.band.roles:
                 song.sidechain(bb.band[role], key=t, pitches='kick', **LOFI['duck'][role])
-    if bb.wants('vinyl') and installed(CRACKLE['pack']):
-        t = song.track(bb.ids.get('vinyl', 'vinyl'), _crackle_instrument(), fx=[fx.eq(dict(LOFI['vinyl_eq']))],
-                       gain_db=-5.0, pan=0.0)
+    if bb.want('vinyl') and installed(CRACKLE['pack']):
+        t = song.track(bb.ids.get('vinyl', 'vinyl'), _crackle_instrument(), fx=[fx.eq(dict(LOFI['vinyl_eq'])), fx.compressor(**LOFI['vinyl_tame'])],
+                       gain_db=LOFI['vinyl_gain'], pan=0.0)
         bb.band.add('vinyl', t)
         bb.band.info['sounds']['vinyl'] = 'SampleRadar vinyl surface-noise loops (drawn, levelled, cross-faded)'
         credit = 'SampleRadar noise, hiss and crackle (MusicRadar): royalty-free, no redistribution of the samples'
@@ -961,30 +1003,30 @@ def bossa(song, *, without=(), sounds=None, ids=None, **options):
     feel = options.get('feel') or _jz.Feel(song.tempo, ratio=0.5, beats_per_bar=song.beats_per_bar,
                                            layback={'piano': 8, 'comp': 4, 'sax': 18})
     bb.band.info['feel'] = feel
-    if bb.wants('guitar'):
+    if bb.want('guitar'):
         bb.track('guitar', lambda o: [fx.eq({'hp.freq': 80, 'peak1.freq': 250, 'peak1.gain': -2.0, 'peak1.q': 0.9,
                                              'peak3.freq': 3000, 'peak3.gain': 1.0, 'peak3.q': 0.8}),
                                       fx.microshift(style='smooth', detune=2, delay=13, focus=250, mix=0.28)],
                  gain_db=-0.5, pan=-0.45, sends=bb.sends(-12), groove=feel.groove('comp'), humanize=(3, 5))
-    if bb.wants('piano'):      # opposite the guitar; without it nearer the centre (the trio leaned 1.8 dB left)
-        bb.track('piano', _piano_chain, gain_db=10.0, pan=_PLACE['piano'] if bb.wants('guitar') else -0.25,
+    if bb.want('piano'):      # opposite the guitar; without it nearer the centre (the trio leaned 1.8 dB left)
+        bb.track('piano', _piano_chain, gain_db=10.0, pan=_PLACE['piano'] if bb.want('guitar') else -0.25,
                  sends=bb.sends(-13, -18), groove=feel.groove('piano'), humanize=bb.hands(feel, 'piano'))
-    if bb.wants('bass'):
+    if bb.want('bass'):
         # -9 (was -6 before the peak-catcher chain): the bossa's root-fifth pulse plays at velocity 85-117, where
         # the uncompressed bass is ~3 dB louder than the old compressor let it be
         bb.track('bass', _bass_chain, gain_db=-9.0, pan=0.05, sends=bb.sends(-18), groove=feel.groove('bass'),
                  humanize=(3, 4))
-    if bb.wants('drums'):
+    if bb.want('drums'):
         _, opt = bb.track('drums', lambda o: _drum_chain(), gain_db=-1.0 + DRUM_TRIM, pan=0.35, sends=bb.sends(-11),
                           groove=feel.groove('drums'), humanize=(2, 4))
         bb.drums(opt)
-    if bb.wants('rim'):
+    if bb.want('rim'):
         _, opt = bb.track('rim', lambda o: [fx.eq({'hp.freq': 150, 'peak1.freq': 500, 'peak1.gain': -2.0,
                                                    'peak1.q': 1.0, 'high.freq': 8000, 'high.gain': -1.5})],
                           gain_db=5.0 + DRUM_TRIM, pan=0.25, sends=bb.sends(-10), groove=feel.groove('drums'),
                           humanize=(2, 5))
         bb.band.info['rim_keys'] = dict(opt.hints['keys']) if opt is not None else {'rim': GM_KIT['rim']}
-    if bb.wants('shaker'):
+    if bb.want('shaker'):
         _, opt = bb.track('shaker', lambda o: [fx.eq({'hp.freq': 300, 'high.freq': 9000, 'high.gain': -2.0})],
                           gain_db=-6.0, pan=0.5, sends=bb.sends(-12), groove=feel.groove('drums'),
                           humanize=(3, 6))
@@ -1028,17 +1070,17 @@ def soul_ballad(song, *, without=(), sounds=None, ids=None, **options):
     feel = options.get('feel') or _jz.Feel(song.tempo, ratio=0.5, beats_per_bar=song.beats_per_bar,
                                            layback={'piano': 8, 'comp': 4, 'sax': 18})
     bb.band.info['feel'] = feel
-    if bb.wants('piano'):
+    if bb.want('piano'):
         bb.track('piano', _rhodes_chain, sound_role='rhodes', gain_db=-1.0, pan=-0.05, sends=bb.sends(-13, -18),
                  groove=feel.groove('piano'), humanize=bb.hands(feel, 'piano'))
-    if bb.wants('bass'):
+    if bb.want('bass'):
         bb.track('bass', _bass_chain, gain_db=0.0, pan=0.05, sends=bb.sends(-18), groove=feel.groove('bass'),
                  humanize=(3, 4))
-    if bb.wants('drums'):
+    if bb.want('drums'):
         _, opt = bb.track('drums', lambda o: _drum_chain(), gain_db=6.0 + DRUM_TRIM, pan=0.35, sends=bb.sends(-11),
                           groove=feel.groove('drums'), humanize=(2, 4))
         bb.drums(opt)
-    if bb.wants('rim'):
+    if bb.want('rim'):
         _, opt = bb.track('rim', lambda o: [fx.eq({'hp.freq': 150, 'peak1.freq': 500, 'peak1.gain': -2.0,
                                                    'peak1.q': 1.0, 'high.freq': 8000, 'high.gain': -1.5})],
                           gain_db=7.0 + DRUM_TRIM, pan=0.25, sends=bb.sends(-10), groove=feel.groove('drums'),
@@ -1152,7 +1194,8 @@ def bossa_groove(bars, band, *, seed=0, vel: float = 1.0, fills: bool = True) ->
 
 # ------------------------------------------------------------------------------------------------ registry
 
-# Every role falls back to GeneralUser GS, so no pack is strictly required (strict=True makes the preferred ones so).
+# Every role falls back to GeneralUser GS, so no pack is required at build (strict=True makes the preferred ones so);
+# compile raises on a fallback unless $AGENTSOUND_PACK_FALLBACK=1 (library.want).
 bands.register('jazz_trio', jazz_trio, genre='jazz', roles=('piano', 'comp', 'bass', 'drums'),
                description='NYC club piano trio: Salamander grand (right hand + comping), Meatbass upright, Swirly '
                            'brushes, one wooden room (salon IR)',

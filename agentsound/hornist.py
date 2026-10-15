@@ -19,10 +19,10 @@ use on its own, and arrange() chooses them from the line (seeded, budgeted, sect
 
 Moves (MOVES): air - push, pulse, swell, messa_di_voce, fp_cresc, bloom, taper, breath_release; pitch - vibrato,
 scoop, fall, doit, shake, growl (a push carries its own small pitch lift); mic - lean_in, turn_away (= off_axis),
-bell_swing, fade_away. A Gesture holds additive shapes on the abstract lanes (LANES): 'air' (dB of breath), 'bright'
+bell_swing, fade_away, and the continuous body sway (sway: arrange(sway=1); off by default). A Gesture holds additive shapes on the abstract lanes (LANES): 'air' (dB of breath), 'bright'
 (dB of tone that comes with the air), 'bend' (semitones), 'vib' (vibrato cents), 'mic' (dB of level from the
 distance to the mic), 'prox' (dB of proximity lift ~300 Hz), 'shelf' (dB above ~3.2 kHz: on/off axis), 'room' (dB on
-the reverb sends). Every shape starts and ends at its rest value with zero slope (cosine keyframes, points every
+the reverb sends), 'pan' (+- of the track's pan: the body sway's stereo drift). Every shape starts and ends at its rest value with zero slope (cosine keyframes, points every
 <= 20 ms): no zipper, no clicks.
 
 Where it goes (targets(track), measured - TARGET_MEASUREMENTS): a +3 dB push on 'instrument.expression' of
@@ -49,20 +49,21 @@ import re
 from .budget import Budget
 from .gesture import (_EPS, LANES, Gesture, _b, _bpm, _num, _pos, _sample, accents, bell_swing, bloom,
                       breath_release, doit, fade_away, fall, fp_cresc, growl, lean_in, messa_di_voce, off_axis, pulse,
-                      push, scoop, shake, swell, taper, turn_away, vibrato)
+                      push, scoop, shake, sway, sway_contour, swell, taper, turn_away, vibrato)
 from .patterns import Clip, Note, as_clip, seed_int
 from .theory import ComposeError
 
 __all__ = ['air_stage', 'LANES', 'FAMILIES', 'STYLES', 'SECTION_ENERGY', 'MOVES', 'AIR', 'PITCH', 'MIC', 'FAST', 'SPICE',
            'TARGET_MEASUREMENTS', 'DYN_SENS', 'Gesture', 'Memory', 'Performance', 'push', 'pulse', 'swell',
            'messa_di_voce', 'fp_cresc', 'bloom', 'taper', 'breath_release', 'vibrato', 'scoop', 'fall', 'doit',
-           'shake', 'growl', 'lean_in', 'turn_away', 'off_axis', 'bell_swing', 'fade_away', 'arrange', 'targets',
+           'shake', 'growl', 'lean_in', 'turn_away', 'off_axis', 'bell_swing', 'fade_away', 'sway', 'sway_contour',
+           'arrange', 'targets',
            'mic_stage', 'render', 'family_of', 'vocabulary']
 
 MOVES = {'accents': accents, 'push': push, 'pulse': pulse, 'swell': swell, 'messa_di_voce': messa_di_voce, 'fp_cresc': fp_cresc,
          'bloom': bloom, 'taper': taper, 'breath_release': breath_release, 'vibrato': vibrato, 'scoop': scoop,
          'fall': fall, 'doit': doit, 'shake': shake, 'growl': growl, 'lean_in': lean_in, 'turn_away': turn_away,
-         'off_axis': off_axis, 'bell_swing': bell_swing, 'fade_away': fade_away}
+         'off_axis': off_axis, 'bell_swing': bell_swing, 'fade_away': fade_away, 'sway': sway}
 AIR = ('accents', 'push', 'pulse', 'swell', 'messa_di_voce', 'fp_cresc', 'bloom', 'taper', 'breath_release')
 PITCH = ('vibrato', 'scoop', 'fall', 'doit', 'shake', 'growl')
 MIC = ('lean_in', 'turn_away', 'off_axis', 'bell_swing', 'fade_away')
@@ -76,45 +77,60 @@ SPICE = ('scoop', 'fall', 'doit')
 
 FAMILIES = {
     'sax': dict(vib_ct=14.0, peak_vib_ct=26.0, vib_hz=5.4, vib_delay=0.28, push_db=2.6, lift=6.0, bright=0.6,
-                scoop=0.45, fall=0.35, doit=0.1, shake=True, growl=True, couple=0.12),
+                scoop=0.45, fall=0.35, doit=0.1, shake=True, growl=True, couple=0.12, sway_hz=0.22, sway_shelf=2.5),
     'trumpet': dict(vib_ct=10.0, peak_vib_ct=18.0, vib_hz=5.6, vib_delay=0.3, push_db=2.4, lift=5.0, bright=0.7,
-                    scoop=0.3, fall=0.35, doit=0.2, shake=True, growl=False, couple=0.12),
+                    scoop=0.3, fall=0.35, doit=0.2, shake=True, growl=False, couple=0.12, sway_hz=0.2,
+                    sway_shelf=3.0),
     'trombone': dict(vib_ct=10.0, peak_vib_ct=16.0, vib_hz=5.0, vib_delay=0.32, push_db=2.4, lift=4.0, bright=0.6,
-                     scoop=0.35, fall=0.4, doit=0.05, shake=False, growl=True, couple=0.1),
+                     scoop=0.35, fall=0.4, doit=0.05, shake=False, growl=True, couple=0.1, sway_hz=0.18,
+                     sway_shelf=2.5),
     'flute': dict(vib_ct=16.0, peak_vib_ct=22.0, vib_hz=5.0, vib_delay=0.18, push_db=2.0, lift=4.0, bright=0.3,
-                  scoop=0.05, fall=0.05, doit=0.0, shake=False, growl=False, couple=0.15),
+                  scoop=0.05, fall=0.05, doit=0.0, shake=False, growl=False, couple=0.15, sway_hz=0.2,
+                  sway_shelf=1.0),
     'clarinet': dict(vib_ct=0.0, peak_vib_ct=6.0, vib_hz=5.2, vib_delay=0.4, push_db=2.0, lift=3.0, bright=0.35,
-                     scoop=0.1, fall=0.05, doit=0.0, shake=False, growl=False, couple=0.1),
+                     scoop=0.1, fall=0.05, doit=0.0, shake=False, growl=False, couple=0.1, sway_hz=0.18,
+                     sway_shelf=1.5),
     'strings': dict(vib_ct=14.0, peak_vib_ct=20.0, vib_hz=5.8, vib_delay=0.12, push_db=2.2, lift=3.0, bright=0.4,
-                    scoop=0.05, fall=0.0, doit=0.0, shake=False, growl=False, couple=0.1),
+                    scoop=0.05, fall=0.0, doit=0.0, shake=False, growl=False, couple=0.1, sway_hz=0.15,
+                    sway_shelf=1.2),
 }
 """Per instrument family: vibrato depth (cents +-) on held notes / held peaks, its rate (Hz) and delay (s), the push
 depth (dB), the pitch lift of a push (cents), how much the tone opens with the air (dB per dB), the chances of a
 scoop / fall / doit at the note edges, whether a shake / growl exists, and how much the vibrato deepens per dB of
-air ('couple'). Baker Street (measured, the riff's held notes): vibrato +-20-30 ct at 5.4-5.5 Hz on the peaks."""
+air ('couple'), the body sway's rate (sway_hz, Hz) and how much the tone changes on / off axis (sway_shelf, dB above
+3.2 kHz: a trumpet's bell is the most directional, a flute's the least). Baker Street (measured, the riff's held notes): vibrato +-20-30 ct at 5.4-5.5 Hz on the peaks."""
 
 STYLES = {
     'hero': dict(push=0.6, pulse=0.5, swell=0.55, bloom=0.3, fp=0.12, taper=0.75, release=0.5, vib_peak=0.95,
                  vib_other=0.35, pitch=1.0, lean=0.9, swing=0.45, fade=0.5, fast_every=24, spice_every=2,
-                 mic_every=4, pulse_every=4),
+                 mic_every=4, pulse_every=4, sway=1.0),
     'pop': dict(push=0.5, pulse=0.35, swell=0.5, bloom=0.3, fp=0.08, taper=0.7, release=0.5, vib_peak=0.9,
                 vib_other=0.3, pitch=0.8, lean=0.7, swing=0.35, fade=0.5, fast_every=32, spice_every=2.5,
-                mic_every=6, pulse_every=6),
+                mic_every=6, pulse_every=6, sway=1.0),
+    # the late-70s record sax (the user's pick 2026-10-15, variant d of the hero sax A/B): pop phrasing, but a growl
+    # may land on any held peak (climax=True), at most one per 8 bars, and no shakes
+    'hero70s': dict(push=0.5, pulse=0.35, swell=0.5, bloom=0.3, fp=0.08, taper=0.7, release=0.5, vib_peak=0.9,
+                    vib_other=0.3, pitch=0.8, lean=0.7, swing=0.35, fade=0.5, fast_every=8, spice_every=2.5,
+                    mic_every=6, pulse_every=6, sway=1.0, climax=True, shake=False),
     'ballad': dict(push=0.3, pulse=0.2, swell=0.75, bloom=0.5, fp=0.05, taper=0.9, release=0.6, vib_peak=0.95,
                    vib_other=0.5, pitch=0.6, lean=0.6, swing=0.5, fade=0.7, fast_every=0, spice_every=3,
-                   mic_every=4, pulse_every=8),
+                   mic_every=4, pulse_every=8, sway=1.0),
     'jazz': dict(push=0.55, pulse=0.3, swell=0.35, bloom=0.35, fp=0.1, taper=0.6, release=0.5, vib_peak=0.8,
                  vib_other=0.3, pitch=1.2, lean=0.4, swing=0.3, fade=0.4, fast_every=32, spice_every=1.5,
-                 mic_every=8, pulse_every=6),
+                 mic_every=8, pulse_every=6, sway=1.0),
     'classical': dict(push=0.15, pulse=0.1, swell=0.7, bloom=0.4, fp=0.12, taper=0.9, release=0.3, vib_peak=0.9,
                       vib_other=0.6, pitch=0.2, lean=0.2, swing=0.2, fade=0.3, fast_every=0, spice_every=4,
-                      mic_every=16, pulse_every=8),
+                      mic_every=16, pulse_every=8, sway=0.0),
 }
 """arrange() styles: chances per held note (push, pulse on long notes, swell on the phrase peaks, bloom, fp on a
 long phrase opener, taper and breath_release at phrase ends, vibrato on held peaks / other held notes, lean_in on
 the hook peaks, bell_swing on long notes, fade_away on soft endings), `pitch` scales the scoop / fall / doit chances,
 and the budgets in bars: fast_every (shake / growl; 0 = none), spice_every (scoop / fall / doit), mic_every
-(lean_in / turn_away / bell_swing / fade_away), pulse_every (pulse, fp_cresc)."""
+(lean_in / turn_away / bell_swing / fade_away), pulse_every (pulse, fp_cresc); sway: the depth of the continuous body
+sway relative to the mic (gesture.sway, phrase-coupled; 1 in hero / pop / ballad / jazz - approved by ear 2026-10-15 -,
+0 in classical (sections); a style may also carry climax= (arrange()'s default: True = a fast set piece may land on
+any held peak) and FAMILIES keys (hero70s: shake=False - growls only); 1 = +-1.2 dB
+distance, +-1.5 dB proximity, +-sway_shelf dB axis, +-1.5 dB room, +-0.05 pan; not budgeted: it is always there)."""
 
 SECTION_ENERGY = {'intro': 0.5, 'verse': 0.55, 'pre': 0.75, 'bridge': 0.7, 'chorus': 1.0, 'hook': 1.0, 'riff': 1.0,
                   'solo': 0.9, 'trade': 0.9, 'climax': 1.15, 'outro': 0.85, 'tag': 0.8, 'ending': 0.7}
@@ -317,7 +333,8 @@ def targets(track, *, room=None, level: str | None = None) -> dict:
     """Where this track's lanes go: {'level': target of the air, 'kind': 'air' | 'dynamics' | 'mic', 'home': rest
     value, 'per_db': value per dB (dynamics), 'comp': dB the mic stage makes good, 'tone': True when the air also
     opens the mic shelf (not on 'dynamics': the layers carry the tone), 'compressed': the chain compresses, 'room':
-    [(bus, base dB)], 'vibrato': [prefixes], 'mic': 'fx.mic'}.
+    [(bus, base dB)], 'vibrato': [prefixes], 'mic': 'fx.mic', 'pan': the track's pan the pan lane moves around (None
+    when someone else automates the pan: then the lane is not written)}.
     The air: on a live-dynamics sampler with no compressor in its chain 'instrument.dynamics' (the real layer
     crossfade), else the breath stage 'fx.air.gain' (air_stage(): the hero chain's own, else inserted at the end of
     the chain - after the compressor, so a 3 dB push stays 3 dB). level= forces 'air' | 'dynamics' | 'mic' (the mic
@@ -371,6 +388,11 @@ def targets(track, *, room=None, level: str | None = None) -> dict:
     else:
         buses = [getattr(r, 'id', r) for r in (room if isinstance(room, (list, tuple)) else [room])]
     out['room'] = [(b_, float(sends.get(b_, -60.0) if sends.get(b_) is not None else -60.0)) for b_ in buses]
+    # the pan lane (a sway's stereo drift): around the track's pan, unless someone else automates / modulates it
+    if '_hornist_pan' not in track.__dict__:
+        track._hornist_pan = (None if 'pan' in auto or any(t_ == 'pan' for t_, *_ in getattr(track, '_mods', []))
+                              else float(getattr(track, 'pan', 0.0) or 0.0))
+    out['pan'] = track._hornist_pan
     return out
 
 
@@ -383,15 +405,24 @@ def render(track, gestures, *, bpm=None, room=None, level: str | None = None, vi
     flat), True / False. mic_post=True: the mic lane's LEVEL (the distance) goes on the air target after the
     compressor too (summed with the air) instead of the mic stage's output before it - a singer's pull-back on a long
     note that the vocal compressor must not undo (agentsound.singer mic_pull); the tone (proximity, axis) stays on the
-    mic stage. Returns the targets plan."""
+    mic stage. A gesture with params['post'] (gesture.sway) gets that for its own distance level alone. Returns the
+    targets plan."""
     b = _bpm(bpm if bpm is not None else track._song.tempo)
     plan = targets(track, room=room, level=level)
     if mic_post and plan['kind'] == 'dynamics':
         raise ComposeError(f"track {track.id!r}: mic_post needs a level stage after the compressor (level='air'), "
                            f"not 'dynamics'")
     acc = plan['compressed'] if accents is None else bool(accents)
-    shapes = [s for g in gestures if acc or g.name != 'accents' for s in g.shapes]
+    gs = [g for g in gestures if acc or g.name != 'accents']
+    shapes = [s for g in gs for s in g.shapes]
     by = {ln: [s for s in shapes if s.lane == ln] for ln in LANES}
+    # a gesture with params post=True (the body sway) has its distance level after the compressor (summed with the
+    # air) when the level stage is there: a slow +-1 dB drift would be flattened by the compressor
+    post = [] if mic_post or plan['kind'] != 'air' else [s for g in gs if g.params.get('post') for s in g.shapes
+                                                         if s.lane == 'mic']
+    if post:
+        ids = {id(s) for s in post}
+        by['mic'] = [s for s in by['mic'] if id(s) not in ids]
     fam = FAMILIES.get(family_of(track) or 'sax')
 
     def write(target, sel, fn):
@@ -410,7 +441,7 @@ def render(track, gestures, *, bpm=None, room=None, level: str | None = None, vi
         elif mic_post:
             write(plan['level'], by['air'] + by['mic'], lambda v: home + v.get('air', 0.0) + v.get('mic', 0.0))
         else:
-            write(plan['level'], by['air'], lambda v: home + v.get('air', 0.0))
+            write(plan['level'], by['air'] + post, lambda v: home + v.get('air', 0.0) + v.get('mic', 0.0))
         if not mic_post:
             write('fx.mic.output', by['mic'], lambda v: comp + v.get('mic', 0.0))
     tone = by['shelf'] + (by['bright'] if plan['tone'] else [])
@@ -418,6 +449,8 @@ def render(track, gestures, *, bpm=None, room=None, level: str | None = None, vi
     write('fx.mic.peak1.gain', by['prox'], lambda v: v.get('prox', 0.0))
     for bus, base in plan['room']:
         write(f'send.{bus}', by['room'], lambda v, base=base: max(-60.0, min(12.0, base + v.get('room', 0.0))))
+    if by['pan'] and plan['pan'] is not None:
+        write('pan', by['pan'], lambda v, p0=plan['pan']: max(-1.0, min(1.0, p0 + v.get('pan', 0.0))))
     write('instrument.pitchbend', by['bend'], lambda v: max(-24.0, min(24.0, v.get('bend', 0.0))))
     if vibrato and by['vib']:
         cp = fam['couple']
@@ -474,7 +507,7 @@ def _keep(cands: list, booked: list, saved: list, every_beats: float, base: floa
 
 def arrange(melody, bpm, *, family: str = 'sax', style: str = 'hero', section=None, energy: float | None = None,
             seed=0, peaks=None, vel=None, legato: bool = True, breath_ms: float = 160.0, max_phrase: float = 8.0,
-            humanize_ms: float = 4.0, late_ms: float = 0.0, climax: bool = False, memory: Memory | None = None,
+            humanize_ms: float = 4.0, late_ms: float = 0.0, climax: bool | None = None, memory: Memory | None = None,
             at=None, bpb: float = 4.0, depth: float = 1.0, held: float = 0.45, accent: float = 0.12,
             **overrides) -> Performance:
     """A wind player's performance of a written line -> Performance (.clip, .gestures, .moves, .budget,
@@ -509,6 +542,10 @@ def arrange(melody, bpm, *, family: str = 'sax', style: str = 'hero', section=No
     if family not in FAMILIES:
         raise ComposeError(f"hornist family must be one of {', '.join(FAMILIES)}, got {family!r}")
     S, F = dict(STYLES[style]), dict(FAMILIES[family])
+    style_climax = bool(S.pop('climax', False))
+    for k in [k for k in S if k in F]:          # a style's FAMILIES keys (hero70s: shake=False)
+        F[k] = S.pop(k)
+    climax = style_climax if climax is None else bool(climax)
     for k, v in overrides.items():
         if k in S:
             S[k] = v
@@ -574,6 +611,17 @@ def arrange(melody, bpm, *, family: str = 'sax', style: str = 'hero', section=No
                         back=starts[ph + 1] if ph + 1 < nphr else None)
             if g.shapes:
                 fixed.append(g)
+
+    if S['sway']:                  # the body never stands still: a continuous sway over the clip (not budgeted)
+        sd = _num(S['sway'], 'sway', 0, 3) * k
+        phr = [[(x['n'].start, x['sound'], x['n'].pitch) for x in info if x['phrase'] == ph] for ph in range(nphr)]
+        if info:
+            t0 = max(0.0, info[0]['n'].start - _b(0.6, b))
+            t1 = max(x['n'].start + x['sound'] for x in info) + _b(0.8, b)
+            g = sway(t0, t1 - t0, b, db=1.2 * sd, prox=1.5 * sd, shelf=F['sway_shelf'] * sd, room=1.5 * sd,
+                     pan=min(0.5, 0.05 * sd), hz=F['sway_hz'], contour=sway_contour(phr, b, peaks=hooks),
+                     seed=f"{seed_int(seed)}:{base:.4f}")
+            fixed.append(g)
 
     plan: list[dict] = []          # candidates: dict(name, t, score, cat, make, alt)
     vel_mean = sum(x['n'].vel for x in info) / len(info) if info else 80

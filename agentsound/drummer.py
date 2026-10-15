@@ -39,7 +39,7 @@ import random
 
 from .patterns import (GM_BRUSH, SWIRLY_BRUSH, Clip, Note, _vel, as_clip, brush_fill as _brush_fill,
                        brushes as _brushes, ride_pattern as _ride_pattern, seed_int, snare_roll as _snare_roll,
-                       tom_fill as _tom_fill)
+                       tom_fill as _tom_fill, weighted_choice)
 from .budget import Budget
 from .theory import ComposeError
 
@@ -95,19 +95,6 @@ def _pos(at) -> float:
 
 def _steps(cell: str) -> list[int]:
     return [i for i, c in enumerate(cell) if c in 'xX']
-
-
-def _pick(rng: random.Random, weights: dict, avoid=()):
-    items = [(k, w * (0.15 if k in avoid else 1.0)) for k, w in weights.items() if w > 0]
-    if not items:
-        return None
-    tot = sum(w for _, w in items)
-    x = rng.random() * tot
-    for k, w in items:
-        x -= w
-        if x <= 0:
-            return k
-    return items[-1][0]
 
 
 # ------------------------------------------------------------------------------------------------ the kit
@@ -1660,12 +1647,12 @@ def arrange(form, *, bpm=None, style: str = 'rock', density: float = 0.5, seed=0
         if key_ not in role_cells:
             pool = st['kicks'][0 if e < 0.62 else 1] or ('x.......x.......',)
             weights = {c: (1.0 if j == 0 else 0.35 + dens) for j, c in enumerate(pool)}
-            a_ = _pick(rng, weights)
-            b_ = _pick(rng, {c: w for c, w in weights.items() if c != a_}) or _vary_kick(a_, rng)
+            a_ = weighted_choice(rng, weights)
+            b_ = weighted_choice(rng, {c: w for c, w in weights.items() if c != a_}) or _vary_kick(a_, rng)
             gh_p = opts.get('ghosts', dens)
             ga = sorted(s for s, w in st['ghosts'].items() if rng.random() < w * (0.3 + 1.0 * gh_p) * (1.15 - 0.45 * e))
             gb = sorted(set(ga) | {s for s, w in st['ghosts'].items() if rng.random() < w * 0.4 * gh_p})
-            role_cells[key_] = (a_, b_, ga, gb, _pick(rng, {c: 1.0 for c in _KICK_HALF}))
+            role_cells[key_] = (a_, b_, ga, gb, weighted_choice(rng, {c: 1.0 for c in _KICK_HALF}))
         a_, b_, ga, gb, kh = role_cells[key_]
         side = opts.get('side', role in st.get('side', ()) and K.has('side'))
         rim = opts.get('rimshot', e >= st['rimshot'] and K.has('rimshot'))
@@ -1801,7 +1788,7 @@ def arrange(form, *, bpm=None, style: str = 'rock', density: float = 0.5, seed=0
                 # calm part (unless the drummer is busy)
                 ww = {k: v * ((0.3 + c['e']) if k in FLASHY else 1.0) for k, v in w.items()
                       if k not in ('roll', 'build') and not (k in FLASHY and c['e'] < 0.5 and dens <= 0.8)}
-                kind = _pick(rng, ww, avoid=near) or 'snare'
+                kind = weighted_choice(rng, ww, multipliers={k: 0.15 for k in near}) or 'snare'
             flashy = kind in FLASHY and L >= 2.0 - _EPS
             if flashy and not c.get('kind'):
                 ok = bud.allows(T, 'flashy', kind)
@@ -1810,7 +1797,7 @@ def arrange(form, *, bpm=None, style: str = 'rock', density: float = 0.5, seed=0
                     # pickup (not what the neighbouring fills play)
                     plain = {k: v for k, v in w.items() if k not in FLASHY + ('roll', 'build')}
                     plain.setdefault('pickup', fill_w.get('pickup', 1.0) if sp['style'] == style else 1.0)
-                    sub = _pick(rng, plain, avoid=near) or 'snare'
+                    sub = weighted_choice(rng, plain, multipliers={k: 0.15 for k in near}) or 'snare'
                     budget_log['dropped'].append((round(a, 4), kind, sub))
                     moves.append((a, c['t'], 'dropped', kind))
                     kind = sub
@@ -1879,7 +1866,7 @@ def arrange(form, *, bpm=None, style: str = 'rock', density: float = 0.5, seed=0
         cw = {k: v for k, v in st['crashes'].items() if K.has(k)} or {'crash': 1.0}
         if 'china' in cw and (e < 0.85 or t - china_used < 16 * 4.0):
             cw.pop('china')
-        piece = _pick(rng, cw) or 'crash'
+        piece = weighted_choice(rng, cw) or 'crash'
         if piece == 'china':
             china_used = t
         # the crash replaces the time stroke of the right hand on that beat; an open hat ringing into it is closed

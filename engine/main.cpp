@@ -23,6 +23,7 @@
 #include "analysis/ClickDetector.h"
 #include "analysis/ComparePlot.h"
 #include "analysis/FileAnalysis.h"
+#include "analysis/MixAnalyzer.h"
 #include "analysis/WaveZoom.h"
 #include "art/Cover.h"
 #include "instruments/Dx7Banks.h"
@@ -669,6 +670,14 @@ int main(int argc, char** argv) {
     const std::string assets = assetDir(assetsOverride);
 
     try {
+        if (command == "verdicts") {
+            if (!args.empty()) throw as::ConfigError("verdicts takes a JSON {report, policy?} on stdin, no arguments");
+            const json input = json::parse(std::cin);
+            for (const auto& item : input.items())
+                if (item.key() != "report" && item.key() != "policy") throw as::ConfigError("unknown verdicts key: " + item.key());
+            std::cout << as::evaluateReport(input.at("report"), input.value("policy", json::object())).dump() << '\n';
+            return 0;
+        }
         if (command == "params") return cmdParams(args);
         if (command == "dx7") return cmdDx7(args, assets);
         if (command == "sf2") return cmdSf2(args, assets);

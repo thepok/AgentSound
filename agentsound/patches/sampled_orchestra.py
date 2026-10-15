@@ -13,6 +13,9 @@ colours, orchestral mallets, bells, harp, timpani rolls and percussion, choirs.
               sampled/timpani_rolls sampled/orchestral_percussion
   choirs:     sampled/choir_mixed sampled/choir_male sampled/choir_oh
 
+The symphonic sections one per track (violins I / II, violas, celli, double basses; woodwinds a2 / a3; muted brass a3)
+live in sampled_sections.py.
+
 Solo winds, brass and strings are monophonic legato players (mono='legato'): overlapping notes are legato
 transitions; articulation.perform(track, line, at) plays a written line on them with articulations, the dynamics lane,
 vibrato and a player's timing (docs/COMPOSE_API.md "Realistic performance"). 'dynamics' (0..1, default 0.6 = mf) is
@@ -625,3 +628,20 @@ _reg(Patch(
           'Soft, rounded pads under strings, hymns, the "ooh"-like colour for ballads. ' + _CHOIR + ' ' + _EVEN +
           ' Sends: hall -6. Measured -18.0 LUFS (audition chords).',
     audition={'notes': 'chord'}))
+
+
+# ------------------------------------------------------------------------------------- masters
+
+register(Patch(
+    'master/film-lyrical',
+    fx=[fx.eq({'peak2.freq': 1100, 'peak2.gain': -3.5, 'peak2.q': 0.6, 'peak1.freq': 400, 'peak1.gain': -2.5,
+               'peak1.q': 0.7, 'peak3.freq': 3500, 'peak3.gain': -2.5, 'peak3.q': 0.8, 'high.freq': 8000,
+               'high.gain': 2.0}),
+        fx.compressor(threshold=-26, ratio=1.8, knee=12, attack=120, release=2500, detector='rms', keyhp=120),
+        fx.limiter(ceiling=-1.2, gain=3.0, release=250)],
+    notes='v1. A lyrical film-orchestra master for long listening (the endless orchestra-film genre): eq (-3.5 dB '
+          'at the boxy 1.1 kHz, -2.5 dB at 400 Hz, -2.5 dB of string glare at 3.5 kHz, +2 dB air above 8 kHz) -> a '
+          'slow rms ride (threshold -26 dBFS, 1.8:1, 12 dB knee, 120 ms attack, 2.5 s release: a tutti climax comes '
+          'down several dB, a pianissimo pad passes untouched - a raw score\'s ~17 LU loudness range -> ~12 LU) -> '
+          'the -1 dBTP limiter (3 dB drive: ~-18 LUFS). Use: song.master.use("master/film-lyrical") before '
+          'bands.make(\'film_orchestra\') (the band keeps a master that is set).'))

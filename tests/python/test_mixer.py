@@ -380,6 +380,19 @@ class Check(unittest.TestCase):
     def codes(self, rep, **kw):
         return [f.code for f in mixer.check(rep, **kw)]
 
+    def test_shared_verdict_boundaries(self):
+        from pathlib import Path
+        import json
+        cases = json.loads((Path(__file__).parents[1] / 'fixtures/verdicts.json').read_text())
+        for c in cases:
+            with self.subTest(c['name']):
+                rep = synth()
+                rep.update(c['report'])
+                actual = {f.code for f in mixer.check(rep)} & {'low_end_wide', 'loudness'}
+                expected = {'low_end_wide' if k == 'low_end_not_mono' else 'loudness'
+                            for k in c['expected'] if k in ('low_end_not_mono', 'loudness_low', 'loudness_high')}
+                self.assertEqual(actual, expected)
+
     def test_lead_not_in_front(self):
         f = mixer.check(synth(lead=-20, drums=-18.5, bass=-18.5, pad=-18.5))
         self.assertEqual(f[0].code, 'lead_not_in_front')

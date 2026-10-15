@@ -49,11 +49,28 @@ constexpr double kMatchMinSeconds = 0.5;  // scripted legato: the level match re
                                           // at least 0.5 s (3 x the crossfade when longer): a drift, not a step
 constexpr float kMatchLimitDb = 12.0f;    // largest level-match correction
 constexpr int kMaxSwitchNotes = 16;       // keyswitch notes tracked while held (sw_down)
+constexpr double kFlutterDelay = 0.03;    // 'flutter' waits this long after a note's attack ...
+constexpr double kFlutterFade = 0.15;     // ... then fades in over this long
+constexpr double kFlutterQ = 0.8;         // its band-pass: ~half to twice 'flutterrate'
+// synthetic round robins (rr*) and velocity blending (layers='blend', veltone): docs/SAMPLE_REALISM_PLAN.md levers 2-3
+constexpr double kRrAttackSkipMs = 6.0;   // rrattack 1: up to 6 ms of the transient skipped ...
+constexpr double kRrAttackRampMs = 4.0;   // ... or a softer ramp of up to 4 ms
+constexpr double kRrRepeatSec = 0.25;     // a repeat of the same key this soon varies 1.5x as much (machine-gun repeats)
+constexpr double kRrBorrowSec = 1.0;      // rrborrow: only for a repeat of the key within 1 s
+constexpr int kRrBorrowReach = 2;
+constexpr double kRrBorrowToneDb = 1.5;   // rrborrow: a neighbour whose attack is brighter / darker than this is not used
+constexpr double kRrBorrowLevelDb = 6.0;  // ... and its level is matched to the own sample's (up to this much)         // ... borrowing the nearest other sample at most 2 semitones away
+constexpr double kToneHz = 2500.0;        // rrtone / veltone: a per-voice high shelf at the output tilt's corner
+constexpr int kVelToneSpan = 32;          // veltone: layers this wide (velocity steps) or wider get the full depth
+constexpr double kVelToneDb = 10.0;       // veltone 1: the bottom of a velocity layer -10 dB above it (dyntone's curve)
+constexpr double kBlendHoldSec = 0.15;    // layers='blend': the mix holds through the attack ...
+constexpr double kBlendSettleSec = 0.25;  // ... then settles on the dominant layer (no comb filtering in the tail)
 
 enum Param { kLevel, kPan, kWidth, kTranspose, kTune, kPitchbend, kCutoff, kResonance, kAttack, kDecay, kSustain, kRelease,
              kVelsens, kStart, kOneshot, kReverse, kMono, kPolyphony, kPedal, kExpression, kDynamics, kDynTone, kDynRange,
              kLayers, kXfSpread, kLegatoTime, kLegatoOffset, kLegatoMatch, kGlide, kGlideShape, kVibrato, kVibratoRate,
-             kSympathetic, kBendFollow, kHarmonic, kHarmonicNum, kHarmonicFocus, kRestrike };
+             kSympathetic, kBendFollow, kHarmonic, kHarmonicNum, kHarmonicFocus, kRestrike, kFlutter, kFlutterPitch, kFlutterRate,
+             kRrPitch, kRrTone, kRrAttack, kRrStart, kRrLevel, kRrBorrow, kBlendWidth, kVelTone };
 
 constexpr double kHalfDampDb = 16.0;      // half pedal: extra decay (dB/s) of pedal-held treble notes at pedal 0.5
                                           // (0 at 1; the heavy bass strings get 40 % of it: the bass rings through)
@@ -131,11 +148,16 @@ std::vector<ParamSpec> makeSpecs() {
             "Level range of 'dynamics': at dynamics 0 the instrument is this much quieter than at 1 (e.g. 18 for a "
             "velocity-layered solo instrument whose crescendi should also grow louder). 0 = dynamics does not move "
             "the level by itself.", false),
-        choice("layers", {"velocity", "dynamics"}, 0,
+        choice("layers", {"velocity", "dynamics", "blend"}, 0,
                "velocity: the note velocity picks the velocity layer (vello / velhi) as recorded. dynamics: velocity "
                "layers become a dynamics stack - a note starts its layers together (phase-aligned; 'xfspread' "
                "layers on each side of the current one) and 'dynamics' crossfades between them live (equal power), so "
-               "a held note can swell from p to f. Velocity then only sets the note's level (velsens)."),
+               "a held note can swell from p to f. Velocity then only sets the note's level (velsens). blend: a struck "
+               "note starts the two velocity layers its velocity lies between and mixes them by where the velocity sits "
+               "between their centres ('blendwidth'): the timbre steps of a 2-5 layer pack become a slope (the per-note "
+               "version of 'dynamics'). The two takes start onset-aligned (their lag measured once at load: no comb in "
+               "the attack) and mix at constant power for how coherent they are; the mix holds through the attack, then "
+               "settles on the nearer layer within ~0.4 s (no comb filtering in the tail). Up to 2x the voices."),
         num("xfspread", 0.0f, 16.0f, 1.0f, "layers",
             "layers='dynamics': extra layers started on each side of the pair 'dynamics' is between at the note-on "
             "(the reach of a crescendo or diminuendo within one note; beyond it the outermost started layer holds). "
@@ -201,6 +223,58 @@ std::vector<ParamSpec> makeSpecs() {
             "tom runs and cymbal swells stop piling up boom and wash (layering every hit fully: a 16th-note floor-tom "
             "run ~+7 dB of low ring over one hit; 6 dB of damping leaves ~+1.2 dB). 0 = off (every hit layers fully, "
             "bit-identical to before); drum kits 4-9, a piano's repeated notes 3-6.", false),
+        num("flutter", 0.0f, 6.0f, 0.0f, "dB",
+            "Living sustain, amplitude: band-limited RANDOM level fluctuation of every note (shimmer: the irregular "
+            "6-20 Hz wobble of a real reed / lip / breath that a looped sample lacks), RMS dB around the note's level. "
+            "Not a periodic tremolo: each note (and each track) gets its own deterministic noise stream, so a section "
+            "never flutters in lockstep; it fades in after the attack (30 ms, then over 150 ms) and runs on through "
+            "legato transitions. 0.3-0.6 = subtle life on a sampled sax / clarinet / brass, 1-1.5 = obvious (a "
+            "breathy, nervous tone). 0 (with flutterpitch 0) costs nothing and is bit-transparent."),
+        num("flutterpitch", 0.0f, 50.0f, 0.0f, "ct",
+            "Living sustain, pitch: band-limited random pitch fluctuation (jitter), RMS cents, a stream independent of "
+            "'flutter' with the same band and fade-in. 1-2 ct = alive; from ~4 ct the high partials (which move by the same "
+            "cents, i.e. by many Hz) smear into a shrill chirp - a 6 ct jitter fills the gaps between a bright tone's "
+            "partials at 3-9 kHz to -37 dB, 2 ct leaves them at -80 dB."),
+        num("flutterrate", 2.0f, 30.0f, 11.0f, "Hz",
+            "Centre of the flutter band (a band-pass at Q 0.8: ~half to twice this). 8-14 Hz = a reed's shimmer (the "
+            "fast tremolo a listener heard as 'more real' on a sax), 4-6 Hz = a slow unsteady breath."),
+        num("rrpitch", 0.0f, 20.0f, 0.0f, "ct",
+            "Synthetic round robin, tuning: every note gets its own random tuning offset (+- this, triangular: most "
+            "notes near the middle), drawn once at the note-on - a string or reed never lands on exactly the same pitch "
+            "twice. A repeat of the same key within 250 ms varies 1.5x as much (all rr* params). Drawn per note from "
+            "its own stream (onset, key): the same in a --section render, shared by the note's layers / mics. Keep it "
+            "small in chords (out of tune from ~8): plucked 2-4, piano 1-2. Where repeats ring into each other (a "
+            "long release) a static detune beats against the earlier notes: give a plucked string 'restrike' too. "
+            "0 = off (bit-identical).", false),
+        num("rrtone", 0.0f, 6.0f, 0.0f, "dB",
+            "Synthetic round robin, brightness: a random +- dB per note on a gentle high shelf above 2.5 kHz (pick / "
+            "finger angle, bow contact, hammer spot). 0.5-1.5 dB. 0 = off.", false),
+        num("rrattack", 0.0f, 1.0f, 0.0f, "",
+            "Synthetic round robin, attack: per note either up to 6 ms of the sample's transient skipped or a softer "
+            "ramp of up to 4 ms (x this amount), so the transients of repeated notes differ. 0.2-0.4. 0 = off.", false),
+        num("rrstart", 0.0f, 50.0f, 0.0f, "ms",
+            "Synthetic round robin for sustained / looped packs: a random 0..this extra start offset where a note "
+            "already enters PAST its attack (mono='legato' scripted transitions, a 'start' beyond the attack) - another "
+            "phase of the vibration and the noise each time, never inside the attack. Reed / brass 20-30. 0 = off.",
+            false),
+        num("rrlevel", 0.0f, 3.0f, 0.0f, "dB",
+            "Synthetic round robin, level: a random +- dB per note under the velocity (triangular). 0.5-1. 0 = off.", false),
+        num("rrborrow", 0.0f, 1.0f, 0.0f, "",
+            "Synthetic round robin for one-sample-per-note packs: the chance that a REPEAT of a key (the same key again "
+            "within 1 s) plays the nearest neighbouring sample (up to 2 semitones away, same velocity layer, re-pitched, "
+            "level-matched) instead of its own - the classic trick against the machine gun. Only a neighbour whose attack "
+            "is about as bright (within 1.5 dB, measured at load) is borrowed, so a borrowed note never sticks out "
+            "(uneven packs borrow rarely); zones without key tracking (drums) never borrow. 0.3-0.5. 0 = off.", false),
+        num("blendwidth", 0.0f, 1.0f, 0.5f, "",
+            "layers='blend': how much of the way between two velocity layers' centres is crossfaded (0 = a hard switch "
+            "as recorded, bit-identical to layers='velocity'; 1 = every velocity between two centres is a mix). A "
+            "narrow width keeps most notes on one pure recording and only smooths the seams.", false),
+        num("veltone", 0.0f, 1.0f, 0.0f, "",
+            "Velocity brightness INSIDE a velocity layer: a note at the bottom of its layer is darker (a high shelf "
+            "above 2.5 kHz, -10 dB x veltone at the lowest velocity of a layer 32+ velocities wide, less in a narrower "
+            "one, as recorded at its top), so a layer no longer has one fixed colour for 30 velocity steps - dyntone's "
+            "curve, per note. 0.3-0.6 on 2-5 layer pianos / guitars (with layers='blend'); 16-layer packs (Salamander) "
+            "barely move. 0 = off.", false),
     };
 }
 
@@ -358,6 +432,9 @@ struct Zone {
     float legatoOffset{kNoValue};                   // ms (scripted legato entry)
     double legatoStart{0.0};                        // frames: where a scripted legato note starts (set in prepare)
     std::shared_ptr<const smp::LevelTrack> levels;  // mono='legato': the sample's level track
+    float atkDb{0.0f}, atkBright{0.0f};             // rrborrow: the attack's level and brightness (smp::attackColour)
+    float blendLead{0.0f}, blendCorr{0.0f};         // layers='blend': s this zone's onset leads the layer below's;
+                                                    // their correlation once in step (smp::leadOf)
     int swLastLo{-1}, swLastHi{-1}, swDown{-1};     // keyswitch conditions (-1: none)
 };
 
@@ -848,6 +925,22 @@ struct Voice {
     float hWarm{0.0f};               // a cold start fades the partial in while its band-passes and envelopes settle
     float hA{0.0f};                  // the amount at the end of the last block (ramped per sample: no zipper)
     float rs{1.0f}, rsTarget{1.0f};  // re-strike damping: the gain and where it glides (restrike)
+    // 'flutter': the note's own random amplitude / pitch streams, faded in after the attack
+    dsp::BandNoise flAmp, flPitch;
+    float flFade{0.0f};
+    int flWait{0};
+    // rrtone / veltone: one high-shelf tone offset per voice (0 = bypassed)
+    float toneK{0.0f};               // shelf gain - 1
+    float toneLp[2]{};
+    // layers='blend': this voice's share of its note (equal power, angle th: cos for the lower layer, sin for the upper)
+    bool blend{false}, blendUpper{false};
+    float blTh{0.0f}, blTarget{0.0f}, blStep{0.0f}, blCorr{0.0f};
+    int blHold{0};
+};
+
+// Draws of one note's synthetic round robin (rr* params; zero when off).
+struct RrDraw {
+    float cents{0.0f}, toneDb{0.0f}, levelDb{0.0f}, skipMs{0.0f}, rampMs{0.0f}, startMs{0.0f};
 };
 
 struct Held {
@@ -1066,6 +1159,9 @@ public:
         mono_ = params_.choice("mono") == 1;
         legatoMode_ = params_.choice("mono") == 2;
         layersDyn_ = params_.choice("layers") == 1;
+        layersBlend_ = params_.choice("layers") == 2;
+        lastOn_.fill(std::numeric_limits<std::int64_t>::min());
+        toneCoef_ = static_cast<float>(1.0 - std::exp(-dsp::kTwoPi * kToneHz / ctx.sampleRate));
         xfSpread_ = static_cast<int>(params_.get(kXfSpread));
         std::vector<ZoneSpec> specs = dir_.empty() ? specs_ : expandDir(ctx.assetDir);
         loadZones(ctx.assetDir, specs);
@@ -1074,9 +1170,20 @@ public:
         voices_.assign(static_cast<std::size_t>(poly_ + std::max(8, poly_ / 2)), Voice{});
         playLayer_.clear();
         playLayer_.reserve(zones_.size() + 1);
+        playBlend_.clear();
+        playBlend_.reserve(zones_.size() + 1);
         if (legatoMode_) {  // level tracks: the scripted-legato entry points and the level match
             for (auto& z : zones_) {
                 if (z.region) z.levels = smp::levelTrack(*z.region);
+            }
+        }
+        if (layersBlend_) alignLayers();
+        if (params_.get(kRrBorrow) > 0.0f) {
+            for (auto& z : zones_) {
+                if (!z.region) continue;
+                const smp::Colour c = smp::attackColour(*z.region, z.offset);
+                z.atkDb = static_cast<float>(c.levelDb);
+                z.atkBright = static_cast<float>(c.brightDb);
             }
         }
         const int maxBlock = std::max(1, ctx.maxBlock);
@@ -1109,6 +1216,12 @@ public:
         vib_ = vib1_ = params_.get(kVibrato);
         vibRate_ = vibRate1_ = params_.get(kVibratoRate);
         vibPhase_ = 0.0;
+        fl_ = fl1_ = params_.get(kFlutter);
+        flCents_ = flCents1_ = params_.get(kFlutterPitch);
+        flOn_ = fl_ > 0.0f || flCents_ > 0.0f;
+        flRate_ = params_.get(kFlutterRate);
+        flCoefs_ = dsp::BandNoise::coefs(flRate_, kFlutterQ, sr_ / smp::kControl);
+        flFadeStep_ = static_cast<float>(smp::kControl / (kFlutterFade * sr_));
         harm_ = harm1_ = params_.get(kHarmonic);
         harmActive_ = harm_ > 0.0f;
         hEnvCoef_ = static_cast<float>(1.0 - std::exp(-1.0 / (kHarmEnvTau * sr_)));
@@ -1167,17 +1280,37 @@ public:
         if (!legato) vibPhase_ = 0.0;   // vibrato starts afresh with a phrase, runs on through legato notes
         const float rnd = random01(static_cast<std::uint64_t>(now), static_cast<std::uint64_t>(key), 0x6E6F74656F6Eull);
         const int dynNow = static_cast<int>(std::lround(params_.get(kDynamics) * 127.0f));
+        const std::int64_t since = now - lastOn_[static_cast<std::size_t>(key)];
+        if (!returning) lastOn_[static_cast<std::size_t>(key)] = now;
+        drawRoundRobin(key, now, since);
+        const int zoneKey = borrowKey(key, vel, rnd, legato, dynNow, now, since, borrowGainDb_);
+        borrow_ = zoneKey - key;
         playing_.clear();
-        for (const int zi : onZones_[static_cast<std::size_t>(key)]) {
+        for (const int zi : onZones_[static_cast<std::size_t>(zoneKey)]) {
             const Zone& z = zones_[static_cast<std::size_t>(zi)];
-            if ((!layersDyn_ && (vel < z.vello || vel > z.velhi)) || rnd < z.lorand || rnd >= z.hirand) continue;
+            if ((!layersDyn_ && !layersBlend_ && (vel < z.vello || vel > z.velhi)) || rnd < z.lorand || rnd >= z.hirand) continue;
             if ((z.trigger == Trigger::First && legato) || (z.trigger == Trigger::Legato && !legato)) continue;
             if (!switchOk(z) || dynNow < z.dynLo || dynNow > z.dynHi) continue;
-            if (!nextInSequence(zi, z)) continue;
+            if (!layersBlend_ && !nextInSequence(zi, z)) continue;   // blend: counted below, for the layers that play
             playing_.push_back(zi);
         }
         playLayer_.assign(playing_.size(), {-1.0f, -1.0f, -1.0f});
+        playBlend_.clear();
         if (layersDyn_) assignLayers(params_.get(kDynamics) * 127.0f);
+        if (layersBlend_) {
+            assignBlend(vel);
+            std::size_t out = 0;
+            for (std::size_t i = 0; i < playing_.size(); ++i) {
+                if (!nextInSequence(playing_[i], zones_[static_cast<std::size_t>(playing_[i])])) continue;
+                playing_[out] = playing_[i];
+                playLayer_[out] = playLayer_[i];
+                playBlend_[out] = playBlend_[i];
+                ++out;
+            }
+            playing_.resize(out);
+            playLayer_.resize(out);
+            playBlend_.resize(out);
+        }
         // a legato transition needs a line to continue and a sustained note to go to (one-shot zones - staccato,
         // pizzicato programs - attack: detached notes)
         const bool line = legatoMode_ && legato && hasLineVoices() &&
@@ -1629,6 +1762,182 @@ private:
         return static_cast<int>(n % static_cast<std::uint32_t>(z.seqLength)) == z.seqPosition - 1;
     }
 
+    // ------------------------------------------------------------------------------ synthetic round robins
+
+    // A note's own random stream (onset sample - song time, so a --section render draws the same -, key, a salt per
+    // purpose): flutter and the round robins each draw from their own, so turning one on never moves the other.
+    std::uint64_t noteSeed(std::int64_t now, int key, std::uint64_t salt) const noexcept {
+        return mix64(seed_ ^ mix64(static_cast<std::uint64_t>(now) ^ mix64(static_cast<std::uint64_t>(key) ^ salt)));
+    }
+
+    static float unit(std::uint64_t s, int k) noexcept {   // k-th uniform draw [0, 1) of a stream
+        return static_cast<float>(static_cast<double>(mix64(s + 0x9E3779B97F4A7C15ull * static_cast<std::uint64_t>(k + 1)) >> 40) *
+                                  (1.0 / 16777216.0));
+    }
+
+    // rr* draws of the note at `now` on `key` (`since`: samples since that key's previous note-on).
+    void drawRoundRobin(int key, std::int64_t now, std::int64_t since) noexcept {
+        rr_ = RrDraw{};
+        const float pitch = params_.get(kRrPitch), tone = params_.get(kRrTone), attack = params_.get(kRrAttack),
+                    start = params_.get(kRrStart), level = params_.get(kRrLevel);
+        if (pitch <= 0.0f && tone <= 0.0f && attack <= 0.0f && start <= 0.0f && level <= 0.0f) return;
+        const std::uint64_t s = noteSeed(now, key, 0x726F756E64726Full);   // "roundro"
+        const float more = since >= 0 && since < static_cast<std::int64_t>(kRrRepeatSec * sr_) ? 1.5f : 1.0f;
+        auto tri = [&](int k) { return unit(s, k) + unit(s, k + 1) - 1.0f; };   // triangular -1..1
+        rr_.cents = pitch * more * tri(0);
+        rr_.toneDb = tone * more * (2.0f * unit(s, 2) - 1.0f);
+        rr_.levelDb = level * more * tri(3);
+        const float u = 2.0f * unit(s, 5) - 1.0f;
+        const float amt = std::min(1.0f, attack * more);
+        rr_.skipMs = u > 0.0f ? static_cast<float>(u * amt * kRrAttackSkipMs) : 0.0f;
+        rr_.rampMs = u < 0.0f ? static_cast<float>(-u * amt * kRrAttackRampMs) : 0.0f;
+        rr_.startMs = start * unit(s, 6);
+    }
+
+    // The zones a key would start (no round-robin counters touched); false when a zone does not follow the key (drums:
+    // never borrowed).
+    bool zonesFor(int k, int vel, float rnd, bool legato, int dynNow, std::array<const Zone*, 16>& out, int& n) const noexcept {
+        n = 0;
+        for (const int zi : onZones_[static_cast<std::size_t>(k)]) {
+            const Zone& z = zones_[static_cast<std::size_t>(zi)];
+            if ((!layersDyn_ && !layersBlend_ && (vel < z.vello || vel > z.velhi)) || rnd < z.lorand || rnd >= z.hirand) continue;
+            if ((z.trigger == Trigger::First && legato) || (z.trigger == Trigger::Legato && !legato)) continue;
+            if (!switchOk(z) || dynNow < z.dynLo || dynNow > z.dynHi) continue;
+            if (z.keytrack == 0.0) return false;
+            if (n < 16 && z.region) out[static_cast<std::size_t>(n++)] = &z;
+        }
+        return true;
+    }
+
+    // rrborrow: a repeat of `key` within 1 s may play the nearest other sample (+-1..2 semitones, re-pitched) whose
+    // attack has a similar brightness (within kRrBorrowToneDb); `gainDb` matches its level to the own sample's.
+    int borrowKey(int key, int vel, float rnd, bool legato, int dynNow, std::int64_t now, std::int64_t since, float& gainDb) const noexcept {
+        gainDb = 0.0f;
+        const float chance = params_.get(kRrBorrow);
+        if (chance <= 0.0f || since < 0 || since > static_cast<std::int64_t>(kRrBorrowSec * sr_)) return key;
+        const std::uint64_t s = noteSeed(now, key, 0x626F72726F77ull);   // "borrow"
+        if (unit(s, 0) >= chance) return key;
+        std::array<const Zone*, 16> own{}, other{};
+        int nOwn = 0, nOther = 0;
+        if (!zonesFor(key, vel, rnd, legato, dynNow, own, nOwn) || nOwn == 0) return key;
+        const int dir = unit(s, 1) < 0.5f ? -1 : 1;
+        for (int reach = 1; reach <= kRrBorrowReach; ++reach) {
+            for (const int d : {dir * reach, -dir * reach}) {
+                const int k = key + d;
+                if (k < 0 || k > 127) continue;
+                if (!zonesFor(k, vel, rnd, legato, dynNow, other, nOther) || nOther == 0) continue;
+                bool differs = false;
+                for (int i = 0; i < nOther && !differs; ++i) {
+                    bool shared = false;
+                    for (int j = 0; j < nOwn && !shared; ++j)
+                        shared = other[static_cast<std::size_t>(i)]->region == own[static_cast<std::size_t>(j)]->region;
+                    differs = !shared;
+                }
+                if (!differs) continue;
+                const Zone& a = *own[0];
+                const Zone& b = *other[0];
+                if (std::fabs(b.atkBright - a.atkBright) > static_cast<float>(kRrBorrowToneDb)) continue;   // sticks out
+                auto lvl = [](const Zone& z) { return z.atkDb + 20.0f * std::log10(std::max(z.gain, 1e-6f)); };
+                gainDb = std::clamp(lvl(a) - lvl(b), static_cast<float>(-kRrBorrowLevelDb), static_cast<float>(kRrBorrowLevelDb));
+                return k;
+            }
+        }
+        return key;
+    }
+
+    // layers='blend': per zone, how far its onset leads the next lower velocity layer of the same key range (same
+    // root and group; the closest mic / pan) - two takes of a hammer or a pluck are coherent in the attack, and blended
+    // 1-2 ms apart they comb-filter it. Computed once here (smp::leadOf), applied as a start delay on the leading take.
+    void alignLayers() {
+        for (auto& z : zones_) {
+            z.blendLead = z.blendCorr = 0.0f;
+            if (!z.region) continue;
+            const Zone* below = nullptr;
+            for (const auto& y : zones_) {
+                if (&y == &z || !y.region || y.lo != z.lo || y.hi != z.hi || y.root != z.root || y.group != z.group ||
+                    y.velhi >= z.vello)
+                    continue;
+                if (!below || y.velhi > below->velhi || (y.velhi == below->velhi && std::fabs(y.pan - z.pan) < std::fabs(below->pan - z.pan)))
+                    below = &y;
+            }
+            if (!below) continue;
+            const smp::Lead l = smp::leadOf(*below->region, below->offset, *z.region, z.offset);
+            z.blendLead = static_cast<float>(l.lead);
+            z.blendCorr = static_cast<float>(l.corr);
+        }
+    }
+
+    // layers='blend': of the velocity layers among playing_, the pair the velocity lies between starts, each zone with
+    // its equal-power share (playBlend_: angle, upper side, target angle); a single layer when the velocity is outside
+    // the pair's crossfade ('blendwidth' 0: exactly the layer 'velocity' picks).
+    void assignBlend(int vel) noexcept {
+        std::array<std::pair<int, int>, 64> layers{};   // (vello, velhi), sorted by centre
+        int n = 0;
+        for (const int zi : playing_) {
+            const Zone& z = zones_[static_cast<std::size_t>(zi)];
+            const std::pair<int, int> r{z.vello, z.velhi};
+            int i = 0;
+            while (i < n && layers[static_cast<std::size_t>(i)].first + layers[static_cast<std::size_t>(i)].second < r.first + r.second) ++i;
+            if (i < n && layers[static_cast<std::size_t>(i)] == r) continue;
+            if (n == 64) continue;
+            for (int j = n; j > i; --j) layers[static_cast<std::size_t>(j)] = layers[static_cast<std::size_t>(j - 1)];
+            layers[static_cast<std::size_t>(i)] = r;
+            ++n;
+        }
+        auto centre = [&](int i) { return 0.5f * static_cast<float>(layers[static_cast<std::size_t>(i)].first + layers[static_cast<std::size_t>(i)].second); };
+        int own = -1;
+        for (int i = 0; i < n; ++i)
+            if (vel >= layers[static_cast<std::size_t>(i)].first && vel <= layers[static_cast<std::size_t>(i)].second) { own = i; break; }
+        if (own < 0) {   // in a gap between layers: the nearest
+            float best = 1e9f;
+            for (int i = 0; i < n; ++i) {
+                const float d = std::fabs(centre(i) - static_cast<float>(vel));
+                if (d < best) { best = d; own = i; }
+            }
+        }
+        int lo = own, hi = own;
+        if (own >= 0 && static_cast<float>(vel) >= centre(own) && own + 1 < n) hi = own + 1;
+        else if (own > 0 && static_cast<float>(vel) < centre(own)) lo = own - 1;
+        float th = 0.0f;   // 0 = all lower layer .. pi/2 = all upper
+        if (lo != hi) {
+            const float w = params_.get(kBlendWidth);
+            const float b = 0.5f * static_cast<float>(layers[static_cast<std::size_t>(lo)].second + layers[static_cast<std::size_t>(hi)].first);
+            const float a0 = b - w * (b - centre(lo)), a1 = b + w * (centre(hi) - b);
+            const float x = static_cast<float>(vel);
+            const float t = a1 > a0 ? std::clamp((x - a0) / (a1 - a0), 0.0f, 1.0f) : (x > b ? 1.0f : 0.0f);
+            th = t * 1.57079633f;
+            if (t <= 0.0f) hi = lo;
+            if (t >= 1.0f) lo = hi;
+        }
+        const float target = th < 0.785398163f ? 0.0f : 1.57079633f;
+        // the two takes start in step: the one whose onset leads waits (alignLayers), so the attacks do not comb
+        float lead = 0.0f, corr = 0.0f;
+        if (lo != hi && own >= 0) {
+            for (const int zi : playing_) {
+                const Zone& z = zones_[static_cast<std::size_t>(zi)];
+                if (std::pair<int, int>{z.vello, z.velhi} == layers[static_cast<std::size_t>(hi)]) {
+                    lead = z.blendLead;
+                    corr = z.blendCorr;
+                    break;
+                }
+            }
+        }
+        std::size_t out = 0;
+        for (std::size_t i = 0; i < playing_.size(); ++i) {
+            const Zone& z = zones_[static_cast<std::size_t>(playing_[i])];
+            const std::pair<int, int> r{z.vello, z.velhi};
+            const bool isLo = own >= 0 && r == layers[static_cast<std::size_t>(lo)], isHi = own >= 0 && r == layers[static_cast<std::size_t>(hi)];
+            if (!isLo && !isHi) continue;
+            playing_[out] = playing_[i];
+            playLayer_[out] = playLayer_[i];
+            const float wait = lo == hi ? 0.0f : isHi ? std::max(0.0f, lead) : std::max(0.0f, -lead);
+            playBlend_.push_back({lo == hi ? -1.0f : th, isHi && lo != hi ? 1.0f : 0.0f, target, wait, corr});
+            ++out;
+        }
+        playing_.resize(out);
+        playLayer_.resize(out);
+    }
+
     // ------------------------------------------------------------------------------ keyswitches
 
     void keyswitchOn(int noteId, int key) noexcept {
@@ -1700,6 +2009,10 @@ private:
         bool haveVib{false};            // zone vibrato state of the line (continued by the new note)
         float vibPhase{0.0f}, vibFade{1.0f};
         int vibWait{0};
+        bool haveFl{false};             // the line's flutter streams (continued by the new note: no new fade-in)
+        dsp::BandNoise flAmp, flPitch;
+        float flFade{1.0f};
+        int flWait{0};
     };
 
     // A voice of the sounding line (mono='legato'): a held note, not a release sample, not on its way out.
@@ -1766,6 +2079,11 @@ private:
                     ho.vibFade = v.vibFade;
                     ho.vibWait = v.vibWait;
                 }
+                ho.haveFl = true;
+                ho.flAmp = v.flAmp;
+                ho.flPitch = v.flPitch;
+                ho.flFade = v.flFade;
+                ho.flWait = v.flWait;
             }
             v.lgFrom = legatoGain(v.lgDir, v.lgPos, v.lgFrom);   // from its current gain (a note still fading in: sin)
             v.lgDir = -1;
@@ -1845,7 +2163,8 @@ private:
             if (gain < 1e-5f) continue;  // decayed below -100 dB
             if (z.groupPolyphony > 0) limitGroup(z, noteId);
             const std::array<float, 3>* layer = (!released && i < playLayer_.size() && playLayer_[i][1] >= 0.0f) ? &playLayer_[i] : nullptr;
-            startVoice(allocate(), z, key, vel, noteId, now, gain, released, layer, ho);
+            const std::array<float, 5>* blend = (!released && i < playBlend_.size() && playBlend_[i][0] >= 0.0f) ? &playBlend_[i] : nullptr;
+            startVoice(allocate(), z, key, vel, noteId, now, gain, released, layer, ho, blend);
         }
     }
 
@@ -2011,7 +2330,9 @@ private:
     }
 
     void startVoice(Voice& v, const Zone& z, int key, int vel, int noteId, std::int64_t now, float gain, bool released,
-                    const std::array<float, 3>* layer = nullptr, const Handoff* ho = nullptr) {
+                    const std::array<float, 3>* layer = nullptr, const Handoff* ho = nullptr,
+                    const std::array<float, 5>* blend = nullptr) {
+        const RrDraw rr = released ? RrDraw{} : rr_;   // release samples: as recorded
         const smp::Region& r = *z.region;
         auto zr = [&](std::uint64_t salt) {
             return random01(static_cast<std::uint64_t>(now), static_cast<std::uint64_t>(key) ^ z.salt, salt);
@@ -2026,6 +2347,9 @@ private:
             else if (ho->offsetMs > 0.0f) offset += ho->offsetMs * 0.001 * r.rate;
             else if (z.levels) offset = std::max(offset, z.levels->attackEnd);
         }
+        // synthetic round robin: past the attack (rrstart) a random extra start; else a little of the transient skipped
+        if (rr.startMs > 0.0f && (scripted || (z.levels && offset >= z.levels->attackEnd))) offset += rr.startMs * 0.001 * r.rate;
+        else if (rr.skipMs > 0.0f && !scripted) offset += rr.skipMs * 0.001 * r.rate;
         offset = std::min(offset, z.end - 1.0);
         const bool loop = z.loops && !oneshot_ && !released;
         v.reader.start(r, offset, z.end, loop);
@@ -2033,13 +2357,38 @@ private:
         v.stereo = r.channels == 2;
         double cents = (key - z.root) * z.keytrack + z.tune + params_.get(kTune);
         if (z.pitchRandom > 0.0f) cents += (2.0 * zr(2) - 1.0) * z.pitchRandom;
+        if (rr.cents != 0.0f) cents += rr.cents;
         v.baseInc = r.rate / sr_ * std::exp2(cents / 1200.0);
         v.inc = v.baseInc;
         v.played = 0.0;
         float amp = z.gain * gain * velocityGain(z, vel);
         if (!layer) amp *= crossfade(vel, z.xf[0], z.xf[1], z.xf[2], z.xf[3], z.xfVelPower);  // a dynamics stack crossfades itself
-        amp *= crossfade(key, z.xf[4], z.xf[5], z.xf[6], z.xf[7], z.xfKeyPower);
+        amp *= crossfade(key + (released ? 0 : borrow_), z.xf[4], z.xf[5], z.xf[6], z.xf[7], z.xfKeyPower);
+        if (!released && borrow_ != 0 && borrowGainDb_ != 0.0f) amp *= dsp::dbToGain(borrowGainDb_);
         if (z.ampRandom > 0.0f) amp *= dsp::dbToGain(zr(3) * z.ampRandom);
+        if (rr.levelDb != 0.0f) amp *= dsp::dbToGain(rr.levelDb);
+        // per-voice tone: the round robin's brightness and the velocity's place inside its layer (veltone)
+        float toneDb = rr.toneDb;
+        const float velTone = params_.get(kVelTone);
+        if (velTone > 0.0f && !released && z.velhi > z.vello) {
+            const float pos = std::clamp(static_cast<float>(vel - z.vello) / static_cast<float>(z.velhi - z.vello), 0.0f, 1.0f);
+            // a narrow layer (a 16-layer pack) spans little colour: the depth follows its width, so the step to the
+            // next layer up never turns darker-brighter-darker
+            const float span = std::min(1.0f, static_cast<float>(z.velhi - z.vello + 1) / static_cast<float>(kVelToneSpan));
+            toneDb -= static_cast<float>(kVelToneDb) * velTone * span * (1.0f - pos);
+        }
+        v.toneK = toneDb != 0.0f ? dsp::dbToGain(toneDb) - 1.0f : 0.0f;
+        v.toneLp[0] = v.toneLp[1] = 0.0f;
+        // layers='blend': this zone's share of the note, settling on the dominant layer after the attack
+        v.blend = blend != nullptr;
+        if (blend) {
+            v.blTh = (*blend)[0];
+            v.blCorr = (*blend)[4];
+            v.blendUpper = (*blend)[1] > 0.5f;
+            v.blTarget = (*blend)[2];
+            v.blHold = static_cast<int>(std::lround(kBlendHoldSec * sr_ / smp::kControl));
+            v.blStep = static_cast<float>(1.57079633 * smp::kControl / (kBlendSettleSec * sr_));
+        }
         v.amp = amp;
         v.pan = z.pan;
         v.width = z.width;
@@ -2060,7 +2409,9 @@ private:
         // envelope: the zone's times (+ velocity tracking), else the instrument's
         constexpr double n = smp::kControl;
         const double x = vel / 127.0;
-        const double a = std::max(0.0, (std::isnan(z.attack) ? params_.get(kAttack) : z.attack) + z.velAttack * x);
+        double a = std::max(0.0, (std::isnan(z.attack) ? params_.get(kAttack) : z.attack) + z.velAttack * x);
+        if (rr.rampMs > 0.0f) a = std::max(a, rr.rampMs * 0.001);   // a softer attack this time
+        if (rr.skipMs > 0.0f) a = std::max(a, 0.001);               // entering a transient late: never a click
         const double d = std::max(0.0, (std::isnan(z.decay) ? params_.get(kDecay) : z.decay) + z.velDecay * x);
         const double sus = std::clamp((std::isnan(z.sustain) ? params_.get(kSustain) : z.sustain) + z.velSustain * x, 0.0, 1.0);
         const double rel = std::isnan(z.release) ? params_.get(kRelease) : z.release + z.velRelease * x;
@@ -2068,6 +2419,7 @@ private:
         v.env.start(sr_, z.envDelay, a, hold, d, sus, rel);
         double delay = z.delay;
         if (z.delayRandom > 0.0f) delay += zr(4) * z.delayRandom;
+        if (blend) delay += (*blend)[3];   // layers='blend': the leading take waits for the other
         v.startDelay = static_cast<int>(std::lround(delay * sr_));
         if (scripted) {  // a legato note does not attack: its envelope starts settled, no start delay
             v.env.level = 1.0f;
@@ -2123,6 +2475,20 @@ private:
             v.vibPhase = ho->vibPhase;
             v.vibFade = ho->vibFade;
             v.vibWait = ho->vibWait;
+        }
+        // flutter: one stream pair per note (the zones / layers of one note share it: one instrument), its own per
+        // track (seed_); a legato note continues the line's
+        if (ho && ho->haveFl) {
+            v.flAmp = ho->flAmp;
+            v.flPitch = ho->flPitch;
+            v.flFade = ho->flFade;
+            v.flWait = ho->flWait;
+        } else {
+            const std::uint64_t fs = noteSeed(now, key, 0x666C7574746572ull);
+            v.flAmp.reset(fs);
+            v.flPitch.reset(mix64(fs ^ 0x7069746368ull));
+            v.flFade = 0.0f;
+            v.flWait = static_cast<int>(std::lround(kFlutterDelay * blocksPerSec));
         }
         v.active = true;
         v.keyDown = !released;
@@ -2235,6 +2601,14 @@ private:
         }
         double cents = (v.bendScale == 1.0f ? bend_ : bend_ * v.bendScale) * 100.0 + v.glideCents;
         if (v.vibDepth != 0.0f) cents += v.vibDepth * lfoStep(v.vibPhase, v.vibInc, v.vibFade, v.vibFadeStep, v.vibWait);
+        float flDb = 0.0f;
+        if (flOn_) {   // living sustain: the note's random shimmer (dB) and jitter (cents)
+            const float fa = v.flAmp.next(flCoefs_), fp = v.flPitch.next(flCoefs_);
+            if (v.flWait > 0) --v.flWait;
+            else v.flFade = std::min(1.0f, v.flFade + flFadeStep_);
+            cents += static_cast<double>(flCents_ * v.flFade * fp);
+            flDb = fl_ * v.flFade * fa;
+        }
         if (vib_ != 0.0f) {
             const double ph = vibPhase_ + static_cast<double>(vibRate_) / sr_ * offset;
             cents += vib_ * std::sin(dsp::kTwoPi * ph);
@@ -2247,6 +2621,17 @@ private:
         v.dynG = dynamicsGain(v);
         float a = v.amp * v.env.level * v.dynG;
         if (v.tremDepth != 0.0f) a *= dsp::dbToGain(v.tremDepth * lfoStep(v.tremPhase, v.tremInc, v.tremFade, v.tremFadeStep, v.tremWait));
+        if (flDb != 0.0f) a *= dsp::dbToGain(flDb);
+        float blendG = 1.0f;
+        if (v.blend) {   // layers='blend': the note's mix of two layers, settling on the dominant one after the attack
+            if (v.blHold > 0) --v.blHold;
+            else if (v.blTh != v.blTarget) v.blTh = v.blTh < v.blTarget ? std::min(v.blTarget, v.blTh + v.blStep) : std::max(v.blTarget, v.blTh - v.blStep);
+            const bool gone = v.blendUpper ? v.blTh <= 0.0f : v.blTh >= 1.57079633f;
+            // equal power, normalised by the pair's coherence: two takes in step add like one (cos + sin would be
+            // +3 dB between the layers), unrelated ones by power
+            blendG = gone ? 0.0f : (v.blendUpper ? std::sin(v.blTh) : std::cos(v.blTh)) / std::sqrt(1.0f + v.blCorr * std::sin(2.0f * v.blTh));
+            a *= blendG;
+        }
         if (v.fadeStep > 0.0f) {
             v.fade = std::max(0.0f, v.fade - v.fadeStep * n);
             a *= v.fade;
@@ -2268,7 +2653,7 @@ private:
         }
         a *= v.rs;
         if (v.env.stage == Eg::Done || (v.fadeStep > 0.0f && v.fade <= 0.0f) || v.reader.done || v.damp < kSilent ||
-            v.rs < kSilent ||
+            v.rs < kSilent || (v.blend && blendG == 0.0f && v.blHold == 0) ||
             (v.lgDir < 0 && v.lgPos >= 1.0f) || (v.env.stage == Eg::Sustain && v.env.sustain * v.amp < kSilent * 0.1f)) {
             v.finishing = true;
             a = 0.0f;
@@ -2338,6 +2723,18 @@ private:
                 zoneTone(v, 0, b0, m);
                 if (v.stereo) zoneTone(v, 1, b1, m);
             }
+            if (v.toneK != 0.0f) {   // rrtone / veltone: one-pole high shelf at 2.5 kHz, x + k (x - lowpass(x))
+                const float c = toneCoef_, k = v.toneK;
+                for (int ch = 0; ch < (v.stereo ? 2 : 1); ++ch) {
+                    float* x = ch == 0 ? b0 : b1;
+                    float lp = v.toneLp[ch];
+                    for (int i = 0; i < m; ++i) {
+                        lp += c * (x[i] - lp);
+                        x[i] += k * (x[i] - lp);
+                    }
+                    v.toneLp[ch] = dsp::flush(lp);
+                }
+            }
             if (v.hOn) {
                 for (int i = 0; i < m; ++i) b0[i] = v.coefs.process(v.lp[0], b0[i]);
                 if (v.stereo) {
@@ -2404,6 +2801,17 @@ private:
         smp::glide(dyn1_, dyn_, params_.get(kDynamics), fast);
         smp::glide(vib1_, vib_, params_.get(kVibrato), fast);
         smp::glide(vibRate1_, vibRate_, params_.get(kVibratoRate), fast);
+        const float flT = params_.get(kFlutter), flpT = params_.get(kFlutterPitch);
+        if (flT > 0.0f || flpT > 0.0f || flOn_) {
+            smp::glide(fl1_, fl_, flT, fast);
+            smp::glide(flCents1_, flCents_, flpT, fast);
+            flOn_ = fl_ != 0.0f || flCents_ != 0.0f || flT > 0.0f || flpT > 0.0f;
+            const float rate = params_.get(kFlutterRate);
+            if (std::fabs(rate - flRate_) > 0.005f * flRate_) {   // automated rate: re-tuned in 0.5 % steps
+                flRate_ = rate;
+                flCoefs_ = dsp::BandNoise::coefs(rate, kFlutterQ, sr_ / smp::kControl);
+            }
+        }
         const float harmTarget = params_.get(kHarmonic);
         if (harmTarget > 0.0f || harm_ != 0.0f || harm1_ != 0.0f) {
             smp::glide(harm1_, harm_, harmTarget, static_cast<float>(std::exp(-t / kHarmTau)));
@@ -2523,11 +2931,22 @@ private:
     float bend1_{0.0f}, cutoff1_{20000.0f}, res1_{0.0f}, pan1_{0.0f}, width1_{1.0f}, gain1_{1.0f};
     float outGain_{1.0f};
     // realism: live dynamics, layers, legato, vibrato, keyswitches
-    bool legatoMode_{false}, layersDyn_{false};
+    bool legatoMode_{false}, layersDyn_{false}, layersBlend_{false};
+    // synthetic round robins and blend: the current note's draws, its borrowed key offset, each key's last note-on
+    RrDraw rr_;
+    int borrow_{0};
+    float borrowGainDb_{0.0f};   // rrborrow: the borrowed sample's level match (dB)
+    std::array<std::int64_t, 128> lastOn_{};
+    float toneCoef_{0.3f};
+    std::vector<std::array<float, 5>> playBlend_;   // per playing_ entry (layers='blend'): angle (-1 single), upper, target,
+                                                    // delay s, the pair's correlation
     int xfSpread_{1};
     std::vector<std::array<float, 3>> playLayer_;   // per playing_ entry: layer neighbours (lo, mid, hi) or mid -1
     float dyn_{1.0f}, dyn1_{1.0f}, vib_{0.0f}, vib1_{0.0f}, vibRate_{5.5f}, vibRate1_{5.5f};
     double vibPhase_{0.0};
+    float fl_{0.0f}, fl1_{0.0f}, flCents_{0.0f}, flCents1_{0.0f}, flRate_{11.0f}, flFadeStep_{1.0f};
+    bool flOn_{false};
+    dsp::BandNoise::Coefs flCoefs_;
     float harm_{0.0f}, harm1_{0.0f}, hEnvCoef_{0.0f}, hPeakFall_{1.0f};
     bool harmActive_{false};
     float dynTone_{0.5f}, lineFadeStep_{0.0f};

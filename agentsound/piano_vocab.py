@@ -204,6 +204,26 @@ def _land(ctx, t: float, pitch: int, dur: float, devices=None) -> Part:
     return pt.shifted(t)
 
 
+def _grid(ctx, dense: bool, length: float, cut: bool = False) -> tuple:
+    """A line's (grid, length): 8ths, or 16ths for a dense line when the feel allows one here (cfg['sixteenths']:
+    {'every': bars between two 16th lines, 'bars': the longest one} - blind round 7: a bossa solo in 16ths for 7
+    bars; None: as dense as the stage wants). A planned burst (the double-time stage) may run twice as long; a longer
+    line stays in 8ths - or, cut=True, runs its 16ths that long (the caller goes on in 8ths). A 16th line is booked
+    in the solo's memory."""
+    if not dense or S.seconds(ctx, 0.25) < 0.11:
+        return 0.5, length
+    six = _cfg(ctx).get('sixteenths')
+    if not six:
+        return 0.25, length
+    from .budget import Budget
+    bud = ctx.memory.setdefault('_sixteenths', Budget({'16': six['every'] * ctx.bpb}))
+    most = six['bars'] * ctx.bpb * (2.0 if ctx.stage == 'burst' else 1.0)
+    if (length > most + 1e-6 and not cut) or not bud.allows(ctx.at, '16'):
+        return 0.5, length
+    bud.book(ctx.at, '16')
+    return 0.25, min(length, most)
+
+
 LINE_ON = 3.0
 """A move fills its slot (Move beats 0): material that ends more than LINE_ON beats before the slot's end (a motif, a
 riff's call and answer, a resolution's few steps) goes on as a line (_line_on) - blind round 6: a 16-beat slot played
@@ -240,7 +260,7 @@ def m_motif(ctx) -> Part:
 
 
 def m_answer(ctx) -> Part:
-    st = _line_on(ctx, S.answer_line(ctx, grid_=0.5 if ctx.density < 0.6 else 0.25))
+    st = _line_on(ctx, S.answer_line(ctx, grid_=_grid(ctx, ctx.density >= 0.6, ctx.beats)[0]))
     return _play(ctx, st, _DEV['answer'], ornaments={'crush': 1.0, 'mordent': 1.0}, quick=0.15)
 
 
@@ -264,8 +284,8 @@ def m_riff(ctx) -> Part:
 
 
 def m_sequence(ctx) -> Part:
-    g = 0.5 if ctx.density < 0.75 or S.seconds(ctx, 0.25) < 0.11 else 0.25
     L = max(1.0, ctx.beats - ctx.rng.choice((0.75, 1.0, 1.5, 2.0)) - 0.25)
+    g, L = _grid(ctx, ctx.density >= 0.75, L, cut=True)       # (a 16th burst cut short goes on in 8ths: _line_on)
     # a sequence: mostly the motif's cell sequenced / developed (soloist.MOTIVIC), else a target-first line
     st = (S.motif_line(ctx, length=L) if ctx.rng.random() < S.MOTIVIC else []) or S.target_line(ctx, grid_=g, length=L)
     st = [(t, min(d, max(0.25, L - t)), p) for t, d, p in st]
@@ -273,7 +293,7 @@ def m_sequence(ctx) -> Part:
     top = S.fold(S.snap(S.step(st[-1][2], S.scale(ctx), ctx.rng.choice((1, 1, -1))),
                         S.chord_tones(ctx, ctx.at + end)), ctx, near=st[-1][2])
     st.append((end, S.held(ctx.beats - end, 0.75), top))
-    return _play(ctx, st, _DEV['sequence'])
+    return _play(ctx, _line_on(ctx, st) if g < 0.5 else st, _DEV['sequence'])
 
 
 def _varied_line(ctx) -> list:
@@ -324,7 +344,9 @@ def _set_piece(ctx, D: float = 2.0, land: float = 1.5):
     figure's length (D x 0.75..1.3) and its landing (land x 0.5..1.6) are drawn; a slot longer than both opens with
     a line (target-first in a dense stage, an answer else) and the figure comes late in it, its place drawn (on an
     8th; the line may run straight into it or breathe first) - a set piece crowns a phrase, it does not fill it, and
-    it never sits in the same spot twice."""
+    it never sits in the same spot twice. The landing is held its drawn length (+ a beat at most), not to the slot's
+    end: _crowned goes on with a line after it (blind round 8: a waltz's fourths cascade landing on a chord held 2.5
+    bars, then a bar of silence - 4-9 silent bars per waltz chorus)."""
     rng = ctx.rng
     D = min(max(1.0, round(D * rng.uniform(0.75, 1.3) * 4) / 4), max(1.0, ctx.beats * 0.45))
     land = land * rng.uniform(0.5, 1.6)
@@ -334,17 +356,28 @@ def _set_piece(ctx, D: float = 2.0, land: float = 1.5):
     t0 = max(1.5, float(int(rest * rng.uniform(0.6, 1.0) * 2) / 2.0))     # on an 8th
     sub = S.Ctx(**dict(ctx.__dict__, beats=t0 - rng.choice((0.0, 0.25, 0.5))))
     if ctx.density >= 0.7:
-        g = 0.5 if S.seconds(ctx, 0.25) < 0.11 else 0.25
-        st = S.target_line(sub, grid_=g, length=sub.beats)
+        st = S.target_line(sub, grid_=_grid(sub, True, sub.beats)[0], length=sub.beats)
         pre = _play(sub, st, _DEV['sequence'])
     else:
         pre = _play(sub, S.answer_line(sub, grid_=0.5), _DEV['answer'])
-    return pre, t0, D, S.held(ctx.beats - t0 - D, 0.75)
+    return pre, t0, D, S.held(min(ctx.beats - t0 - D, land + 1.0), 0.75)
 
 
-def _crowned(pre, t0, fig: Part, land: Part) -> Part:
+def _crowned(pre, t0, fig: Part, land: Part, ctx=None) -> Part:
+    """The lead-in, the figure at t0 and its landing; with ctx, a slot left open after the landing (more than LINE_ON
+    beats) goes on as an answering line (LINE_ON)."""
     out = fig.shifted(t0).merge(land.shifted(t0))
-    return pre.merge(out) if pre is not None else out
+    out = pre.merge(out) if pre is not None else out
+    if ctx is None or not len(out.clip):
+        return out
+    end = max(n.start + n.dur for n in out.clip)
+    if ctx.beats - end < LINE_ON + 1.0 - 1e-6:
+        return out
+    last = max(out.clip, key=lambda n: (n.start, n.pitch))
+    t1 = end + ctx.rng.choice((0.0, 0.5, 0.5, 1.0))
+    sub = S.Ctx(**dict(ctx.__dict__, at=ctx.at + t1, beats=ctx.beats - t1,
+                       last=Note(ctx.at + last.start, last.dur, last.pitch, 80)))
+    return out.merge(_play(sub, S.answer_line(sub, grid_=0.5), _DEV['answer']).shifted(t1))
 
 
 def _last_pitch(part) -> int | None:
@@ -373,10 +406,14 @@ def m_run(ctx) -> Part:
         start = last - ctx.rng.choice((1, 2, 3)) if last is not None and lo <= last < top - 4 else \
             max(lo, top - span)
         end = top - 1
-    run = pianist.run(start, end, D, ctx.bpm, chord=ctx.chord(ctx.at + t0), key=S.key_of(ctx),
-                      vel=(S.vel(ctx, 0.35), S.vel(ctx, 0.8)), seed=ctx.rng.randrange(1 << 30))
     sub = S.Ctx(**dict(ctx.__dict__, at=ctx.at + t0))
-    return _crowned(pre, t0, _figure(ctx, run, 'run'), _land(sub, D, top, hold))
+    tries = iter((0, 2, -2, 3))                      # (a run that repeats a recent lick starts elsewhere: fresh)
+
+    def make():
+        return pianist.run(max(lo, start + next(tries, 0)), end, D, ctx.bpm, chord=ctx.chord(ctx.at + t0),
+                           key=S.key_of(ctx), vel=(S.vel(ctx, 0.35), S.vel(ctx, 0.8)), seed=ctx.rng.randrange(1 << 30))
+    run = S.fresh(sub, make)
+    return _crowned(pre, t0, _figure(ctx, run, 'run'), _land(sub, D, top, hold), ctx)
 
 
 def m_fourths(ctx) -> Part:
@@ -394,7 +431,7 @@ def m_fourths(ctx) -> Part:
         f = Clip._raw([n for n in f if n.start < cut - 1e-6], f.length)
     low = min(n.pitch for n in f) if len(f) else top - 7
     land = S.fold(S.snap(low + 2, S.chord_tones(ctx, ctx.at + t0 + D), 1), ctx, near=low)
-    return _crowned(pre, t0, _figure(ctx, f, 'fourths'), _land(sub, D, land, hold))
+    return _crowned(pre, t0, _figure(ctx, f, 'fourths'), _land(sub, D, land, hold), ctx)
 
 
 def m_octave_run(ctx) -> Part:
@@ -406,7 +443,7 @@ def m_octave_run(ctx) -> Part:
     run = pianist.octave_run(start, top - 1, D, ctx.bpm, chord=ctx.chord(ctx.at + t0), key=S.key_of(ctx),
                              vel=(S.vel(ctx, 0.5), S.vel(ctx, 0.9)), seed=ctx.rng.randrange(1 << 30))
     land = _land(sub, D, top, hold, devices={'octave': 3.0, 'locked': 1.0})
-    return _crowned(pre, t0, _figure(ctx, run, 'octave_run'), land)
+    return _crowned(pre, t0, _figure(ctx, run, 'octave_run'), land, ctx)
 
 
 def _held(ctx):
@@ -569,7 +606,8 @@ def _place_fn(cfg):
 def vocabulary(style: str = 'straight', *, lh_track=None, lh: str | None = 'guide', lh_vel: float = 56,
                lh_register=('C3', 'C4'), lh_density: float = 0.5, lh_answers: float | None = None, pedal: bool = True,
                register=('A4', 'D6'), floor='C4', ceiling='C7', vel=(58, 112), doubles: float | None = 0.8,
-               memory=None, moves=None, weights=None, phrase_bars: float = 2, budget=None, seed=0) -> Vocabulary:
+               memory=None, moves=None, weights=None, phrase_bars: float = 2, budget=None, seed=0,
+               sixteenths=None) -> Vocabulary:
     """The jazz pianist's soloist.Vocabulary: MOVES built from the soloist's material and played by the pianist's
     hands (pianist.arrange per phrase with the move's voicing devices - no fills: the soloist plans the space -; the
     named moves for the set pieces). style: STYLES ('straight', 'bar', 'lush', 'ballad': move weights, the budget,
@@ -580,7 +618,9 @@ def vocabulary(style: str = 'straight', *, lh_track=None, lh: str | None = 'guid
     right hand's track, lifted for runs / 4ths / trills. vel=(lo, hi) of the whole solo; doubles: the notes under the
     melody's top note x this velocity (the line leads). memory: a pianist.Memory shared with the song's arrange()
     calls (the ornament budget song-wide; default one per solo). weights= / moves= as the guitar's; budget= the
-    soloist budget in bars (default the style's: fast every 16, spice every 2). seed: the left hand's dice."""
+    soloist budget in bars (default the style's: fast every 16, spice every 2). seed: the left hand's dice.
+    sixteenths: {'every': bars, 'bars': bars} - 16th lines at most one per `every` bars and `bars` long (the feel's
+    density: a bossa rarely, a ballad's double time more often; None: whenever a dense stage wants them)."""
     from . import pianist
     from .theory import note as _note
     if style not in STYLES:
@@ -590,13 +630,17 @@ def vocabulary(style: str = 'straight', *, lh_track=None, lh: str | None = 'guid
     if memory is not None and not isinstance(memory, pianist.Memory):
         raise ComposeError(f"piano vocabulary memory must be a pianist.Memory(), got {memory!r}")
     ST = STYLES[style]
+    if sixteenths is not None and (set(sixteenths) != {'every', 'bars'} or
+                                   not all(isinstance(v, (int, float)) and v > 0 for v in sixteenths.values())):
+        raise ComposeError(f"piano vocabulary sixteenths must be {{'every': bars > 0, 'bars': bars > 0}}, got "
+                           f"{sixteenths!r}")
     lo, hi = _note(register[0]), _note(register[1])
     if not 48 <= lo < hi - 12 <= 96:
         raise ComposeError(f"piano vocabulary register must span 12+ semitones within C3..C8, got {register!r}")
     cfg = {'arrange_style': style if style in pianist.STYLES else 'straight', 'roll': ST['roll'],
            'floor': _note(floor), 'ceiling': ceiling, 'doubles': doubles, 'memory': memory, 'lh_track': lh_track,
            'lh': lh, 'lh_vel': lh_vel, 'lh_register': lh_register, 'lh_density': lh_density, 'lh_answers': lh_answers,
-           'pedal': bool(pedal), 'seed': seed}
+           'pedal': bool(pedal), 'seed': seed, 'sixteenths': dict(sixteenths) if sixteenths else None}
     w = dict(ST['weights'])
     w.update(weights or {})
     names = list(MOVES) if moves is None else list(moves)

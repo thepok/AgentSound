@@ -8,6 +8,7 @@
 #include "analysis/MixAnalyzer.h"
 #include "analysis/NoteDynamics.h"
 #include "analysis/Profiles.h"
+#include "analysis/Realism.h"
 #include "analysis/Space.h"
 #include "analysis/StreamStats.h"
 
@@ -26,6 +27,8 @@ struct NodeData {
     std::unique_ptr<StreamStats> stats;
     std::unique_ptr<ClickDetector> clicks;
     std::unique_ptr<OnsetEnvelope> env;  // tracks only: 2.5 ms envelope for the note dynamics
+    std::unique_ptr<RealismProbe> realism;  // tracks with notes: the realism probes (made at the first feed)
+    bool realismTried{false};
     // filled by finish()
     double rmsDb{kDbFloor};  // RMS while active
     double peakDb{kDbFloor};
@@ -114,6 +117,7 @@ struct MixImpl {
     std::vector<ZoomSpan> zooms;               // per-section spectrogram images
     std::vector<ImageInfo> images;             // what writeImages() writes, in reading order
     SpaceData space;                           // the 'space' assessment (Space.h)
+    std::vector<std::string> packFallbacks;    // analysis.packFallbacks messages: 'pack_fallback' errors
 
     double tickSec() const noexcept { return tickLen / sampleRate; }
     // Song beat at `sec` seconds from the first rendered sample, and back (through the tempo map).

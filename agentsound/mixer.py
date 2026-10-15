@@ -160,6 +160,11 @@ PROFILES: dict[str, MixProfile] = {
                         lead_ride_db=0.0, bed_ride_db=0.0, bed_duck_db=0.0, kick_bass_duck_db=0.0, dip_db=0.0,
                         glue=('no glue: one instrument, the pianist balances the hands; keep the dynamics',),
                         notes='solo piano: the melody hand on top of the accompaniment (voicing, 3-12 dB), one room'),
+    'organ': MixProfile('organ', rhythm=(-14.0, -4.0), low=(-12.0, 0.0), bed=(-12.0, -1.0), other_max=-1.0,
+                        lead_ride_db=0.0, bed_ride_db=0.0, bed_duck_db=0.0, kick_bass_duck_db=0.0, dip_db=0.0,
+                        glue=('no glue: one instrument - the registration is the balance; keep the dynamics',),
+                        notes='church organ: the solo stop over its accompaniment, the pedal the foundation, one '
+                              'church (bands.church_organ calibrates the registers)'),
     'film': MixProfile('film', rhythm=(-10.0, -2.0), low=(-8.0, -1.0), bed=(-7.0, -1.0), other_max=-1.5,
                        lead_ride_db=1.0, bed_ride_db=-1.0, bed_duck_db=1.5, kick_bass_duck_db=4.0, dip_db=-1.5,
                        glue=('a hybrid bus (low hits, braams, synth sub): compressor 2:1, 2 dB',),
@@ -1239,17 +1244,16 @@ def check(report, *, profile=None, song=None, roles=None, lead=None, hooks=None,
                                f"{space.get('widthAbove150HzPct', '?')} %, correlation {space.get('correlationAbove150Hz', '?')})",
                                ('widen the music parts: ' + ops) if code == 'narrow' and ops else
                                'back off the wideners (chorus mix, width > 1.2) on the parts that go anti-phase'))
-    lowc = [s['name'] for s in rep.get('sections', []) if s.get('lowEndCorrelation', 1.0) < 0.8 and s.get('lufs', -120) > view.loudest - 12]
-    if lowc:
-        out.append(Finding('low_end_wide', 'warn', f"the low end is not mono in {', '.join(lowc)} (correlation < 0.8 "
-                           f"below 150 Hz)", 'mono the lows: the master width with monobass, or eq width off the bass '
-                           '/ kick layers; no chorus on the bass', None, [], lowc))
-    g = rep.get('global') or {}
-    tgt = (rep.get('reference') or {}).get('lufsTarget')
-    if tgt and g.get('lufsIntegrated') is not None and not tgt[0] - 0.5 <= g['lufsIntegrated'] <= tgt[1] + 0.5:
-        out.append(Finding('loudness', 'info', f"{g['lufsIntegrated']:.1f} LUFS vs the {prof.name} target "
-                           f"{tgt[0]:g}..{tgt[1]:g} (the mastering stage: limiter drive)", 'master.gain / limiter gain; '
-                           'the mix balance does not depend on it'))
+    from .verdicts import evaluate
+    remedies = {'low_end_not_mono': ('low_end_wide', 'warn',
+                 'mono the lows: master width monobass; no chorus on the bass'),
+                'loudness_low': ('loudness', 'info', 'master.gain / limiter gain'),
+                'loudness_high': ('loudness', 'info', 'master.gain / limiter gain')}
+    for f in evaluate(rep):
+        if f['code'] in remedies:
+            code, severity, fix = remedies[f['code']]
+            out.append(Finding(code, severity, f['message'], fix,
+                               sections=[f['section']] if f['section'] else []))
     order = {'warn': 0, 'info': 1}
     arc = arc_proposal(rep, song, getattr(song, 'applied_mix', None) if song is not None else None)
     if arc:

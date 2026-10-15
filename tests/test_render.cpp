@@ -170,6 +170,49 @@ int main() {
     bad = baseSong();
     bad["tracks"][1]["notes"][0][2] = 128;
     check(throwsConfig(bad, "pitch"), "out-of-range pitch rejected");
+
+    // Per-note expression (core/NoteExpression.h): the optional fifth note field, strict per instrument.
+    {
+        json ok = baseSong();
+        ok["tracks"][1]["notes"][0].push_back(json::object());
+        const auto parsed = as::parseSong(ok);
+        const auto& pad = parsed.nodes[1];
+        check(pad.notes[0].expression == 0 && pad.expressions.size() == 1 && pad.expressions[0].count == 0 &&
+                  pad.notes[1].expression == -1,
+              "an empty note-params object is accepted on any instrument (index into the node's expressions)");
+        bad = baseSong();
+        bad["tracks"][1]["notes"][0].push_back({{"string", 2}});
+        check(throwsConfig(bad, "takes no note params"), "note params on an instrument without note specs rejected");
+        bad = baseSong();
+        bad["tracks"][1]["notes"][0].push_back(3);
+        check(throwsConfig(bad, "must be an object"), "a note-params field that is not an object rejected");
+        bad = baseSong();
+        bad["tracks"][1]["notes"][0] = {0, 4, 57, 90, json::object(), 1};
+        check(throwsConfig(bad, "notes[0]"), "a note with six fields rejected");
+        const std::vector<as::ParamSpec> specs = {as::num("string", -1.0f, 5.0f, -1.0f, "", "string"),
+                                                  as::num("pick", 0.0f, 1.0f, 0.0f, "", "pick")};
+        const auto e = as::parseNoteExpression(json{{"string", 3}, {"pick", 0.25}}, specs);
+        check(e.count == 2 && e.get("string", -9.0f) == 3.0f && e.get("pick", -9.0f) == 0.25f && e.get("legato", -9.0f) == -9.0f &&
+                  e.has("pick") && !e.has("legato"),
+              "parseNoteExpression copies declared params into fixed slots; missing ones fall back");
+        auto rejects = [&](const json& v, const char* needle) {
+            try {
+                as::parseNoteExpression(v, specs);
+            } catch (const as::ConfigError& err) {
+                return std::string(err.what()).find(needle) != std::string::npos;
+            }
+            return false;
+        };
+        check(rejects(json{{"bogus", 1}}, "bogus") && rejects(json{{"string", 9}}, "string"),
+              "unknown and out-of-range note params rejected");
+        // the expression rides with the note-on; an instrument without specs plays the note unchanged
+        as::RenderOptions eo;
+        eo.assetDir = "assets";
+        eo.quiet = true;
+        eo.outDir = (scratch / "expr").string();
+        as::renderSong(parsed, eo);
+        check(readFile(scratch / "expr" / "mix.wav") == a, "a note with empty params renders bit-identically");
+    }
     bad = baseSong();
     bad["tracks"][1]["fx"][0]["type"] = "reverb";
     check(throwsConfig(bad, "sidechain"), "sidechain on an effect without key input rejected");
@@ -223,7 +266,7 @@ int main() {
             d["analysis"] = analysis;
             return throwsConfig(d, expect);
         };
-        check(rejects({{"profile", "outrun"}}, "unknown analysis profile 'outrun' (profiles: default, synthwave, dreamwave, darksynth, jazz, classical, piano, pop, edm, rock, film)"),
+        check(rejects({{"profile", "outrun"}}, "unknown analysis profile 'outrun' (profiles: default, synthwave, dreamwave, darksynth, jazz, classical, piano, organ, pop, edm, rock, film)"),
               "unknown profile rejected, message lists the profiles");
         check(rejects({{"profil", "synthwave"}}, "unknown key 'profil'"), "unknown analysis key rejected");
         check(rejects("synthwave", "$.analysis: must be an object"), "non-object analysis rejected");

@@ -179,7 +179,7 @@ def build() -> Song:
     # the solo sax in front of a thinned band: the bed ducked and carved deeper under it (6-8 dB, the lamplight rule)
     sax = hero(s.track('sax', 'hero/sax'), family='sax', genre='synthwave', bed=[pad, choir, strings],
                competitors=[keys, arp, glass], sections=[solo], duck=4.0, carve=4.5)
-    sax.send(s.buses['hero_plate'], -11)     # its own big plate 3 dB wetter (was -14): an epic, wider solo image
+    sax.send(s.buses['hero_plate_70s'], -11)     # its own big plate (hero/sax v2: the 70s plate) 3 dB wetter (was -14): an epic, wider solo image
 
     # ------------------------------------------------------------------ the hook instrument, played by a pianist
     # a synthwave hook is sung, not decorated: restrikes and rolls (the piano's way to sustain), a rare crush or turn

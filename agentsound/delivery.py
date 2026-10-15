@@ -43,8 +43,8 @@ GENRE_OF_STYLE = {'synthwave': 'Synthwave', 'outrun': 'Synthwave', 'dreamwave': 
                   'jazz': 'Jazz', 'classical': 'Classical', 'rock': 'Rock', 'pop': 'Pop'}
 DEFAULT_ARTIST = 'AgentSound'
 # Analysis profiles that are not cover styles themselves (engine/analysis/Profiles.cpp).
-PROFILE_STYLE = {'film': 'classical', 'piano': 'classical'}
-PROFILE_GENRE = {'film': 'Soundtrack', 'piano': 'Classical'}
+PROFILE_STYLE = {'film': 'classical', 'piano': 'classical', 'organ': 'classical'}
+PROFILE_GENRE = {'film': 'Soundtrack', 'piano': 'Classical', 'organ': 'Classical'}
 
 # SoundFonts shipped in assets/soundfonts (no SOURCE.json there).
 KNOWN_SOUNDFONTS = {

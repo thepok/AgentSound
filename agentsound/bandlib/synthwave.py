@@ -14,7 +14,8 @@ the final numbers are in each band's notes (band.notes) and in recipes/synthwave
 
 Common options (agentsound/bands.py): without=('arp', ...), sounds={'lead': 'synthwave/sync_lead'} (replaces the
 sound, keeps the role's chain, fader, pan and sends), ids={'drums': 'kit'}. Preset options are listed per preset.
-Missing sample packs fall back to the library's synthesized equivalents (band.info['fallbacks'] names what was
+Missing sample packs fall back to the library's synthesized equivalents - compile raises on them unless
+$AGENTSOUND_PACK_FALLBACK=1 (library.want) - (band.info['fallbacks'] names what was
 replaced and the pack that brings the sampled sound back); nothing here needs a pack at import time.
 
 A bus the song already has under a preset's bus id ('hall', 'plate', 'echo', ...) is used as it is (the preset does
@@ -44,8 +45,10 @@ _CMI = 'fairlight-cmi-library-1-3'
 _GRAND = 'salamander-grand'
 
 
-def _have(*packs: str) -> bool:
-    return all((library.SAMPLES / p / 'SOURCE.json').is_file() for p in packs)
+def _have(*packs: str, instead: str = '') -> bool:
+    """All `packs` installed? A miss inside a preset is recorded with what plays `instead` (library.want): compile
+    raises unless $AGENTSOUND_PACK_FALLBACK=1."""
+    return all([library.want(p, instead) for p in packs])
 
 
 def _s(pack: str, rel: str) -> str:
@@ -94,40 +97,39 @@ def _assemble(song, preset: str, roles: dict, *, returns: dict, master, analysis
               sounds=None, ids=None, gate_pitches=('snare', 'clap'), key_role: str = 'drums', info=None):
     """Build the band: the returns the active roles use, the tracks, the keyed gated reverb, the kick pump and the
     master chain."""
-    without, sounds, ids = set(without or ()), dict(sounds or {}), dict(ids or {})
-    band = bands.Band(song, preset, notes, analysis)
+    builder = bands.Builder(song, preset, bus_policy='reuse', callable_overrides=True, without=without, sounds=sounds, ids=ids,
+                            notes=notes, analysis=analysis)
+    band, sounds = builder.band, builder.sounds
     band.info.update(info or {})
     fallbacks, used_packs = {}, set()
-    active = {r: spec for r, spec in roles.items() if r not in without}
+    active = {r: spec for r, spec in roles.items() if builder.want(r)}
     used = {b for spec in active.values() for b in spec.sends}
     for bid, (chain, gain) in returns.items():
         if bid not in used:
             continue
-        if bid in song.buses:
-            band.bus(bid, song.buses[bid])
-        else:
-            band.bus(bid, song.bus(bid, patches.get(chain) if isinstance(chain, str) else chain, gain_db=gain))
+        builder.bus(bid, create=lambda name: song.bus(
+            name, patches.get(chain) if isinstance(chain, str) else chain, gain_db=gain))
     for role, spec in active.items():
         if role in sounds:
             sound = sounds[role]
-        elif spec.packs and not _have(*spec.packs):
-            missing = [p for p in spec.packs if not _have(p)]
+        elif spec.packs and not all(library.has(p) for p in spec.packs):
+            missing = [p for p in spec.packs if not library.has(p)]
             if spec.alt is None:
                 raise ComposeError(f"band {preset!r}: role {role!r} needs the sample pack(s) {', '.join(missing)}: "
                                    f"python -m agentsound samples fetch {' '.join(missing)}")
             sound = spec.alt
+            for p in missing:
+                library.record(p, f"{role}: {spec.alt if isinstance(spec.alt, str) else bands._sound_name(spec.alt)}")
             fallbacks[role] = missing
         else:
             sound = spec.sound
             used_packs.update(spec.packs)
-        sound = sound() if callable(sound) else sound
-        t = song.track(ids.get(role, role), _as_patch(sound, role), fx=[f.copy() for f in spec.fx],
+        t = builder.track(role, sound, prepare=_as_patch, fx=[f.copy() for f in spec.fx],
                        pre=[f.copy() for f in spec.pre_fx], gain_db=spec.gain, pan=spec.pan,
                        sends={band.buses[b]: db for b, db in spec.sends.items() if b in band.buses})
         if role not in sounds:                      # movement written for the default sound's params
             for target, mod in spec.mods:
                 t.modulate(target, mod)
-        band.add(role, t)
     kit = band.roles.get(key_role)
     if kit is not None:
         if 'gated' in band.buses:
@@ -178,9 +180,9 @@ def _hall(dark: bool = False, width: float | None = None):
     """The Lexicon 224XL concert / dark hall (IR) when installed, else the algorithmic lush hall. width narrows the
     return (the halls are decorrelated, ~105 % side/mid: under a wide master a pad-only intro reads correlation < 0)."""
     if dark:
-        name = 'bus/ir_hall_dark' if _have(_XL_DARK) else 'bus/hall_lush'
+        name = 'bus/ir_hall_dark' if _have(_XL_DARK, instead='bus/hall_lush') else 'bus/hall_lush'
     else:
-        name = 'bus/ir_hall' if _have(_XL_HALL) else 'bus/hall'
+        name = 'bus/ir_hall' if _have(_XL_HALL, instead='bus/hall') else 'bus/hall'
     return (name if width is None else patches.get(name).with_fx(fx.width(width=width)), 0.0)
 
 
@@ -214,7 +216,7 @@ def _plate():
     """The 224XL constant-density plate A (IR) when installed, else the algorithmic 80s EMT plate. The IR plates
     return ~8 dB less than bus/plate at the same send (measured, agentsound/patches/space_ir.py v3): the bus gets
     +7 dB so the preset sends mean the same on both."""
-    return ('bus/ir_plate', 7.0) if _have(_XL_PLATE) else ('bus/plate_80s', 0.0)
+    return ('bus/ir_plate', 7.0) if _have(_XL_PLATE, instead='bus/plate_80s') else ('bus/plate_80s', 0.0)
 
 
 # ------------------------------------------------------------------------------------------ kits

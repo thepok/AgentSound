@@ -155,11 +155,6 @@ def _echo_stage(time: float = 0.75, offset: float = 33.333, feedback: float = 0.
             'lowcut': 350, 'wow': 0.15, 'duck': 0.35, 'width': 1.0, 'mix': mix}
 
 
-def _echo(time: float = 0.75, offset: float = 33.333, feedback: float = 0.32, mix: float = 0.2):
-    """The lead's own stereo echo (an FX; see _echo_stage)."""
-    return heroes.stage_fx('echo', _echo_stage(time, offset, feedback, mix))[0]
-
-
 # the guitar heroes' mix / space / playing rules for heroes.hero()
 _GTR_MIX = {'duck': 2.5, 'duck_attack': 10.0, 'duck_release': 180.0, 'carve_db': 2.5, 'carve_freq': 2000.0,
             'carve_q': 0.8, 'ride_db': 1.0, 'dip_db': -2.0, 'dip_freq': 2000.0, 'dip_q': 0.9}

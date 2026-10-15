@@ -1973,6 +1973,364 @@ void testGuitarTechniques() {
 
 }  // namespace
 
+// 'flutter' / 'flutterpitch' / 'flutterrate': band-limited random amplitude and pitch micro-modulation per note.
+// Synthetic round robins (rr*) and velocity blending (layers='blend', veltone): docs/SAMPLE_REALISM_PLAN.md levers 2-3.
+void testRoundRobinsAndBlend() {
+    std::printf("synthetic round robins (rrpitch / rrtone / rrlevel / rrattack / rrstart / rrborrow), layers='blend', veltone\n");
+    const fs::path dir = gTmp / "rr";
+    const std::string sn = writeWav(dir / "s.wav", sine(440.0, 48000, 1.0, 0.5), 48000, 16);
+    const json base = {{"velsens", 0}, {"release", 0.02}, {"samples", {{"file", sn}, {"root", 69}}}};
+    std::vector<Event> rep;   // 8 repeats, 0.5 s apart (not 'fast' repeats)
+    for (int k = 0; k < 8; ++k) {
+        rep.push_back({sec(0.5 * k), true, k + 1, 69, 0.8f});
+        rep.push_back({sec(0.5 * k + 0.4), false, k + 1, 69, 0.0f});
+    }
+    auto seeded = [&](const json& p, std::uint64_t seed, double startBeat = 0.0) {
+        auto s = makeSampler();
+        s->configure(p);
+        RenderContext ctx;
+        ctx.sampleRate = kSr;
+        ctx.assetDir = gAssets;
+        ctx.startBeat = startBeat;
+        ctx.bpm = 120.0;
+        ctx.seed = seed;
+        s->prepare(ctx);
+        return s;
+    };
+    auto plain = make(base), zero = make(merged(base, {{"rrpitch", 0}, {"rrtone", 0}, {"rrattack", 0}, {"rrstart", 0}, {"rrlevel", 0},
+                                                       {"rrborrow", 0}, {"veltone", 0}}));
+    const Audio P = render(*plain, rep, sec(4.2)), Z = render(*zero, rep, sec(4.2));
+    check(P.l == Z.l && P.r == Z.r, "rr* / veltone 0: bit-identical to the plain sampler");
+
+    const json rp = merged(base, {{"rrpitch", 10}});
+    auto r1 = seeded(rp, 11), r2 = seeded(rp, 11), r3 = seeded(rp, 12);
+    const auto x1 = render(*r1, rep, sec(4.2)).mono(), x2 = render(*r2, rep, sec(4.2)).mono(), x3 = render(*r3, rep, sec(4.2)).mono();
+    double lo = 1e9, hi = -1e9;
+    std::vector<double> cs;
+    for (int k = 0; k < 8; ++k) {
+        const double c = cents(zeroCrossHz(x1, sec(0.5 * k + 0.02), sec(0.5 * k + 0.38)), 440.0);
+        cs.push_back(c);
+        lo = std::min(lo, c);
+        hi = std::max(hi, c);
+    }
+    check(lo >= -10.3 && hi <= 10.3 && hi - lo > 1.0 && x1 == x2 && x1 != x3,
+          fmt("rrpitch 10: every note within +-10 ct (%.1f..%+.1f), they differ; same seed identical, another seed differs", lo, hi));
+    // preview parity: the draw is keyed by the song-time onset (a --section render draws the same)
+    auto pv = seeded(rp, 11, 4.0);   // starts at beat 4 = 2 s
+    std::vector<Event> late;
+    for (int k = 4; k < 8; ++k) {
+        late.push_back({sec(0.5 * k - 2.0), true, k + 1, 69, 0.8f});
+        late.push_back({sec(0.5 * k - 2.0 + 0.4), false, k + 1, 69, 0.0f});
+    }
+    const auto xp = render(*pv, late, sec(2.2)).mono();
+    double worst = 0.0;
+    for (int k = 4; k < 8; ++k)
+        worst = std::max(worst, std::fabs(cents(zeroCrossHz(xp, sec(0.5 * k - 2.0 + 0.02), sec(0.5 * k - 2.0 + 0.38)), 440.0) - cs[static_cast<std::size_t>(k)]));
+    check(worst < 0.05, fmt("rrpitch in a preview from beat 4 draws what the full render draws (worst %.3f ct)", worst));
+
+    // rrlevel / rrtone: per-note level and brightness spread, within bounds
+    std::vector<float> two = sine(200.0, 48000, 1.0, 0.3);
+    const auto hi6 = sine(6000.0, 48000, 1.0, 0.3);
+    for (std::size_t i = 0; i < two.size(); ++i) two[i] += hi6[i];
+    const std::string st = writeWav(dir / "two.wav", two, 48000, 16);
+    const json tb = {{"velsens", 0}, {"release", 0.02}, {"samples", {{"file", st}, {"root", 69}}}};
+    auto t0 = make(tb), tt = make(merged(tb, {{"rrtone", 3}, {"rrlevel", 2}}));
+    const auto m0 = render(*t0, rep, sec(4.2)).mono(), mt = render(*tt, rep, sec(4.2)).mono();
+    double tlo = 1e9, thi = -1e9, llo = 1e9, lhi = -1e9;
+    for (int k = 0; k < 8; ++k) {
+        const long a = sec(0.5 * k + 0.1);
+        const double l = db(tone(mt, a, 8192, 200.0) / tone(m0, a, 8192, 200.0));
+        const double h = db(tone(mt, a, 8192, 6000.0) / tone(m0, a, 8192, 6000.0)) - l;
+        llo = std::min(llo, l);
+        lhi = std::max(lhi, l);
+        tlo = std::min(tlo, h);
+        thi = std::max(thi, h);
+    }
+    check(llo >= -2.1 && lhi <= 2.1 && lhi - llo > 0.3 && tlo >= -3.2 && thi <= 3.2 && thi - tlo > 0.8,
+          fmt("rrlevel 2: %+.2f..%+.2f dB; rrtone 3: 6 kHz vs 200 Hz %+.2f..%+.2f dB", llo, lhi, tlo, thi));
+
+    // rrattack: transients differ, never a click
+    auto ra = make(merged(base, {{"rrattack", 1}}));
+    const Audio A = render(*ra, rep, sec(4.2));
+    const auto am = A.mono();
+    bool differ = false;
+    for (int k = 1; k < 8 && !differ; ++k)
+        differ = std::fabs(am[static_cast<std::size_t>(sec(0.5 * k) + 100)] - am[static_cast<std::size_t>(sec(0.0) + 100)]) > 1e-3f;
+    check(differ && clicks(A) == 0, "rrattack 1: the transients of repeated notes differ, click-free");
+
+    // rrstart: only past the attack - a plain note keeps its attack (bit-identical), a legato entry moves
+    auto rs = make(merged(base, {{"rrstart", 50}}));
+    const Audio RS = render(*rs, rep, sec(4.2));
+    check(RS.l == P.l, "rrstart: a note that starts at its attack is unchanged (never starts inside the attack)");
+    std::vector<float> lg = sine(440.0, 48000, 2.0, 0.5);
+    for (std::size_t i = 0; i < lg.size(); ++i) lg[i] *= static_cast<float>(1.0 + 0.3 * std::sin(2.0 * kPi * 3.0 * static_cast<double>(i) / 48000.0));
+    const std::string ls = writeWav(dir / "lg.wav", lg, 48000, 16);
+    const json lb = {{"velsens", 0}, {"mono", "legato"}, {"samples", {{"file", ls}, {"root", 69}}}};
+    const std::vector<Event> leg = {{0, true, 1, 69, 0.8f}, {sec(0.5), true, 2, 71, 0.8f}, {sec(0.6), false, 1, 69, 0.0f},
+                                    {sec(1.2), false, 2, 71, 0.0f}};
+    auto l0 = make(lb), l1 = make(merged(lb, {{"rrstart", 50}}));
+    const Audio L0 = render(*l0, leg, sec(1.5)), L1 = render(*l1, leg, sec(1.5));
+    bool same = true;
+    for (long i = 0; i < sec(0.49); ++i) same = same && L0.l[static_cast<std::size_t>(i)] == L1.l[static_cast<std::size_t>(i)];
+    check(same && L0.l != L1.l && clicks(L1) == 0, "rrstart 50: a scripted legato entry starts elsewhere past the attack, click-free");
+
+    // rrborrow: one sample per 2 keys (60-61 a sine, 62-63 a quieter one with a soft 2nd harmonic); repeats of key 61
+    // borrow the 62 sample, re-pitched to 61 and level-matched; a much brighter neighbour is never borrowed
+    auto withHarmonic = [](double f, double amp, int h, double hamp) {
+        std::vector<float> x = sine(f, 48000, 1.0, amp);
+        const auto y = sine(h * f, 48000, 1.0, hamp);
+        for (std::size_t i = 0; i < x.size(); ++i) x[i] += y[i];
+        return x;
+    };
+    const std::string pa = writeWav(dir / "p60.wav", sine(261.626, 48000, 1.0, 0.5), 48000, 16);
+    const std::string pb = writeWav(dir / "p62.wav", withHarmonic(293.665, 0.25, 2, 0.03), 48000, 16);
+    const std::string pc = writeWav(dir / "p62b.wav", withHarmonic(293.665, 0.4, 3, 0.2), 48000, 16);
+    auto zonesOf = [&](const std::string& other, int keytrack) {
+        json a0 = {{"file", pa}, {"root", 60}, {"lo", 60}, {"hi", 61}}, b0 = {{"file", other}, {"root", 62}, {"lo", 62}, {"hi", 63}};
+        if (keytrack == 0) a0["pitchKeytrack"] = b0["pitchKeytrack"] = 0;
+        return json{{"velsens", 0}, {"release", 0.02}, {"rrborrow", 1}, {"samples", json::array({a0, b0})}};
+    };
+    std::vector<Event> r61;
+    for (int k = 0; k < 6; ++k) {
+        r61.push_back({sec(0.5 * k), true, k + 1, 61, 0.8f});
+        r61.push_back({sec(0.5 * k + 0.4), false, k + 1, 61, 0.0f});
+    }
+    auto bw = make(zonesOf(pb, 100));
+    const auto bm = render(*bw, r61, sec(3.2)).mono();
+    const double f61 = 440.0 * std::pow(2.0, (61 - 69) / 12.0);
+    const double first2 = tone(bm, sec(0.1), 8192, 2 * f61), later2 = tone(bm, sec(1.1), 8192, 2 * f61);
+    const double match = db(tone(bm, sec(1.1), 8192, f61) / tone(bm, sec(0.1), 8192, f61));
+    const double pitchErr = std::fabs(cents(zeroCrossHz(bm, sec(1.05), sec(1.35)), f61));
+    check(first2 < 1e-3 && later2 > 0.01 && pitchErr < 1.0 && std::fabs(match) < 0.5,
+          fmt("rrborrow 1: the first note plays its own sample (2nd harmonic %.4f), a repeat the neighbour's (%.3f) at "
+              "the right pitch (%.2f ct off), level-matched (%+.2f dB)", first2, later2, pitchErr, match));
+    auto bright = make(zonesOf(pc, 100));
+    const auto brm = render(*bright, r61, sec(3.2)).mono();
+    check(tone(brm, sec(1.1), 8192, 3 * f61) < 1e-3, "rrborrow: a neighbour with a much brighter attack is never borrowed");
+    auto drum = make(zonesOf(pb, 0));
+    const auto dm = render(*drum, r61, sec(3.2)).mono();
+    check(tone(dm, sec(1.1), 8192, 2 * 293.665) < 1e-3, "rrborrow: zones without key tracking (drums) never borrow");
+
+    // layers='blend': two velocity layers (440 Hz: 0-62, centre 31; 660 Hz: 63-127, centre 95)
+    const std::string s440 = writeWav(dir / "b440.wav", sine(440.0, 48000, 2.0), 48000, 16);
+    const std::string s660 = writeWav(dir / "b660.wav", sine(660.0, 48000, 2.0), 48000, 16);
+    const json lay = {{"velsens", 0}, {"release", 0.02},
+                      {"samples", json::array({{{"file", s440}, {"root", 69}, {"velhi", 62}}, {{"file", s660}, {"root", 69}, {"vello", 63}}})}};
+    bool identical = true;
+    for (const int v : {10, 40, 62, 63, 80, 127}) {
+        auto a = make(lay), b = make(merged(lay, {{"layers", "blend"}, {"blendwidth", 0}}));
+        const std::vector<Event> one = {{0, true, 1, 69, v / 127.0f}, {sec(0.5), false, 1, 69, 0.0f}};
+        identical = identical && render(*a, one, sec(0.6)).l == render(*b, one, sec(0.6)).l;
+    }
+    check(identical, "layers='blend' blendwidth 0 is bit-identical to 'velocity'");
+    auto at = [&](int v, double t) {
+        auto b = make(merged(lay, {{"layers", "blend"}, {"blendwidth", 1}}));
+        const auto m = render(*b, {{0, true, 1, 69, v / 127.0f}, {sec(1.5), false, 1, 69, 0.0f}}, sec(1.6)).mono();
+        return std::pair<double, double>{tone(m, sec(t), 4096, 440.0), tone(m, sec(t), 4096, 660.0)};
+    };
+    auto single = make(lay);
+    const auto sm = render(*single, {{0, true, 1, 69, 31 / 127.0f}, {sec(1.5), false, 1, 69, 0.0f}}, sec(1.6)).mono();
+    const auto c31 = at(31, 0.05);
+    const double centreDiff = db(std::fabs(c31.first - tone(sm, sec(0.05), 4096, 440.0)) + 1e-12);
+    const auto mid = at(63, 0.05), settled = at(63, 1.0);
+    const double power = db(std::sqrt(mid.first * mid.first + mid.second * mid.second) / c31.first);
+    check(centreDiff < -90.0 && c31.second < 1e-5 && mid.first > 0.2 && mid.second > 0.2 && std::fabs(power) < 0.5 &&
+              std::min(settled.first, settled.second) < 1e-4,
+          fmt("blend: at a layer centre the single layer (%.0f dB diff); between them both, equal power (%+.2f dB); after "
+              "the attack the dominant layer alone (minor %.1e)", centreDiff, power, std::min(settled.first, settled.second)));
+    double prev = -1e9;
+    bool mono = true;
+    for (int v = 31; v <= 95; v += 4) {
+        const auto g = at(v, 0.05);
+        const double lvl = db(std::sqrt(g.first * g.first + g.second * g.second));
+        mono = mono && lvl >= prev - 0.05;
+        prev = lvl;
+    }
+    auto lvSens = make(merged(lay, {{"layers", "blend"}, {"blendwidth", 1}, {"velsens", 1}}));
+    const Audio blendClicks = render(*lvSens, {{0, true, 1, 69, 0.5f}, {sec(1.2), false, 1, 69, 0.0f}}, sec(1.4));
+    check(mono && clicks(blendClicks) == 0, "blend: the level never falls as the velocity rises between the layers; click-free settle");
+
+    // blend of two coherent takes 1 ms apart (the lower layer late): aligned by its onset, no comb, the level of one
+    {
+        std::vector<float> take(48000, 0.0f), late(48000, 0.0f);
+        for (std::size_t i = 0; i < take.size(); ++i) {
+            const double t = static_cast<double>(i) / 48000.0;
+            for (const double f : {500.0, 1500.0, 2500.0}) take[i] += static_cast<float>(0.2 * std::exp(-3.0 * t) * std::sin(2.0 * kPi * f * t));
+        }
+        for (std::size_t i = 48; i < late.size(); ++i) late[i] = take[i - 48];
+        const std::string sl = writeWav(dir / "late.wav", late, 48000, 24), su = writeWav(dir / "take.wav", take, 48000, 24);
+        const json two2 = {{"velsens", 0}, {"release", 0.02}, {"layers", "blend"}, {"blendwidth", 1},
+                           {"samples", json::array({{{"file", sl}, {"root", 69}, {"velhi", 62}}, {{"file", su}, {"root", 69}, {"vello", 63}}})}};
+        auto solo = make(merged(two2, {{"layers", "velocity"}}));
+        const auto ref = render(*solo, {{0, true, 1, 69, 1.0f}, {sec(0.5), false, 1, 69, 0.0f}}, sec(0.6)).mono();
+        auto mixd = make(two2);
+        const auto mx = render(*mixd, {{0, true, 1, 69, 63 / 127.0f}, {sec(0.5), false, 1, 69, 0.0f}}, sec(0.6)).mono();
+        double worstBand = 0.0;
+        for (const double f : {500.0, 1500.0, 2500.0})
+            worstBand = std::max(worstBand, std::fabs(db(tone(mx, sec(0.002), 2048, f) / tone(ref, 0, 2048, f))));
+        check(worstBand < 0.6 && clicks(render(*make(two2), {{0, true, 1, 69, 63 / 127.0f}, {sec(0.5), false, 1, 69, 0.0f}}, sec(0.6))) == 0,
+              fmt("blend: two coherent takes 1 ms apart start in step - no comb notch, the level of one take (worst band "
+                  "%.2f dB)", worstBand));
+    }
+
+    // veltone: darker at the bottom of a layer, as recorded at its top
+    const json vt = {{"velsens", 0}, {"samples", {{"file", st}, {"root", 69}, {"vello", 0}, {"velhi", 127}}}};
+    auto v0 = make(vt), v1 = make(merged(vt, {{"veltone", 1}}));
+    const auto vlow = render(*v1, {{0, true, 1, 69, 1 / 127.0f}}, sec(0.5)).mono(), vref = render(*v0, {{0, true, 1, 69, 1 / 127.0f}}, sec(0.5)).mono();
+    auto w0 = make(vt), w1 = make(merged(vt, {{"veltone", 1}}));
+    const auto vtop = render(*w1, {{0, true, 1, 69, 1.0f}}, sec(0.5)).mono(), vtop0 = render(*w0, {{0, true, 1, 69, 1.0f}}, sec(0.5)).mono();
+    const double darker = db(tone(vlow, sec(0.2), 8192, 6000.0) / tone(vref, sec(0.2), 8192, 6000.0));
+    const double low200 = db(tone(vlow, sec(0.2), 8192, 200.0) / tone(vref, sec(0.2), 8192, 200.0));
+    check(darker < -4.5 && darker > -10.5 && std::fabs(low200) < 0.3 && vtop == vtop0,
+          fmt("veltone 1 (-10 dB shelf from 2.5 kHz): the bottom of a layer %.1f dB at 6 kHz (200 Hz %+.2f dB), its top as recorded", darker, low200));
+    const json vn = {{"velsens", 0}, {"samples", {{"file", st}, {"root", 69}, {"vello", 60}, {"velhi", 63}}}};
+    auto n0 = make(vn), n1 = make(merged(vn, {{"veltone", 1}}));
+    const double narrow = db(tone(render(*n1, {{0, true, 1, 69, 60 / 127.0f}}, sec(0.5)).mono(), sec(0.2), 8192, 6000.0) /
+                             tone(render(*n0, {{0, true, 1, 69, 60 / 127.0f}}, sec(0.5)).mono(), sec(0.2), 8192, 6000.0));
+    check(narrow < -0.3 && narrow > -1.5, fmt("veltone 1 in a layer 4 velocities wide: the bottom only %.2f dB at 6 kHz", narrow));
+}
+
+void testFlutter() {
+    std::printf("flutter: random shimmer / jitter per note, faded in, deterministic, decorrelated, legato-continuous\n");
+    const fs::path dir = gTmp / "flutter";
+    const std::string sn = writeWav(dir / "s.wav", sine(440.0, 48000, 3.0, 0.5), 48000, 16);
+    const json base = {{"velsens", 0}, {"release", 0.05}, {"samples", {{"file", sn}, {"root", 69}}}};
+    const std::vector<Event> one = {{0, true, 1, 69, 0.8f}, {sec(2.2), false, 1, 69, 0.0f}};
+    auto plain = make(base), off = make(merged(base, {{"flutter", 0}, {"flutterpitch", 0}, {"flutterrate", 7}}));
+    const Audio P = render(*plain, one, sec(2.5)), O = render(*off, one, sec(2.5));
+    check(P.l == O.l && P.r == O.r, "flutter 0 / flutterpitch 0: bit-identical to no flutter");
+
+    // amplitude: 10 ms RMS levels around the note's level, spread ~ the flutter dB (RMS), irregular
+    auto levels = [](const std::vector<float>& m, long from, long to) {
+        std::vector<double> db;
+        for (long t = from; t + sec(0.01) <= to; t += sec(0.01)) db.push_back(20.0 * std::log10(rms(m, t, t + sec(0.01)) + 1e-12));
+        double mean = 0.0;
+        for (double d : db) mean += d;
+        mean /= static_cast<double>(db.size());
+        for (double& d : db) d -= mean;
+        return db;
+    };
+    auto sd = [](const std::vector<double>& v) {
+        double s = 0.0;
+        for (double d : v) s += d * d;
+        return std::sqrt(s / static_cast<double>(v.size()));
+    };
+    auto fa = make(merged(base, {{"flutter", 1.0}}));
+    const Audio A = render(*fa, one, sec(2.5));
+    const auto am = A.mono(), pm = P.mono();
+    const double sdA = sd(levels(am, sec(0.3), sec(2.1))), sdP = sd(levels(pm, sec(0.3), sec(2.1)));
+    check(sdA > 0.6 && sdA < 1.4 && sdP < 0.1, fmt("flutter 1 dB: level spread %.2f dB RMS (plain %.3f)", sdA, sdP));
+    // the band: most of the level wobble lies in ~5-25 Hz (not a slow drift, not a buzz) - count sign changes
+    const auto lv = levels(am, sec(0.3), sec(2.1));
+    int crossings = 0;
+    for (std::size_t i = 1; i < lv.size(); ++i) crossings += (lv[i - 1] < 0.0) != (lv[i] < 0.0);
+    const double perSec = crossings / 2.0 / 1.8;   // zero crossings per second / 2 = cycles per second
+    check(perSec > 5.0 && perSec < 22.0, fmt("flutter band around 11 Hz: %.1f level cycles per second", perSec));
+    // the attack is left alone: the first 30 ms are the plain note's
+    double head = 0.0;
+    for (long i = 0; i < sec(0.025); ++i) head = std::max(head, static_cast<double>(std::fabs(am[static_cast<std::size_t>(i)] - pm[static_cast<std::size_t>(i)])));
+    check(head < 1e-6, fmt("flutter waits for the attack (first 25 ms identical, max diff %.1e)", head));
+    check(clicks(A) == 0, "flutter: click-free");
+
+    // pitch: jitter in cents (20 ms zero-crossing windows), bounded
+    auto fp = make(merged(base, {{"flutterpitch", 10}}));
+    const auto pmm = render(*fp, one, sec(2.5)).mono();
+    double s2 = 0.0, peak = 0.0;
+    int nW = 0;
+    for (long t = sec(0.3); t + sec(0.02) < sec(2.1); t += sec(0.01)) {
+        const double c = cents(zeroCrossHz(pmm, t, t + sec(0.02)), 440.0);
+        s2 += c * c;
+        peak = std::max(peak, std::fabs(c));
+        ++nW;
+    }
+    const double sdC = std::sqrt(s2 / nW);
+    check(sdC > 3.0 && sdC < 12.0 && peak < 35.0, fmt("flutterpitch 10 ct: pitch spread %.1f ct RMS, peak %.0f ct", sdC, peak));
+
+    // deterministic; two notes (and two tracks) get their own streams
+    auto fa2 = make(merged(base, {{"flutter", 1.0}}));
+    const Audio A2 = render(*fa2, one, sec(2.5));
+    check(A.l == A2.l && A.r == A2.r, "flutter: same seed -> bit-identical");
+    const std::vector<Event> two = {{0, true, 1, 69, 0.8f}, {sec(0.0), true, 2, 69, 0.8f}, {sec(2.2), false, 1, 69, 0.0f},
+                                    {sec(2.2), false, 2, 69, 0.0f}};
+    auto lv1 = levels(am, sec(0.3), sec(2.1));
+    const std::vector<Event> later = {{sec(0.5), true, 1, 69, 0.8f}, {sec(2.7), false, 1, 69, 0.0f}};
+    auto fl = make(merged(base, {{"flutter", 1.0}}));
+    const auto lm = render(*fl, later, sec(3.0)).mono();
+    auto lv2 = levels(lm, sec(0.8), sec(2.6));
+    double c12 = 0.0;
+    const std::size_t n12 = std::min(lv1.size(), lv2.size());
+    for (std::size_t i = 0; i < n12; ++i) c12 += lv1[i] * lv2[i];
+    c12 /= static_cast<double>(n12) * sd(lv1) * sd(lv2);
+    check(std::fabs(c12) < 0.4, fmt("flutter: a later note has its own stream (level correlation %.2f)", c12));
+    RenderContext ctx;
+    ctx.sampleRate = kSr;
+    ctx.assetDir = gAssets;
+    ctx.bpm = 120.0;
+    ctx.seed = 12;
+    auto other = makeSampler();
+    other->configure(merged(base, {{"flutter", 1.0}}));
+    other->prepare(ctx);
+    const auto om = render(*other, one, sec(2.5)).mono();
+    auto lv3 = levels(om, sec(0.3), sec(2.1));
+    double c13 = 0.0;
+    for (std::size_t i = 0; i < lv1.size(); ++i) c13 += lv1[i] * lv3[i];
+    c13 /= static_cast<double>(lv1.size()) * sd(lv1) * sd(lv3);
+    check(std::fabs(c13) < 0.4, fmt("flutter: another track (seed) does not flutter in lockstep (correlation %.2f)", c13));
+    (void)two;
+
+    // legato: the line's streams run on (no new fade-in, click-free); preview = full render
+    std::vector<Event> phrase;
+    for (int k = 0; k < 3; ++k) {
+        phrase.push_back({sec(0.6 * k), true, k + 1, 69 + 2 * k, 0.8f});
+        phrase.push_back({sec(0.6 * k + 0.62), false, k + 1, 69 + 2 * k, 0.0f});
+    }
+    const json lj = merged(base, {{"mono", "legato"}, {"flutter", 1.0}, {"flutterpitch", 3}});
+    auto lgf = make(lj), lgp = make(lj, kSr, 2.0);
+    const Audio LF = render(*lgf, phrase, sec(2.2));
+    check(clicks(LF) == 0, "flutter through legato transitions: click-free");
+    std::vector<Event> pev = {{sec(1.2), true, 1, 69, 0.8f}, {sec(1.7), true, 2, 71, 0.8f}, {sec(1.72), false, 1, 69, 0.0f},
+                              {sec(2.4), false, 2, 71, 0.0f}};
+    auto full = make(lj);
+    const Audio F = render(*full, pev, sec(2.6));
+    std::vector<Event> shifted;
+    for (const auto& e : pev) shifted.push_back({e.at - sec(1.0), e.on, e.id, e.pitch, e.vel, e.param, e.value});
+    const Audio Pv = render(*lgp, shifted, sec(1.6));
+    double pdiff = 0.0;
+    for (long i = 0; i < sec(1.6); ++i) pdiff = std::max(pdiff, static_cast<double>(std::fabs(Pv.l[static_cast<std::size_t>(i)] - F.l[static_cast<std::size_t>(i + sec(1.0))])));
+    check(pdiff < 1e-6, fmt("flutter: preview (startBeat 2) = full render (max diff %.1e)", pdiff));
+    bool finite = true;
+    for (float x : LF.l) finite = finite && std::isfinite(x);
+    check(finite, "flutter: finite output");
+
+    // no hash: on a bright harmonic tone (220 Hz, 40 partials) a strong flutter keeps the gaps between the high
+    // partials (3-8.6 kHz) clean - a modulator with audio-rate noise in it (a bare 2-pole band-pass) fills them
+    // with sidebands, heard as something shrill on a sampled sax
+    std::vector<float> rich(static_cast<std::size_t>(3 * 48000));
+    for (std::size_t i = 0; i < rich.size(); ++i) {
+        double v = 0.0;
+        for (int h = 1; h <= 40; ++h) v += std::sin(2.0 * kPi * 220.0 * h * static_cast<double>(i) / 48000.0) / h;
+        rich[i] = static_cast<float>(0.25 * v);
+    }
+    const std::string rn = writeWav(dir / "rich.wav", rich, 48000, 16);
+    const json rb = {{"velsens", 0}, {"samples", {{"file", rn}, {"root", 57}}}};
+    const std::vector<Event> held = {{0, true, 1, 57, 0.8f}, {sec(2.6), false, 1, 57, 0.0f}};
+    auto rp = make(rb), rf = make(merged(rb, {{"flutter", 1.5}, {"flutterpitch", 2}}));
+    const auto rpm = render(*rp, held, sec(2.6)).mono(), rfm = render(*rf, held, sec(2.6)).mono();
+    auto gaps = [&](const std::vector<float>& m) {   // power between the partials over power on them, 3-8.6 kHz
+        double on = 0.0, off = 0.0;
+        for (long t = sec(0.4); t + 16384 < sec(2.5); t += 8192) {
+            for (int h = 14; h <= 39; ++h) {
+                on += std::pow(tone(m, t, 16384, 220.0 * h), 2);
+                off += std::pow(tone(m, t, 16384, 220.0 * (h + 0.5)), 2);
+            }
+        }
+        return 10.0 * std::log10(off / on + 1e-30);
+    };
+    const double gp = gaps(rpm), gf = gaps(rfm);
+    check(gf < -60.0, fmt("flutter 1.5 dB / 2 ct adds no hash between the partials 3-8.6 kHz: gaps %.1f dB under the "
+                          "partials (plain %.1f)", -gf, -gp));
+}
+
 int main(int argc, char** argv) {
     if (argc > 1) {
         gAssets = argv[1];
@@ -2020,6 +2378,8 @@ int main(int argc, char** argv) {
         testSkip();
         testRealismReview();
         testGuitarTechniques();
+        testFlutter();
+        testRoundRobinsAndBlend();
     } catch (const std::exception& e) {
         std::printf("FAIL: unexpected exception: %s\n", e.what());
         return 1;

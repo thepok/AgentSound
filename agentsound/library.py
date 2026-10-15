@@ -112,6 +112,68 @@ def installed(pack: dict) -> bool:
     return (pack_dir(pack) / 'SOURCE.json').is_file()
 
 
+# -------------------------------------------------------------------------------- pack fallbacks
+# A band preset that finds its preferred pack missing plays a substitute (GeneralUser GS, a synth, an algorithmic
+# reverb). That is never silent: library.want() records the miss on the song being built, and Song.compile() raises
+# with the install hint - unless $AGENTSOUND_PACK_FALLBACK=1 opts in, then the render carries the substitutes and the
+# report an error-level 'pack_fallback' warning naming them.
+
+FALLBACK_ENV = 'AGENTSOUND_PACK_FALLBACK'
+_WATCH: list = []        # the songs whose band presets are being built (bands.make), innermost last
+
+
+def has(pack_id: str) -> bool:
+    """Is sample pack `pack_id` installed (its SOURCE.json in SAMPLES)? A pure check: records nothing."""
+    return (SAMPLES / pack_id / 'SOURCE.json').is_file()
+
+
+def want(pack_id: str, instead: str = '', song=None) -> bool:
+    """A sound choice asks for pack `pack_id`: True when installed; a miss is recorded on `song` (default: the song
+    whose band preset is being built) with what plays `instead`, for Song.compile() to raise / report."""
+    if has(pack_id):
+        return True
+    record(pack_id, instead, song)
+    return False
+
+
+def record(pack_id: str, instead: str = '', song=None) -> None:
+    """Record that `song` (default: the one being built by bands.make) plays `instead` of missing pack `pack_id`."""
+    song = song if song is not None else (_WATCH[-1] if _WATCH else None)
+    if song is not None:
+        subs = song.pack_fallbacks.setdefault(pack_id, [])
+        if instead and instead not in subs:
+            subs.append(instead)
+
+
+class watching:
+    """with library.watching(song): pack misses (want()) inside are recorded on `song` (bands.make uses it)."""
+
+    def __init__(self, song):
+        self.song = song
+
+    def __enter__(self):
+        _WATCH.append(self.song)
+        return self.song
+
+    def __exit__(self, *exc):
+        _WATCH.pop()
+        return False
+
+
+def fallback_allowed() -> bool:
+    """$AGENTSOUND_PACK_FALLBACK=1: render a band's substitutes for missing packs (an error-level report warning)."""
+    return os.environ.get(FALLBACK_ENV, '').strip().lower() in ('1', 'true', 'yes', 'on')
+
+
+def fallback_message(fallbacks: dict) -> str:
+    """What compile says about {pack id: [substitutes]}: the packs, what would play, how to install."""
+    what = '; '.join(f"{p} -> {', '.join(subs) or 'its fallback sound'}" for p, subs in sorted(fallbacks.items()))
+    return (f"sample pack(s) missing in {SAMPLES} - the band would play substitutes: {what}. Install with "
+            f"`python -m agentsound samples fetch {' '.join(sorted(fallbacks))}`, or point AGENTSOUND_SAMPLES at a "
+            f"folder that has them (a git worktree: the main checkout's assets/samples); {FALLBACK_ENV}=1 renders the "
+            f"substitutes anyway (an error-level pack_fallback report warning)")
+
+
 # -------------------------------------------------------------------------------- download
 
 def _human(n: float | None) -> str:

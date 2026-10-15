@@ -1,6 +1,7 @@
 #include "render/SongSpec.h"
 
 #include "analysis/Profiles.h"
+#include "render/Registry.h"
 
 #include <algorithm>
 #include <cmath>
@@ -409,7 +410,7 @@ std::vector<MeterPoint> parseMeter(const json& a, const std::string& path) {
 
 // "analysis": {"profile": "synthwave", "loudness": [-12, -9]}, both optional.
 AnalysisSpec parseAnalysis(const json& a, const std::string& path) {
-    allowOnly(a, path, {"profile", "loudness", "silentNotes", "audioOnsets"});
+    allowOnly(a, path, {"profile", "loudness", "silentNotes", "audioOnsets", "registration", "packFallbacks"});
     AnalysisSpec spec;
     if (a.contains("profile")) {
         spec.profile = string(a, "profile", path);
@@ -468,6 +469,34 @@ AnalysisSpec parseAnalysis(const json& a, const std::string& path) {
         for (const json& t : list) {
             if (!t.is_string() || t.get<std::string>().empty()) fail(lp, "must hold track ids (strings)");
             spec.audioOnsets.push_back(t.get<std::string>());
+        }
+    }
+    if (a.contains("registration")) {
+        // ["principal", ...]: tracks without touch dynamics (an organ: agentsound.organist / bands.church_organ) -
+        // their dynamics are the registration and the swell box, judged over the sections, not per note
+        const json& list = a.at("registration");
+        const std::string lp = path + ".registration";
+        if (!list.is_array()) fail(lp, "must be an array of track ids");
+        for (const json& t : list) {
+            if (!t.is_string() || t.get<std::string>().empty()) fail(lp, "must hold track ids (strings)");
+            spec.registration.push_back(t.get<std::string>());
+        }
+    }
+    if (a.contains("packFallbacks")) {
+        // [{"pack", "instead", "message"}]: band substitutes for missing sample packs (agentsound.library.want)
+        const json& list = a.at("packFallbacks");
+        const std::string lp = path + ".packFallbacks";
+        if (!list.is_array()) fail(lp, "must be an array of {pack, instead, message}");
+        for (std::size_t i = 0; i < list.size(); ++i) {
+            const json& e = list[i];
+            const std::string ep = lp + "[" + std::to_string(i) + "]";
+            allowOnly(e, ep, {"pack", "instead", "message"});
+            PackFallbackHint h;
+            h.pack = string(e, "pack", ep);
+            h.instead = string(e, "instead", ep);
+            h.message = string(e, "message", ep);
+            if (h.pack.empty()) fail(ep + ".pack", "must name the sample pack");
+            spec.packFallbacks.push_back(std::move(h));
         }
     }
     return spec;
@@ -674,10 +703,12 @@ SongSpec parseSong(const json& doc) {
             const json& notes = t.at("notes");
             if (!notes.is_array()) fail(p + ".notes", "must be an array");
             n.notes.reserve(notes.size());
+            std::unique_ptr<Instrument> expressionValidator;   // the instrument's note specs (made on the first need)
             for (std::size_t k = 0; k < notes.size(); ++k) {
                 const json& nt = notes[k];
                 const std::string np = p + ".notes[" + std::to_string(k) + "]";
-                if (!nt.is_array() || nt.size() != 4) fail(np, "must be [startBeat, durationBeats, pitch, velocity]");
+                if (!nt.is_array() || (nt.size() != 4 && nt.size() != 5))
+                    fail(np, "must be [startBeat, durationBeats, pitch, velocity] or [..., velocity, {note params}]");
                 for (int f = 0; f < 4; ++f) if (!nt[f].is_number()) fail(np, "all four fields must be numbers");
                 NoteSpec note{nt[0].get<double>(), nt[1].get<double>(), 0, 0};
                 const double pitch = nt[2].get<double>(), vel = nt[3].get<double>();
@@ -689,6 +720,21 @@ SongSpec parseSong(const json& doc) {
                 if (vel != std::floor(vel) || vel < 1 || vel > 127) fail(np, "velocity must be an integer 1..127");
                 note.pitch = static_cast<int>(pitch);
                 note.velocity = static_cast<int>(vel);
+                if (nt.size() == 5) {
+                    if (!expressionValidator) {
+                        try {
+                            expressionValidator = createInstrument(n.instrumentType);
+                        } catch (const ConfigError& e) {
+                            fail(p + ".instrument", e.what());
+                        }
+                    }
+                    try {
+                        n.expressions.push_back(expressionValidator->parseExpression(nt[4]));
+                    } catch (const ConfigError& e) {
+                        fail(np + "[4]", e.what());
+                    }
+                    note.expression = static_cast<int>(n.expressions.size()) - 1;
+                }
                 n.notes.push_back(note);
             }
         }
@@ -774,6 +820,8 @@ SongSpec parseSong(const json& doc) {
     }
     for (const std::string& t : song.analysis.audioOnsets)
         if (!isTrack(t)) fail(root + ".analysis.audioOnsets", "'" + t + "' is not a track id");
+    for (const std::string& t : song.analysis.registration)
+        if (!isTrack(t)) fail(root + ".analysis.registration", "'" + t + "' is not a track id");
     for (const auto& n : song.nodes) {
         if (n.kind != NodeSpec::Kind::Master && n.output != "master" && !isBus(n.output)) {
             fail(n.path + ".output", "'" + n.output + "' is not a bus id or 'master'");

@@ -374,5 +374,35 @@ class KeyedGatedReverb(unittest.TestCase):
         self.assertEqual(s4.buses, {})                                    # ... and nothing was created
 
 
+class NoteParams(unittest.TestCase):
+    """Per-note params (articulation.note_params): the render JSON's optional fifth note field."""
+
+    def test_marks_survive_transforms_and_compile(self):
+        from agentsound import articulation as art
+        from agentsound.notation import format as fmt
+        from agentsound.patterns import Clip
+        s = Song('np', tempo=120, key='C major', seed=1)
+        s.section('a', bars=2)
+        t = s.track('x', inst.va())
+        t.note(60, 0, 1, 90, params={'string': 2})
+        c = art.note_params(Clip([(0, 1, 62, 80), (1, 1, 64, 80)], length=2), {'string': 3, 'pick': 0.5},
+                            where=lambda n: n.pitch == 64)
+        self.assertEqual(art.params_of(c[1]), {'pick': 0.5, 'string': 3})
+        self.assertIsNone(art.params_of(c[0]))
+        c = c.transpose(1)                                                # built on _replace: the mark stays
+        self.assertEqual(art.params_of(c[1]), {'pick': 0.5, 'string': 3})
+        t.play(c, 2)
+        notes = s.compile()['tracks'][0]['notes']
+        self.assertEqual(notes[0], [0.0, 1.0, 60, 90, {'string': 2}])
+        self.assertEqual(len(notes[1]), 4)
+        self.assertEqual(notes[2][4], {'pick': 0.5, 'string': 3})
+        self.assertIsNone(art.params_of(art.plain(c)[1]))
+        with self.assertRaises(ComposeError):
+            fmt(c)                                                        # no notation syntax for params
+        for bad in ({'string': 'x'}, {1: 2}, {'string': float('nan')}):
+            with self.assertRaises(ComposeError):
+                art.note_params(c, bad)
+
+
 if __name__ == '__main__':
     unittest.main()

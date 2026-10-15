@@ -373,7 +373,7 @@ private:
 // Tremolo / autopan
 // ---------------------------------------------------------------------------------------------
 
-enum TremoloParam { kTRate, kTSync, kTBeats, kTDepth, kTShape, kTStereo };
+enum TremoloParam { kTRate, kTSync, kTBeats, kTDepth, kTShape, kTStereo, kTRateMod, kTDepthMod, kTModRate, kTModShape };
 
 const std::vector<ParamSpec>& tremoloSpecs() {
     static const std::vector<ParamSpec> s = {
@@ -385,9 +385,71 @@ const std::vector<ParamSpec>& tremoloSpecs() {
                "LFO shape; sine/triangle peak on the beat; square = trance-gate chop, open for the first half "
                "of each period with ~4 ms click-free edges"),
         num("stereo", 0, 180, 0, "deg", "Right-channel LFO phase offset; 180 = autopan (left/right alternate)"),
+        num("ratemod", 0, 10, 0, "Hz",
+            "Slow modulation of the tremolo RATE: it swings +- this many Hz around 'rate' at 'modrate' (free mode "
+            "only: a synced tremolo stays on the grid). A living, player-like tremolo instead of a machine: on a "
+            "sampled sax 10 Hz +- 2-3 Hz. 0 = off (bit-identical to the plain tremolo)."),
+        num("depthmod", 0, 1, 0, "",
+            "Slow modulation of the tremolo DEPTH: it swings +- this around 'depth' (clamped to 0..1) at 'modrate' - "
+            "a quarter cycle after the rate swing (sine) or an independent random stream (random). 0 = off."),
+        num("modrate", 0.01f, 5, 0.3f, "Hz",
+            "Speed of the slow modulator of 'ratemod' / 'depthmod' (0.1-1 Hz: phrase-length breathing; random: the "
+            "rate of new random targets). Runs from the song start (a preview starts where a full render is)."),
+        choice("modshape", {"sine", "random"}, 0,
+               "Shape of the slow modulator: sine (a regular swell) or random (smooth random: a new deterministic "
+               "random target every 1/modrate s, eased in - irregular, like a player)."),
     };
     return s;
 }
+
+// The slow modulator of the tremolo's 'ratemod' / 'depthmod' at modulator phase pm (cycles since the song start): a
+// sine (the depth swing a quarter cycle after the rate swing) or smooth random (deterministic targets per cycle,
+// eased in by a smoothstep; two independent streams). seek() only moves forward.
+class SlowMod {
+public:
+    void reset(std::uint64_t seed, bool random) noexcept {
+        random_ = random;
+        rng_.reseed(seed);
+        seg_ = 0;
+        acc_ = 0.0;
+        ra_ = rng_.bipolar();
+        rb_ = rng_.bipolar();
+        da_ = rng_.bipolar();
+        db_ = rng_.bipolar();
+        seek(0.0);
+    }
+    void seek(double pm) noexcept {
+        pm_ = pm;
+        if (!random_) return;
+        const auto seg = static_cast<std::int64_t>(std::floor(pm));
+        while (seg_ < seg) {
+            acc_ += 0.5 * (static_cast<double>(ra_) + rb_);   // the integral of one whole eased segment
+            ra_ = rb_;
+            rb_ = rng_.bipolar();
+            da_ = db_;
+            db_ = rng_.bipolar();
+            ++seg_;
+        }
+        x_ = static_cast<float>(pm - static_cast<double>(seg_));
+    }
+    float rate() const noexcept { return random_ ? ra_ + (rb_ - ra_) * ease(x_) : sinCycles(pm_); }
+    float depth() const noexcept { return random_ ? da_ + (db_ - da_) * ease(x_) : sinCycles(pm_ - 0.25); }
+    // The integral of rate() from 0 to pm (modulator cycles); seeks there.
+    double rateIntegral(double pm) noexcept {
+        if (!random_) return (1.0 - std::cos(dsp::kTwoPi * pm)) / dsp::kTwoPi;
+        seek(pm);
+        const double x = x_;
+        return acc_ + ra_ * x + (static_cast<double>(rb_) - ra_) * (x * x * x - 0.5 * x * x * x * x);
+    }
+
+private:
+    static float ease(float x) noexcept { return x * x * (3.0f - 2.0f * x); }
+    dsp::Rng rng_;
+    bool random_{false};
+    std::int64_t seg_{0};
+    double acc_{0.0}, pm_{0.0};
+    float x_{0.0f}, ra_{0.0f}, rb_{0.0f}, da_{0.0f}, db_{0.0f};
+};
 
 class Tremolo final : public ParamEffect {
 public:
@@ -398,26 +460,44 @@ public:
         shape_ = std::clamp(getInt(kTShape), 0, 2);
         hz_.prepare(sr_, kRateTau, get(kTRate));
         depth_.prepare(sr_, kGainTau, get(kTDepth));
+        rateMod_.prepare(sr_, kRateTau, get(kTRateMod));
+        depthMod_.prepare(sr_, kGainTau, get(kTDepthMod));
+        mod_.reset(ctx.seed ^ dsp::hashString("as.fx.tremolo.mod"), getInt(kTModShape) == 1);
+        modInc_ = get(kTModRate) / sr_;
         // Synced: the phase comes from the song position; free: a preview starts where a full render
         // at a constant rate would be. The gain smoothers are pre-rolled over the last ~20 ms before
         // the start (from the song start if closer), so their lag matches a full render too.
         const bool sync = on(kTSync);
         const float hz = sync ? syncHz() : get(kTRate);
-        const float depth = get(kTDepth);
+        const float depth0 = get(kTDepth);
         const double stereo = get(kTStereo) / 360.0;
         const std::int64_t start = static_cast<std::int64_t>(startSample_);
         const std::int64_t n0 = std::max<std::int64_t>(0, start - static_cast<std::int64_t>(0.02 * sr_));
+        // the slow modulator runs from the song start: rate and depth as they are at song sample n
+        const bool modOn = get(kTRateMod) > 0.0f || get(kTDepthMod) > 0.0f;
+        float hzNow = hz;
+        auto depthAt = [&](std::int64_t n) {
+            hzNow = hz;
+            if (!modOn) return depth0;
+            mod_.seek(static_cast<double>(n + 1) * modInc_);
+            if (!sync) hzNow = std::max(0.01f, hz + get(kTRateMod) * mod_.rate());
+            return std::clamp(depth0 + get(kTDepthMod) * mod_.depth(), 0.0f, 1.0f);
+        };
         phase_ = n0 == 0 ? 0.0 : phaseAt(n0 - 1, sync, hz);
+        float depth = depthAt(n0 - 1);
         for (int ch = 0; ch < 2; ++ch)
-            gain_[ch].prepare(sr_, kEdgeTau, 1.0f - depth * (1.0f - shapeAt(phase_ + (ch ? stereo : 0.0), hz)));
+            gain_[ch].prepare(sr_, kEdgeTau, 1.0f - depth * (1.0f - shapeAt(phase_ + (ch ? stereo : 0.0), hzNow)));
         for (std::int64_t n = n0; n < start; ++n) {
             phase_ = phaseAt(n, sync, hz);
+            depth = depthAt(n);
             for (int ch = 0; ch < 2; ++ch) {
-                gain_[ch].setTarget(1.0f - depth * (1.0f - shapeAt(phase_ + (ch ? stereo : 0.0), hz)));
+                gain_[ch].setTarget(1.0f - depth * (1.0f - shapeAt(phase_ + (ch ? stereo : 0.0), hzNow)));
                 gain_[ch].next();
             }
         }
         phase_ = sync ? gridPhase(songBeat(), get(kTBeats)) : phaseAt(start - 1, false, hz);
+        modPhase_ = static_cast<double>(start) * modInc_;
+        if (modOn) mod_.seek(modPhase_);
         changed();
     }
 
@@ -425,19 +505,30 @@ public:
         if (changed()) {
             hz_.setTarget(get(kTRate));
             depth_.setTarget(get(kTDepth));
+            rateMod_.setTarget(get(kTRateMod));
+            depthMod_.setTarget(get(kTDepthMod));
+            modInc_ = get(kTModRate) / sr_;
         }
         float* io[2] = {left, right};
         const bool sync = on(kTSync);
         const double beats = get(kTBeats), stereo = get(kTStereo) / 360.0;
         const float hzSync = syncHz();
         for (int n = 0; n < frames; ++n) {
+            float freeHz = hz_.next();
+            float depth = depth_.next();
+            // the slow modulator of rate and depth (its phase always advances with the song position)
+            modPhase_ += modInc_;
+            const float rm = rateMod_.next(), dm = depthMod_.next();
+            if (rm != 0.0f || dm != 0.0f) {
+                mod_.seek(modPhase_);
+                if (rm != 0.0f) freeHz = std::max(0.01f, freeHz + rm * mod_.rate());
+                if (dm != 0.0f) depth = std::clamp(depth + dm * mod_.depth(), 0.0f, 1.0f);
+            }
             // Synced: phase straight from the song grid, so the pattern follows 'beats' changes at once
             // (the gain smoother keeps the jump click-free) and previews match full renders.
-            const float freeHz = hz_.next();
             phase_ = sync ? gridPhase(songBeat(), beats) : wrap01(phase_ + freeHz / sr_);
             ++pos_;
             const float hz = sync ? hzSync : freeHz;
-            const float depth = depth_.next();
             for (int ch = 0; ch < 2; ++ch) {
                 gain_[ch].setTarget(1.0f - depth * (1.0f - shapeAt(phase_ + (ch ? stereo : 0.0), hz)));
                 io[ch][n] *= gain_[ch].next();
@@ -451,11 +542,15 @@ private:
     static constexpr double kEdgeTau = 0.0006;
 
     float syncHz() const { return static_cast<float>(1.0 / beatsToSeconds(get(kTBeats), songBpm())); }
-    // LFO phase at song sample n (free-running: integrated at a constant rate from the song start,
-    // i.e. (n + 1) steps, as process() advances before use).
-    double phaseAt(std::int64_t n, bool sync, float hz) const {
+    // LFO phase at song sample n (free-running: integrated from the song start, i.e. (n + 1) steps, as process()
+    // advances before use - the constant rate plus the integral of the 'ratemod' swing).
+    double phaseAt(std::int64_t n, bool sync, float hz) {
         if (sync) return gridPhase(songBeatAt(n), get(kTBeats));
-        return wrap01(static_cast<double>(n + 1) * hz / sr_);
+        const double steps = static_cast<double>(n + 1);
+        double ph = steps * hz / sr_;
+        const float rm = get(kTRateMod);
+        if (rm > 0.0f && modInc_ > 0.0) ph += rm * mod_.rateIntegral(steps * modInc_) / (modInc_ * sr_);
+        return wrap01(ph);
     }
 
     // LFO level 0..1 at phase ph (cycles).
@@ -472,9 +567,10 @@ private:
         }
     }
 
-    Smoother hz_;
-    Smooth2 depth_, gain_[2];
-    double phase_{0.0};
+    Smoother hz_, rateMod_;
+    Smooth2 depth_, depthMod_, gain_[2];
+    SlowMod mod_;
+    double phase_{0.0}, modPhase_{0.0}, modInc_{0.0};
     int shape_{0};
 };
 
