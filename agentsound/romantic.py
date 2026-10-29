@@ -30,6 +30,7 @@ Measured targets (the recording the etude compared against, a concert pianist):
 
 from __future__ import annotations
 
+import bisect
 import math
 import random
 
@@ -123,11 +124,30 @@ ACCOMPANIMENT = {
     'tension': 3.0,             # + velocity on a tension chord (a tritone in it, or resolving down a fifth)
     'bass': (0.92, 1.1),        # the bass against the figure: x U(lo, hi) at a phrase's start and end, linear between
     'below_db': 6.0,            # budget: a phrase's accompaniment median at least this many dB under the melody's
+    # the give and take of the hands (Score.perform(balance=) only - a drawn balance plan; HUMAN_FEEDBACK
+    # 2026-10-15: "the right hand always feels louder than the left - it should be dynamic"):
+    'give': 1.24,               # the hand swells into the melody's gap: x this where the tune holds a note or rests,
+    'give_beats': (0.6, 2.0),   # ... ramping in from this many beats after the melody's last onset to full at the 2nd
+    'take': 0.93,               # ... and recedes under a melody note just struck (x this)
+    'lead_end': 0.12,           # the phrase's last bar: x 1 + this more of the give (the hand leads the transition)
+    'scale': (0.55, 1.9),       # a phrase's hand is scaled to its balance by at most these factors
 }
 """The left hand's dynamics in a broken-chord figure (Score.perform figures): it follows the phrase's arc and the
 melody (at a smaller range), swells into the tension chords and relaxes at their resolution, shifts the balance of
-bass and figure, and always stays under the tune (Repp 1996: the accompaniment's dynamic profile parallels the
-melody's a few dB below it)."""
+bass and figure, and stays under the tune (Repp 1996: the accompaniment's dynamic profile parallels the melody's a
+few dB below it). With a balance plan (Score.perform(balance=)) the budget is a target per phrase instead - near
+equal in a flowing build, the hand leading in an answer phrase - and the hands give and take: the left hand swells
+into the melody's held notes and rests and recedes under a new melody note."""
+
+ENERGY_EXP = 2.5
+"""A note's energy as (velocity / 127) ** ENERGY_EXP (composer.NoteView's loudness model): the balance plan's dB are
+the hands' summed energy per phrase - many soft notes add up like the stems' RMS (the measured endless sets: the
+note dB and the stems' RMS dB within about 1 dB per piece)."""
+
+
+def _energy(vel: float) -> float:
+    return (vel / 127.0) ** ENERGY_EXP
+
 
 RULES = {'async': ASYNC, 'pedal': PEDAL, 'charge': CHARGE, 'articulation': ARTICULATION, 'phrase_tempo': PHRASE_TEMPO,
          'accompaniment': ACCOMPANIMENT}
@@ -467,31 +487,49 @@ def accompany(beats, bpm, *, pattern: str = 'bcc', step: float = 0.5, vel: float
 
 
 def harmonize(clip: Clip, chord_at, *, voices: int = 1, min_dur: float = 1.0, share: float = 0.6, floor='F4',
-              seed=0) -> Clip:
+              seed=0, move: float = 0.0, still=None, long_share: float | None = None, scale_at=None) -> Clip:
     """A melody's long notes (`min_dur` beats+, `share` of them, seeded) given the chord under them in the right
     hand: voices=1 a third or a sixth below (a chord tone; the sung line's companion - letters-to-the-morning's A2 /
-    A3), voices=2 two chord tones inside the octave below (the climax's chords: the hook in chords); short notes stay
-    single, nothing under `floor`. chord_at(beat) -> a Chord / symbol or None. The melody keeps its notes; voice the
-    top with Score.perform(inner=)."""
+    A3), voices=2 two chord tones inside the octave below (the climax's chords: the hook in chords), voices=3 the
+    melody in octaves with a chord tone inside (the climax's octaves); short notes stay single, nothing under
+    `floor`. move: that share of the notes held 1.5 beats+ with a companion get an inner voice that MOVES under them
+    (the companion let go at the half, another chord tone - or the scale step next to it - struck there: an alto
+    line under the held tune; HUMAN_FEEDBACK 2026-10-15, "as if he had only one finger"; still(start, end) True: not
+    under that note - a phrase's landing keeps its breath). long_share: the share for the notes held 1.5 beats+
+    (default `share`; blind round g3: inner motion under held notes 0.22 - the long notes want their companion).
+    scale_at(beat) -> pitch classes: the moving voice's passing step (no chord tone in reach) only inside them (the
+    key's scale there; new-age round g13: MYUS's Bb4 a whole step under C5 over Cadd9 in C major, "a stray dominant
+    7th on the tonic", two judges). The hand's span stays
+    within a ninth. chord_at(beat) -> a Chord / symbol or None. The melody keeps its notes; voice the top with
+    Score.perform(inner=)."""
     from .theory import Chord
-    if voices not in (1, 2):
-        raise ComposeError(f"harmonize voices must be 1 (3rds / 6ths) or 2 (chords), got {voices!r}")
+    if voices not in (1, 2, 3):
+        raise ComposeError(f"harmonize voices must be 1 (3rds / 6ths), 2 (chords) or 3 (octaves), got {voices!r}")
     rng = random.Random(seed_int(seed))
     lo = note(floor)
     out = list(clip)
     for n in clip:
-        if n.dur < min_dur - _EPS or rng.random() >= share:
+        if n.dur < min_dur - _EPS or rng.random() >= (share if long_share is None or n.dur < 1.5 - _EPS
+                                                       else max(share, long_share)):
             continue
         c = chord_at(n.start)
         if c is None:
             continue
         c = c if isinstance(c, Chord) else Chord.parse(c)
         tones = {(c.root + i) % 12 for i in c.intervals}
+        added = []
         if voices == 1:
             cand = [p for p in range(n.pitch - 9, n.pitch - 2) if p % 12 in tones and p >= lo
-                    and (n.pitch - p) in (3, 4, 8, 9)]
+                    and (n.pitch - p) in (3, 4, 8, 9)] or \
+                [p for p in (n.pitch - 5,) if p % 12 in tones and p >= lo and long_share is not None
+                 and n.dur >= 1.5 - _EPS]              # (a held note: an open 4th under it when no 3rd / 6th fits)
             if cand:
-                out.append(n._replace(pitch=rng.choice(cand), vel=_vel(n.vel * 0.85)))
+                added = [n._replace(pitch=rng.choice(cand), vel=_vel(n.vel * 0.85))]
+        elif voices == 3:
+            if n.pitch - 12 >= lo:
+                mid = [p for p in range(n.pitch - 9, n.pitch - 2) if p % 12 in tones and p % 12 != n.pitch % 12]
+                added = [n._replace(pitch=n.pitch - 12, vel=_vel(n.vel * 0.9))] + \
+                    ([n._replace(pitch=rng.choice(mid), vel=_vel(n.vel * 0.8))] if mid else [])
         else:
             cand = sorted({p for p in range(n.pitch - 11, n.pitch - 2) if p % 12 in tones and p >= lo
                            and p % 12 != n.pitch % 12}, reverse=True)
@@ -501,8 +539,44 @@ def harmonize(clip: Clip, chord_at, *, voices: int = 1, min_dur: float = 1.0, sh
                     picked.append(p)
                 if len(picked) == 2:
                     break
-            out += [n._replace(pitch=p, vel=_vel(n.vel * 0.85)) for p in picked]
+            added = [n._replace(pitch=p, vel=_vel(n.vel * 0.85)) for p in picked]
+        if added and move and n.dur >= 1.5 - _EPS and rng.random() < move and \
+                not (still is not None and still(n.start, n.start + n.dur)):
+            # the inner voice moves under the held note: the lowest companion let go at the half, the next chord
+            # tone (else the scale step) toward the melody struck there, softer
+            low = min(added, key=lambda x: x.pitch)
+            h = round(n.dur / 2 * 2) / 2 or 0.5
+            c2 = chord_at(n.start + h)
+            c2 = c2 if c2 is None or isinstance(c2, Chord) else Chord.parse(c2)
+            t2 = tones if c2 is None else {(c2.root + i) % 12 for i in c2.intervals}
+            nxt = [p for p in range(low.pitch - 4, n.pitch - 2) if p % 12 in t2 and p != low.pitch and p >= lo
+                   and all(p != q.pitch for q in added) and (n.pitch - p) % 12 not in (1, 11)]
+            # (new-age round g14: no major 7th / minor 9th under the held note - the leading tone under a held tonic
+            # once the chord moves to V)
+            if not nxt:                                # (blind round g3: inner motion 0.22 - no chord tone in
+                # reach: the whole step under / over the companion, a passing 9th / 6th - never a 2nd under the tune)
+                sc = scale_at(n.start + h) if scale_at is not None else None
+                nxt = [p for p in (low.pitch - 2, low.pitch + 2) if p >= lo and n.pitch - p >= 3
+                       and all(abs(p - q.pitch) >= 2 for q in added if q is not low)
+                       and (sc is None or p % 12 in sc) and (n.pitch - p) % 12 not in (1, 11)]
+            if nxt:
+                q = min(nxt, key=lambda p: (abs(p - low.pitch), -p))
+                added = [x for x in added if x is not low] + [low._replace(dur=h), low._replace(
+                    start=n.start + h, dur=n.dur - h, pitch=q, vel=_vel(low.vel * 0.92))]
+        out += added
     return Clip._raw(out, clip.length)
+
+
+def _under_held(notes):
+    """A predicate over `notes`' notes: struck under a higher one of them still held a quarter beat past it (an inner
+    voice under a held melody note, not the melody - the packets' '(under)')."""
+    held = sorted((n.start, n.start + n.dur, n.pitch) for n in notes)
+    h0 = [x[0] for x in held]
+
+    def under(n):
+        i0, i1 = bisect.bisect_left(h0, n.start - 8), bisect.bisect_left(h0, n.start - 0.05)
+        return any(z_ > n.start + 0.25 and p_ > n.pitch for _, z_, p_ in held[i0:i1])
+    return under
 
 
 # ------------------------------------------------------------------------------------------------ the singing line
@@ -895,6 +969,11 @@ def articulate(clip: Clip, bpm, *, repeat_ms=None, leap: int | None = None, leap
     for i, n in enumerate(ns):
         if tops and abs(n.start - tops[-1][1].start) < 0.02:
             continue
+        p = tops[-1][1] if tops else None
+        if p is not None and n.pitch < p.pitch and p.start + p.dur > n.start + 0.05:
+            continue                                  # (an inner voice moving under a held top note is no melody
+            #                                           note: new-age round g9 - the alto's move let the held theme
+            #                                           note go at a 'leap' down to it, half the heads lost their top)
         tops.append((i, n))
     out = list(ns)
     for k, (i, n) in enumerate(tops[:-1]):
@@ -1183,7 +1262,7 @@ class Score:
                 accompany=None, lh_dyn: float = 0.6, rubato=None, cap: int = 112, accent_cap: float = 118,
                 roll_bpm=None, anchors: str = 'half', pedal_opts=None, plain: bool = False, figures=None,
                 figure_vel: float = 41, inner: float | None = None, figure_opts: dict | None = None,
-                rules: dict | None = None) -> dict:
+                rules: dict | None = None, balance=None, line: dict | None = None) -> dict:
         """Play the score like a romantic pianist (the nocturne etude's measured pipeline):
           left hand first (the timekeeper: the tempo map knows its onsets) - accompany() per entry (`accompany`
             options: vel 38, bass 1.2, first 1.0, second 0.88, top 1.06, roll_ms 14), the dynamics at a gentler
@@ -1205,6 +1284,16 @@ class Score:
             (spread hand='lh': together / bottom-up, an arpeggiated cadence chord now and then); the pedal
             changes with every entry's chord; `figure_opts`: pianist.figure's register
             ({'bass_lo': the lowest bass, 'cap': the top} - an e-piano's hand sits higher than a grand's)
+          balance - the hands' balance plan for the broken-chord hand: [(from beat, to beat, dB)] - a phrase starting
+            in a span is played with the left hand's summed note energy (ENERGY_EXP) that many dB under the right
+            hand's (negative: the hand leads; a later span wins), both ways, and the hands give and take inside it
+            (ACCOMPANIMENT give / take / lead_end); None: the fixed budget (below_db, only ever down)
+          line - the melody as ONE dynamic line per phrase (HUMAN_FEEDBACK 2026-10-15: "note by note, not
+            flowing" - neighbouring melody notes 5-7 velocity steps apart, each placed on its own): {'keep': the
+            share of each note's own velocity kept (the rest a smoothed arc over its neighbours), 'step': the
+            largest step between neighbouring melody notes, 'accent': a note this far over the arc keeps its
+            accent, 'range' / 'stretch': the smoothed arc stretched back to that share of the phrase's own range,
+            at most x stretch} - the notes under a melody note move with it (_line); None: as the rules place them
           inner - the right hand's own chords voiced to the top: the notes under the melody x inner (0.78: the
             sixths / thirds under a long note, the climax's chords sing softer than the tune)
           pedal - pedal_changes() with the harmony (the left hand's bass + chord) `delay_ms` after it, a half change
@@ -1324,8 +1413,14 @@ class Score:
                 for n in rh:
                     k = round(n.start, 2)
                     tops[k] = max(tops.get(k, 0), n.pitch)
-                rh = Clip._raw([n if n.pitch == tops[round(n.start, 2)] else n._replace(vel=_vel(n.vel * f))
-                                for n in rh], rh.length)
+                # (new-age round g13: an inner voice struck alone under a held melody note - the moving alto of
+                # harmonize(move=) - was its onset's top and sang at the melody's level, MYUS's Bb4 v79 under E5 v84:
+                # a note struck under a higher one still held a quarter beat past it is an inner note too)
+                under = _under_held(rh)
+                rh = Clip._raw([n if n.pitch == tops[round(n.start, 2)] and not under(n)
+                                else n._replace(vel=_vel(n.vel * f)) for n in rh], rh.length)
+            if line and not plain:
+                rh = self._line(rh, line, inner=inner is not None)
             if not plain:
                 rh = spread(rh, bpm, seed=len(self.events), travel=A['travel'], max_ms=A['max_ms'],
                             sd_ms=A['chord_sd_ms'])
@@ -1333,7 +1428,7 @@ class Score:
             out['rh'] = rh
         if lh_later:                                   # the broken-chord hand under the tune: follow it, stay below
             if not plain and out.get('rh') is not None:
-                out['lh'] = self._lh_under(out['lh'], out['rh'], R['accompaniment'])
+                out['lh'] = self._lh_under(out['lh'], out['rh'], R['accompaniment'], balance=balance)
             lh_track.play(out['lh'], 0)
         if pedal:
             po = {k: v for k, v in R['pedal'].items() if k not in ('half_beats', 'same_bass')}
@@ -1369,6 +1464,51 @@ class Score:
                     t.automate('instrument.pedal', ped)
             out['pedal'] = ped
         return out
+
+    def _line(self, rh: Clip, opts: dict, inner: bool = False) -> Clip:
+        """perform(line=): per phrase, the melody's velocities (each onset's top note, notes over 1/3 beat - the
+        figures and ornaments keep their own shape) pulled toward a smoothed arc (a triangular mean over two
+        neighbours each side) - opts['keep'] of the note's own kept, an accent opts['accent'] over the arc stays -
+        then the steps between neighbours limited to opts['step'] (forward and back, averaged); every note struck
+        with a melody note scaled with it. inner (perform(inner=) given): a note struck under a held higher one is
+        an inner voice, not on the line (_under_held)."""
+        keep, step, acc = opts.get('keep', 0.4), opts.get('step', 4.0), opts.get('accent', 14.0)
+        groups: dict = {}
+        for n in rh:
+            groups.setdefault(round(n.start, 2), []).append(n)
+        # (new-age round g13: an inner voice struck alone under a held melody note is no melody note - pulled to the
+        # line's arc it sang at the tune's level, MYUS's Bb4 v79 under E5 v84: _under_held)
+        under = _under_held(rh) if inner else (lambda n: False)
+        starts = sorted(k for k in groups if not under(max(groups[k], key=lambda n: n.pitch)))
+        bounds = [self.bar(a) for a, _ in self.phrases] + [float('inf')]
+        new_v: dict = {}
+        for a, z in zip(bounds, bounds[1:]):
+            ks = [k for k in starts if a - 0.05 <= k < z - 0.05 and max(groups[k], key=lambda n: n.pitch).dur > 1 / 3]
+            if len(ks) < 3:
+                continue
+            v = [float(max(groups[k], key=lambda n: n.pitch).vel) for k in ks]
+            arc = []
+            for i in range(len(v)):
+                w = [(v[j], 3 - abs(j - i)) for j in range(max(0, i - 2), min(len(v), i + 3))]
+                arc.append(sum(x * k for x, k in w) / sum(k for _, k in w))
+            t = [x if x - m >= acc else keep * x + (1 - keep) * m for x, m in zip(v, arc)]
+            f, b_ = list(t), list(t)
+            for i in range(1, len(t)):
+                f[i] = min(f[i - 1] + step, max(f[i - 1] - step, f[i])) if v[i] - arc[i] < acc else f[i]
+            for i in range(len(t) - 2, -1, -1):
+                b_[i] = min(b_[i + 1] + step, max(b_[i + 1] - step, b_[i])) if v[i] - arc[i] < acc else b_[i]
+            sm = [(x + y) / 2 for x, y in zip(f, b_)]
+            # (the phrase keeps its dynamic range: the smoothed arc stretched back toward the notes' own spread -
+            # one line that swells and falls, not a flattened one)
+            r0, r1 = max(v) - min(v), max(sm) - min(sm)
+            mu = sum(sm) / len(sm)
+            k_ = min(opts.get('stretch', 1.6), max(1.0, opts.get('range', 0.9) * r0 / max(1e-6, r1)))
+            for k, x, v0 in zip(ks, sm, v):
+                new_v[k] = (mu + (x - mu) * k_) / max(1.0, v0)
+        if not new_v:
+            return rh
+        return Clip._raw([n._replace(vel=_vel(n.vel * new_v[round(n.start, 2)])) if round(n.start, 2) in new_v
+                          else n for n in rh], rh.length)
 
     def _plain_dyn(self, clip: Clip, power: float) -> Clip:
         """perform(plain=True): the dynamics with the tools that existed - humanize.crescendo per span of marks."""
@@ -1426,10 +1566,18 @@ class Score:
             out.append(n._replace(vel=_vel(n.vel * f)))
         return Clip._raw(out, lh.length)
 
-    def _lh_under(self, lh: Clip, rh: Clip, AC: dict) -> Clip:
+    def _lh_under(self, lh: Clip, rh: Clip, AC: dict, balance=None) -> Clip:
         """The left hand under the melody (ACCOMPANIMENT): it follows the melody's level (x (the melody's last
         note / its phrase mean) ** follow) and every phrase's median stays below_db under the melody's - where the
-        melody plays (a note within the last bar); alone the hand keeps its level."""
+        melody plays (a note within the last bar); alone the hand keeps its level.
+        balance [(from beat, to beat, dB)]: every phrase with a melody is set to its span's dB under the right hand
+        (the phrase's summed note energy, ENERGY_EXP; up or down, within AC 'scale', never raised over the phrase's
+        loudest melody note; a later span wins), and inside it the hand gives and takes: x take under a
+        melody note just struck, rising to x give where the tune holds a note or rests (from give_beats[0] beats
+        after its onset to full at give_beats[1]; x 1 + lead_end more of it in the phrase's last bar) - the
+        notes beyond a bar of melody silence inside such a phrase too."""
+        if balance is not None:
+            return self._lh_balance(lh, rh, AC, balance)
         tops: dict = {}
         for n in rh:
             k = round(n.start, 2)
@@ -1467,6 +1615,74 @@ class Score:
             if ratio > cap:
                 for k in idx:
                     out[k] = out[k]._replace(vel=_vel(out[k].vel * cap / ratio))
+        return Clip._raw(out, lh.length)
+
+    def _lh_balance(self, lh: Clip, rh: Clip, AC: dict, balance) -> Clip:
+        """_lh_under with a balance plan (see there)."""
+        import bisect
+        spans = []
+        for sp in balance:
+            if not isinstance(sp, (tuple, list)) or len(sp) != 3:
+                raise ComposeError(f"perform balance: [(from beat, to beat, dB)], got {sp!r}")
+            spans.append((float(sp[0]), float(sp[1]), _num(sp[2], 'perform balance dB', -12, 18)))
+        g0, g1 = AC['give_beats']
+        if not 0 <= g0 < g1:
+            raise ComposeError(f"accompaniment give_beats: (from, full) beats with 0 <= from < full, got {(g0, g1)}")
+        give = _num(AC['give'], 'accompaniment give', 1, 2)
+        take = _num(AC['take'], 'accompaniment take', 0.5, 1)
+        lead_end = _num(AC['lead_end'], 'accompaniment lead_end', 0, 1)
+        lo_s, hi_s = AC['scale']
+        tops: dict = {}
+        for n in rh:
+            k = round(n.start, 2)
+            if k not in tops or n.pitch > tops[k].pitch:
+                tops[k] = n
+        mel = sorted(tops.values(), key=lambda n: n.start)
+        if not mel:
+            return lh
+        ts = [n.start for n in mel]
+        by: dict = {}
+        for n in mel:
+            ph = self._phrase_of(n.start)
+            by.setdefault(None if ph is None else ph[0], []).append(n.vel)
+        fol = _num(AC['follow'], 'accompaniment follow', 0, 2)
+        out, groups = [], {}
+        for n in lh:
+            ph = self._phrase_of(n.start)
+            key = None if ph is None else ph[0]
+            mv = by.get(key)
+            j = bisect.bisect_right(ts, n.start + 0.02) - 1
+            if not mv or j < 0 or key is None:
+                out.append(n)                      # a phrase without the melody (an intro): the hand's own level
+                continue
+            m = mel[j]
+            since = n.start - m.start
+            near = since <= self.bar_beats
+            f = (m.vel / (sum(mv) / len(mv))) ** fol if near else 1.0
+            rest = m.start + m.dur < n.start - 0.05 or not near     # the tune rests (or is far away)
+            x = 1.0 if rest else min(1.0, max(0.0, (since - g0) / (g1 - g0)))
+            f *= take + (give - take) * x
+            if x > 0 and n.start >= ph[2] - self.bar_beats - _EPS:
+                f *= 1 + lead_end * x               # the phrase's last bar: the hand leads the way on
+            groups.setdefault(key, []).append(len(out))
+            out.append(n._replace(vel=_vel(n.vel * f)))
+        for key, idx in groups.items():
+            s0 = self.phrases[key]
+            start, end = self.bar(s0[0]), self.bar(s0[1] + 1)
+            db = None
+            for a, z, d in spans:
+                if a - _EPS <= start < z - _EPS:
+                    db = d
+            if db is None:
+                continue
+            er = sum(_energy(n.vel) for n in rh if start - _EPS <= n.start < end - _EPS)
+            el = sum(_energy(out[k].vel) for k in idx)
+            if er <= 0 or el <= 0:
+                continue
+            f = min(hi_s, max(lo_s, 10 ** ((10 * math.log10(er / el) - db) / (10 * ENERGY_EXP))))
+            top = max(n.vel for n in rh if start - _EPS <= n.start < end - _EPS)
+            for k in idx:                          # (never a strike over the phrase's loudest melody note)
+                out[k] = out[k]._replace(vel=min(_vel(out[k].vel * f), max(out[k].vel, top)))
         return Clip._raw(out, lh.length)
 
     def _chord_at(self, harmony):

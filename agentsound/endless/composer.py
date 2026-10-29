@@ -48,6 +48,8 @@ from __future__ import annotations
 
 from collections import namedtuple
 from copy import deepcopy
+import itertools
+import math
 import random
 import re
 from dataclasses import dataclass, field
@@ -201,11 +203,49 @@ def set_plan(genre: Genre, n: int, seed: int, mood: str | None = None, prev_key:
     out, prev_feel = [], None
     prev_pc = Key(prev_key).tonic % 12 if prev_key else None
     drng = random.Random(f"set-draws:{genre.name}:{seed}")     # (the set-level draws: their own dice)
+    bars_mem: list = []                                        # (round o22: the realised bar plans so far)
     for k in range(n):
         e = arc_at(S['curve'], k / (n - 1) if n > 1 else 0.0)
-        slot = _slot(genre, e, rng, moods, prev_feel, prev_pc)
-        slot.update(set_draws(genre, drng, history=out))
+        need_end = _end_need(S, out)
+        slot = _slot(genre, e, rng, moods, prev_feel, prev_pc, [x['feel'] for x in out], n=n,
+                     taken=[(tuple(genre.feels[x['feel']].get('time_sig') or ()), x['key']) for x in out],
+                     key_rng=random.Random(f"set-key:{genre.name}:{seed}:{k}"), need_end=need_end)
+        slot.update(set_draws(genre, drng, history=out, n=n, ctx=slot))
+        if genre.plan.get('set_shape'):                # (round o19a: a draw combination never twice per feel)
+            _set_shape(genre, slot, out, random.Random(f"set-shape:{genre.name}:{seed}:{k}"))
+        if S.get('end_alt'):                           # (round o22: the endings' dynamic alternates)
+            slot['coda'] = _end_coda(genre, slot, need_end, random.Random(f"set-end:{genre.name}:{seed}:{k}"))
+        if genre.plan.get('set_bars'):                 # (round o22: no twin bar plans in a set)
+            _set_bars(genre, slot, out, bars_mem, random.Random(f"set-bars:{genre.name}:{seed}:{k}"))
+        if genre.plan.get('set_tech'):                 # (round o23: the playing techniques, with the set's memory)
+            from .symphony import tech_rank
+            slot['tech'] = tech_rank(slot['feel'], random.Random(f"set-tech:{genre.name}:{seed}:{k}"),
+                                     [x.get('tech') for x in out])
+        if genre.plan.get('set_macro'):                # (round o24: the macro shape, the techniques' whole-set memory)
+            from .symphony import shape_slot
+            shape_slot(genre, slot, out, n, random.Random(f"set-macro:{genre.name}:{seed}:{k}"))
+        if genre.plan.get('set_choir'):                # (round oc1: the choir's plan, with the set's memory)
+            from .choir import choir_draw
+            slot['choir'] = choir_draw(slot['feel'], random.Random(f"set-choir:{genre.name}:{seed}:{k}"),
+                                       [x.get('choir') for x in out])
+        if genre.plan.get('set_solo'):                 # (round os1: the string solo event, with the set's memory)
+            from .solo import solo_slot
+            solo_slot(slot, out, random.Random(f"set-solo:{genre.name}:{seed}:{k}"))
+        if genre.plan.get('set_guest'):                # (round ox1: the guest colour, with the set's memory)
+            from .colour import guest_slot
+            guest_slot(genre, slot, out, n, random.Random(f"set-guest:{genre.name}:{seed}:{k}"))
+        if genre.plan.get('set_polish'):               # (round op1: POLISH - the title's label, the summit's texture)
+            from .choir import choir_slot
+            prng = random.Random(f"set-polish:{genre.name}:{seed}:{k}")
+            title_slot(genre, slot, out, prng)
+            choir_slot(slot, out, prng)
+        if genre.plan.get('set_tech2'):                # (round o24b: TECH2 - the techniques' whole-set memory)
+            from .symphony import tech2_slot
+            tech2_slot(genre, slot, out, random.Random(f"set-tech2:{genre.name}:{seed}:{k}"))
         out.append(slot)
+        if genre.plan.get('perform') == 'symphony':
+            from . import hero_sax
+            hero_sax.slot(slot, f'{seed}:{k}', history=[x.get('hero_sax_enabled', False) for x in out[:-1]])
         prev_feel, prev_pc = slot['feel'], Key(slot['key']).tonic % 12
     return out
 
@@ -215,7 +255,8 @@ BLOCK_PINS = ('hook', 'open', 'build')
 mode's)."""
 
 
-def set_draws(genre: Genre, rng: random.Random, prev: dict | None = None, history: list | None = None) -> dict:
+def set_draws(genre: Genre, rng: random.Random, prev: dict | None = None, history: list | None = None,
+              n: int | None = None, ctx: dict | None = None) -> dict:
     """The genre's set-level draws (genre.plan['set'] {key: {choice: weight}}: the arrangement's layout, the climax
     kind, the melody's register shift, the chorus's chord block - HUMAN_FEEDBACK 2026-10-12: a set must vary, not
     only a piece) for one slot: each drawn by weight, never a choice of the last plan['set_memory'][key] slots
@@ -223,41 +264,480 @@ def set_draws(genre: Genre, rng: random.Random, prev: dict | None = None, histor
     weights are per mode ({'major': {choice: weight}, 'minor': ...}: the chorus's 'hook' block) draws one choice per
     mode ({mode: choice}; compose takes its mode's). The slot pins them for every best-of-N candidate (the score
     cannot collapse a set onto its safest choice); compose() draws them itself without a set plan (the teacher
-    export)."""
+    export). A genre with plan['signature'] also draws the piece's signature moves (signature_draw: n the set's size,
+    ctx the slot's key / tempo / feel - the moves' fingerprints never repeat in the set)."""
     hist = list(history) if history is not None else [prev] if prev else []
     mem = genre.plan.get('set_memory') or {}
+    groups = genre.plan.get('set_groups') or {}
     out = {}
+
+    def fresh(w, hs, get_, grp=None):
+        # (the choices none of the last n slots took; when every one was taken, a shorter memory - the least
+        # recently used, never simply any; grp {choice: group} (plan['set_groups'], round o18b: the motto's rhythm
+        # family) - none of their GROUPS)
+        g_ = (lambda v: grp.get(v, v)) if grp else (lambda v: v)
+        for n in range(len(hs), -1, -1):
+            used = {g_(get_(h)) for h in hs[len(hs) - n:]} if n else set()
+            cand = {v: x for v, x in w.items() if g_(v) not in used}
+            if cand:
+                return cand
+        return w
+    by_feel = genre.plan.get('set_feel') or ()
     for k, w in sorted((genre.plan.get('set') or {}).items()):
+        if k in LATE_DRAWS:
+            continue
+        if k in by_feel and ctx and ctx.get('feel') in genre.feels:
+            # (round o18b, plan['set_feel']: the draw among the slot's feel's own choices - its 'layouts' - so that
+            # the memory sees what the piece plays)
+            own = genre.feels[ctx['feel']].get(k + 's')
+            w = {x: v for x, v in w.items() if x in own} or w if own else w
         recent = hist[max(0, len(hist) - mem.get(k, 1)):]
         if all(isinstance(x, dict) for x in w.values()):
             out[k] = {}
-            for m, wm in sorted(w.items()):
-                used = {(h.get(k) or {}).get(m) for h in recent}
-                out[k][m] = _pick(rng, {v: x for v, x in wm.items() if v not in used} or wm)
+            for m, wm in sorted(w.items()):            # (a per-mode draw remembers that mode's slots: a major
+                mine = [h for h in hist if str(h.get('key', '')).endswith(m)] or recent    # piece's hook block
+                mine = mine[max(0, len(mine) - mem.get(k, 1)):] if mine is not recent else recent   # is not
+                out[k][m] = _pick(rng, fresh(wm, mine, lambda h: (h.get(k) or {}).get(m),      # used up by minor)
+                                             (groups.get(k) or {}).get(m)))
             continue
-        used = {h.get(k) for h in recent}
-        cand = {v: x for v, x in w.items() if v not in used} or w
-        out[k] = _pick(rng, cand)
+        out[k] = _pick(rng, fresh(w, recent, lambda h: h.get(k), groups.get(k)))
+    if genre.plan.get('signature'):
+        out['signature'] = signature_draw(genre, rng, hist, n, ctx or {})
+    for k in LATE_DRAWS:                               # (drawn last, in this order: the draws before them as they
+        w = (genre.plan.get('set') or {}).get(k)       # were)
+        if not w:
+            continue
+        recent = hist[max(0, len(hist) - mem.get(k, 1)):]
+        out[k] = _pick(rng, fresh(w, recent, lambda h, _k=k: h.get(_k)))
+        if k == 'arrival' and out.get('signature') is not None:
+            out['signature'] = arrival_pause(genre, rng, out['arrival'], out['signature'])
     return out
 
 
-def _slot(genre: Genre, e: float, rng: random.Random, moods: dict, prev_feel, prev_pc) -> dict:
+LATE_DRAWS = ('arrival', 'peak', 'big', 'second', 'fug_order')
+"""plan['set'] keys set_draws draws after the signature moves, in this order (a key added later: the other draws stay
+put)."""
+
+
+def arrival_pause(genre: Genre, rng: random.Random, arrival: str, sig: dict) -> dict:
+    """The signature's suspended pause made to agree with the climax's arrival (plan['set']['arrival']; round g9, four
+    judges: "the theme returns at the climax" heard as the set's one plan - the climax arrives differently per piece):
+    'pause' - the pause sits at the climax seam (drawn when the piece had none); any other arrival - a pause drawn for
+    the climax seam moves to the return (its high note goes: the climax's lead-in only). -> the signature."""
+    X = ((genre.plan.get('signature') or {}).get('moves') or {}).get('pause')
+    if not X:
+        return sig
+    sig = dict(sig)
+    p = sig.get('pause')
+    if arrival == 'pause':
+        if p is None:
+            p = {'kind': _pick(rng, X['kind']), 'hold': _pick(rng, X['hold']), 'approach': _pick(rng, X['approach']),
+                 'after': _pick(rng, X['after'])}
+        sig['pause'] = dict(p, seam='climax')
+    elif p is not None and p['seam'] == 'climax':
+        kinds = {k: w for k, w in X['kind'].items() if k != 'high_note'} or X['kind']
+        sig['pause'] = dict(p, seam='return', kind=p['kind'] if p['kind'] in kinds else _pick(rng, kinds))
+    return sig
+
+
+MOTTOS = {
+    # the motto's kinds (docs/PIANO_MOVES.md 5.1; genres._NA_SIGNATURE draws one per piece): (onset, duration, scale
+    # steps over the anchor - 'open' = the next degree 2 / 5 / 6 up) in grid units; 'osc' - the neighbour oscillation
+    # with its break-off - is built from its interval / swings / breakoff (motto_cell)
+    'sigh': ((0, 2, 1), (2, 2, 0), (4, 2, 0), (6, 3, -1)),            # appoggiatura + resolution, a step lower again
+    'toll': ((0, 3, 0), (3, 1, 0), (4, 4, 0), (8, 2, -1), (10, 6, -2)),   # a repeated note, dotted, then falling
+    'call': ((0, 1, -2), (1, 1, -1), (2, 2, 0), (4, 6, 'open')),      # rising into an open degree, held
+    'leap': ((0, 2, 0), (2, 4, 5), (6, 1, 4), (7, 1, 3), (8, 4, 2)),  # a 6th up, then a stepwise fall
+    'fall3': ((0, 3, 2), (3, 3, 1), (6, 6, 0)),                       # three falling notes
+}
+"""The motto cells besides 'osc' (motto_cell)."""
+
+
+MOTTO_BANDS = {'low': (67, 72), 'mid': (71, 77), 'high': (75, 81)}
+"""The motto's register bands (genres._NA_SIGNATURE motto 'register'; motto_anchor's lo..hi): all over the left
+hand's (E4) and under the singing register's top."""
+
+
+def motto_anchor(kind: str, head: list, key_pcs, tonic_pc: int, lo: int = 67, hi: int = 81, anchor: str = 'head',
+                 minor: bool = False) -> int:
+    """The motto's anchor pitch from the theme's head (the piece's own material): an oscillation hovers on the key's
+    5th (else its 3rd) nearest the head's mean; the other kinds start from the head's first note - within lo..hi.
+    anchor (round g4: three mottos of a set from one D5): 'third' / 'fifth' / 'root' start on that degree of the
+    key instead (nearest the head's mean), 'head' on the head's first note."""
+    ps = [n[2] for n in head] or [72]
+    mean = sum(ps) / len(ps)
+    if kind != 'osc' and anchor in ('third', 'fifth', 'root'):
+        deg = {'third': 3 if minor else 4, 'fifth': 7, 'root': 0}[anchor]
+        c = [q for q in range(lo, hi + 1) if (q - tonic_pc) % 12 == deg]
+        if c:
+            return min(c, key=lambda q: (abs(q - mean), q))
+    if kind == 'osc':
+        for deg in (7, 4, 3):
+            c = [q for q in range(lo, hi + 1) if (q - tonic_pc) % 12 == deg and q % 12 in key_pcs]
+            if c:
+                return min(c, key=lambda q: (abs(q - mean), q))
+    p = ps[0]
+    while p < lo:
+        p += 12
+    while p > hi:
+        p -= 12
+    return p
+
+
+def motto_cell(kind: str, x: dict, anchor: int, key_pcs, tonic_pc: int, minor: bool = False) -> list:
+    """The motto as notes [(beat, beats, pitch)] from 0 (docs/PIANO_MOVES.md 5.1): 'osc' - `swings` alternations of
+    the anchor and its lower neighbour (x['interval'] semitones: the chromatic one under the 5th, else the key's),
+    then its break-off ('arp_fall' the tonic triad down, 'step_land' two steps down, 'held' the anchor held); the other
+    kinds MOTTOS' shapes; on x['grid'] (beats per unit), its last note a beat at least."""
+    g = float(x['grid'])
+    kp = set(key_pcs)
+
+    def step(p, n):
+        return _scale_step(p, n, kp) if n else p
+    out = []
+    if kind == 'osc':
+        nb = anchor - int(x['interval'])
+        if nb % 12 not in kp and not (int(x['interval']) == 1 and (anchor - tonic_pc) % 12 == 7):
+            nb = _scale_step(anchor, -1, kp)
+        t = 0.0
+        for i in range(2 * int(x['swings'])):
+            out.append((t, g, anchor if i % 2 == 0 else nb))
+            t += g
+        b = x['breakoff']
+        if b == 'arp_fall':
+            tri = {(tonic_pc + i) % 12 for i in ((0, 3, 7) if minor else (0, 4, 7))}
+            down = [q for q in range(anchor - 1, anchor - 13, -1) if q % 12 in tri][:3]
+            for j, q in enumerate(down):
+                out.append((t, g if j < len(down) - 1 else max(1.0, 4 * g), q))
+                t += g
+        elif b == 'step_land':
+            out += [(t, g, step(anchor, -1)), (t + g, max(1.0, 4 * g), step(anchor, -2))]
+        else:
+            out.append((t, max(1.0, 4 * g), anchor))
+        return out
+    prev = anchor
+    for a, d, st in MOTTOS[kind]:
+        if st == 'open':
+            opens = {(tonic_pc + i) % 12 for i in ((2, 7, 8) if minor else (2, 7, 9))}
+            q = next(q for q in range(prev + 1, prev + 13) if q % 12 in opens and q % 12 in kp | opens)
+        else:
+            q = step(anchor, st)
+        out.append((a * g, d * g, q))
+        prev = q
+    last = out[-1]
+    out[-1] = (last[0], max(1.0, last[1]), last[2])
+    return out
+
+
+def signature_prints(sig: dict) -> set:
+    """A signature move set's fingerprints (docs/PIANO_MOVES.md section 7): {(move, the coarse parameters a listener
+    would recognise)} - the motto (kind, the oscillation's interval), the ostinato (grid, contour, span band), the
+    pause (kind, seam), the goosebump chord (degree), the cascade (pattern, group)."""
+    out = set()
+    for mv, x in (sig or {}).items():
+        if mv == 'motto':
+            out.add((mv, x['kind'], x['interval'] if x['kind'] == 'osc' else 0))     # (round g4: two 'sigh' mottos
+            #   differing only in an interval their cell ignores, and in the grid, read as one gesture: the kind is the
+            #   gesture - one per set; three mottos from one D5: the register band too)
+            if x.get('register'):
+                out.add(('motto_band', x['register']))
+        elif mv == 'ostinato':
+            out.add((mv, x['grid'], x['contour'], 'wide' if x['span'] >= 5 else 'narrow'))
+        elif mv == 'pause':
+            out.add((mv, x['kind'], x['seam']))
+        elif mv == 'goose':
+            out.add((mv, x['degree']))
+        elif mv == 'cascade':
+            out.add((mv, x['pattern'], x['group']))    # (round g4: one bar always - its hand pattern and groups)
+    return out
+
+
+def signature_draw(genre: Genre, rng: random.Random, history: list, n: int | None, ctx: dict) -> dict:
+    """One piece's signature moves (genre.plan['signature'], genres._NA_SIGNATURE; docs/PIANO_MOVES.md sections 6-7):
+    {move: its parameters}. By slot - identity (the motto / the signature ostinato, both now and then), the
+    transition (the suspended pause), the payoff (the goosebump chord, the cascade) - each move by its chance, x
+    'after' when the slot before had it (a payoff not the slot before's), never in more than plan['signature']['cap']
+    of the set (n pieces; the history so far), its parameters drawn by weight so that its fingerprint
+    (signature_prints) is new in the set (else the move is left out). ctx: the slot's 'key' (the goosebump degree's
+    mode), 'tempo' and 'feel' (16ths only at a slow tempo; the waltz's grids). Every piece gets one move at least."""
+    S = genre.plan['signature']
+    M = S['moves']
+    used = set()
+    count: dict = {}
+    for h in history:
+        used |= signature_prints(h.get('signature') or {})
+        for mv in (h.get('signature') or {}):
+            count[mv] = count.get(mv, 0) + 1
+    last = (history[-1].get('signature') or {}) if history else {}
+    cap = max(1, int(S['cap'] * n + 1e-9)) if n else None
+    mode = str(ctx.get('key', 'C major')).split()[-1]
+    tempo = ctx.get('tempo') or 72
+    meter = (genre.feels.get(ctx.get('feel')) or {}).get('meter', 4) if ctx.get('feel') else 4
+
+    def free(mv):
+        return cap is None or count.get(mv, 0) < cap
+
+    def params(mv):
+        """The move's parameters, drawn until its fingerprint is new (20 tries), else None."""
+        X = M[mv]
+        for _ in range(20):
+            if mv == 'motto':
+                kind = _pick(rng, X['kind'])
+                grids = {g: w for g, w in X['grid'].items() if (g >= 0.5 or tempo <= X['slow']) and
+                         (meter == 4 or abs(g - 1 / 3) > 1e-3)}
+                x = {'kind': kind, 'interval': _pick(rng, X['interval']), 'grid': _pick(rng, grids),
+                     'swings': _pick(rng, X['swings']), 'breakoff': _pick(rng, X['breakoff']),
+                     'exposure': _pick(rng, X['exposure']), 'payoff': _pick(rng, X['payoff']),
+                     'dyn': _pick(rng, X['dyn']), 'anchor': _pick(rng, X['anchor']),
+                     'register': _pick(rng, X['register'])}
+            elif mv == 'ostinato':
+                grids = X['grid'][meter]
+                grids = {g: w for g, w in grids.items() if g <= X['fast'][meter] or tempo <= X['slow']}
+                x = {'grid': _pick(rng, grids), 'contour': _pick(rng, X['contour']), 'span': _pick(rng, X['span']),
+                     'colour': _pick(rng, X['colour']), 'bass': _pick(rng, X['bass']),
+                     'lh_only': _pick(rng, X['lh_only'])}
+                if x['grid'] > X['fast'][meter]:
+                    x['span'] = min(x['span'], 5)
+            elif mv == 'pause':
+                x = {'kind': _pick(rng, X['kind']), 'seam': _pick(rng, X['seam']), 'hold': _pick(rng, X['hold']),
+                     'approach': _pick(rng, X['approach']), 'after': _pick(rng, X['after'])}
+                if x['kind'] == 'high_note' and x['seam'] != 'climax':
+                    # (round g9, all five judges: DMZT 52's lone F6 over a silent left hand before the coda - the
+                    # high note is the climax's lead-in only)
+                    x['kind'] = _pick(rng, {k: w for k, w in X['kind'].items() if k != 'high_note'} or X['kind'])
+            elif mv == 'goose':
+                x = {'degree': _pick(rng, X['degree'][mode]), 'where': _pick(rng, X['where']),
+                     'dyn': _pick(rng, X['dyn']), 'voicing': _pick(rng, X['voicing'])}
+            else:
+                x = {'pattern': _pick(rng, X['pattern']), 'group': _pick(rng, X['group']),
+                     'length': _pick(rng, X['length']), 'grid': _pick(rng, X['grid']),
+                     'landing': _pick(rng, X['landing'])}
+            if not signature_prints({mv: x}) & used:
+                return x
+        return None
+    out: dict = {}
+    for slot_ in ('identity', 'transition', 'payoff'):
+        mvs = [mv for mv in sorted(M) if M[mv]['slot'] == slot_ and free(mv)]
+        rng.shuffle(mvs)
+        took = 0
+        for mv in mvs:
+            ch = M[mv]['chance'] * (S['after'] if mv in last else 1.0)
+            if took and slot_ == 'identity':
+                ch *= S['both']
+            if rng.random() < ch:
+                x = params(mv)
+                if x is not None:
+                    out[mv] = x
+                    took += 1
+    if not out:                                        # (one move at least: the freest one - a retired move,
+        for mv in sorted((m_ for m_ in M if M[m_]['chance'] > 0), key=lambda m_: (count.get(m_, 0), m_)):  # chance
+            #                                                                                     0, never)
+            x = params(mv) if free(mv) else None
+            if x is not None:
+                out[mv] = x
+                break
+    return out
+
+
+def _set_shape(genre: Genre, slot: dict, history: list, rng: random.Random) -> None:
+    """plan['set_shape'] {'by': slot key, 'keys': (draw, ...)} (round o19a - o18b's judges: "it is the BVMD plan
+    exactly (202 bars, 13 sections ...)", two scherzo_trio pieces of one set): the combination of the `keys` draws
+    never repeats among the set's earlier slots with the slot's own `by` value (the feel: a scherzo's layout and
+    section count) - a repeat is redrawn (rng, by weight) among the combinations still free; the weights are
+    plan['set'][key] (the feel's own where plan['set_feel'] lists the key). In place."""
+    X = genre.plan['set_shape']
+    keys = tuple(X['keys'])
+    if any(k not in slot for k in keys):
+        return
+    by = slot.get(X['by'])
+    used = {tuple(str(h.get(k)) for k in keys) for h in history if h.get(X['by']) == by}
+    if tuple(str(slot[k]) for k in keys) not in used:
+        return
+    S_ = genre.plan.get('set') or {}
+    by_feel = genre.plan.get('set_feel') or ()
+    opts = []
+    for k in keys:
+        w = dict(S_.get(k) or {slot[k]: 1.0})
+        own = genre.feels.get(slot.get('feel'), {}).get(k + 's') if k in by_feel else None
+        if own:
+            w = {x: v for x, v in w.items() if x in own} or w
+        opts.append(sorted(w.items(), key=lambda kv: str(kv[0])))
+    free = {}
+    for combo in itertools.product(*opts):
+        vals = tuple(v for v, _ in combo)
+        if tuple(str(v) for v in vals) not in used:
+            wt = 1.0
+            for _, x in combo:
+                wt *= float(x)
+            free[vals] = wt
+    if not free:
+        return
+    vals = _pick(rng, free)
+    for k, v in zip(keys, vals):
+        slot[k] = v
+
+
+def _end_need(S: dict, history: list):
+    """The set arc's 'end_alt' (round o22): 'loud' after a dissolving coda, 'soft' after `run` loud ones in a row,
+    else None (the slot's own draw)."""
+    X = S.get('end_alt')
+    if not X or not history:
+        return None
+    codas = [h.get('coda') for h in history]
+    if codas[-1] == X['soft']:
+        return 'loud'
+    if len(codas) >= X['run'] and all(c == X['loud'] for c in codas[-X['run']:]):
+        return 'soft'
+    return None
+
+
+def _end_coda(genre: Genre, slot: dict, need, rng: random.Random) -> str:
+    """The slot's coda as it will sound (round o22, 'end_alt'): the one `need` asks for, else the slot's draw - where
+    the slot's mood has it, else one of the mood's own."""
+    X = genre.arc['set']['end_alt']
+    cw = {c: w for c, w in (genre.moods[slot['mood']].get('coda') or {'triumph': 1.0}).items() if w > 0}
+    want = X[need] if need else slot.get('coda')
+    return want if want in cw else _pick(rng, cw)
+
+
+def _minor_need(S: dict, taken, n) -> bool:
+    """The set arc's 'mode_quota' (round o22): True when this slot must be minor / modal - the quota (q per `per`
+    slots, ceil over the set's n) out of reach without it, or the last 'major_run' slots all major. taken: the earlier
+    slots' [(time_sig, key)]."""
+    q = S.get('mode_quota')
+    if not q or taken is None or not n:
+        return False
+    keys = [str(k_) for _, k_ in taken]
+    have = sum(1 for k_ in keys if not k_.endswith(' major'))
+    need = int(math.ceil(q[0] * n / q[1] - 1e-9))
+    if have + (n - len(keys) - 1) < need:
+        return True
+    r = S.get('major_run')
+    return bool(r and len(keys) >= r and all(k_.endswith(' major') for k_ in keys[-r:]))
+
+
+def _bar_sim(a: list, b: list, tol: float) -> float:
+    """The share of two bar plans' sections (of the longer's count) whose lengths agree within tol at one index."""
+    return sum(1 for x, y in zip(a, b) if abs(x - y) <= tol + 1e-9) / max(1, len(a), len(b))
+
+
+def _set_bars(genre: Genre, slot: dict, history: list, mem: list, rng: random.Random) -> None:
+    """plan['set_bars'] (round o22 - o20's set judges: "piece 7 then replays piece 2: the same 4/4 layout (3 | 12 | 12
+    | 8 | 12 ...)"): the slot's realised bar plan (symphony.bar_plan) against every earlier slot's (`mem`, appended
+    to); a twin (_bar_sim over 'sim') draws the slot's 'keys' again - 'tries' candidates by weight among the values
+    the keys' set memory leaves free - and keeps the least similar. In place."""
+    from . import symphony as S_
+    X = genre.plan['set_bars']
+
+    def worst(v):
+        return max((_bar_sim(v, h, X['tol']) for h in mem), default=0.0)
+    try:
+        v = S_.bar_plan(genre, slot)
+    except (ComposeError, KeyError, ValueError):
+        return
+    if mem and worst(v) > X['sim'] + 1e-9:
+        S = genre.plan.get('set') or {}
+        memo = genre.plan.get('set_memory') or {}
+        opts = {}
+        for k in X['keys']:
+            w = dict(S.get(k) or {})
+            if k == 'layout':                  # (the feel's own layouts its earlier slots did not play)
+                own = genre.feels[slot['feel']].get('layouts') or ()
+                w = {c: x for c, x in w.items() if c in own and
+                     not any(h.get('feel') == slot['feel'] and h.get('layout') == c for h in history)} or \
+                    {slot['layout']: 1.0}
+            recent = {str(h.get(k)) for h in history[max(0, len(history) - memo.get(k, 1)):]} if memo.get(k, 1) else set()
+            opts[k] = {c: x for c, x in w.items() if str(c) not in recent} or w
+        best = (worst(v), 0, {})
+        for j in range(int(X['tries'])):
+            c = {k: _pick(rng, w) for k, w in opts.items() if w}
+            try:
+                vv = S_.bar_plan(genre, dict(slot, **c))
+            except (ComposeError, KeyError, ValueError):
+                continue
+            s_ = worst(vv)
+            if s_ < best[0] - 1e-9:
+                best, v = (s_, j + 1, c), vv
+            if s_ <= X['sim'] + 1e-9 and best[2]:
+                break
+        slot.update(best[2])
+    mem.append(v)
+
+
+def _slot(genre: Genre, e: float, rng: random.Random, moods: dict, prev_feel, prev_pc, used=None,
+          n: int | None = None, taken=None, key_rng: random.Random | None = None, need_end=None) -> dict:
     """One set slot at energy e: the feel nearest the energy (not the last tune's), a mood that has it, the tempo by
-    the energy, the key moved from the tune before by the set arc's key table."""
+    the energy, the key moved from the tune before by the set arc's key table. The set arc's optional keys (round
+    o2, the orchestra: a set must not be one plan family) - 'feel_noise' the dice on the feel's distance (default
+    0.04: the nearest nearly always), 'feel_max' no feel more often in a set (`used` the set's feels so far),
+    'tempo_spread' the tempo's place in the feel's range moved by up to +-this (an extra die). Round o18b (the
+    orchestra's meter mix): 'meter_share' ((time_sig, share), ...) - a time signature in at most its share of the set
+    (n its size), 'meter_gap' - never the meter of the slot before; the feels' dice are thrown before they filter, so a
+    slot they leave alone draws as without them. Round o19a (o18b's judges: "bars 93-104 are identical to JDGP bars
+    73-84", two F major scherzos - a development's chart and its voicing are a function of the home key and the
+    meter): 'key_apart' - never a key an earlier slot of the same time signature has (`taken` [(time_sig, key)]); a
+    clash is redrawn with `key_rng` among the mode's other keys (then the mood's other modes, then any key of the
+    genre's moods in the mode), so a slot without a
+    clash draws as before. Round o22 (o20's set judges: "seven major pieces out of eight, with F major three times",
+    "six loud endings of eight"): 'key_max' - no key more often in the set, over every time signature; 'mode_quota'
+    (q, per) with 'major_run' - the slot the quota needs (or the one after that many major slots in a row) takes a
+    mood with a minor / modal mode and that mode; need_end ('end_alt', set_plan's _end_need) - a mood that has the
+    coda the slot needs."""
     S = genre.arc['set']
     feels = sorted({f for m in moods.values() for f in m['feels']})
     cand = [f for f in feels if f != prev_feel] or feels
-    feel = min(cand, key=lambda f: abs(genre.feels[f].get('energy', 0.5) - e) + 0.04 * rng.random())
-    mname = _pick(rng, {m: M['feels'][feel] * (1.25 - abs(M.get('energy', 0.5) - e))
-                        for m, M in sorted(moods.items()) if feel in M['feels']})
+    if S.get('feel_max') and used:
+        cand = [f for f in cand if used.count(f) < S['feel_max']] or cand
+    noise = S.get('feel_noise', 0.04)
+    dice = {f: rng.random() for f in cand}
+
+    def ts(f_):
+        return tuple(genre.feels[f_].get('time_sig') or ())
+    if S.get('meter_share') and used and n:
+        cap = {tuple(k): max(1, int(math.ceil(v * n - 1e-9))) for k, v in S['meter_share']}
+        cand = [f for f in cand if sum(ts(u) == ts(f) for u in used) < cap.get(ts(f), n)] or cand
+    if S.get('meter_gap') and prev_feel:
+        cand = [f for f in cand if ts(f) != ts(prev_feel)] or cand
+    feel = min(cand, key=lambda f: abs(genre.feels[f].get('energy', 0.5) - e) + noise * dice[f])
+    mw = {m: M['feels'][feel] * (1.25 - abs(M.get('energy', 0.5) - e))
+          for m, M in sorted(moods.items()) if feel in M['feels']}
+    minor_need = _minor_need(S, taken, n)
+    if minor_need:                                 # (round o22: the mode quota - a mood with a minor / modal mode)
+        mw = {m: x for m, x in mw.items() if any(md != 'major' and wm > 0
+                                                 for md, wm in genre.moods[m]['modes'].items())} or mw
+    if need_end and S.get('end_alt'):              # (round o22: a mood that has the coda the slot needs)
+        cn = S['end_alt'][need_end]
+        mw = {m: x for m, x in mw.items() if (genre.moods[m].get('coda') or {}).get(cn, 0) > 0} or mw
+    mname = _pick(rng, mw)
     M, F = genre.moods[mname], genre.feels[feel]
     lo, hi = F['tempo']
     pos = min(1.0, max(0.0, 0.5 + (e - F.get('energy', 0.5)) * 1.5))
     tempo = int(round(min(hi, max(lo, lo + (hi - lo) * pos + M.get('tempo', 0)))))
-    mode = _pick(rng, M['modes'])
+    modes = M['modes']
+    if minor_need:
+        modes = {md: x for md, x in modes.items() if md != 'major' and x > 0} or modes
+    mode = _pick(rng, modes)
     w = {t: (S['keys'].get((Key(f"{t} {mode}").tonic - prev_pc) % 12, 1.0) if prev_pc is not None else 1.0)
          for t in M['keys'][mode]}
     tonic = _pick(rng, w) if any(v > 0 for v in w.values()) else rng.choice(M['keys'][mode])
+    if S.get('key_apart') and taken and key_rng is not None:
+        clash = {k_ for t_, k_ in taken if tuple(t_) == ts(feel)}
+        if S.get('key_max'):                       # (round o22: no key more than key_max times, every meter)
+            seen = [k_ for _, k_ in taken]
+            clash |= {k_ for k_ in seen if seen.count(k_) >= S['key_max']}
+        if f"{tonic} {mode}" in clash:
+            wider = sorted({t for M_ in genre.moods.values() for t in (M_.get('keys') or {}).get(mode, ())})
+            for m_, ts_ in [(mode, M['keys'][mode])] + [(x, M['keys'][x]) for x in sorted(M['modes']) if x != mode
+                                                        and not (minor_need and x == 'major')] + \
+                    [(mode, wider)]:          # (then any key the genre plays in the mode)
+                free = {t: max(1e-3, w.get(t, 1.0)) if m_ == mode else 1.0 for t in ts_
+                        if f"{t} {m_}" not in clash}
+                if free:
+                    tonic, mode = _pick(key_rng, free), m_
+                    break
+    if S.get('tempo_spread'):
+        pos = min(1.0, max(0.0, pos + S['tempo_spread'] * (2 * rng.random() - 1)))
+        tempo = int(round(min(hi, max(lo, lo + (hi - lo) * pos + M.get('tempo', 0)))))
     return {'energy': round(e, 2), 'feel': feel, 'mood': mname, 'tempo': tempo, 'key': f"{tonic} {mode}"}
 
 
@@ -285,7 +765,7 @@ def mix_plan(genres_: list, n: int, seed: int, prev_key: str | None = None, weig
         slot = dict(_slot(g, e, rng, g.moods, prev_feel, prev_pc), genre=gname)
         if g.plan.get('set'):                          # (the genre's set-level draws, against its own last slot)
             slot.update(set_draws(g, random.Random(f"set-draws:{gname}:{seed}:{k}"),
-                                  next((x for x in reversed(out) if x['genre'] == gname), None)))
+                                  history=[x for x in out if x['genre'] == gname], n=n, ctx=slot))
         out.append(slot)
         prev_g, prev_feel, prev_pc = gname, slot['feel'], Key(slot['key']).tonic % 12
     return out
@@ -435,6 +915,9 @@ class _Ctx:
     lead: list | None = None             # [the last strong pitch]: the guide-tone line the strong notes follow
     repeat: tuple = (0.7, 0.0)           # the cost of repeating the note before (strong / landing notes, weak ones)
     chromatic: float = 0.3               # the chance of a half-step-below approach note (genre melody 'chromatic')
+    contour: float = 1.0                 # the cost of a semitone off the planned contour (the theme's head: more -
+    #                                      round g8, its leap and its held top kept as drawn)
+    chrom_step: bool = False             # a chromatic approach note only after a step (genre melody 'chromatic_step')
 
 
 def _choose(ci: ChordInfo, target: int, prev: int | None, kind: str, ctx: _Ctx, land_pcs=None, also=(),
@@ -451,7 +934,7 @@ def _choose(ci: ChordInfo, target: int, prev: int | None, kind: str, ctx: _Ctx, 
     for c in range(ctx.lo, ctx.hi + 1):
         if c % 12 not in pcs:
             continue
-        cost = abs(c - target)
+        cost = ctx.contour * abs(c - target)
         if kind == 'strong' and c % 12 in ci.tensions:
             cost += 1.2
         if prev is not None:
@@ -517,10 +1000,13 @@ def _fit(events, deltas, ctx: _Ctx, prev: int | None, *, first=None, land=None, 
         if kind != 'weak' and ctx.lead is not None:
             ctx.lead[0] = p
     # chromatic approach notes: a short off-beat note right before a chord tone on the beat, now and then a half step
-    # below it (never into a tension, never off the beat: blind round 5)
+    # below it (never into a tension, never off the beat: blind round 5); ctx.chrom_step: approached by step (round
+    # g13: JQTJ's Eb5-Gb5-G5 over Ebmaj7, three judges - a chromatic note leapt to is heard as a wrong note)
     for i in range(len(out) - 1):
         st, du, p = out[i]
         nst, ndu, np_ = out[i + 1]
+        if ctx.chrom_step and i and abs(out[i - 1][2] - (np_ - 1)) > 2:
+            continue
         if du <= 0.5 and not events[i][2] and abs(st + du - nst) < 1e-6 and events[i + 1][2] \
                 and abs(nst - round(nst)) < 1e-6 and np_ % 12 in ctx.harm.under(nst, ndu).core \
                 and ctx.rng.random() < ctx.chromatic and ctx.lo <= np_ - 1:
@@ -678,6 +1164,19 @@ def _cell_ending(cell, kind: str, bar8: int) -> tuple | None:
     return tuple(head + land)
 
 
+def _cell_jacc(a, b) -> float:
+    """Two rhythm cells' (8ths, rests negative) onset sets: their Jaccard (1 = the same rhythm)."""
+    def ons(c):
+        t, o = 0, set()
+        for x in c:
+            if x > 0:
+                o.add(t)
+            t += abs(x)
+        return o
+    x, y = ons(a), ons(b)
+    return len(x & y) / max(1, len(x | y))
+
+
 def _vary_cell(cell, how: str, bar8: int) -> tuple:
     """A two-bar rhythm cell (8ths, rests negative) developed (genres.DEVELOP_RHYTHM): 'same'; 'displace' an 8th
     later (its tail an 8th shorter); 'truncate' its first bar, then one long note and a breath; 'augment' its first bar
@@ -740,14 +1239,16 @@ def _appoggiatura(notes, harm: Harm, meter: int, a: float, b: float, lo: int, hi
 
 
 def _style_issues(notes, meter: int, beats: float, skip=(), span: int = 0, lands=None,
-                  pads: float = 0.125) -> list[str]:
+                  pads: float | None = 0.125, holes: float = 0.0, head: bool = False) -> list[str]:
     """The writing rules of a head part (blind rounds 4-5), checked like melody_issues but weighed lower: a rhythm
     cell (a bar of 3+ notes) at most twice per 8 bars, a plainer bar (2 notes: half + half, a waltz's half + quarter)
     three times (bars in `skip` - a riff's repeat - left out); per 4-bar phrase no pitch struck more than about a third
     of the time (max(2, 30 %)) and a range of a 4th+ (no circling one pitch); the part's whole range at least `span`
     semitones (an A: an octave - blind round 5: an A inside A4-Eb5). lands= the bars where a phrase lands (a set of
     bar indices): the other bars may strike one note or none in `pads` of them at most (blind round 7: heads padding
-    with a one-note bar every other bar)."""
+    with a one-note bar every other bar; pads None: no such limit). holes: the other bars sound at least that share
+    of the bar (round g7, XEDV: a pickup, then half-empty bars - the theme a phrase, not cells with holes); head: the
+    first 4 notes not a neighbour figure inside a whole step (round g7, WHKZ's B-C-D-C head)."""
     out = []
     if lands is not None:
         per = [0] * int(round(beats / meter))
@@ -757,8 +1258,16 @@ def _style_issues(notes, meter: int, beats: float, skip=(), span: int = 0, lands
                 per[b_] += 1
         free = [b_ for b_ in range(len(per)) if b_ not in lands and b_ not in skip]
         thin = [b_ for b_ in free if per[b_] <= 1]
-        for b_ in thin[int(pads * len(free) + 1e-6):]:
+        for b_ in (thin[int(pads * len(free) + 1e-6):] if pads is not None else ()):
             out.append(f"bar {b_ + 1}: one note or none (a pad)")
+        for b_ in (free if holes else ()):
+            a_, z_ = b_ * meter, (b_ + 1) * meter
+            if sum(max(0.0, min(z_, s_ + d_) - max(a_, s_)) for s_, d_, _ in notes) < holes * meter - 1e-6:
+                out.append(f"bar {b_ + 1}: half empty")
+    if head and len(notes) >= 4:
+        ps = [n[2] for n in notes[:4]]
+        if max(ps) - min(ps) <= 2 and ps[3] in ps[:3]:
+            out.append("a neighbour-figure head")
     if span and notes and max(n[2] for n in notes) - min(n[2] for n in notes) < span:
         out.append(f"range {max(n[2] for n in notes) - min(n[2] for n in notes)} under {span}")
     rs = _bar_rhythms(notes, meter, beats)
@@ -781,6 +1290,93 @@ def _style_issues(notes, meter: int, beats: float, skip=(), span: int = 0, lands
         if max(ns) - min(ns) < 5:
             out.append(f"bars {4 * k + 1}-{4 * k + 4} inside a 4th")
     return out
+
+
+HEAD_PROFILE = {'leap': 5, 'held': {4: 1.0, 3: 1.5}, 'band': 3, 'share': 0.67,
+                'circle': {4: (4, 2, 0.5), 3: (8, 3, 0.6)}}
+"""A theme head's profile (round g8, all five judges: JTQL circling D5-E5, LXCD A4-B4, VJGT, VWBU's E5-D5-E5 - the
+heads the judges remembered, FBHB / ZGLR / the longing reference, have a shape): the head (the theme's first two bars)
+leaps at least 'leap' semitones once, its highest note is held 'held' beats or more (per meter), and no 'band'-
+semitone window holds more than 'share' of its notes (no 2-3 note stepwise band circled). Round g13 (all seven judges:
+VYDA's head, G#5 then C#5-D#5-C#5-B4-D#5-C#5 - it passed, its leap and held top in bar 1): 'circle' {meter: (bars,
+semitones, share)} - over the theme's first bars no window of that many semitones holds more than that share of the
+notes (VYDA 0.58 on C#5-D#5; GZAT, praised by every judge, 0.50; a waltz head's 4 bars hold too few notes to tell).
+Round g14 (all seven judges: PPHK's waltz head "circles a narrow cell", B4-F#5 for 8 bars, 0.65 of its notes in one
+3-semitone window; the longing reference's waltz 0.35, the generated waltzes 0.5-0.68): a waltz's 8 bars, 3 semitones,
+0.6 of the notes."""
+
+
+def _planned_profile(cell, deltas, meter: int) -> bool:
+    """A head's profile as planned (HEAD_PROFILE in scale steps, before its pitches are fitted): a rhythm cell (8ths)
+    and its contour moves - a leap of 3+ steps after the first note, the top held, no 3-step window over the share."""
+    ev = _events(cell, 0.0, meter)
+    if len(ev) < 3 or len(deltas) < len(ev):
+        return False
+    cum = [sum(deltas[1:k + 1]) for k in range(len(ev))]
+    top = max(cum)
+    H = HEAD_PROFILE
+    held = max(du for (_, du, _), c in zip(ev, cum) if c == top)
+    band = max(sum(c <= x <= c + 2 for x in cum) for c in cum) / len(cum)
+    return any(abs(d) >= 3 for d in deltas[1:len(ev)]) and held >= H['held'].get(meter, 1.0) - 1e-6 and \
+        band <= H['share'] + 1e-6
+
+
+def head_profile(notes, meter: int) -> dict:
+    """The theme head's profile (HEAD_PROFILE) of a part's notes [(start, dur, pitch)]: {'leap': the largest interval,
+    'held': the longest duration of the head's top pitch, 'band': the most notes in one band window (share), 'ok':
+    all three met}."""
+    head = sorted(n for n in notes if n[0] < 2 * meter - 1e-6)
+    ps = [n[2] for n in head]
+    if len(ps) < 3:
+        return {'leap': 0, 'held': 0.0, 'band': 1.0, 'circle': 1.0, 'ok': False}
+    H = HEAD_PROFILE
+    leap = max(abs(b - a) for a, b in zip(ps, ps[1:]))
+    held = max(n[1] for n in head if n[2] == max(ps))
+    band = max(sum(p <= x <= p + H['band'] for x in ps) for p in ps) / len(ps)
+    nb, w, most = H['circle'].get(meter, (2, 12, 1.0))
+    p4 = [n[2] for n in sorted(notes) if n[0] < nb * meter - 1e-6]
+    circle = max(sum(p <= x <= p + w for x in p4) for p in p4) / len(p4)
+    return {'leap': leap, 'held': held, 'band': round(band, 2), 'circle': round(circle, 2),
+            'ok': leap >= H['leap'] and held >= H['held'].get(meter, 1.0) - 1e-6 and band <= H['share'] + 1e-6
+            and circle <= most + 1e-6, 'circle_ok': circle <= most + 1e-6}
+
+
+HEAD_SHAPE = {'bars': 4, 'downs': 2, 'arrive': 1.0, 'osc': 4, 'cadence': {4: 1.5, 3: 2.0}, 'rate': {4: 2.5, 3: 2.0},
+              'short': 1.0}
+"""A theme head's shape beyond its profile (round g11; g10's weak heads, every judge: VBJZ "starts off the beat in
+fragments", VEAS's "Cb-Db oscillation", ELNQ's waltz head "never lands on a chord tone"), over its first 'bars' bars:
+'downs' of their downbeats struck, one of them by a note of 'arrive' beats or more (an arrival, not fragments after
+rests); no 'osc' notes in a row swinging between two pitches (a-b-a-b) anywhere in the part; a cadence - a chord tone held 'cadence'
+beats (per meter) or more, struck on a strong beat - in its bars 2-'bars'. Round g12 (all five judges: KTGG's waltz
+head, three half notes over two bars - 1.9 attacks a bar, "a line of whole notes" - passed every check): a rhythm, 'rate'
+onsets a bar (per meter) or more over its 'bars' bars and a short-long cell in its first two bars (a note of 'short'
+beats or less joined to one at least twice as long)."""
+
+
+def head_shape(notes, harm: Harm, meter: int) -> dict:
+    """The theme head's shape (HEAD_SHAPE) of a part's notes [(start, dur, pitch)] over its chords `harm`: {'down':
+    downbeat arrivals, 'osc': no two-pitch oscillation in the part, 'cad': a chord-tone cadence by the last bar, 'rhy':
+    the onset rate and a short-long cell, 'ok': all four}."""
+    H = HEAD_SHAPE
+    end = H['bars'] * meter
+    ns = sorted(n for n in notes if n[0] < end - 1e-6)
+    if len(ns) < 3:
+        return {'down': False, 'osc': True, 'cad': False, 'rhy': False, 'ok': False}
+    h2 = [n for n in ns if n[0] < 2 * meter - 1e-6]
+    rhy = len(ns) / H['bars'] >= H['rate'].get(meter, 2.5) - 1e-6 and any(
+        x[1] <= H['short'] + 1e-6 and y[1] >= 2 * x[1] - 1e-6 and abs(y[0] - x[0] - x[1]) < 0.05
+        for x, y in zip(h2, h2[1:]))
+    downs = [n for n in ns if abs(n[0] / meter - round(n[0] / meter)) * meter < 0.05]
+    down = len({round(n[0] / meter) for n in downs}) >= H['downs'] and any(n[1] >= H['arrive'] - 1e-6 for n in downs)
+    ps = [n[2] for n in sorted(notes)]                 # (the oscillation anywhere in the part: VEAS bars 5 / 12 / 14)
+    k = H['osc']
+    osc = not any(ps[i] != ps[i + 1] and all(ps[i + j] == ps[i + j % 2] for j in range(k))
+                  for i in range(len(ps) - k + 1))
+    strong = (0, 2) if meter == 4 else (0,)
+    cad = any(n[0] >= meter - 1e-6 and n[1] >= H['cadence'].get(meter, 1.5) - 1e-6
+              and any(abs(n[0] % meter - x) < 0.05 for x in strong)
+              and n[2] % 12 in harm.under(n[0], n[1]).core for n in ns)
+    return {'down': down, 'osc': osc, 'cad': cad, 'rhy': rhy, 'ok': down and osc and cad and rhy}
 
 
 def melody_issues(notes, harm: Harm, lo: int, hi: int, *, meter: int = 4, final_pcs=None) -> list[str]:
@@ -867,6 +1463,12 @@ class Tune:
     def bar_beats(self) -> int:
         return self.meter
 
+    @property
+    def meter_text(self) -> str:
+        """The time signature as printed: the tune's own (a symphonic 6/8: tune.time_sig) else meter / 4."""
+        ts = getattr(self, 'time_sig', None)
+        return f"{ts[0]}/{ts[1]}" if ts else f"{self.meter}/4"
+
     def part_beats(self, part: str) -> float:
         return sum(b for _, b in self.changes[part])
 
@@ -904,13 +1506,13 @@ class Tune:
     def describe(self) -> str:
         sw = f"swing {self.swing:.2f}" if self.swing else 'straight 8ths'
         head = [f"{self.title}  ({self.genre}, mood {self.mood}, seed {self.seed})",
-                f"{self.key}, {self.tempo} BPM, {self.meter}/4, {self.feel} ({sw}), form {self.form} "
+                f"{self.key}, {self.tempo} BPM, {self.meter_text}, {self.feel} ({sw}), form {self.form} "
                 f"({len(self.parts)} x {self.part_beats(self.parts[0]) / self.meter:g} bars)"]
         return '\n'.join(head + self.lead_sheet())
 
     def to_dict(self) -> dict:
         return {'title': self.title, 'genre': self.genre, 'mood': self.mood, 'seed': self.seed, 'key': self.key,
-                'tempo': self.tempo, 'meter': f"{self.meter}/4", 'feel': self.feel, 'swing': self.swing,
+                'tempo': self.tempo, 'meter': self.meter_text, 'feel': self.feel, 'swing': self.swing,
                 'form': self.form, 'parts': list(self.parts), 'blocks': self.blocks,
                 'changes': {p: self.changes_str(p) for p in self.parts}, 'lead_sheet': self.lead_sheet(),
                 'melody': {p: [[round(s, 3), round(d, 3), note_name(n)] for s, d, n in self.melody[p]]
@@ -937,14 +1539,44 @@ def key_words(key: str) -> str:
     return tonic[0] + {'b': '-flat', '#': '-sharp'}.get(tonic[1:], '') + ' ' + mode
 
 
-def title(rng: random.Random, feel: str, form: str, table: dict | None = None, key: str | None = None) -> str:
+def _prefix(shape: str) -> str:
+    """A title shape's form label ('Overture: {adj} {noun}' -> 'Overture'; '' without one)."""
+    return shape.split(':')[0].strip() if ':' in shape else ''
+
+
+def title_slot(genre: Genre, slot: dict, history: list, rng: random.Random, window: int = 3) -> None:
+    """POLISH's set memory on the title's form label (round op1: a 5-piece set had three "Symphonic Dance:"): no
+    label when one of the `window` slots before had one, else a label at its shapes' share, never the set's last label
+    while another is left -> slot['title_form'] ('' or the label; composer.title(prefix=))."""
+    T = genre.titles or {}
+    shapes = T.get('shapes') or []
+    shapes = sorted({s for v in shapes.values() for s in v}) if isinstance(shapes, dict) else list(shapes)
+    labels = sorted({_prefix(s) for s in shapes} - {''})
+    if not labels:
+        return
+    if any(h.get('title_form') for h in history[-window:]):
+        slot['title_form'] = ''
+        return
+    share = sum(1 for s in shapes if _prefix(s)) / max(1, len(shapes))
+    if rng.random() >= share:
+        slot['title_form'] = ''
+        return
+    used = [h['title_form'] for h in history if h.get('title_form')]
+    pick = [x for x in labels if not used or x != used[-1]] or labels
+    slot['title_form'] = pick[rng.randrange(len(pick))]
+
+
+def title(rng: random.Random, feel: str, form: str, table: dict | None = None, key: str | None = None,
+          prefix: str | None = None) -> str:
     """A title from the genre's words (Genre.titles, default genres.JAZZ_TITLES): each word list drawn once (sorted
     by name), a shape (a list, or {feel: [shapes]}) filled; {suffix} by the feel / form ('waltz' before the form),
-    {key} the key spelled out."""
+    {key} the key spelled out. prefix (POLISH, title_slot): only the shapes with that form label ('' none)."""
     T = table or JAZZ_TITLES
     S = T.get('suffix', {})
     suffix = S[feel] if feel == 'waltz' and feel in S else S.get(form) or S.get(feel) or S.get('', '')
     shapes = T['shapes'].get(feel, T['shapes'].get('', [])) if isinstance(T['shapes'], dict) else T['shapes']
+    if prefix is not None:
+        shapes = [s for s in shapes if _prefix(s) == prefix] or shapes
     shape = _pick(rng, {s: 1.0 for s in shapes})
     words = {k: rng.choice(v) for k, v in sorted(T.items()) if k not in ('shapes', 'suffix')}
     t = shape.format(suffix=suffix, key=key_words(key) if key else '', **words)
@@ -1038,6 +1670,9 @@ def compose(genre: Genre, seed: int, mood: str | None = None, swing: float | boo
     the rolled feel allows swing (a bossa stays straight); None and a feel with its own 'groove' ratio (lofi's lazy
     swing): that ratio (False keeps it straight). plan: a set_plan() entry pinning the tune's mood / feel /
     tempo / key / energy - or its form (each optional; the rest is rolled)."""
+    if genre.plan.get('perform') == 'symphony':        # (its own composer: endless/symphony.py)
+        from .symphony import compose as _symphony
+        return _symphony(genre, seed, mood, swing, plan)
     plan = dict(plan or {})
     rng = random.Random(f"endless:{genre.name}:{seed}")
     mood = mood or plan.get('mood') or _pick(rng, {m: 1.0 for m in sorted(genre.moods)})
@@ -1178,7 +1813,11 @@ def compose(genre: Genre, seed: int, mood: str | None = None, swing: float | boo
     # the set-level draws (genre.plan['set']: layout / climax kind / register shift / the chorus's block) - a set
     # plan's pins, else drawn here with their own dice (set_draws); the hook block (per mode) is the harmony's, not
     # the players' (Tune.arrange keeps the others)
-    arrange = {k: plan.get(k, v) for k, v in set_draws(genre, random.Random(f"set-draws:{genre.name}:{seed}")).items()}
+    arrange = {k: plan.get(k, v) for k, v in set_draws(genre, random.Random(f"set-draws:{genre.name}:{seed}"),
+                                                       ctx={'key': key, 'tempo': tempo, 'feel': feel}).items()}
+    opening_pin = arrange.pop('opening', None)       # (the theme's opening cell per cell family: the set's draw)
+    intro_pin = (arrange.pop('intro', None) or {}).get(mode)    # (the intro's vamp: the set's draw, per mode)
+    tag_pin = arrange.pop('tag', None)                 # (the coda's approach into the end chord: the set's draw)
     block_pins = {}
     for k_ in BLOCK_PINS:                              # (the set's chord blocks: the harmony's, not the players')
         v_ = arrange.pop(k_, None)
@@ -1280,15 +1919,72 @@ def compose(genre: Genre, seed: int, mood: str | None = None, swing: float | boo
             return _choose_from(mrng, fam['motif'], avoid=avoid)
         return _pick(mrng, {k: OW.get(k, 1.0) for k in sorted(fam['motif']) if k not in avoid}
                      or {k: OW.get(k, 1.0) for k in sorted(fam['motif'])})
-    motif_cell = fam['motif'][opening()]
+    k0 = opening()
+    if isinstance(opening_pin, dict) and opening_pin.get(F['cells']) in fam['motif']:
+        k0 = opening_pin[F['cells']]                   # (the dice thrown as before, the set's pin wins)
+    motif_cell = fam['motif'][k0]
     line_cell = fam['line'][_choose_from(mrng, fam['line'])]
     contrast_cell = fam['motif'][opening(avoid=[k for k, v in fam['motif'].items() if v == motif_cell])]
     motif_shape = _pick(mrng, {'arch': 3, 'rise': 2, 'valley': 1, 'fall': 1})
     n_motif = sum(1 for x in motif_cell if x > 0)
     steps = genre.melody.get('steps')                    # the contour's move sizes (STEPS; a singable genre: steps)
     motif_deltas = _contour(n_motif, motif_shape, mrng, steps)
-    cum = [sum(motif_deltas[1:k + 1]) for k in range(n_motif)]
-    hook_lift = round(1.7 * sum(cum) / n_motif)          # how far the hook's mean sits above its first note
+    # a genre's melody['head'] {'leap': {scale steps: weight}, 'at': {move index: weight}}: the theme's head gets one
+    # leap (a 4th+) at a drawn move, stepping back after it (blind round g3, the three composers: A themes circling a
+    # third / fourth, a neighbour cell, weaker than the chorus - a head with a leap has a profile); its own dice
+    HD = genre.melody.get('head')
+    if HD and n_motif >= 3 and not any(abs(d) >= 3 for d in motif_deltas[1:4]):
+        hrng = random.Random(f"head:{genre.name}:{seed}")
+        at_ = min(n_motif - 1, _pick(hrng, HD['at']))
+        up_ = motif_shape == 'rise' and hrng.random() < 0.5     # (mostly down and back: a leap up lifted the A
+        #                                                             theme's register over the chorus - the arc check
+        #                                                             rejected 41 % of the seeds instead of 34 %)
+        motif_deltas[at_] = _pick(hrng, HD['leap']) * (1 if up_ else -1)
+        if at_ + 1 < n_motif:
+            motif_deltas[at_ + 1] = -1 if up_ else 1
+    # (round g8, all five judges: heads circling a 2-3 note band - JTQL D5-E5, LXCD A4-B4): the theme's head drawn
+    # with a profile (HEAD_PROFILE: a leap, its top note held, no band circled) - the drawn head when it has one as
+    # planned, else up to melody['profile'] redraws on their own dice (its cell, or another opening cell when the
+    # set does not pin it); the A1's attempts try the planned heads in turn until one keeps its profile as fitted
+    heads = [(motif_cell, motif_shape, n_motif, motif_deltas)]
+    if genre.melody.get('profile'):
+        prng_ = random.Random(f"profile:{genre.name}:{seed}")
+        cells_ = [motif_cell] + ([] if isinstance(opening_pin, dict) and opening_pin.get(F['cells']) in fam['motif']
+                                 else [fam['motif'][k] for k in sorted(fam['motif'])
+                                       if fam['motif'][k] not in (motif_cell, contrast_cell)
+                                       and (not OW or OW.get(k, 1.0) > 0.1)])
+        good = [heads[0]] if _planned_profile(motif_cell, motif_deltas, meter) else []
+        for _ in range(genre.melody['profile']):
+            if len(good) >= 6:
+                break
+            c_ = cells_[0] if prng_.random() < 0.6 or len(cells_) == 1 else prng_.choice(cells_[1:])
+            sh_ = _pick(prng_, {'arch': 3, 'rise': 2, 'valley': 1, 'fall': 1})
+            n_ = sum(1 for x in c_ if x > 0)
+            d_ = _contour(n_, sh_, prng_, steps)
+            if HD and n_ >= 3 and not any(abs(d) >= 3 for d in d_[1:4]):
+                at_ = min(n_ - 1, _pick(prng_, HD['at']))
+                up_ = sh_ == 'rise' and prng_.random() < 0.5
+                d_[at_] = _pick(prng_, HD['leap']) * (1 if up_ else -1)
+                if at_ + 1 < n_:
+                    d_[at_ + 1] = -1 if up_ else 1
+            if _planned_profile(c_, d_, meter) and (c_, d_) not in [(h[0], h[3]) for h in good]:
+                good.append((c_, sh_, n_, d_))
+        # (the drawn cell first, then a cell that opens like it - a pickup's rest is the phrase before's breath)
+        good.sort(key=lambda h: (h[0] != motif_cell, (h[0][0] < 0) != (motif_cell[0] < 0)))
+        heads = good + [h for h in heads if h not in good]     # (none planned: the drawn head as it was)
+        motif_cell, motif_shape, n_motif, motif_deltas = heads[0]
+
+    # (round g13: B1 without a hook of its own - NFLS 5, ZSTD 4, JQTJ 4, GZAT 3: its cell a rhythm of its own -
+    # genre.melody['b_contrast']: the chorus's counter-motif cell shares at most that onset Jaccard with the hook's,
+    # else the most different opening cell)
+    BC = genre.melody.get('b_contrast')
+    if BC is not None and _cell_jacc(contrast_cell, motif_cell) > BC + 1e-6:
+        elig = [k for k in sorted(fam['motif']) if fam['motif'][k] != motif_cell and (not OW or OW.get(k, 1.0) > 0.1)]
+        if elig:
+            contrast_cell = fam['motif'][min(elig, key=lambda k: (_cell_jacc(fam['motif'][k], motif_cell), k))]
+
+    def head_lift(n_m, deltas):                          # how far the hook's mean sits above its first note
+        return round(1.7 * sum(sum(deltas[1:k + 1]) for k in range(n_m)) / n_m)
     seq_step = mrng.choice([-2, -1, 1, 2])
     # the hook as a 1-bar cell and its sequence along the root motion (genre.melody['hook_seq'] of the tunes; blind
     # round 6: composed heads state one cell and sequence it - diatonic or chromatic - with the chords)
@@ -1345,7 +2041,12 @@ def compose(genre: Genre, seed: int, mood: str | None = None, swing: float | boo
         if (p, u) == (climax_part, climax_unit):
             return under
         drop = max(contour(p, x) for x in range(len(plans[p]))) - contour(p, u)
-        return min(under, hi + round(T[p][u]['ceiling']) + lifts[ckind[p]]) - round(drop)
+        top_ = min(under, hi + round(T[p][u]['ceiling']) + lifts[ckind[p]]) - round(drop)
+        if HD and p[0] == 'A' and u == 0 and role_of(p, u)[0] == 'motif':
+            # (blind round g3: the A theme circling a third - its first phrase's ceiling sat 7-8 semitones under the
+            # part's top, so the head's leap was clipped: a hook statement has room for it, a 6th over its centre)
+            top_ = max(top_, min(under, u_center(p, u) + 7))
+        return top_
 
     def toward(prev, p, u, off, most):
         """A phrase's first target: from the note before, at most `most` semitones toward its centre (+ off)."""
@@ -1366,9 +2067,12 @@ def compose(genre: Genre, seed: int, mood: str | None = None, swing: float | boo
         best, best_n = None, 1e9
         for attempt in range(80):
             prng = random.Random(f"{seed}:{p}:{attempt}")
+            if p == order[0] and len(heads) > 1:      # (round g8: the planned heads in turn - HEAD_PROFILE - on
+                motif_cell, motif_shape, n_motif, motif_deltas = heads[attempt % len(heads)]   # one attempt's dice:
+                prng = random.Random(f"{seed}:{p}:{attempt // len(heads)}")   # the phrases' ends as they were)
             notes, prev = [], None
             motif_start = hook_start if hook_start is not None else \
-                u_center(p, 0) - hook_lift + prng.choice([-2, -1, 0, 1])          # the hook centred on its target
+                u_center(p, 0) - head_lift(n_motif, motif_deltas) + prng.choice([-2, -1, 0, 1])  # (centred)
             hook_c = u_center(order[0], 0)
             peak_at = None
             lead, goals, used = [None], [], {}
@@ -1380,7 +2084,9 @@ def compose(genre: Genre, seed: int, mood: str | None = None, swing: float | boo
                 if u % 2 == 0:
                     used = {}                    # a 4-bar phrase's pitches (circling one pitch is a tell)
                 ctx = _Ctx(harm, meter, lo, u_hi(p, u), prng, used, lead,
-                           tuple(genre.melody.get('repeat', (0.7, 0.0))), genre.melody.get('chromatic', 0.3))
+                           tuple(genre.melody.get('repeat', (0.7, 0.0))), genre.melody.get('chromatic', 0.3),
+                           3.0 if genre.melody.get('profile') and p == order[0] and u == 0 and role == 'motif'
+                           else 1.0, bool(genre.melody.get('chromatic_step')))
                 lv = levels[p][u]
                 restate = copied(p, u)
                 if restate or role == 'again':
@@ -1427,7 +2133,8 @@ def compose(genre: Genre, seed: int, mood: str | None = None, swing: float | boo
                 elif role in ('motif', 'develop', 'answer'):
                     # the hook's rhythm, developed in a 'develop' / 'answer' phrase (DEVELOP_RHYTHM, drawn)
                     ev = _events(motif_cell if role == 'motif' else
-                                 _vary_cell(motif_cell, _pick(prng, DEVELOP_RHYTHM), 2 * meter), t0, meter)
+                                 _vary_cell(motif_cell, _pick(prng, genre.melody.get('develop') or DEVELOP_RHYTHM),
+                                            2 * meter), t0, meter)
                     dl = list(motif_deltas)
                     first = motif_start + u_center(p, u) - hook_c          # the hook follows the phrase's register
                     if prev is not None and abs(first - prev) > 7:      # (an octave nearer the note before it)
@@ -1528,13 +2235,30 @@ def compose(genre: Genre, seed: int, mood: str | None = None, swing: float | boo
             elif any(n[2] > under for n in notes):
                 issues.append('over the climax')
             # the style rules weigh less than the hard ones (a clash): the best attempt keeps the hard rules
+            # (genre.melody['holes']: an A part's free bars sound that share of the bar, the theme's head is no
+            # neighbour figure - round g7)
+            holes = genre.melody.get('holes', 0.0) if p[0] == 'A' else 0.0
             lands = {2 * u + 1 for u in range(len(plan_p)) if role_of(p, u)[0] in ('land', 'half')} \
-                if 'pads' in genre.melody else None
+                if 'pads' in genre.melody or holes else None
             soft = _style_issues(notes, meter, harm.length, riff_bars, span=12 if p[0] == 'A' else 0, lands=lands,
-                                 pads=genre.melody.get('pads', 0.125))
+                                 pads=genre.melody.get('pads', 0.125 if 'pads' in genre.melody else None),
+                                 holes=holes, head=bool(holes) and p == order[0])
             score = len(issues) + 0.3 * len(soft)
+            hp_ = head_profile(notes, meter) if genre.melody.get('profile') and p == order[0] else None
+            if hp_ and not hp_['ok']:
+                soft.append('no head profile')         # (round g8: the theme's head as fitted - HEAD_PROFILE)
+                score += 0.6
+                if not hp_['circle_ok']:               # (round g14: a circling head costs on its own - PPHK's waltz
+                    score += 0.6                       # head failed its held top note too, the circle went unseen)
+            if genre.melody.get('shape') and p == order[0]:
+                hs_ = head_shape(notes, harm, meter)   # (round g11: downbeat arrivals, no a-b-a-b, a cadence by
+                miss = [k for k in ('down', 'osc', 'cad', 'rhy') if not hs_[k]]    # bar 4, a rhythm - HEAD_SHAPE)
+                if miss:
+                    soft.append('head shape: ' + ', '.join(miss))
+                    score += genre.melody['shape'] * len(miss)
             if score < best_n:
                 best, best_n = notes, score
+                best_head = (motif_cell, motif_shape, n_motif, motif_deltas)
                 if p == climax_part and peak_at is not None:
                     climax_pitch = (notes[peak_at][0], notes[peak_at][2])
             if not issues and not soft:
@@ -1545,6 +2269,7 @@ def compose(genre: Genre, seed: int, mood: str | None = None, swing: float | boo
         melody[p] = best
         if p == order[0]:
             hook_start = best[0][2] if best else center
+            motif_cell, motif_shape, n_motif, motif_deltas = best_head   # (the head the theme kept: the hook)
 
     # ---- the frame: the intro is its own material (a vamp from INTROS with the hook over it), the tag reprises it with
     # a twist (the tritone sub into the end chord, whose colour comes from ENDINGS)
@@ -1553,7 +2278,7 @@ def compose(genre: Genre, seed: int, mood: str | None = None, swing: float | boo
     motif = [n for n in melody[a1] if n[0] < unit_beats]
     top = max(n[2] for p in order for n in melody[p])
     intro, tag = frame(changes[a1], melody[a1], mode, t_pc, sharps, meter, stretch, key_pcs, top,
-                       random.Random(f"frame:{genre.name}:{seed}"), genre.harmony)
+                       random.Random(f"frame:{genre.name}:{seed}"), genre.harmony, pin=intro_pin, tag_pin=tag_pin)
     counter = [n for n in melody['B'] if n[0] < unit_beats] if 'B' in order else []   # the bridge's motif
     # the solo plays the tune's own chart; plan['solo']['reharm'] of the tunes reharmonize ONE dominant of a head-out
     # part (drawn: the slot is not always the last cadence) - in the last solo chorus and the head out alike, the
@@ -1615,7 +2340,8 @@ def compose(genre: Genre, seed: int, mood: str | None = None, swing: float | boo
 
 
 def frame(changes_a1, mel_a1, mode: str, t_pc: int, sharps: bool, meter: int, stretch: int, key_pcs, top: int,
-          rng: random.Random, harmony: dict | None = None) -> tuple[dict, dict]:
+          rng: random.Random, harmony: dict | None = None, pin: str | None = None,
+          tag_pin: str | None = None) -> tuple[dict, dict]:
     """The intro and the tag (4 bars; a waltz 8): a vamp from INTROS (the head opening on the tonic allows the tonic
     vamps) with a line from INTRO_LINES over it (drawn - a fragment of the hook developed, never the head's bars:
     its first bar augmented and sequenced, its first notes as a cell sequenced bar by bar, its rhythm with the contour
@@ -1623,14 +2349,17 @@ def frame(changes_a1, mel_a1, mode: str, t_pc: int, sharps: bool, meter: int, st
     hand out), an octave up where that stays under the head's top note `top`, and the tag reprising the hook's
     fragment over the vamp (TAG_LINES, drawn) with a twist: the second half of its last bar an approach into the end
     chord drawn from TAG_APPROACH (the tritone sub, the backdoor bVII9, the minor plagal IVm6, a deceptive V-bVI, a
-    cold stop on V7alt), its second half an octave up (where it fits), its last note held (a cold stop: struck
-    short). Every line is re-fitted to the vamp's chords.
+    cold stop on V7alt; `tag_pin`: the set's draw - blind round g4, one IV - iv6 close in 4 pieces of 8), its second
+    half an octave up (where it fits), its last note held (a cold stop: struck short). Every line is re-fitted to the
+    vamp's chords.
     {'kind', 'line', 'changes', 'melody', 'approach' (the tag's)}."""
     bar, ub = meter * stretch, 2 * meter
     H = harmony or {'intros': INTROS, 'intro_tonic': INTRO_TONIC, 'tag_approach': TAG_APPROACH}
     table = H['intros'][mode]
     on_tonic = chord(changes_a1[0][0]).root % 12 == t_pc
     kind = _pick(rng, {k: w for k, (_, w) in table.items() if on_tonic or k not in H.get('intro_tonic', ())})
+    if pin in table and (on_tonic or pin not in H.get('intro_tonic', ())):
+        kind = pin                                     # (the set's draw: the dice thrown as before, the pin wins)
     ch = []
     for tok in table[kind][0].split():
         if tok.startswith('head:'):
@@ -1639,6 +2368,8 @@ def frame(changes_a1, mel_a1, mode: str, t_pc: int, sharps: bool, meter: int, st
             ch += [(chord_name(t_pc, off, q, sharps), b * bar) for off, q, b in parse_block(tok)]
     # the tag's last half bar leads into the end chord (TAG_APPROACH, drawn: the dice after the intro's)
     approach = _pick(random.Random(f"{kind}:{rng.random()}"), H.get('tag_approach', TAG_APPROACH))
+    if tag_pin in H.get('tag_approach', TAG_APPROACH):
+        approach = tag_pin                             # (the set's draw: the dice thrown as before, the pin wins)
     # what the tag plays (H['tag_frames'], drawn - a genre without them reprises the intro): the intro's vamp, another
     # vamp, or the A's last four bars (the classic tag)
     frng = random.Random(f"tag-frame:{kind}:{approach}:{changes_a1}")
@@ -3438,10 +4169,17 @@ FRAME_SECTIONS = ('intro', 'tag', 'end', 'coda', 'inter')
 """A piano arrangement's frame sections (breath / piano_tells measure the others: the body)."""
 
 
+LEAN = 0.1
+"""Beats a downbeat may be struck early and still count as on it (phrase_rests: the melody's lean, rubato)."""
+
+
 def phrase_rests(song) -> float:
     """Share of the 4-bar phrase ends (counted from every body section's start; a waltz: 8 bars) where the right hand
     breathes: a beat or more between its last onset before the phrase boundary (within two bars) and its first after
-    it - the singer's breath at every phrase end (letters-to-the-morning: every one)."""
+    it - the singer's breath at every phrase end (letters-to-the-morning: every one). An onset within LEAN beats
+    before the boundary is the next phrase's downbeat struck early (the melody leaning ahead of the bass, the
+    player's timing: blind round g3 - the 'drop' to ~0.58 was mostly such downbeats counted as the old phrase's
+    last note)."""
     view = NoteView.of(song)
     m = view.m
     ons = sorted({round(n[0], 3) for n in view.rh})
@@ -3452,10 +4190,10 @@ def phrase_rests(song) -> float:
             continue
         k = sec.start + span
         while k <= sec.end + 1e-6:
-            before = [t for t in ons if k - 2 * m <= t < k - 1e-6]
+            before = [t for t in ons if k - 2 * m <= t < k - LEAN]
             if before:
                 tot += 1
-                nxt = next((t for t in ons if t >= k - 1e-6), k + 2 * m)
+                nxt = next((t for t in ons if t >= k - LEAN), k + 2 * m)
                 hit += nxt - before[-1] >= 1.0 - 1e-6
             k += span
     return round(hit / max(1, tot), 2)
@@ -3532,7 +4270,8 @@ def newage_tells(song) -> dict:
       a1_copy       share of the later body bars (3+ onsets) whose top line is the first body section's same bar at
                     any transposition (round r2: the climax / A4 = A1 an octave up note for note)
       climax_lift   the climax section's mean top-line pitch over the first body section's (round r1: the generated
-                    climax +5-7 semitones, the references +9-14)
+                    climax +5-7 semitones, the references +9-14; the top line here leaves a signature cascade out -
+                    figuration, sig_spans)
       peak_holes    bars without a right-hand onset in the climax and the section before it (round r1: rests at
                     the peak)
       off_chord32   top-line notes outside the chord's scale / tones / tensions per 32 body bars
@@ -3545,7 +4284,8 @@ def newage_tells(song) -> dict:
     song = view.song
     m = view.m
     out: dict = {}
-    line = top_line(view.rh, tol=0.08)
+    casc = sig_spans(song, 'cascade')
+    line = [n for n in top_line(view.rh, tol=0.08) if not any(a - 1e-6 <= n[0] < z - 1e-6 for a, z in casc)]
     steps = [(a, b) for a, b in zip(line, line[1:]) if b[0] - a[0] < 2.0]
     out['rep_pitch'] = round(sum(a[2] == b[2] for a, b in steps) / max(1, len(steps)), 3)
     # the final chord: the last right-hand onset group
@@ -3634,7 +4374,8 @@ def newage_tells(song) -> dict:
     for x in body[max(0, i_pk - 1):i_pk + 1] if i_pk >= 0 else []:
         for k_ in range(int(round((x.end - x.start) / m))):
             a = x.start + k_ * m
-            holes += not any(a - 0.25 <= n[0] < a + m - 0.25 for n in line)
+            holes += not any(a - 0.25 <= n[0] < a + m - 0.25 for n in line) and \
+                    not any(c0 - 1e-6 <= a < c1 - 1e-6 for c0, c1 in casc)
     out['peak_holes'] = holes
     from ..theory import chord_scale as _cscale
 
@@ -3774,6 +4515,177 @@ def bloom_tells(song) -> dict:
     return out
 
 
+def hands_tells(song) -> dict:
+    """The hands' balance and the right hand's register (HUMAN_FEEDBACK 2026-10-15: "the right hand always feels
+    louder than the left - it should be dynamic"; "too many very high notes"), on a performance's notes:
+      hand_bal      the right hand over the left per 4-bar phrase of the body where both play, in dB of the notes'
+                    energy (NoteView.energies: (velocity / 127) ** 2.5, summed - many soft notes add up like the
+                    audio's RMS): the phrases' mean - before the dynamic balance ~6-8 dB, a pianist ~3-5
+      hand_bal_sd   their spread (a balance that never moves: < 1.5)
+      hand_lead     share of those phrases at 1 dB or less (the left hand near equal or leading)
+      rh_c6         share of the right hand's notes at or above C6 (84) outside the climax (the 'climax' section):
+                    the top region, a rare event there (blind round g5: the climax's theme belongs in the C6 band -
+                    the user's "too many very high notes" was about them everywhere, not at the peak)
+      rh_e6         ... at or above E6 (88)
+      rh_med        the right hand's median pitch (the singing register C4-C6: ~70-76)"""
+    import math
+    import statistics as st
+    view = NoteView.of(song)
+    m = view.m
+    out: dict = {}
+    if view.rh:
+        ps = [n[2] for n in view.rh]
+        clx = [(x.start, x.end) for x in view.sections if x.name == 'climax']
+        out_ = [n[2] for n in view.rh if not any(a - 1e-6 <= n[0] < z - 1e-6 for a, z in clx)] or ps
+        out['rh_c6'] = round(sum(p >= 84 for p in out_) / len(out_), 3)
+        out['rh_e6'] = round(sum(p >= 88 for p in out_) / len(out_), 3)
+        out['rh_med'] = st.median(ps)
+    if not view.lh:
+        return out
+    body = [x for x in view.sections if x.name not in FRAME_SECTIONS]
+    bals = []
+    for x in body:
+        nb = int(round((x.end - x.start) / m))
+        for k in range(0, nb, 4):
+            a, z = x.start + k * m - 0.05, x.start + min(nb, k + 4) * m - 0.05
+            er = sum((n[3] / 127.0) ** 2.5 for n in view.rh if a <= n[0] < z)
+            el = sum((n[3] / 127.0) ** 2.5 for n in view.lh if a <= n[0] < z)
+            if er > 0 and el > 0:
+                bals.append(10 * math.log10(er / el))
+    if bals:
+        out['hand_bal'] = round(st.mean(bals), 2)
+        out['hand_bal_sd'] = round(st.pstdev(bals), 2)
+        out['hand_lead'] = round(sum(b <= 1.0 for b in bals) / len(bals), 2)
+    return out
+
+
+def sig_spans(song, move: str) -> list:
+    """[(from, to)] beats of a signature move's statements in a piano piece (song.endless_signature; perform._sign):
+    the cascade is figuration, not the line - the top-line and ornament measures leave it out."""
+    sg = getattr(song, 'endless_signature', None) or {}
+    return [(d['at'], d['end']) for d in sg.get('statements') or () if d['move'] == move]
+
+
+SIGNATURE_TELLS = ('sig_moves', 'motto_n', 'motto_hit', 'motto_exposed', 'motto_payoff', 'sig_share', 'pause_s',
+                   'goose', 'casc_span', 'casc_turns')
+"""signature_tells' keys (the blind-round tells, songs/_blind/tells_newage.py)."""
+
+
+def signature_tells(song, tune=None) -> dict:
+    """Whether a piece's signature moves (song.endless_signature: perform._sign) are there and audible, from the
+    notes played: sig_moves the moves planned; motto_n its statements, motto_hit the share of them played (80 % of
+    the cell's notes struck at their beat and pitch), motto_exposed 1 when the plant has at most one left-hand onset
+    per bar under it (a held bass; over the ostinato: its figure) and the cell is the right hand's top, motto_payoff
+    1 when the climax states it; sig_share the share of the ostinato sections' left-hand bars playing its figure;
+    pause_s the seconds the pause's bar is held over its
+    written length; goose 1 when its note sounds over its chord; casc_span the cascade's range (semitones) and
+    casc_turns its hand changes. A move not planned: None."""
+    sg = getattr(song, 'endless_signature', None) or {}
+    stm = sg.get('statements') or []
+    out = {k: None for k in SIGNATURE_TELLS}
+    out['sig_moves'] = len(sg.get('moves') or {})
+    if not sg:
+        return out
+    rh = [(n.start, n.dur, n.pitch) for n in song.tracks['piano']._notes]
+    lh = [(n.start, n.dur, n.pitch) for n in song.tracks['comp']._notes] if 'comp' in song.tracks else []
+    meter = song.meter[0] if isinstance(getattr(song, 'meter', None), tuple) else 4
+
+    def struck(ns, t, p, tol=0.2):
+        return any(abs(a - t) <= tol and q == p for a, _, q in ns)
+    mo = [d for d in stm if d['move'] == 'motto']
+    if mo:
+        hits = [sum(struck(rh, t, p) for t, _, p in d['notes']) >= 0.8 * len(d['notes']) for d in mo]
+        out['motto_n'] = len(mo)
+        out['motto_hit'] = round(sum(hits) / len(hits), 3)
+        out['motto_payoff'] = int(any(h for h, d in zip(hits, mo) if d['role'] == 'payoff'))
+        pl = next((d for d in mo if d['role'] == 'plant'), None)
+        if pl is not None:
+            ons = {round(a, 2) for a, _, _ in lh if pl['at'] - 0.05 <= a < pl['end'] - 0.05}
+            tops = all(not any(abs(a - t) <= 0.05 and q > p for a, _, q in rh) for t, _, p in pl['notes'])
+            bars = int((pl['end'] - 1e-6) // meter) - int(pl['at'] // meter) + 1
+            alone = 'ostinato' in (sg.get('moves') or {}) or len(ons) <= bars     # (over the ostinato: its own hand)
+            out['motto_exposed'] = int(alone and tops)
+    os_ = [d for d in stm if d['move'] == 'ostinato']
+    if os_:
+        figs = getattr(song, 'endless_figures', {}) or {}
+        n = k = 0
+        for d in os_:
+            f = figs.get(d['role']) or []
+            n += len(f)
+            k += sum(1 for x in f if x == d['figure'])
+        out['sig_share'] = round(k / n, 3) if n else 0.0
+    pa = next((d for d in stm if d['move'] == 'pause'), None)
+    if pa is not None:
+        bpm = song.tempo
+        out['pause_s'] = round(song.seconds(pa['end']) - song.seconds(pa['at']) - (pa['end'] - pa['at']) * 60 / bpm, 2)
+    go = next((d for d in stm if d['move'] == 'goose'), None)
+    if go is not None:
+        tl = getattr(song, 'endless_timeline', []) or []
+        sym = next((x for t, b, x in tl if t - 1e-6 <= go['at'] < t + b - 1e-6), None)
+        out['goose'] = int(sym == go['sym'] and struck(rh, go['at'], go['pitch'], 0.25))
+    ca = next((d for d in stm if d['move'] == 'cascade'), None)
+    if ca is not None:
+        ns = sorted([(a, p, 'R') for a, _, p in rh if ca['at'] - 0.05 <= a < ca['end'] - 0.05] +
+                    [(a, p, 'L') for a, _, p in lh if ca['at'] - 0.05 <= a < ca['end'] - 0.05 and p > 40])
+        ps = [p for _, p, _ in ns]
+        out['casc_span'] = (max(ps) - min(ps)) if ps else 0
+        out['casc_turns'] = sum(1 for x, y in zip(ns, ns[1:]) if x[2] != y[2])
+    return out
+
+
+def flow_tells(song) -> dict:
+    """Does the right hand FLOW (HUMAN_FEEDBACK 2026-10-15: "the right hand plays note by note, not flowing - as if
+    he had only one finger")? On a performance's notes, over the body (the frames out):
+      mel_rate      the melody's (the top line's: an onset's highest note, ornaments / runs under 1/3 beat out)
+                    onsets per beat (a quarter-note pace ~1.0)
+      dvel_med      the median |velocity step| between neighbouring melody notes of a phrase (notes placed one by
+                    one: 5-7; one phrase-long dynamic line: 2-4); dvel_p90 its 90th percentile
+      dvel_curv     the mean |second difference| of the melody's velocities (a smooth arc: low)
+      rh_multi      share of the right hand's onsets (ornaments out) with 2+ notes; rh_multi_<role> per section
+                    kind ('A1' the theme, 'A' a return, 'B' the chorus / build, 'climax')
+      inner_move    share of the melody notes held 1.5 beats+ under which another right-hand note starts later"""
+    import statistics as st
+    view = NoteView.of(song)
+    out: dict = {}
+    body = [x for x in view.sections if x.name not in FRAME_SECTIONS]
+    if not view.rh or not body:
+        return out
+
+    def role(name):
+        return 'A1' if name == 'A1' else 'A' if name.startswith('A') else 'climax' if name == 'climax' else 'B'
+    fast = 1 / 3 + 1e-3
+    beats, line, multi, n_on, steps, curv = 0.0, 0, {}, {}, [], []
+    held, moved = 0, 0
+    for x in body:
+        beats += x.end - x.start
+        cl = [c for c in view.cl if x.start - 1e-6 <= c[0] < x.end - 1e-6 and c[1][1] > fast]
+        line += len(cl)
+        r = role(x.name)
+        for c in cl:
+            n_on[r] = n_on.get(r, 0) + 1
+            multi[r] = multi.get(r, 0) + (c[2] >= 2)
+        vs = [c[1][3] for c in cl]
+        steps += [abs(a - b) for a, b in zip(vs, vs[1:])]
+        curv += [abs(a - 2 * b + c) for a, b, c in zip(vs, vs[1:], vs[2:])]
+        for c in cl:
+            top = c[1]
+            if top[1] >= 1.5:
+                held += 1
+                moved += any(top[0] + 0.2 < n[0] < top[0] + top[1] - 0.1 and n[2] < top[2] for n in view.rh)
+    out['mel_rate'] = round(line / max(1e-9, beats), 2)
+    if steps:
+        s_ = sorted(steps)
+        out['dvel_med'] = st.median(s_)
+        out['dvel_p90'] = s_[int(0.9 * (len(s_) - 1))]
+        out['dvel_curv'] = round(st.mean(curv), 2) if curv else 0.0
+    out['rh_multi'] = round(sum(multi.values()) / max(1, sum(n_on.values())), 3)
+    for r in ('A1', 'A', 'B', 'climax'):
+        if n_on.get(r):
+            out[f"rh_multi_{r}"] = round(multi[r] / n_on[r], 3)
+    out['inner_move'] = round(moved / max(1, held), 3)
+    return out
+
+
 def breath(song) -> dict:
     """Does the playing BREATHE (the user, r6: "sounds like an endless monotone line of notes")? Measured on the right
     hand's onsets (a rolled chord is one attack) and the left hand's attacks over the head, the solo and the head out:
@@ -3784,18 +4696,19 @@ def breath(song) -> dict:
                     quarters has none; room between the phrases); quiet1_sec: per section; quiet1_both: neither hand
       rest_half     right-hand rests of half a bar or more (no new onset; the last note may ring) per 8 bars;
                     rest_bar: rests of a whole bar or more per 32 bars; rest_max: the longest (beats)
-      ph_on         right-hand onsets per phrase (phrases split where two beats or more pass without an onset);
+      ph_on        right-hand onsets per phrase (phrases split where two beats or more pass without an onset);
                     ph_beats: their length
       long_share    share of the right hand's attacks held a beat and a half or longer (sustained notes)
       lh_bar        left-hand attacks per bar; lh_still: share of the left hand's bars with one attack or none
                     (it rests or lets the chord ring)
       orn32         ornament notes (right-hand onsets less than a 16th before the next: grace notes, turns, trills,
-                    sextuplet runs) per 32 bars
+                    sextuplet runs; a signature cascade is figuration: left out) per 32 bars
       ph_reg / ph_vel / ph_den  the mean change from one phrase to the next of its mean pitch (semitones), mean
                     velocity and onsets per beat (contrast between phrases)"""
     import statistics as st
     view = NoteView.of(song)
     m = view.m
+    casc = sig_spans(view.song, 'cascade')
     body = [view.secs[k] for k in ('head', 'solo', 'out') if k in view.secs] or \
         [x for x in view.sections if x.name not in FRAME_SECTIONS]      # (a piano arrangement: its sections)
     cl, lcl = view.cl, view.lcl
@@ -3832,7 +4745,8 @@ def breath(song) -> dict:
                 phrases.append(cur)
                 cur = []
             cur.append(c)
-            if j + 1 < len(on) and on[j + 1][0] - c[0] < 0.2 - 1e-6:
+            if j + 1 < len(on) and on[j + 1][0] - c[0] < 0.2 - 1e-6 and \
+                    not any(a - 1e-6 <= c[0] < z - 1e-6 for a, z in casc):
                 orn += 1
         if cur:
             phrases.append(cur)
@@ -3900,6 +4814,9 @@ def score_metrics(song, tune=None, style: str = 'jazz') -> dict:
     if style == 'orchestra':                            # (the orchestra: the melodic layer on its reduction + the
         from .orchestra import orchestra_metrics        # orchestration - endless/orchestra.py)
         return orchestra_metrics(song, tune)
+    if style == 'symphony':                             # (the symphonic composer: the orchestration + the motto's
+        from .symphony import symphony_metrics          # life - endless/symphony.py)
+        return symphony_metrics(song, tune)
     rh_name, lh_name = next(((a, b) for a, b in HANDS if a in song.tracks), (None, None))
     if rh_name is None:
         raise ComposeError(f"score: no right-hand track ({' / '.join(a for a, _ in HANDS)}) in the song")
@@ -3919,6 +4836,9 @@ def score_metrics(song, tune=None, style: str = 'jazz') -> dict:
         if style == 'new-age':                          # the new-age blind rounds' tells (the other styles: as before)
             raw.update(newage_tells(view))
             raw.update(bloom_tells(view))                # (the bloom: HUMAN_FEEDBACK 2026-10-15)
+            ft = flow_tells(view)                        # (the right hand's flow: 2026-10-15, "one finger")
+            raw.update({k: ft[k] for k in ('mel_rate', 'dvel_med', 'rh_multi', 'inner_move') if k in ft})
+        raw.update(hands_tells(view))                    # (the hands' balance, the register: 2026-10-15)
     try:
         raw['body_heard'] = body_stats(deepcopy(song), rh_name)['coupling'].get('heard')
     except Exception:                                   # (a track without a played body: no body measure)
@@ -3933,6 +4853,8 @@ def score_metrics(song, tune=None, style: str = 'jazz') -> dict:
                 mi += len(melody_issues(notes, harm, 0, 127, meter=tune.meter))
                 ms += len(_style_issues(notes, tune.meter, harm.length))
         raw['mel_issues'], raw['mel_style'] = mi, ms
+        if style == 'new-age':                          # (round g8: the theme's head profile, HEAD_PROFILE)
+            raw['head_prof'] = int(head_profile(tune.melody.get(tune.parts[0]) or [], tune.meter)['ok'])
         try:                                            # the lead sheet's long-range shape (shape(): the arc)
             sh = shape(tune)
             raw['arc_pitch_r'] = sh['arc']['phrase_pitch_r']

@@ -56,6 +56,9 @@ class RoundTrip(unittest.TestCase):
         mod.sections['climax']['climax'] = 'step' if arr.sections['climax'].get('climax') != 'step' else 'lift'
         mod.sections.pop('inter', None)
         mod.sections['A1']['figures'] = 'chorus'                 # (a fixed key told otherwise: in the tokens too)
+        # (round g9: seed 101's 'key' arrival draws the climax a step up - 'step' then plays as 'theme' did; the
+        # A1 figures sit under its ostinato: B1's figures are told otherwise too)
+        mod.sections['B1']['figures'] = 'calm' if arr.sections['B1'].get('figures') != 'calm' else 'chorus'
         base, told = notes(endless.song(tune)), notes(endless.song(tune, arrangement=mod))
         self.assertNotEqual(base, told)
         back = T.decode(T.encode(tune, mod), G, seed=tune.seed, title=tune.title)

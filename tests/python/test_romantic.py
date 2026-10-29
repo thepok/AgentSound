@@ -334,6 +334,37 @@ class ExpressionRules(unittest.TestCase):
         bars = [statistics.mean(n.vel for n in out['lh'] if k * 4 <= n.start < k * 4 + 4) for k in range(8)]
         self.assertGreater(20 * math.log10(max(bars) / min(bars)), 1.5)  # it moves with the phrase, not flat
 
+    def test_balance_plan_moves_the_hands(self):
+        """balance=: a phrase's hands at its span's dB (note energy, both ways: the left hand may lead), and the
+        give and take - the hand swells under a held melody note, recedes under one just struck."""
+        def play(balance, ac=None):
+            s = Song('t', tempo=60, key='C major', seed=1)
+            s.section('a', 8)
+            rh, lh = s.track('rh', inst.va()), s.track('lh', inst.va())
+            # a phrase of quarters, then one of whole notes (the melody holds: room for the left hand)
+            mel = Clip([(b * 1.0, 1.0, p, 80) for b, p in enumerate(['E5', 'G5', 'A5', 'C6'] * 4)] +
+                       [(16.0 + b * 4.0, 4.0, p, 80) for b, p in enumerate(['B5', 'G5', 'F5', 'E5'])])
+            sc = rom.score(mel, meter='4/4', key='C major', phrases=[(1, 4), (5, 8)])
+            figs = [(k * 4.0, 4.0, c, 'flow') for k, c in enumerate(['C', 'F', 'G7', 'C'] * 2)]
+            return sc.perform(s, rh, lh, figures=figs, touch=dict(lo=50, hi=95), balance=balance,
+                              rules={'accompaniment': ac} if ac else None)
+
+        def bal(out, a):
+            e = lambda ns: sum(rom._energy(n.vel) for n in ns if a <= n.start < a + 16)   # noqa: E731
+            return 10 * math.log10(e(out['rh']) / e(out['lh']))
+        out = play([(0, 16, 6.0), (16, 32, -2.0)])
+        self.assertAlmostEqual(bal(out, 0.0), 6.0, delta=0.6)
+        self.assertAlmostEqual(bal(out, 16.0), -2.0, delta=0.6)          # the left hand leads the second phrase
+
+        def swell(out):                                 # the hand late in a held melody note over the hand at its onset
+            held = [n.vel for n in out['lh'] if 16 <= n.start and (n.start - 16) % 4 >= 2]
+            struck = [n.vel for n in out['lh'] if 16 <= n.start and (n.start - 16) % 4 < 0.3]
+            return statistics.mean(held) / statistics.mean(struck)
+        flat = play([(0, 16, 6.0), (16, 32, -2.0)], {'give': 1.0, 'take': 1.0, 'lead_end': 0.0})
+        self.assertGreater(swell(out), swell(flat) * 1.15)              # it swells into the held note
+        with self.assertRaisesRegex(ComposeError, 'balance'):
+            play([(0, 16)])
+
 
 class PhraseTempo(unittest.TestCase):
     """PHRASE_TEMPO: every phrase its own arch, the beat lilt drawn per phrase."""

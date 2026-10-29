@@ -1,5 +1,9 @@
 # Human feedback (read before every song)
 
+- 2026-10-27, "Gold über den Wolken" (an Endless orchestra adaptation with gritty Hero Sax):
+  "ziemlich cool"; user asks to integrate this as an occasional guest in Endless.
+  Reuse suitable orchestral themes, give the sax room and preserve orchestral interludes.
+
 What the user said after listening, and the rule it implies. The recipes and analysis profiles cannot hear these
 things; the user can. Every entry is a mistake a song has already made: do not make it again. Newest first.
 Add new feedback here (date, song, the user's words, the rule) whenever the user reacts to a render.
@@ -407,3 +411,50 @@ Add new feedback here (date, song, the user's words, the rule) whenever the user
   Pair 5 (concert grand crescendo pp -> ff): the user picked X = the PLAIN patch over layers='blend' 0.4 + veltone
   0.5, then: "just take 5Y, maybe experts hear it" -> sampled/concert_grand v2 carries realism.BLEND anyway (no
   clear preference by ear; it removes the measured 17 dB brightness jump between layers).
+- **2026-10-15, the endless new-age 1 h set (songs/_endless_piano/out/na_1h):** "the right hand always feels louder
+  than the left" - and: "it shouldn't be like that in general, I think it should be dynamic too". Measured: right
+  hand over left hand 4.6-8.1 dB RMS per piece, +4..+9 in nearly every section - a fixed budget (the left hand's
+  phrase median at least 6 dB of velocity under the melody's). Rule: the hands' balance is a performance decision
+  that moves: a melody ~3-5 dB over its accompaniment on average, the left hand swelling into the melody's held
+  notes and rests and receding under a new note, near equal in a flowing build / bloom, both strong at the climax,
+  and once or twice a piece a phrase where the left hand leads (romantic `balance=`, perform.BALANCE). Touch
+  (velocity), never fader automation.
+- **2026-10-15, same set:** "I feel too many very high notes are played." Measured: most pieces' right hand median
+  C5-Eb5 with <= 5 % at or above C6, but some sit high throughout (a median of F5, 29 % >= C6, a C7 top) - the
+  theme an octave up as the climax, octave-up returns. Rule: the singing register of solo new-age piano is ~C4-C6;
+  above C6 is a rare event (the climax's peak, an occasional sparkle), never a whole section; climbing runs turn
+  around below ~E6 (plan['ceiling']).
+- **2026-10-15, the endless new-age balance set (songs/_endless_piano/out/balance_v1):** "the right hand still plays
+  excessively note by note - not very flowing", then sharper: "as if he had only one finger". Measured on the
+  renders: the articulation is legato already (dur / IOI median 1.07), but the melody moves at a quarter-note pace
+  almost everywhere (~0.9 notes a beat), neighbouring melody notes jump in velocity (median |dvel| 5-7, p90 16-20:
+  each note placed on its own), few connecting notes, and 91-96 % of the right hand's onsets are a single note (only
+  4-10 % of its notes have inner motion under them). Rule: the melody is ONE dynamic line per phrase (smooth arcs,
+  small neighbour steps, jumps only for real accents); connecting passing / neighbour notes between the structural
+  notes; the right hand voices its melody with the other fingers - mostly a single line with an occasional dyad in
+  an intimate first statement, thirds / sixths and inner motion under held notes in the returns and the chorus,
+  chords and octaves at the build / climax (roughly 30-50 % multi-note onsets overall), the top note the melody and
+  the loudest, the hand's span within a ninth (plan['texture'], plan['line'], composer.flow_tells).
+
+- 2026-10-16, endless new-age piano after the blind quality loop g3-g14 (judges rate quality vs hidden references, paired A/B since g14): the user says it has become very good ("es ist mittlerweile sehr gut geworden"). Keep what got it there: the theme sung at the climax (D6-F6 peak, cap F6), profiled heads with an answer phrase, varied returns, the climax as the loudest section, a light left hand, no flicks / stabs / holes at phrase ends. Changes to the new-age generator go through a paired blind round before they reach master.
+
+- 2026-10-16, browser/WASM prototype A/B (same endless new-age piece): the Splendid grand (concert_grand, Public Domain) sounds good to great to the user even as the 26 MB Opus and the 10 MB mini cut; the Upright KW (CC0) does not convince. Web / light-weight piano renders: Splendid, never Upright KW as the lead piano.
+
+- 2026-10-16, endless orchestra-film (seeds 93006 / 93018, 60-75 BPM, 'gentle' verses): 'very meditative, hardly anything happens, no da-da-da-daaa of Beethoven, no Moldau source, no life - only shallow'. The new-age plan orchestrated is too static for an orchestra: it needs a short rhythmic motif that drives and is developed (sequence, fragmentation, imitation between sections, the motif in the bass), flowing running figuration that carries the music forward (the Moldau's two flutes), real tempo and energy (allegro sections, not only 60-75 BPM gentle), contrasts (tutti vs solo, loud vs soft, sudden), and development - drama, not a pad with a tune. Original material only (the techniques, never the famous themes).
+
+- 2026-10-16, first orchestra-symphonic piece ('Overture: Golden Mountains', 128 BPM, motto + running figuration + symphonic form, interim render): 'uhhh, so much better already' compared with orchestra-film. Drive, motto and motion are the right direction for the endless orchestra.
+
+- 2026-10-19, neural choir prototype stage 1 (DiffSinger vowel pack, 6 virtual singers per S/A part and 4 per T/B, vs the old sampled choir, the same notes): the own choir "sounds like fewer people". The learned ears rated both about the same (43.0 vs 43.3), but the ear hears a smaller ensemble: a choir needs perceived section size - more singers, wider spread of pitch / timing / formant, room position - before anything else.
+
+- 2026-10-24, endless orchestra-symphonic (live web page / o22 master): "I feel techniques are missing, e.g. plucked strings". Measured on 8 pieces: strings 65 % sustain, 24 % staccato, spiccato 4 %, tremolo 3 %, pizzicato 2 % (almost only basses / cellos), marcato 1 %; never col legno, harmonics, trills, mutes, glissandi, a pizzicato string choir. The orchestra needs its idiomatic colour palette used as musical events (pizzicato passages, tremolo, trills, harp glissandi, brass mutes, woodwind staccato chatter), not only sustain and staccato.
+
+- 2026-10-24, o23 listening set (TECH on: pizzicato choir, harp glissandi, measured tremolo, trills, col legno, muted / stopped brass, woodwind staccato chatter, harmonics, sfz - drawn per piece with set memory): "it definitely sounds more interesting". The playing-technique palette is the right direction for the endless orchestra.
+
+- 2026-10-24, endless orchestra (wish): "I think the choir will help the orchestra to greatness - it gives goosebumps much more surely". A real-sounding big choir (wordless vowels) at the arrivals / climaxes of the symphonic pieces is the next big lever after the playing techniques.
+
+- 2026-10-25, endless orchestra (wish): "what I miss in the orchestra are more exotic instruments like a church organ or an acoustic guitar - that can be beautiful too - and above all increase diversity". The endless orchestra should vary its instrumental colour per piece (organ, classical guitar, harpsichord, celesta, bells), built idiomatically into the piece, with set memory.
+
+- 2026-10-25, 1 h endless orchestra-symphonic on master f1ced2e (D:	mp\orch1h; CHOIR v2 + SOLO + COLOUR + SHAPE3 + TECH2 on): "the ideas of the pieces are good, but the performance is restless in a negative way - sometimes it feels pumping, as if someone is playing with the volume knob". Fast level changes (swells, dynamics lanes, master chain) must stay musical: no audible gain riding.
+# 2026-10-28: Endless orchestra mix A/B
+
+User: "neu klingt besser", followed by approval to adopt it in the generator. Matched current-code Wings of the Sea, seed 4242, pass 2: bells -2 dB, horns -1.5 dB, first violins EQ at 3500 Hz / -1.5 dB / Q 0.9. Both phone MP3s approximately -18 LUFS; notes, timing and master identical. Adopt this mix in build_symphony after all voices are created. No blanket solo boost or bass-ducking change was approved or included.

@@ -8,14 +8,14 @@
     learn finetune --run RUN --data DATA ...                   expert iteration (generate -> score -> keep -> train)
     learn rl      --run RUN ...                                GRPO with composer.score as the reward
     learn render  --tokens FILE.json --out DIR                 perform + render a student piece (engine)
-Torch is only imported by train / sample / eval / finetune / rl (the CUDA venv: D:/venvs/agentsound-ears).
+Torch is only imported by train / sample / eval / finetune / rl (the CUDA venv: local/venvs/ears).
 """
 from __future__ import annotations
 
 import os
 from pathlib import Path
 
-DEFAULT_ROOT = Path(os.environ.get('AGENTSOUND_LEARN', 'D:/agentsound-learn'))
+DEFAULT_ROOT = Path(os.environ.get('AGENTSOUND_LEARN', Path(__file__).resolve().parents[2] / 'local' / 'learn'))
 
 
 def add_parser(sub) -> None:

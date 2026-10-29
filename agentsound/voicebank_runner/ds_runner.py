@@ -9,6 +9,7 @@ these exports, so this small runner drives the ONNX graphs directly, the way Ope
     python ds_runner.py request.json response.json
 
 request.json: {"bank": "/mnt/d/.../assets/voices/hanami", "provider": "cuda" | "cpu", "jobs": [job, ...]}
+(optional: "vocoder_provider": "cpu" runs only the vocoder on the CPU, "cpu_threads": n its threads)
 Jobs (all lengths in frames of hop_size / sample_rate, e.g. 512 / 44100 = 11.6 ms):
   {"op": "info"}
       -> {"phonemes": [...], "speakers": [...], "sample_rate", "hop_size", "acoustic": {...flags}, "has": {...}}
@@ -104,13 +105,23 @@ class Bank:
         c['_speakers'] = self._embeds(c.get('speakers') or [], c['_dir'])
         return c
 
-    def session(self, path):
-        s = self._sessions.get(path)
+    vocoder_cpu = False
+    """The request's "vocoder_provider": "cpu" runs only the vocoder on the CPU (TIGER's tgm_hifigan: ~4.4 s on the
+    GPU for 7.8 s of audio, faster on the CPU) with "cpu_threads" threads (0 = onnxruntime's default)."""
+    cpu_threads = 0
+
+    def session(self, path, cpu: bool = False):
+        key = (path, cpu)
+        s = self._sessions.get(key)
         if s is None:
             so = ort.SessionOptions()
             so.log_severity_level = 3
-            s = ort.InferenceSession(path, sess_options=so, providers=self.providers)
-            self._sessions[path] = s
+            if cpu and self.cpu_threads:
+                so.intra_op_num_threads = int(self.cpu_threads)
+                so.inter_op_num_threads = 1
+            s = ort.InferenceSession(path, sess_options=so,
+                                     providers=['CPUExecutionProvider'] if cpu else self.providers)
+            self._sessions[key] = s
         return s
 
     def tokens(self, phonemes, table=None):
@@ -243,7 +254,7 @@ class Bank:
         if missing:
             raise ValueError(f"acoustic model needs inputs this runner does not know: {sorted(missing)}")
         mel = ac.run(None, feeds)[0]
-        voc = self.session(f"{self.root}/dsvocoder/{self.voc_cfg['model']}")
+        voc = self.session(f"{self.root}/dsvocoder/{self.voc_cfg['model']}", cpu=self.vocoder_cpu)
         wav = voc.run(None, _only(voc, {'mel': mel.astype(np.float32), 'f0': f0[None]}))[0][0]
         g = job.get('gain_db', 0.0)
         if np.ndim(g) == 0:
@@ -310,6 +321,8 @@ def main(argv):
         req = json.load(f)
     t0 = time.time()
     bank = Bank(req['bank'], req.get('provider', 'cuda'))
+    bank.vocoder_cpu = req.get('vocoder_provider') == 'cpu'
+    bank.cpu_threads = int(req.get('cpu_threads', 0))
     results = []
     for job in req['jobs']:
         op = job.get('op')

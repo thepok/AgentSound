@@ -36,6 +36,7 @@ violins to the basses' octave).
 
 from __future__ import annotations
 
+import bisect
 import math
 from collections import Counter, namedtuple
 
@@ -45,7 +46,7 @@ from .theory import Chord, ComposeError, Key, Progression, chord as _chord, note
 __all__ = ['SATB', 'STRINGS', 'WINDS', 'WINDS8', 'HORNS', 'BRASS', 'TUTTI', 'N', 'line', 'length', 'ChordInfo', 'info',
            'leading_tone', 'voice', 'satb', 'chorale', 'timeline', 'harmony_at', 'Harmony', 'Issue', 'check',
            'summary', 'arpeggiate', 'passing_eighths', 'parallel_or_rub', 'merge_ties', 'window', 'trim', 'fugue',
-           'Fugue', 'imitation']
+           'Fugue', 'imitation', 'CP', 'cp_issues', 'cp_cost', 'repair', 'complement_rhythm', 'counterline']
 
 # --------------------------------------------------------------------------------------------------- voice sets
 
@@ -1039,3 +1040,364 @@ def imitation(cell, entries, *, key=None) -> dict:
     for v in out:
         out[v].sort()
     return out
+
+
+# --------------------------------------------------------------------------------------------------- joint lines
+
+CP = {'unison': 1.0, 'lock': 4,
+      'weights': {'parallel_outer': 4.0, 'parallel': 2.0, 'unison_run': 3.0, 'dissonance': 3.0, 'rhythm_lock': 1.0,
+                  'crossing': 2.0}}
+"""The joint voice-leading check of simultaneous LINES (round o19b, the endless fugato; the code review's A4 - a
+shared core the summit's layers can use too): cp_issues' limits - two voices in unison / octaves at most 'unison'
+beats running, at most 'lock' attacks together in a row - and the issues' weights (repair / counterline's cost)."""
+
+
+def _dissonant(a: int, b: int, low: bool = False) -> bool:
+    """A 2nd, tritone or 7th (compound too); a 4th when the lower note is the lowest voice (low)."""
+    ic = abs(a - b) % 12
+    return ic in (1, 2, 6, 10, 11) or (ic == 5 and low)
+
+
+class _Lines:
+    """Sorted lines {voice: [(start, dur, pitch)]} with the note sounding at a beat (bisect)."""
+
+    def __init__(self, parts: dict, names):
+        self.names = [v for v in names if v in parts and parts[v]]
+        self.ps = {v: sorted(tuple(n[:3]) for n in parts[v]) for v in self.names}
+        self.st = {v: [n[0] for n in self.ps[v]] for v in self.names}
+
+    def at(self, v, t: float):
+        """The index of voice v's note sounding at t, or None."""
+        if v not in self.ps:
+            return None
+        i = bisect.bisect_right(self.st[v], t + 1e-6) - 1
+        if i >= 0 and t < self.ps[v][i][0] + self.ps[v][i][1] - 1e-6:
+            return i
+        return None
+
+
+def cp_issues(parts: dict, *, order=None, strong: float = 1.0, t0: float = 0.0, unison: float | None = None,
+              lock: int | None = None, span=None) -> list:
+    """The joint voice leading of simultaneous lines {voice: [(start, dur, pitch)]} (order: top to bottom, default
+    the dict's) -> [Issue] sorted by beat, of the kinds:
+      'parallel_outer' / 'parallel'  parallel fifths / octaves (both voices move the same way onto the same perfect
+          interval class) between the outer voices (the highest and the lowest sounding) / between another pair;
+      'unison_run'  two voices in unison or octaves for more than `unison` beats (CP) running;
+      'dissonance'  on a strong beat (every `strong` beats from t0) a 2nd / tritone / 7th (a 4th over the lowest
+          voice) both voices attack, or a held one (a suspension) that does not resolve down by step; on a weak beat
+          an attacked dissonance neither approached nor left by step;
+      'rhythm_lock'  two voices attacking together `lock` (CP) times in a row (no rhythmic independence);
+      'crossing'  a voice under the one ordered below it.
+    span=(a, b): only the issues at beats there (the lines around it are read)."""
+    un = CP['unison'] if unison is None else float(unison)
+    lk = CP['lock'] if lock is None else int(lock)
+    a0, b0 = span if span is not None else (-1e18, 1e18)
+    if span is not None:                         # (the lines around the span only: a repair's local look)
+        parts = {v: [n for n in ns if n[0] + n[1] > a0 - 4 * strong and n[0] < b0 + 4 * strong]
+                 for v, ns in parts.items()}
+    L = _Lines(parts, list(order or parts))
+    names, ps = L.names, L.ps
+    out = []
+
+    def inside(t):
+        return a0 - 1e-6 <= t < b0 - 1e-6
+
+    def strong_(t):
+        x = (t - t0) / strong
+        return abs(x - round(x)) < 1e-6
+    onsets = sorted({round(a, 6) for v in names for a in L.st[v]})
+    snd = {t: {v: L.at(v, t) for v in names} for t in onsets}
+    prev = None
+    for t in onsets:
+        now = {v: i for v, i in snd[t].items() if i is not None}
+        if not now:
+            prev = None
+            continue
+        pit = {v: ps[v][i][2] for v, i in now.items()}
+        lo_, hi_ = min(pit.values()), max(pit.values())
+        att = {v for v, i in now.items() if abs(ps[v][i][0] - t) < 1e-6}
+        vs = [v for v in names if v in now]
+        if inside(t):
+            for x in range(len(vs)):
+                for y in range(x + 1, len(vs)):
+                    u, w = vs[x], vs[y]
+                    pu, pw = pit[u], pit[w]
+                    if prev is not None:
+                        iu, iw = snd[prev].get(u), snd[prev].get(w)
+                        if iu is not None and iw is not None:
+                            qu, qw = ps[u][iu][2], ps[w][iw][2]
+                            ic = abs(pu - pw) % 12
+                            if pu != qu and pw != qw and (pu - qu) * (pw - qw) > 0 and ic == abs(qu - qw) % 12 \
+                                    and ic in (0, 7):
+                                kind = 'parallel_outer' if max(pu, pw) == hi_ and min(pu, pw) == lo_ else 'parallel'
+                                out.append(Issue(kind, t, (u, w), (pu, pw), f"{kind} {u}/{w} at beat {t:g}: "
+                                                                            f"{qu}-{qw} -> {pu}-{pw}"))
+                    if (u in att or w in att) and _dissonant(pu, pw, min(pu, pw) == lo_):
+                        bad = False
+                        if strong_(t):
+                            if u in att and w in att:
+                                bad = True
+                            else:                            # (the held voice: a suspension resolves down by step)
+                                h = w if u in att else u
+                                i = now[h]
+                                nx = ps[h][i + 1][2] if i + 1 < len(ps[h]) else None
+                                bad = nx is None or not 1 <= ps[h][i][2] - nx <= 2
+                        else:
+                            for v in (u, w):
+                                if v not in att:
+                                    continue
+                                i = now[v]
+                                p = ps[v][i][2]
+                                pr = ps[v][i - 1][2] if i > 0 and ps[v][i - 1][0] + ps[v][i - 1][1] > t - 1e-3 \
+                                    else None
+                                nx = ps[v][i + 1][2] if i + 1 < len(ps[v]) else None
+                                if not ((pr is not None and abs(p - pr) <= 2) or (nx is not None and abs(nx - p) <= 2)):
+                                    bad = True
+                        if bad:
+                            out.append(Issue('dissonance', t, (u, w), (pu, pw),
+                                             f"dissonance {u}/{w} at beat {t:g}: {pu} against {pw}"))
+            for u, w in zip(names, names[1:]):
+                if u in pit and w in pit and pit[u] < pit[w]:
+                    out.append(Issue('crossing', t, (u, w), (pit[u], pit[w]),
+                                     f"{u} {pit[u]} under {w} {pit[w]} at beat {t:g}"))
+        prev = t
+    ends = sorted(set(onsets) | {round(n[0] + n[1], 6) for v in names for n in ps[v]})
+    for x in range(len(names)):
+        for y in range(x + 1, len(names)):
+            u, w = names[x], names[y]
+            run0, seen = None, None
+            for t, t2 in zip(ends, ends[1:]):
+                iu, iw = L.at(u, t), L.at(w, t)
+                if iu is not None and iw is not None and (ps[u][iu][2] - ps[w][iw][2]) % 12 == 0:
+                    run0 = t if run0 is None else run0
+                    if t2 - run0 > un + 1e-6 and seen != run0 and inside(run0):
+                        seen = run0
+                        out.append(Issue('unison_run', run0 + un, (u, w), (ps[u][iu][2], ps[w][iw][2]),
+                                         f"{u}/{w} in unison / octaves from beat {run0:g} past {un:g} beats"))
+                else:
+                    run0 = None
+            su, sw = {round(a, 6) for a in L.st[u]}, {round(a, 6) for a in L.st[w]}
+            run = 0
+            for t in sorted(su | sw):
+                run = run + 1 if (t in su and t in sw) else 0
+                if run == lk and inside(t):
+                    out.append(Issue('rhythm_lock', t, (u, w), (), f"{u}/{w} attack together {lk} times to beat {t:g}"))
+    out.sort(key=lambda i: (i.beat, i.kind))
+    return out
+
+
+def cp_cost(issues) -> float:
+    """The issues weighed (CP['weights'])."""
+    return sum(CP['weights'].get(i.kind, 1.0) for i in issues)
+
+
+def _leap_cost(a: int, b: int) -> float:
+    m = abs(a - b)
+    return (0.6 if m == 0 else 0.0 if m <= 2 else 0.3 if m <= 4 else 0.6 if m == 5 else 2.5 if m == 6 else
+            0.9 if m == 7 else 1.0 if m == 12 else 1.6 if m < 12 else 6.0)
+
+
+def _melodic(ns, i: int) -> float:
+    """Note i's melodic cost in its line: the leaps into and out of it, a leap not recovered by a step back."""
+    c = 0.0
+    p = ns[i][2]
+    if i > 0:
+        c += _leap_cost(ns[i - 1][2], p)
+        if i > 1:
+            l1 = ns[i - 1][2] - ns[i - 2][2]
+            if abs(l1) > 4 and (p - ns[i - 1][2]) * l1 > 0:
+                c += 1.2
+    if i + 1 < len(ns):
+        c += _leap_cost(p, ns[i + 1][2])
+    return c
+
+
+def repair(parts: dict, *, scale, movable=None, harmony=None, order=None, ranges=None, strong: float = 1.0,
+           t0: float = 0.0, rounds: int = 3, hook=None, reach: int = 5) -> dict:
+    """The joint voice leading repaired (cp_issues): for every issue a movable note of a voice in it moves to the
+    scale tone within `reach` semitones that lowers the local cost - the issues around it (CP's weights), its leaps,
+    a strong-beat non-chord tone against harmony [(start, dur, chord)], hook(voice, note, pitch) -> extra cost (the
+    caller's own rule) -, `rounds` greedy passes. parts {voice: [(start, dur, pitch)]} (order top to bottom);
+    scale(beat) -> the pitch classes there; movable(voice, note) -> bool (default every note); ranges {voice: (lo,
+    hi)}. Returns the repaired copy."""
+    parts = {v: sorted(tuple(n[:3]) for n in ns) for v, ns in parts.items()}
+    names = list(order or parts)
+    hset = [(float(a), d, set(_chord(s).pcs)) for a, d, s in (harmony or ())]
+
+    def chord_pcs(t):
+        for a, d, cs in hset:
+            if a - 1e-6 <= t < a + d - 1e-6:
+                return cs
+        return None
+
+    def strong_(t):
+        x = (t - t0) / strong
+        return abs(x - round(x)) < 1e-6
+
+    def local(v, i, q):
+        a, d, _ = parts[v][i]
+        trial = dict(parts)
+        trial[v] = parts[v][:i] + [(a, d, q)] + parts[v][i + 1:]
+        c = cp_cost(cp_issues(trial, order=names, strong=strong, t0=t0, span=(a - strong, a + d + strong)))
+        c += 0.5 * _melodic(trial[v], i)
+        cs = chord_pcs(a)
+        if cs is not None and strong_(a) and q % 12 not in cs:
+            c += 1.0
+        if hook is not None:
+            c += hook(v, (a, d, q), q)
+        return c
+    for _ in range(max(0, int(rounds))):
+        iss = cp_issues(parts, order=names, strong=strong, t0=t0)
+        if not iss:
+            break
+        changed = False
+        done = set()
+        for it in iss:
+            for v in it.voices:
+                i = _Lines(parts, names).at(v, it.beat)
+                if i is None or (v, i) in done:
+                    continue
+                n = parts[v][i]
+                if movable is not None and not movable(v, n):
+                    continue
+                done.add((v, i))
+                a, d, p = n
+                pcs = scale(a)
+                lo, hi = (ranges or {}).get(v, (0, 127))
+                best, bc = p, local(v, i, p)
+                for q in sorted(range(p - reach, p + reach + 1), key=lambda q: (abs(q - p), q)):
+                    if q == p or q % 12 not in pcs or not lo <= q <= hi:
+                        continue
+                    c = local(v, i, q)
+                    if c < bc - 1e-9:
+                        best, bc = q, c
+                if best != p:
+                    parts[v][i] = (a, d, best)
+                    changed = True
+        if not changed:
+            break
+    return parts
+
+
+def complement_rhythm(against, t0: float, t1: float, *, grid: float = 0.5, hold: float = 1.0,
+                      longest: float = 2.0) -> list:
+    """A rhythm against a line (notes [(start, dur, pitch)]) over [t0, t1): moving on `grid` where the line holds,
+    holding (`hold` to `longest` beats) where it moves on the grid or faster - a counter-subject's complementary
+    rhythm -> [(start, dur)]."""
+    ns = sorted(tuple(n[:3]) for n in against)
+
+    def moving(x):
+        for a, d, _ in ns:
+            if a - 1e-6 <= x < a + d - 1e-6:
+                return d <= grid + 1e-6
+        return False
+    out, x = [], float(t0)
+    while x < t1 - 1e-6:
+        if moving(x) or moving(x + grid / 2):
+            y = x + hold
+            while y < x + longest - 1e-6 and moving(y):
+                y += grid
+        else:
+            y = x + grid
+        y = min(y, t1)
+        out.append((x, y - x))
+        x = y
+    return out
+
+
+def counterline(against: dict, rhythm, *, scale, lo: int, hi: int, harmony=None, centre: float | None = None,
+                start: int | None = None, goal=None, strong: float = 1.0, t0: float = 0.0, below=(), above=(),
+                bass: bool = False, beam: int = 12, hook=None) -> list:
+    """A new line against fixed ones - a beam search over the pitches of `rhythm` [(start, dur)]: against {voice:
+    notes} the lines it sounds with; scale(beat) -> pitch classes; lo / hi its range, centre its pull; harmony
+    [(start, dur, chord)] (strong-beat chord tones; bass: the chord's root first); start the pitch before it, goal
+    the pitch classes its last note lands on; below / above the voices it stays under / over. The cost: CP's issues
+    with every against line (parallels, unison runs, unprepared dissonances, crossings), the leaps (a leap recovered
+    by a step back), hook(note, pitch, previous pitch) -> extra cost. Returns [(start, dur, pitch)]."""
+    L = _Lines(against, list(against))
+    W = CP['weights']
+    hset = [(float(a), d, _chord(s)) for a, d, s in (harmony or ())]
+    ctr = (lo + hi) / 2.0 if centre is None else float(centre)
+
+    def chord_at(t):
+        for a, d, c in hset:
+            if a - 1e-6 <= t < a + d - 1e-6:
+                return c
+        return None
+
+    def strong_(t):
+        x = (t - t0) / strong
+        return abs(x - round(x)) < 1e-6
+
+    def sounding(t):
+        out = {}
+        for v in L.names:
+            i = L.at(v, t)
+            if i is not None:
+                out[v] = L.ps[v][i]
+        return out
+    rhythm = [(float(a), float(d)) for a, d in rhythm]
+    beams = [(0.0, (), 0)]                      # (cost, pitches, 1: the last note a weak-beat dissonance)
+    for k, (a, d) in enumerate(rhythm):
+        now = sounding(a)
+        later = [n for v in L.names for n in L.ps[v] if a + 1e-6 < n[0] < a + d - 1e-6]
+        before = sounding(rhythm[k - 1][0]) if k else {}
+        c_ = chord_at(a)
+        cpcs = set(c_.pcs) if c_ is not None else None
+        st_ = strong_(a)
+        cand = [q for q in range(lo, hi + 1) if q % 12 in scale(a)]
+        nxt = {}
+        for cost, path, flag in beams:
+            pp = path[-1] if path else start
+            for q in cand:
+                c = cost + 0.03 * abs(q - ctr)
+                if pp is not None:
+                    c += _leap_cost(pp, q)
+                    if len(path) >= 2 and abs(path[-1] - path[-2]) > 4 and (q - path[-1]) * (path[-1] - path[-2]) > 0:
+                        c += 1.2
+                    if flag and abs(q - pp) > 2:
+                        c += 2.0
+                low_ = min([q] + [n[2] for n in now.values()])
+                f2 = 0
+                for v, n in now.items():
+                    pw = n[2]
+                    if _dissonant(q, pw, min(q, pw) == low_):
+                        if st_:
+                            c += 1.0 if (pp == q and abs(n[0] - a) < 1e-6) else W['dissonance']
+                        elif pp is not None and abs(q - pp) <= 2:
+                            c += 0.5
+                            f2 = 1
+                        else:
+                            c += 0.8 * W['dissonance']
+                    if q == pw:
+                        c += 1.5
+                    if (q - pw) % 12 == 0 and d > CP['unison'] + 1e-6:
+                        c += W['unison_run']
+                    if v in before and pp is not None:
+                        qw = before[v][2]
+                        ic = abs(q - pw) % 12
+                        if q != pp and pw != qw and (q - pp) * (pw - qw) > 0 and ic == abs(pp - qw) % 12 and \
+                                ic in (0, 7):
+                            c += W['parallel_outer']
+                    if (v in below and q > pw) or (v in above and q < pw):
+                        c += W['crossing'] + 1.0
+                for n in later:                 # (the others' strong-beat attacks under the held note)
+                    if strong_(n[0]) and _dissonant(q, n[2]):
+                        c += 1.0
+                if cpcs is not None and st_:
+                    if bass:
+                        iv = (q - c_.root) % 12
+                        c += 0.0 if iv == 0 else 0.6 if iv in (3, 4) else 1.4 if iv == 7 else 3.0
+                    elif q % 12 not in cpcs:
+                        c += 1.5
+                if goal is not None and k == len(rhythm) - 1 and q % 12 not in set(goal):
+                    c += 3.0
+                if hook is not None:
+                    c += hook((a, d, q), q, pp)
+                kk = (q, f2)
+                if kk not in nxt or c < nxt[kk][0]:
+                    nxt[kk] = (c, path + (q,), f2)
+        beams = sorted(nxt.values(), key=lambda x: x[0])[:max(1, beam)]
+    if not beams or not beams[0][1]:
+        return []
+    return [(a, d, q) for (a, d), q in zip(rhythm, beams[0][1])]

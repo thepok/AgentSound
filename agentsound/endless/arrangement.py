@@ -49,15 +49,22 @@ PIANO_FIXED = ('melody', 'dyn', 'figures', 'harmonize', 'harm_share', 'tempo', '
                'lh_only', 'peak', 'drums')
 """A piano section's keys copied from its plan entry (the record holds them so a player can be told otherwise)."""
 PIANO_DRAWN = ('octave', 'climax', 'reharm', 'bars', 'tail', 'cadence', 'bass', 'octave_half', 'fill', 'turn', 'swell',
-               'cadenza', 'moves', 'vary', 'key')
+               'cadenza', 'moves', 'vary', 'key', 'close')
 MOVES = ('hold', 'bass', 'sub', 'ped')
 PLAY_KEYS = ('rubato', 'inhale', 'lilt', 'breath', 'push', 'inner', 'cap', 'lh_vel', 'pedal', 'end_dyn', 'end_roll',
-             'end_hold')
+             'end_hold', 'balance', 'lh_lead', 'end_voice')
+SIGN_KEYS = (('motto', 'motto', 'kind'), ('ostinato', 'sig', 'contour'), ('pause', 'pause', 'kind'),
+             ('goose', 'goose', 'degree'), ('cascade', 'exit', 'pattern'))
+"""The signature moves' piece-level keys (plan['signature']; perform._signature): (move, record key, the parameter
+recorded - the motto's kind, the ostinato's contour, the pause's kind, the goosebump chord's degree, the cascade's
+pattern; 'none' without the move)."""
 """The pianist's per-piece choices (plan['play'] {key: {value: weight}}, piece-level; perform._piano_draws /
 _play_piano): rubato (x the feel's phrase rubato depth), inhale (beats of the slowing into the climax, 0: none), lilt
 (the bar's weight on beat 3 / 2), breath (beats cut at a phrase end), push (ms the melody leans ahead of the bass),
 inner (the notes under the melody x), cap (the right hand's top velocity), lh_vel (the left hand's level), pedal (ms
-the pedal changes after the harmony), end_dyn / end_roll / end_hold (the last chord's mark, roll ms, fermata beats)."""
+the pedal changes after the harmony), end_dyn / end_roll / end_hold (the last chord's mark, roll ms, fermata beats),
+balance (dB the melody sits over the left hand in a theme's return: perform.BALANCE's base), lh_lead (phrases the left
+hand leads), end_voice (the last chord's right-hand grip: 'full' / 'open' / 'single')."""
 ORCH_DRAWN = ('texture', 'lead', 'counter')
 """An orchestra section's orchestrator draws (endless/orchestra.py RECORDED); the piece's: 'size'."""
 JAZZ_FIELDS = ('lh', 'steps', 'choruses', 'opening', 'quotes', 'over', 'window', 'burst')
@@ -162,6 +169,8 @@ def values(genre) -> dict:
             for s in secs:
                 v = s.get(k)
                 add(k, v if isinstance(v, dict) else [] if v is None else [v])
+        from .perform import WALTZ_FORM          # (round g14: _waltz_cap pins a section to its 'least' phrase)
+        add('bars', list(WALTZ_FORM['bars']) + [WALTZ_FORM['least']])
         add('climax', (P.get('set') or {}).get('climax') or {})
         add('figures', [n for F in genre.feels.values() for n in (F.get('figures') or {})])
         add('swell', P.get('swell') or {})
@@ -173,11 +182,16 @@ def values(genre) -> dict:
         add('key', [k for s in secs for w in (s.get('key') or {}).values() for k in w])
         for k in PLAY_KEYS:
             add(k, (P.get('play') or {}).get(k) or {})
+        M = (P.get('signature') or {}).get('moves') or {}
+        for mv, k, par in SIGN_KEYS:                   # (the signature moves: the kind played, or none)
+            if mv in M:
+                w = M[mv][par]
+                add(k, ['none'] + sorted({v for d in w.values() for v in d} if mv == 'goose' else w))
         if kind_of(genre) == 'orchestra':
-            from ..bandlib.orchestration import TEXTURES
+            from ..bandlib.orchestration import SYMPHONIC, TEXTURES
             roles = sorted({r for rs in (P.get('sizes') or {}).values() for r in rs})
             add('size', sorted(P.get('sizes') or {}))
-            add('texture', sorted(TEXTURES))
+            add('texture', sorted(t for t in TEXTURES if t not in SYMPHONIC))    # (the film / new-age plans)
             add('lead', roles)
             add('counter', roles + ['none'])
     elif kind_of(genre) == 'jazz':

@@ -9,7 +9,7 @@ import random
 from pathlib import Path
 from types import SimpleNamespace
 
-MAIN = Path(os.environ.get('AGENTSOUND_MAIN', 'D:/Repos/AgentSound'))
+MAIN = Path(os.environ.get('AGENTSOUND_MAIN', Path(__file__).resolve().parents[2]))
 
 
 def _env():

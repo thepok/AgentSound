@@ -6,6 +6,31 @@ user's rule: KISS - a preset / patch / chain / default / data table before new c
 
 ## Endless generators (`agentsound.endless`)
 
+- **Symphonic pumping (opt-in fix)**: `genres.symphony_pumping(True)` reduces the stacked automatic phrase arc;
+  matched-seed measurements and limitations are in `docs/PUMPING.md`. Leave the default off pending listening:
+  the measured reduction does not prove a subjective preference, and intentional accents / sample attacks remain.
+
+- **PIANO_DIVERSE (rounds p-div .. p-div4, 2026-10-25; master has p-div3 with the flag off, p-div4 on branch pdiv4,
+  not merged)**. Per piece -0.38 / +0.22 / -0.40 / -0.22; the set choice order-driven (p-div4's two passes: 10 of 28
+  judges agree, below chance; the programme read second kept 82 %); the paired variety rating steady (+0.32..+1.07).
+  Next:
+  1. The set level: rate each programme alone (unpaired variety / coherence / keep-listening) instead of the forced
+     choice, or more judges with the agreed two-pass count (`set_round.py deal --two-pass`).
+  2. The climax hand: the running-8ths-only pool reads like the verse (p-div4 RURD: "give it octave bass and fuller
+     texture") - bring the bass octave back with motion (big, broad + 8ths).
+  3. Keep p-div4's anthem revert; gate 1.2 / weigh 0.02 / the dynamics guard.
+
+- **Signature piano moves - open points** (round g4, 2026-10-16). The first five are built: `plan['signature']`,
+  `perform._signature` / `_sign`, `composer.signature_tells`, docs/PIANO_MOVES.md section 11. Round g4 judged them:
+  generated memorable 1.93 vs the references' 2.90. 18 of 40 named moments sit on a move's bars, 14 of them the motto.
+  Open (g5 fixed the cascade as a link, the motto's anchor / register band and its octave-down recurrences):
+  1. 'sigh' ignores its drawn interval.
+  2. The cascade still reads as "a flourish" twice in g5 (QJUG 107-108: the hands cross); once "a nice pedal effect".
+  3. The score costs: a motto adds hook statements and repeated notes (`hook`, `rep_pitch`), and the pause bar counts
+     as a peak hole. The new-age SCORES do not know the moves yet: measure their ranges on the references.
+  4. The student's checkpoints need a re-export for the new piece tokens (AMotto_ / ASig_ / APause_ / AGoose_ /
+     AExit_).
+
 - **The new-age bloom - open points** (2026-10-15, `plan['bloom']`, docs/PIANIST_RULES.md "The bloom"; renders
   `songs/_endless_piano/out/bloom_v1`). Not yet heard by the user. Open:
   1. The right hand's density in the bloom depends on the composed melody. Hand-offs need a note held from the half
@@ -18,6 +43,55 @@ user's rule: KISS - a preset / patch / chain / default / data table before new c
   4. The learned student: its decoded tunes bloom by their seed (the bloom is not in the arrangement record). A
      re-export would let it learn where blooms sit.
   5. The hand-written references score lower under the new metrics (`tempo_push` 1.0-1.07, `flow32` 0-2.9).
+  6. The new-age set, g14 (songs/_blind/ROUNDS.md "Round g14"): a paired round, the same 8 seeds (85000) by the g14
+     code and by the g12 code (master), two panels of seven judges, the 3 references in both.
+     - Paired g14 - g12: overall +0.29 (melody +0.38, development +0.54, harmony -0.02, performance +0.09),
+       memorable 1.95 vs 1.62. Five slots won, three lost (se about 0.36): the waltz +1.57, JUJW +1.29, MFMM +1.00;
+       WYQD -1.29, JQHZ -0.86.
+     - Against the references: g14 code 5.43, g12 code 5.14, references 7.50. The g14 code's rel 0.726 / z -1.71 is
+       not comparable with g3-g13: the paired halves exposed the set's template to every judge.
+     The g13 repairs are in and measured (docs/PIANIST_RULES.md "After round g13"):
+     - climax opening as A1 replayed 0.85 -> 0.08 (ANTHEM_HEAD 'open' reharm, ANTHEM_SECOND draws);
+     - flicks into phrase landings 0.56 -> 0 (ORNAMENT_LAND);
+     - bare climax exits 0.06 -> 0 (PAUSE_EXIT);
+     - payoff holes filled (MOTTO_HELD);
+     - waltzes 87 -> 79 bars (WALTZ_FORM 'most' / 'least');
+     - codas 10 % of the piece (CODA 'share');
+     - waltz heads that do not circle 0.50 -> 0.88 (HEAD_PROFILE['circle'][3]);
+     - inner voices at melody level 12.5 -> 0.08, off the chord 2.0 -> 0.31 (harmonize scale_at, _line skips them,
+       A1 plain).
+     No judge named a flick, a stab or an empty bar after a phrase end.
+     Open, ranked by the judges (g14 code):
+     (a) The climax peaks low or collapses (about 16): JQHZ never above B5 (all seven), MFMM D6 only, ZNSH under C6,
+         YPCW falls within a bar of its octave lift. The 'peak' set draws / ceiling are too low for middle-register
+         heads: make the climax's top at least a third over every earlier section's, held for 2+ bars.
+     (b) The section after the climax (about 16): RQHP's A2 replays A1 at mf for 10 bars, WYQD's A3 as loud and as
+         high as the climax, JUJW's A3 dropping -5.7 LU at once. Give the post-climax return its own level (between
+         the climax and the coda), its peak under the climax's, and a shortened or varied body.
+     (c) The climax's first unit still at A1's register (about 12; the statistician counts it as an aligned copy):
+         YPCW 36 = 5, MFMM 47-48 = 5-6, XTHR 45-48. Keep the reharm, and start the unit at the octave (or the third).
+     (d) The key-up climax's way back (ZNSH: one F7sus4 into Bb, four judges): two bars of preparation.
+     (e) Heads with no downbeat / no hook (MFMM, WYQD, ZNSH, RQHP); B1 aimless (WYQD, YPCW, RQHP).
+     (f) Fussy 16th inner ticks under a held note before the climax (MFMM 46, ZNSH 36), ZNSH 42's Ab/Cb6 chord over the
+         key move (three each).
+     (g) A paired round shows the set's template: siblings share key, tempo, intro and build figures. Shared flags
+         rose to 32 / 24. Read the next round paired (on panels again) and singly (one code, 8 + 3) to compare.
+     Costs (48 seeds / 48 set slots): score 94.9 / 94.5 -> 95.2 / 95.8; head_prof 0.90 / 0.90 -> 0.85 / 0.90;
+     shared3 23.2 -> 27.8. Baseline: new-age 101 / 102 / 103 at 92.3 / 94.6 / 92.2 (candidates [302, 95.5],
+     [300, 95.4]), classical candidate 300 at 92.8; orchestra unchanged.
+
+- **The dynamic hand balance and the register ceiling - open points** (2026-10-15, HUMAN_FEEDBACK "the right hand
+  always louder" / "too many very high notes"; `perform.BALANCE`, `Score.perform(balance=)`, `plan['ceiling']`,
+  `composer.hands_tells`; docs/PIANIST_RULES.md "The hands' balance"; renders
+  `songs/_endless_piano/out/balance_v1`). Not yet heard by the user. Open:
+  1. The left hand's lead phrases are touch only: the same broken-chord figure, louder. A real tenor / bass answer
+     line in that phrase (Ideas #9 / #15) would give the hand a voice, not just a level.
+  2. The note-energy model (velocity ^ 2.5, summed) matches the stems' RMS within ~1 dB per piece, but not in sparse
+     phrases: a held, decaying melody over a busy left hand renders 2-4 dB more left-leaning than planned.
+  3. `jazz-piano` (`pianist.arrange`, `perform._lh_under` "the melody leads") still keeps a fixed melody lead.
+  4. The hand-written references keep the fixed budget and sit higher (rh_c6 0.09-0.37): they now score a little
+     lower on hand_bal / hand_bal_sd / rh_c6 (ranges from the user's ask, not from them).
+  5. The learned student's checkpoints do not know the new play tokens (ABalance / ALhLead): their records draw them.
 
 - **new-age-epiano: the DX7's level barely follows velocity** (2026-10-11, the first 30-minute set, seed 2000):
   E.PIANO 1 moves its tine, not its level (0.5 dB per 10 velocity steps; a grand ~2.2), so the genre stacks three
@@ -288,12 +362,378 @@ user's rule: KISS - a preset / patch / chain / default / data table before new c
     a melody doubled in unison by horns and cellos for 8 bars.
   - The colour roles and the doublings are seeded draws below the record (not `orchestra.RECORDED`): record them
     (`ACol`, `ADbl`) when the student should learn orchestration choices.
-  - The gate rejects ~1 render in 3-4: a single click "in no single track (master chain or the sum)" (find it -
-    the limiter / the hall?), and flat_dynamics on an accompaniment track named after an instrument (the analysis
-    judges `violins2` / `trombones` as leads by name: NoteDynamics.cpp leadIntentName) - a Score-level hint
-    (an analysis role 'bed' for parts that are only harmony / ostinato) would stop it.
-  - The harder genres (romantic symphony, development, fugue, Debussy / Ravel colour, late-romantic film): the
-    roadmap in docs/ORCHESTRA_ENDLESS.md - each a composer writing lines + TEXTURES rows + a player style.
+  - A latent tempo-plan bug (round g6, 2026-10-16): with the new-age melody a whole step up, `orchestra-film` seed
+    102 raised "fermata at beat 190.5 (holding 33.45 beats) overlaps the fermata at beat 158.5" in
+    `song.tempo_points`. A fermata held 33 beats is wrong. The orchestra now keeps its old register / shift draw
+    (`genres._orchestra_genre`), which hides it. Find the fermata's length source (a held last note of a section?).
+  - The gate's "no single track" sum clicks were splice glitches in the SSO sustain samples (113 of 211 files);
+    the sampler's `repair` bridges them (round o2) - film could take `film_orchestra(repair=9)` too (changes every
+    film render: do it with a film round). The other reject: flat_dynamics on an accompaniment track named after an
+    instrument (NoteDynamics.cpp leadIntentName judges `violins2` / `trombones` as leads by name) - an analysis role
+    'bed' for parts that are only harmony / ostinato would stop it.
+  - The harder genres (fugue proper, Debussy / Ravel colour, late-romantic film): the roadmap in
+    docs/ORCHESTRA_ENDLESS.md - each a composer writing lines + TEXTURES rows + a player style. The romantic symphony
+    with development is built (`orchestra-symphonic`, below).
+  - Film keeps `RULES['bass_floor']` True: its bass slots' `basses (-12)` doublings under C3 are dropped, so the
+    cellos play the bass alone in most film textures. Turning it off changes every film render (bit-identity), so
+    do it with a film round.
+- **Endless orchestra-symphonic: open ends (blind rounds q1, o2-o12, 2026-10-16/17; paired vs master: o2
+  -0.09 se 0.17, o3 +0.08 se 0.38, o4 (o3 + o4) +0.14 se 0.24 with 5 of 8 slots won, o5 against master (= o4) +0.39 se 0.29
+  with 4 won / 1 tied / 3 lost - the second lean in a row, merged; o6 against master (= o5) +0.00 se 0.17 with 4 won /
+  4 lost - not merged; o7 (o6 + o7) against master +0.23 se 0.33 with 4 won / 2 tied / 2 lost - a first lean, not
+  merged; o8 (o6 + o7 + o8) against master +0.39 se 0.20 with 6 won / 2 lost - the second lean, merged; o9 against
+  master (= o8) +0.30 se 0.27 with 5 won / 2 lost - to merge; o10 against master (= o9) +0.39 se 0.28, 7 won / 1
+  lost - merged; o11 against master (= o10) +0.32 se 0.32, 5 won / 3 lost - merged; o12 against master (= o11)
+  +0.54 se 0.20, 7 won / 0 lost - to merge; o14 (best-of-1, the same seeds: CHROMA_CADENCE on vs off) -0.05 se 0.18,
+  7 won / 8 lost - the flag stays off; o15b (CHROMA_EVENT on vs off, the same protocol) -0.12 se 0.16, 5 won / 8
+  lost - the flag stays off; o16 (DEV_WALK on vs off, the same protocol) -0.28 se 0.19, 5 won / 9 lost - the flag
+  stays off; o17 (DEV_WALK v2 on vs off, the same protocol) -0.14 se 0.20, 8 won / 7 lost - the flag stays off;
+  o18a (DEV_WALK v3 on vs off, the same protocol) +0.03 se 0.16, 8 won / 7 lost - level, the flag stays off;
+  songs/_blind/ROUNDS.md "Orchestra" / "Round o2" - "Round o18a", docs/ORCHESTRA_ENDLESS.md "The symphonic
+
+  o18b (SET_PLAN on vs off, the same protocol paired by slot) -0.16 se 0.27, 6 won / 9 lost - the flag stays off;
+  o19a (SET_PLAN v2 on vs off, the same protocol) -0.25 se 0.20, 6 won / 9 lost - the flag stays off;
+  o19b (FUGUE on vs off, the same protocol, the plan forced to a fugato in all 16 slots) +0.27 se 0.15, 9 won / 4
+  lost - 1.7 se, under the bar, the flag stays off;
+  songs/_blind/ROUNDS.md "Orchestra" / "Round o2" - "Round o19b", docs/ORCHESTRA_ENDLESS.md "The symphonic
+  o20 (SET_PLAN v3 on vs off, the same protocol plus the set-level judgment) -0.04 se 0.24, 9 won / 7 lost, sets
+  kept 11 of 21 (CI 0.30-0.74) - the flag stays off; o22 (SET_PLAN v4) +0.05 se 0.21, 8 / 7, sets kept 21 of 28 (CI 0.55-0.89) - MERGE (flag on by default; re-check the protected hashes on master with FUGUE v2 on);
+  songs/_blind/ROUNDS.md "Orchestra" / "Round o2" - "Round o20", docs/ORCHESTRA_ENDLESS.md "The symphonic
+  o21 (FUGUE v2 on vs off, the same protocol, the plan forced to a fugato in all 16 slots) +0.38 se 0.13, 9 won / 3
+  lost - 2.9 se, over the bar: MERGE (on the o21 branch, not merged yet - the flag is off on master until it is);
+  songs/_blind/ROUNDS.md "Orchestra" / "Round o2" - "Round o21", docs/ORCHESTRA_ENDLESS.md "The symphonic
+  composer").**
+  Done (o3 / o4 / o5 merged into master, o6 + o7 + o8 on the o8 branch):
+  - o3: the development from the motto, the build vocabulary, the transformed climax, the material draws, mottos
+    with character, range floors.
+  - o4: the forms (`_SYM_LAYOUTS` rondo / variations / ternary / arch / through / false / scherzo_trio /
+    journey_var, free phrase lengths, an elision), recomposed returns, `BUILD_FRAMES`, second themes as periods,
+    runs that turn, varied ostinati, `IDIOM` (timpani / violas / chamber horns / flute top), and the line dynamics
+    under `SHAPE['ceiling']` with sforzandi on arrivals.
+  - Measured (tells_orch.py, 24 pieces, master -> o4): mod48 0.88 -> 0.57; same macro form 0.25 -> 0.06; recap
+    copies 0.37 -> 0.16; t2 copied 0.83 -> 0.43; pedal build 1 -> 0.29; t2 a tune 0.08 -> 0.88; folds 2.1 -> 0.9;
+    violas over 11 -> 0.25; timpani off 5.1 -> 0; score 97.7 -> 94.0.
+  - The o4 judges: melody +0.32, development +0.30, form -0.18, orchestration -0.16. Template flags per packet
+    new 17.5 / old 42.0 / references 0.
+
+  - o5: the scherzo's dance tune (`DANCE`, `Writer.dance`, the trio re-rhythmed, a pump bass),
+    figuration from the chords (`RUN_FIGURES` chord ladders / scales with chord tones on the strong positions),
+    voiced V-I / IV-I endings (`ENDINGS`, `end_cadence` / `end_strokes` / `end_motto`), the audible melody
+    (`_audible`, counter slots in the climax / cantabile textures), drawn coda plans and source openings
+    (`CODA_PLANS`, `SOURCE_CHARTS`, `SOURCE_ENTRIES`), and the trumpets' tune floor G4 (`_tune_ok`). Tells, master (= o4) ->
+    o5: scherzo held bars 0.43 -> 0.20, off-chord figuration 0.34 -> 0.04, bare endings 0.25 -> 0.04, melody under
+    the accompaniment 0.22 -> 0.02, climax counter-lines 0.33 -> 0.79, low trumpet tunes 4.0 -> 0, same 6/8 coda
+    0.18 -> 0.03.
+  - The o5 judges: every dimension leans new (development +0.60, harmony +0.49, form +0.35, melody +0.29,
+    orchestration +0.25, life +0.15). Template flags per packet new 29.0 / old 27.0 / references 2.0.
+
+  - o6 (branch only, paired +0.00): the climax from the piece's own material (`APEX` combine = the motto over the
+    second theme, theme_aug, augment in the trumpets), the scherzo's tune on top (`SCHERZO_TEX`), the development on
+    the first theme (`DEV_TECH['theme']`), the river's wave bug (stuck on one note), `close` without the unison
+    scale, the climax key per set (`CLX_MODES`, `clx_mode`), the second theme one tune in either mode
+    (`Writer.tmode`), coda / end_soft / timpani-roll draws. Tells, master (= o5) -> o6: climax windows on the motto
+    0.25 -> 0.50, scherzo tune buried 0.44 -> 0.02, wind repeated-note run 1 -> 0 bars, unison bars 0.79 -> 0.54,
+    fig_circ 0.34 -> 0.07, harp climaxes 0.29 -> 0.08, same plan 0.05 -> 0.01, same ending 0.12 -> 0.21 (worse).
+  - The o6 judges: development +0.16, life +0.21, melody -0.11, memorable -0.14. Template flags per packet new 26.5 /
+    old 23.4 / references 23.7.
+
+  - o7 (branch only, paired +0.23, a first lean): the scherzo's climax at its own speed (`APEX_SCHERZO`: no
+    augment / theme_aug at scale 2, 'combine' as the dance tune over the second theme, the coda's motto diminished),
+    voice-led endings (`_approach`: cad64 / IV-V7 / plagal / pedal approach bars, `_resolve`: the leading tone up, the
+    7th down, `END_VOICING`: the tune in violins / flutes on top, the dominant with its bass), soft endings drawn per
+    piece (`SOFT_OF`), ending set_memory 3, climax textures with the line in 1-2 colours over brass harmony and a
+    counter-choir, moving inner parts (`INNER_MOTION`, `_move_inner`), the bass in the tune's rhythm instead of
+    octave unison (`_bass_in_rhythm`). Tells, master (= o5) -> o6 -> o7: scherzo whole-bar tune 0.072 -> 0.042 ->
+    0.036, end chords inverted 1 -> 0.79 -> 0.08, unison bars 0.79 -> 0.54 -> 0.13, inner static 0.27 -> 0.27 ->
+    0.01, coda octaves on the melody 2.0 -> 1.8 -> 1.3, same ending 0.13 -> 0.21 -> 0.10, folds 1.7 -> 0.9 -> 1.6
+    (worse), score 93.5 -> 93.0 -> 92.9.
+  - The o7 judges: life +0.68, orchestration +0.38, melody +0.30, overall +0.23; the scherzo slot +2.14 (old PLSN
+    3.0 the worst piece, new XGPD 5.1). Template flags per packet new 29.4 / old 26.8 / references 8.3.
+  - Infra (branch `orch-infra-lead-start`, master-based, can go to master alone): `orchestra.lead` at the song's
+    start - a run at 0 is no longer a flam (`LEAD_KEEP`, `LEAD_FLOOR`); the silent first 16th of the o6 gate.
+
+  - o8 (on the o7 branch, paired +0.39 se 0.20, 6 won / 2 lost - the second lean: merge): related development keys
+    (`DEV_PATHS` as home-key degrees, `dev_keys`), the motto in the brass at the climax (trumpets / horns in the
+    climax tutti, `tutti_chorale_brass`) and recalled in the hymn / memory codas (`CODA_RECALL`), the figuration under
+    the tune (`FIG_RANGE`, `FIG_UNDER`), the scherzo's varied restatements (`DANCE_VARY`), proportions (`PROPORTION`,
+    the fall `CODA_FALL`), the final bass on the low tonic (`END_BASS`, `BASS_HOLD`), folds re-voiced to chord tones
+    (`FOLD`, `_lower`), the arrival drawn per piece (`ARRIVALS`). Tells, master -> o7 -> o8: dev_far 0.13 -> 0.10 ->
+    0.02, climax motto in the brass 0.54 -> 0.42 -> 0.67, coda motto 0.67 -> 0.75 -> 0.83, theme buried 0.28 ->
+    0.32 -> 0.09, ff into a soft coda 1 -> 1 -> 0, folds 1.67 -> 1.63 -> 0.88, stock build 0.67 -> 0.54 -> 0.33,
+    score 93.5 -> 92.9 -> 92.6.
+  - The o8 judges: melody +0.43, harmony +0.41, orchestration +0.41, overall +0.39, memorable -0.02; the scherzo
+    slot +1.29 again. Template flags per packet new 24.0 / old 19.0 / references 0.
+
+  - o9 (on the o9 branch, against master = o8: +0.30 se 0.27, 5 won / 2 lost - meets the > +0.3 / 5-of-8 bar by
+    0.004, to merge; ROUNDS.md "Round o9"): the climax carries the augmented theme with its canon over it, the 16ths
+    late (`APEX_CANON`, `apex_theme(_strings)`), no literal restatements (`REPEAT`), episodes from the theme
+    (`DERIVE`, `EPISODE_FROM`), `STATIC`, `RETRANS_LEAD`, `POST_PEAK`, `END_PRE`, no choir, the gate's lead hint
+    (`analysis.leads`: 0 gate rejects, master 3); after the round `_audible` cuts a folded note at the chord change.
+    Tells, master -> o9: climax 16ths 0.45 -> 0.10, 16ths over a brass melody 0.33 -> 0, literal copies 0.08 -> 0,
+    sch_lit 2.5 -> 1.5, retransition lead-in 0 -> 0.54, predominant before V 0.63 -> 1.0, stock build 0.33 -> 0.08;
+    score 92.6 -> 91.8. The o9 judges: melody +0.45, life +0.34, form / development +0.32, harmony +0.09. Template
+    flags per packet new 23.1 / old 18.9 / references 4.0.
+
+  - o10 (merged): early themes (`OPENING`), the loudest climax (`LOUDEST`), re-struck holds, `VLN_UNISON`, moving
+    trios (`STATIC['figure']`), `MOTTO_RATION`, `BASS_FIGS`, `END_LEN`, `FUGUE_ORDERS`, `UNFOLD`.
+  - o11 (branch, paired +0.32, to merge; ROUNDS.md "Round o11"): the form's argument - `DEV_SHARE` (25-33 % of the
+    bars, 16 song bars), `DEV_LADDER` / `dev_stages` (the unit shrinks, at most two transposed copies), `RETURN`
+    (recap2 rows, the return at least the exposition's weight), `RT_PEDAL` (6 bars over the dominant, the head in
+    imitation), the climax at home (`REHARM`, `APEX_RIVER`, no 'relative' / 'restate'), RULES `reserve` 3 +
+    `reserve_after`, `LOUDEST` 'pre' / 'quiet', V - I endings, `STATIC['walk']`, `MIN_LEN` 3:00, `form_stats` in
+    `SCORES['symphony']`. The judges: development +0.52, melody +0.43, orchestration -0.02, life +0.09; masterpiece
+    (absolute) new 4.23 / old 3.89 / references 5.50.
+
+  - o12 (branch, paired +0.54 se 0.20, 7 won / 0 lost - to merge; masterpiece new 3.98 / old 3.59 / references
+    5.74; ROUNDS.md "Round o12"): the development on the motto (`DEV_LADDER['imitate']`, motto episodes,
+    `INNER_MOTION` 'floor', dev_own a hard gate), the summit (`SUMMIT`: the violins I over every earlier line, the
+    trumpets / trombones - or horns - on the melody, the fullest tutti; RULES `reserve_lines` 1), `TEX_RUN` (no
+    accompaniment grid over 8 bars), `RT_DRIVE` (the dominant re-struck in the basses / cellos / timpani),
+    `MOTTO_CHARACTER['scale']`, `DANCE_FILL`, `CODA_RECALL['unit']`, `UNFOLD_ALL` / `_refold`. Tells (24 pieces,
+    master / o12): dev_own 0.67 / 0.75, tutti_peak 0.42 / 1.0, one_summit 0.42 / 1.0, the peak's violins over every
+    earlier line 0.75 / 4.6 semitones, brass at the peak 0.29 / 2.0, acc_run 16.3 / 8.0, rt_drive 0.8 / 4.7, folds
+    1.54 / 1.08, head_scale 1.75 / 1.21.
+
+  The code review (`songs/_endless_orchestra/out/code_review/REPORT.md`; docs/ORCHESTRA_ENDLESS.md "After o12: the
+  code review's infrastructure") - done: G1 (the guaranteed metrics are assertions, `genres.SYMPHONY_GATES`), the
+  tells' windows / seq_links independent of symphony (5.5), A2 step 1 (`CHROMA`, `realise`, `CHROMA_CADENCE` - off,
+  ready for a paired round: `shared_plan.py run ... --flag chroma` for the new code; `--flag rank_gates` the o12
+  ranking),
+  REHARM and the stacked docstrings (5.4 / 5.7). Open:
+  - CHROMA_CADENCE stays off: round o14 (on vs off, best-of-1, the same seeds, 16 slots) is a null, overall -0.05
+    se 0.18, 7 won / 8 lost, masterpiece 3.50 / 3.48. The retransition's chromatic predominant went unheard (no judge
+    named one; they still asked for "a Neapolitan or augmented-sixth predominant" and called the pedals stock); the
+    final cadence's was named in 5 of 16 pieces - praised in 2 (BUHR's brass coda 104-108, 5 judges; UABH 103-106),
+    "a colour, not an idea" / "wandering" in 3 (EUJQ, UMZX, ZVBD). The
+    references' Neapolitan (VRNU bar 112: a sudden tutti chord) and chromatic chord-block chain (71-74) were praised by
+    10+ judges. Next try: the chromatic chord as an EVENT - tutti / brass, accented, held or with a ritardando, the
+    bass on the chromatic step, at the structural cadence only; the retransition's as a chord chain before the pedal
+    rather than two quiet inner-voice bars (ROUNDS.md "Round o14").
+  - CHROMA_EVENT stays off: round o15b (on vs off, best-of-1, the same seeds, 16 slots) -0.12 se 0.16, 5 won / 8
+    lost, harmony +0.17 se 0.14, life -0.29 se 0.20, masterpiece 3.52 / 3.54 / references 5.67. The held tutti
+    chromatic chain before the pedal and the N6 / aug-6 final were heard by every judge - and named the shared
+    formula in every lens's ADVICE (template flags per packet 66.9 vs 42.8); the neapolitan chain copied the stormy
+    reference's 71-74 chord for chord. Next try (if any): at most one event per piece, drawn (retransition / final /
+    none) and prepared from the motto's interval and a moving line, not a block chorale; endings varied per piece
+    (plagal / deceptive / quiet), the lone timpani last bar retired (ROUNDS.md "Round o15b").
+  - The hard-gate caps under best-of-1 (o15b's plan: 11 of 16 in both codes): dev_own 9 (the quality gate), seconds 1
+    (slot 2, 171.7 s after `MIN_LEN['more']`), pre_semis + vln_over 1 (slot 14, seed 125130); flat_dynamics rejected
+    seed 125010's oboe lead with CHROMA_EVENT on. acc_run, seq_links and tutti_peak are fixed (o15b: `TEX_RUN['repair']`,
+    `SEQ_BREAK`, `TUTTI_SKIP`).
+  - A1 (the kernel / transform engine) is built, round o16: `Kernel` + `DERIVE_OPS` (motto_notes through it,
+    bit-identical), the development as a planned walk `DEV_WALK` (off), the derivation graph in the log,
+    `derive_stats` / `genres.symphony_derive` in place of the dev_own gate. o16 on vs off -0.28 se 0.19, 5 won / 9
+    lost, form -0.39, masterpiece 3.54 / 3.71 / references 5.05; route diversity 0.61 vs 0.29 (Jaccard), not heard
+    as quality. The judges heard the phase split as 4-6 bar panels ("channel-switching": 29 vs 6 sentences) and
+    the depth-3/4 chains as material unrelated to the motto. Round o17 built those fixes as v2 (`DEV_WALK_ON` is v2,
+    `Writer.walk2` / `WALK2`: one block, 8-12 bar worked processes, depth <= 2, held notes / rests, framed false
+    entries; o16's walk is `DEV_WALK_V1`): -0.14 se 0.20, 8 won / 7 lost, harmony +0.12, form -0.21, life -0.24,
+    masterpiece 3.40 / 3.50 / references 5.48, route diversity 0.61 vs 0.29 kept. "Unrelated material" is level
+    (12 / 10); the panels stay (23 / 11) as KEY panels - every process arrives in a new key, often by a chromatic
+    jolt; the slow pieces' developments read as one cell over a thin texture (slots 4 / 16: -1.71 / -1.43). Next
+    (ROUNDS.md "Round o17", fixes): one key or one prepared modulation per block, the process length by time at slow
+    tempi (lines moving through the model's rest), a stretto of 3-4 entries driving into the pedal without an
+    arrival cadence, the silent_notes rejects on the flag (slot 11: 3 of 4 seeds - the walk_dialogue doubling at p).
+    Round o18a built them as v3 (`DEV_WALK_ON` is v3, `Writer.walk3` / `WALK3`; o17's walk is `DEV_WALK_V2`):
+    +0.03 se 0.16, 8 won / 7 lost - level, the flag stays off; development -0.18, form / life / orchestration lean
+    up; masterpiece 3.33 / 3.32 / references 5.14. Keys per block 1.88 (v2 2.75), the key panels level (43 / 41),
+    the andantes no longer lose; the silent_notes rejects were 32nds from `_fit_ops`' 'diminish' (gone: `_fit3`, no
+    note under a 16th) - none on the flag in o18a. Next (ROUNDS.md "Round o18a", fixes): the stretto as an event
+    (whole-motto entries one per bar in one choir, as old's develop() stretto the judges name, then the others; no
+    unisons between entries), transform rather than restate the unit per degree; the shared dev_fugato's thin /
+    one-pattern stretches (outside the walk); the role-pick case of a retransition lead with no notes (silent_node,
+    slot 2 seed 131010).
+    Still left of A1: retiring DERIVE / DANCE_FILL /
+    MOTTO_RATION / REPEAT into the kernel ops (the recap / summit / episodes still use them), the graph metrics
+    replacing own_stats for good.
+  - The set template (C1 / C8, round o18b): `SET_PLAN` (off; `genres.symphony_setplan`) draws the set-level choices
+    diverse and memoryful (10 build gestures, the crisis arc, layered summit, contours, 6 ending families, motto
+    rhythm families, the meter mix). It lowered the plan similarity (0.418 vs 0.495) and the gesture tells (timpani
+    pedal build 0.50 vs 2.06 lines per packet), but the template flags only 12 % (34.4 vs 39.0, references 23.7);
+    -0.16 se 0.27. Next (ROUNDS.md "Round o18b", fixes): (1) the LAYOUT is the template now - the scherzo_trio's
+    fixed 13-section / 202-bar plan and the fugal / sonata section lists repeat bar for bar; vary section counts and
+    proportions per piece, memory on the layout's shape; (2) cross-piece verbatim bars in two 3/4 pieces (HYRF /
+    JDGP 93-104 = 73-84) - find the seedless shared figure; (3) the post-climax harp episode (14 / 17 sentences),
+    and the flag's silent_node rejects (the harp only in the coda: 2 of 16 seeds); (4) the crisis arc lost 3 of 3
+    (the development climax not heard as one, the calm recap as a fade); (5) the peak at 72-87 % in 13 of 16; (6)
+    the amen / deceptive endings unheard - the motto at the close.
+    Round o19a (SET_PLAN v2: the shape memory, `peak_at`, no harp after the peak, CRISIS_V2, END_V2; master's
+    `key_apart` fixed (2): the verbatim bars were two scherzos in one key) -0.25 se 0.20, 6 / 9; template flags
+    37.1 vs 48.6 (references 15.3), no post-climax harp / copied-bars verdicts. Next (ROUNDS.md "Round o19a",
+    fixes): (1) shape by merging / lengthening, not added short sections (14-15 sections lost -1.00), cap ~12;
+    (2) the section textures are the template now (the 16-bar violins1 / cellos dialogue, the oboe over a pulsing
+    bass, the running figure under a held note) - draw them with memory; (3) cap the fades at 8-10 bars; (4) drop
+    the crisis arc (5 of 5 lost or tied over o18b / o19a); (5) the peak at 0.66 or later; (7) silent_node still
+    rejects a quiet harp with 16+ notes - gate on its level.
+    Round o20 (SET_PLAN v3: merges to <= 12 sections, the 8-bar floor, `TEX_V3` texture memory, fades <= 10 bars,
+    no crisis, the peak at 0.7+, empty roles removed - o19a's silent_node was an empty harp TRACK) per piece
+    -0.04 se 0.24 (level; life -0.32), template flags 37.9 vs 36.4 (references 7.3); the set-level judgment
+    (`songs/_blind/set_round.py`) kept v3 11 of 21 (CI 0.30-0.74; 6/7, 5/7, 0/7 per set pair). Next (ROUNDS.md
+    "Round o20", fixes): (1) the merged blocks are long and static ("too long / static" 2.06 vs 0.75 lines per
+    packet) - an inner change at each join; (2) set memory on the mode (>= 2 minor / modal in 8; no key three
+    times - key_apart is per time signature); (3) set memory on the realised bar plan, not the sections draw (two
+    rondos merged into the same 3|12|12|8|12); (4) alternate dissolving / loud endings across a set; (5) the
+    one-step-per-bar climax ladder is the next named gesture - give it memory.
+    Round o22 (SET_PLAN v4: JOIN_V4, key_max / mode_quota, form_seed / bar_plan / _set_bars, end_alt, FRAG_V4) per
+    piece +0.05 se 0.21 (8 / 7), template flags 35.0 vs 40.6, sets kept 21 of 28 (CI 0.55-0.89; the programme read
+    second kept 21 of 28) - MERGE (switch the default on after re-checking the protected hashes on master). Next
+    (ROUNDS.md "Round o22"): (1) the climax at 76-90 % in every piece - vary / withhold it; (2) note-identical
+    violins2 broken-chord accompaniments across pieces - find the seedless figure; (3) opening memory (held string
+    chord, running 16ths under a held note); (4) the shared theme-rhythm cell and the post-climax chorale coda;
+    (5) the ladder in the peak block (0.88 vs 0.06 lines) - FRAG_V4 on the reharmonised climax too.
+    Round o23 (TECH: 13 playing techniques as events, set memory) per piece +0.42 se 0.15 (12 / 4), masterpiece
+    +0.34, sets kept 28 of 28 (CI 0.88-1.00, 14 / 14 by order) - MERGE (switch the default on after re-checking the
+    protected hashes on master). Next (ROUNDS.md "Round o23"): (1) col legno / the pizzicato choir as "texture for its
+    own sake" - put the motto on them; (2) set memory over the whole set per gesture (pizz interlude 3-4x, the trill
+    crowning two climaxes); (3) harmonics 0.1 % of notes - a home for them; (4) harp glissandi in tuttis under 1 % of
+    the section's energy; (5) the shared skeleton (template flags 44 vs references 9) stays the main tell.
+    Round o24 (SHAPE: macro shapes with whole-set memory + TECH v2, `--flag shape`, off) per piece -0.09 se 0.20
+    (7 / 7), sets kept 14 of 28 (CI 0.33-0.67; the programme read second kept 24 of 28) - NOT MERGED. The loudest
+    section's spread doubled (sd 0.077 vs 0.038), openings louder (-0.9 vs -4.3 LU), but the judges still hear every
+    climax at 71-90 %. Next (ROUNDS.md "Round o24"): (1) the early / mid arcs never land before 0.63 - move the
+    summit's material, not only its marks; (2) cut / loud endings are no louder than the dying ones - measure the
+    ending on the render; (3) set memory on the opening theme's rhythm cell and its S2 texture; (4) the non-unison
+    climaxes (apex_dialogue, chorale) are not heard as different; (5) the staccato octave-bass ostinato under a
+    woodwind tune recurs 3-4x a set; (6) re-test TECH v2 alone (the glissando / pizz ration) on master.
+
+    Round oc1 (CHOIR: vocalset-choir SATB as events, `--flag choir`, off) per piece -0.02 se 0.15 (10 / 5; the 5
+    no-choir slots are byte-identical packets, -0.20 = noise; a cappella +0.43, halo / coda -0.32), sets kept 28 of
+    28 (14 / 14 by order) - MERGE by the rule, but a colour win on identical scores. Next (ROUNDS.md "Round oc1"):
+    (1) the summit choir sings the motto / chorale melody instead of doubling the brass chords; (2) set memory per
+    gesture (the lead_in "oo" -> summit "ah" pair is the formula); (3) more a cappella, halo / coda with a phrase;
+    (4) packet bug: the orchestration line counts the choir's early start in the previous section (use EARLY).
+    Round oc2 (CHOIR v2, `--flag choir2`: fixes 1-4) per piece +0.18 se 0.18 (8 / 7; the 10 choir slots +0.33,
+    summit-only -0.57), sets kept 28 of 28 (14 / 14 by order) - MERGE and DEFAULT ON (switch on master, re-check
+    the protected hashes). Next (ROUNDS.md "Round oc2"): (1) at the sung summit the orchestra's melody instruments
+    leave the theme - the choir alone on it, not a doubling -, `unison` more often; (2) summit cap 2 per 8 slots,
+    more a cappella / halo / coda; (3) no halo in an 8-s intro, at least 4 bars of a line; (4) the master click bug
+    of set seed 162000 slot 2 (violins2 bar 76, a one-beat swell lane; choir off too).
+
+
+    Round ox1 (COLOUR: guest organ / guitar / harpsichord / celesta / bells per piece with set memory, `--flag
+    colour`, off; branch worktree-agent-a0be75d3b24959444) per piece +0.05 se 0.19 (8 / 8; the 2 no-colour slots
+    are byte-identical packets, +-0.57 = noise), sets kept 56 of 56 (two passes, 28 / 28 agree, both orders) -
+    MERGE by the rule; again a colour win on identical compositions (variety 5.18 vs 3.96). Next (ROUNDS.md "Round
+    ox1"): (1) the colour gestures repeat inside a set (the same celesta C5-C7 closing arpeggio, the same descending
+    bell peal on a lone bell, the lone harpsichord last chord) - vary them per piece with set memory; (2) the guest
+    vanishes after its first event (celesta / guitar read as cameos: 10 of 14 / 12 of 21) - one return in the
+    development or recap, bells foreshadowed before the climax; (3) the guitar piece misses a real brass climax;
+    (4) the colour should reshape the composition, not only the scoring; (5) 'none' is 3 of 48 plans.
+    Round op1 (POLISH: oc2 / os1 / ox1's fixes + the title label memory, `--flag polish`, off; branch
+    worktree-agent-a67cd5bc263b2248f) per piece -0.15 se 0.20 (6 / 9), sets AGREED new 1 of 21 (CI 0.01-0.23),
+    expression -0.95, variety -0.29 - NOT MERGED. Next (ROUNDS.md "Round op1"): keep the concertmaster +4 dB, the
+    cello event, the guests' returns / gestures, the title memory; (1) the no-parade rule and the guests' returns
+    cost solos (the set judges want more single players) - vary the third solo block instead, never return a guest
+    over a solo line; (2) the guitar piece's full brass makes every climax full brass - set memory on climax weight;
+    (3) the sung summit's held notes sit above the sopranos and stand still ("a wall of held notes") - hold them
+    under the sung note, moving; (4) a 'halo' plan without a 4-bar place sings nothing - fall back; (5) master bug:
+    choir alto notes silent at beat 4.9 (seed 167010 bar 80 'oo' C#4; set 167700 slot 8 bars 69-70 'ah' C4, every
+    seed) fail the gate.
+
+    Round o24b (o24 split, both off): A = TECH2 alone (`--flag tech2`) per piece +0.03 se 0.24 (10 / 6), sets AGREED
+    16 of 25 (CI 0.45-0.80, two-pass) - NOT MERGED (neutral). B = SHAPE2 + TECH2 vs TECH2 (`--flag shape2`: o24's
+    fixes 1-5, the climax material moved, peaks now down to 0.46, loud / cut endings -2.6 / -2.0 LU) per piece -0.39
+    se 0.21 (-1.86 se; form -0.46, life -0.39), sets AGREED 25 of 25 (CI 0.87-1.00), variety +1.23 - NOT MERGED by the
+    rule. Next, a SHAPE3 on the new master (ROUNDS.md "Round o24b"): (1) the aftermath after an early / mid climax is
+    a thin f -> mp run (38 quiet bars) - a second build or a rising return; (2) `apex_chorale2` is homorhythmic brass
+    on steps - give it the motto's head and a moving bass; (3) the late / cut slots lost - shorter run-up, the ff
+    hammer chords in the motto's rhythm.
+    Round o25 (SHAPE3 + TECH2 vs master with CHOIR v2 / SOLO / COLOUR, `--flag tech2 --flag shape3`): o24b's 3 fixes
+    done (the aftermath a second build + a rising tutti return, apex_chorale3, the shorter late / cut run-up,
+    hammer_motto). Per piece -0.06 se 0.18 (-0.33 se; form -0.01, life +0.19), sets AGREED 18 of 20 (CI 0.70-0.97,
+    two-pass), variety +0.80 - MERGE by the rule (to switch on in master). Next (ROUNDS.md "Round o25"): (1) set memory
+    on the opening's texture (two medias / motto openings on the same horn-call fanfare); (2) the cut at most once in
+    4 slots, never adjacent, its texture varied; (3) the in medias res opening -0.61 a slot; (4) the dialogue / twin
+    shapes weakest (-0.43 / -0.39).
+  - A2 steps 2-3 (the development's chart from the grammar instead of I | V7-of-next, then a key plan), A3 (phrase-syntax plans), A4 (a voice-leading core for the
+    summit's layers / imitation / fugato), A5 (an orchestration planner over time) - each behind a flag, one per round.
+  - The fugato (C7 / A4, round o19b): `FUGUE` (off; `Writer.fugue2`, the joint core `voicing.cp_issues` / `repair` /
+    `counterline`) - a subject from the motto, a tonal answer, a counter-subject, entries over the choirs, a
+    modulating episode, a bass entry or a stretto: +0.27 se 0.15 (1.7 se), 9 won / 4 lost, every dimension up, the
+    "unaccompanied violin" and one-pattern sentences gone or halved. Next (ROUNDS.md "Round o19b", fixes): (1) the
+    first entry over a pedal or the running accompaniment, never alone, the dynamic growing entry by entry, at least 3
+    roles from the second entry; (2) an audible counter-subject (its own register / colour / dynamics), entries at
+    the fifth as well as the octave; (3) the subject from the motto's first phrase as heard, not the kernel (3 pieces
+    heard it as new material); (4) at most 12 bars at vivace / in a scherzo, the dance accompaniment kept; (5) the
+    subject back at the summit (augmentation in the bass, or `counterline` against the summit's melody); (6) vary the
+    entry spacing across pieces.
+    Round o21 (FUGUE v2: fixes 1-6 as one flag, `FUGUE_V2`): +0.38 se 0.13 (2.9 se), 9 won / 3 lost - MERGE;
+    lone / thin lines 31 -> 9, "no counter-subject" 10 -> 2; the andante / river pieces win (+0.93 / +0.43), the
+    capped vivace / scherzo pieces are level. Open (ROUNDS.md "Round o21", fixes): (1) the summit's return is
+    heard in 1 of 16 pieces (4 bars of basses) - longer, in the low brass too, from the climax's first bar, or
+    `counterline` against the climax melody; (2) the scherzo / vivace dialogue after the capped fugato is 28-32
+    thin bars in both codes - drop the surplus or give it a third voice; (3) the counter-subject's unison doubling
+    feeds the octave / unison lines (44 vs 33); (4) dev_own falls (0.70 vs 0.76): the counterline-written
+    counter-subject and the codettas are new material.
+  - A2 steps 2-3 (the development's chart from the grammar instead of I | V7-of-next, then a key plan), A3 (phrase-syntax plans), A4 (the joint core exists since o19b - `voicing.counterline` / `repair`; next its use for the
+    summit's layers), A5 (an orchestration planner over time) - each behind a flag, one per round.
+  - 5.1-5.3 (fixes that fight each other: motto quantity, `_unrepeat` vs DEV_LADDER, five octave repairs; the
+    order-dependent form / post passes), 5.6 (mode / scherzo special cases scattered), APEX 'restate' / CLX_MODES
+    'relative' only reachable without a set draw.
+  - symphony.own_stats (the dev_own gate) still matches +-1 semitone windows incl. scale runs; the tells' dev_own
+    now does not - compare the two on the next round before trusting the gate.
+
+  The tells still open after o12 (ROUNDS.md "Round o12" has the judges' `missing` sentences):
+  - The river 'journey_var' layout's development (var / episode / dev blocks working the river tune varied) states
+    the piece's material in 0.3-0.5 of its bars (dev_own; seed 5: 0.39); best-of-4 drops it by the gate, but every
+    river slot draws it often - its variations need the motto's / tune's cells, not new figures.
+  - dev_own 0.75 on average, under the 0.8 gate: the 'fragment' (0.59) and 'sequence' (0.69) dialogues miss their
+    held / cadence bars.
+  - The summit: a line already at B6 before the peak (dev2 95) can only move by phrases; a peak whose melody spans
+    two octaves cannot lift (the violins' top over the earlier lines is 1 semitone in 2 of 8 pieces of set 96000).
+  - Folds 1.08 (the violins II's pulse at chord changes under a low melody - _refold finds no octave).
+  - The o12 judges (ROUNDS.md "Round o12", the fixes for o13): the development repeats the whole motto (a
+    ladder of whole statements, never fragmented / in canon); the summit is one line doubled in 5-7 roles (no
+    countermelody, inner harmony or bass line of its own - `_summit`'s fill doubles); codas fade or close plainly
+    instead of transforming the motto; second themes without a melody of their own that never meet the motto; climaxes
+    that quote no theme (the river 'journey'); short / quiet dominant pedals.
+  - Quiet climaxes (andante 'quiet') still not the loudest section.
+  - The sonata climax in the transition (18 %) in one o11 piece: the summit placement does not bind every form.
+
+  The tells still open after o9 (partly addressed by o10 / o11; the o9 judges first, ROUNDS.md "Round o9"):
+  - Openings without a theme: the river's clarinet / violin 16th scale runs for 12 bars (CKNM 1-12, 7 of 7 judges);
+    an opening that empties after a few bars (ECER 5-10: bar 9 silent, -9 LU).
+  - The climax in the middle: the loudest section mid-piece (EMWY S6, BLMX S6 +3.6 LU) with a quieter recap; a
+    climax of held brass blocks under a violin line (APPS 69-80); violins I + II in unison up to B6 (UZWK 72).
+    clx_theme stayed 0.65: the canon / augmentation is there, but the judges still hear blocks.
+  - Static trios / episodes: the scherzo trio a flute over block clarinet / bassoon chords for 28 bars (EYPC 29-56);
+    the scherzo theme still restated nearly literally (EYPC 9-28, sch_lit 1.5).
+  - The motto over-stated: its head opens almost every phrase (BLMX, UZWK "about thirty times") over one
+    repeated-eighth bass (rep rate 0.52).
+  - Endings short after a long build (EYPC 65-66, UZWK 90-92): the 3-bar end row is not enough after a long climax.
+  - A shared plan signature: a solo cello entry that grows into a fugato (CKNM / DEXR / UZWK / XXAF).
+  - folds 0.88 -> 1.08 and the score -0.8 (the river's episode lost its tutti; the canon's statements push the
+    motto count past 80 in one piece).
+  - Still from o6 / o7: the shared 6/8 bass cell, melodies under their accompaniment in low registers, `folds` 0.88
+    per piece (mostly the octave-pulse ostinato, a tell artifact below), end_oct 0.75 (a quarter of the endings
+    without the low tonic + octave).
+  - Development / episode bars with own material 0.79 (references 0.84): the variation and episode blocks (ornament
+    runs, chorale even notes) score low; partly a tell limit.
+  - The 6/8 opening: same_open68 0.11 (o5 0.11) - the drawn intro lengths did not spread the opening signature.
+  - tells_orch `folds` counts the octave-pulse ostinato (G#3 G#3 G#4 G#4) as folds: exclude a figure that repeats
+    each note.
+  - The gate (o7): master lost slot 5 (a Bb scherzo) in 7 of 8 candidates to flat_dynamics (flutes / oboes /
+    trumpets); the o4 code had 1 reject in 9 renders. NoteDynamics.cpp leadIntentName judges `violins2` /
+    `trombones` as leads by name.
+  - `SCORES['symphony']`: still provisional; o4's / o5's score means (94.0 / 93.5) sit under master's (97.7) with
+    better tells.
+    Set the ranges from the three references.
+  - `motto_bass` depends on the texture draw. No learn-token schema for the symphonic tune (TokenError; the export
+    skips it).
+  - SOLO (round os1, branch worktree-agent-ae01ce1f1cef2a791, off): the concertmaster sits 17.3 dB under the
+    violins I on average (14.8-23.9; target 10-14). Lift `SOLO_GAIN['violin_concertmaster']` by 3-4 dB and check
+    that it does not stick out. The cello event never happened in the round: 0 of the drawn cello events, because no
+    soft cellos theme block passed the filter. Loosen `SOLO['event']` for the cellos, or drop 'cello' from the
+    kinds. Judges heard a wind solo inside a loud tutti once ("oboe_solo inside a loud tutti - lost"): the 10-role
+    tutti cap lets it through. Judges also called runs of 3-4 soft solo episodes a "parade" (oboe -> concertmaster
+    -> clarinet -> horn), so the solos need the composer to develop the theme across them.
+  - VSCO ranges: the chamber orchestra's bassoon reaches A#1 and its flute staccato starts at F4, but BassoonVib and
+    the flute legato start at C2 / F4. `chamber_orchestra` can still write notes there that make no sound.
+    `orch.SOLO_RANGE` (the intersection of each solo player's programs) guards only the solo players.
+  - Set 160000 (master and SOLO alike): tune 4 (allegro, solo 'none') fails the gate on every seed tried (15 seeds,
+    both codes). The cause is silent_notes: oboes F#5 at bar 33 and violins1 A4 at bar 50, the same bars every time.
+    So the plan, not the seed, makes them. master's --rerolls (0817ab6) now skips the slot instead of stopping, but
+    the silent notes themselves (probably a technique's mute or harmonics on those bars) are not fixed yet.
 
 ## Mixer (`agentsound.mixer`)
 
@@ -410,6 +850,38 @@ user's rule: KISS - a preset / patch / chain / default / data table before new c
   fragments; the desktop SAPI engine is poor on singing in general, so the proxy is weak). Next: the user's
   verdict, then maybe a small German G2P (rules + exceptions) and diction checks for German codas (ch / cc, -en).
 
+- **Neural choir prototype findings** (songs/_choir_proto, 2026-10-17; measured on direct DiffSinger 'sing' jobs):
+  1. The formant sign: `sing(formant=)` documents "+ = brighter / smaller", but on both banks the acoustic model's
+     `gender` input darkens with + (Hanami D4 +0.15: centroid 588 -> 427 Hz, F1 721 -> 624; TIGER G2 +0.5: F1 829 ->
+     452 Hz). Check by ear, then fix the docstring (or the sign) - `double()` / `prism()` pick their formants by it.
+  2. TIGER holds a nasal ([m] [n] [ng], also after a vowel) of more than ~3 s as silence (-90 dB); split into
+     phonemes of <= 2.2 s it hums. TIGER under ~C3 is breath noise over weak harmonics (HNR 11-17 dB at G2 against
+     35 at E3, every voice mode); with gender < 0 the low notes go silent. A bass part needs another voice.
+  3. TIGER's vocoder (tgm_hifigan) takes ~4.4 s on the GPU for 7.8 s of audio (Hanami's 0.24 s; TIGER on the CPU
+     2.4 s): long TIGER takes are slow - the runner can now run only the vocoder on the CPU (request
+     "vocoder_provider": "cpu", "cpu_threads": n; ~5.8 -> ~3.3 s a 7.8 s take with 4 threads), but
+     agentsound.voicebank.run does not pass it yet. Hanami at 10 diffusion steps = 20 steps by HNR / centroid at
+     half the time (1.8 s a take).
+  4. Stage 3 (ensemble size; songs/_choir_proto/measure_size.py, room.py): the user heard stage 1 as "fewer people"
+     than the old SSO choir. Measured at the same notes, the gaps were stereo (section samples IACC 0.94-0.96 vs
+     0.0-0.16; mix width 19 % vs 67 %), no room (release decay 128-165 vs 51-91 dB/s) and the men's pitch spread
+     (12 vs 21 ct); beating / harmonic decorrelation already matched. The big pack (14/14/12/12 singers, each placed
+     in one hall: ORTF + outriggers, early reflections, a diffuse stage tail; varispeed detune; breath) reaches
+     SA spread 13.4 / IACC 0.13 / decay -83 (SSO 14.0 / 0.16 / -91), mix width 50 %. Still open: the men's
+     sections stay narrower (IACC 0.39 vs ~0), the new pack's low end is 5x the old (10.7 % vs 2.2 % of the
+     energy), TB HNR 31.5 vs 22.5, and the user's verdict on stage3_vs_old / stage3_abc. The 'clones' pack (the
+     stage-1 takes x 3, clones with detune + LFO pitch, a moving pre-delay, random-phase all-pass, timbre, own seat)
+     measures like the real big section without new renders (comb ripple 0.38-0.40 dB / notch -0.9 dB vs real
+     0.37-0.76 / -0.7, copies 2.3-2.6 / -5.3..-8.2; mix width 52 %) - if the ears agree, real extra takes are not
+     needed for size. The real big section's ripple (0.7-1.3 dB, notch -0.8) is higher than stage 1's: unexplained.
+  5. WSL's /mnt drives answered every access with I/O errors (2026-10-18, 9p drvfs wedged; Windows -> WSL over
+     \\wsl.localhost still worked): the singing backend cannot run until WSL restarts - the prototype ran its
+     runner from the WSL home instead (choir.run_jobs). voicebank.runner_ok() does not detect it.
+  6. TIGER sings a sustained [iy] of 6.6 s weak and unstable (-25..-49 dB); split into three [iy] it holds (the
+     hum's trick) - the "ee" vowel uses that.
+- **sampled/choir_oh's low samples** (nbo-2 Choir/Oh 2_D, 2_E, 2_Gb: ~-4 dB of their energy above 16 kHz; 2_Bb,
+  3_Bb, 3_C, 3_D, 3_E: -15..-23 dB; the rest -53): consecutive samples alternate by ~0.5 (a near-Nyquist component
+  on top of the voice). Check how the engine plays them / low-pass or replace those zones.
 - **Mic pull**: every long phrase end is pulled (chance `end` 1.0: may read as a habit); no coda-vs-band measure (with the pull the final consonants
   ended 14-17 dB under the band and passed) - and no pull-back for a deadpan voice; the report reads the trigger
   notes, not the pulled vowels.
@@ -469,6 +941,10 @@ user's rule: KISS - a preset / patch / chain / default / data table before new c
   follow the dynamics. `ensemble.VIBRATO` / `vibrato_depth` could be reused there.
 
 ## Analysis / checks (engine/analysis, silent_notes, the report)
+
+- **WAV disk-full error reporting** (2026-10-25 pumping diagnostics): the engine returned `ok: true` after D:
+  filled, but decoded WAVs were truncated and MP3 encoding failed. Propagate WAV write/close errors to render's
+  exit status. `tools/pumping_ab.py` checks free space before its diagnostic renders; this is not an engine fix.
 
 - **Silent-notes ear gaps**: the compile-time check does not know `{'dir': ...}` samplers or sf2 layers inside a
   stack; the render-time ear cannot hear a silent note that starts with a sounding one on the same
@@ -543,8 +1019,10 @@ user's rule: KISS - a preset / patch / chain / default / data table before new c
   damping 6 dB on by default, inst.kit's cymbal choke keys).
 - Loop seams: `sampled/choir_mixed` on long held notes (matryoshka's coda: 7-10 masked clicks, -45 dBFS),
   `choir_f` (2), `sampled/choir_male` (a held D3 in lux-perpetua), SSO trumpets / violins II on a 9 s fermata
-  (lux-perpetua: 11 masked), the orchestral basses (5 masked). SSO crotales (octave mapping) and string harmonics
-  (loops click) are unusable as they are.
+  (lux-perpetua: 11 masked), the orchestral basses (5 masked). SSO crotales (octave mapping) are unusable as they
+  are. The SSO string harmonics' loops end at the file's end (a 15-30 dB step every pass: endless symphony set
+  162000 slot 2 failed the click gate in all candidates on a violins II harmonic): the sampler's `repair` now
+  crossfades a broken forward-loop seam (smp::smoothSeam) - with repair off (most songs) they still click.
 - Ranges: `sampled/choir` (VPO female) has samples G4-C6 only (ashes' `choir_f` 41 notes under G4, polaroid-summer's
   `choir` 37), `sampled/choir_oh` D2-C#5 (above is stretched; `film_orchestra(choir='oh')` still gives C3-A5),
   orbital-station plays 14 tambourines on the TR-808 kit (none: map one from 80s Digital / Chart).
@@ -712,3 +1190,5 @@ section 9:
   grow with a note's length. (7) VPO/SSO violins II sustain: 2 masked sample discontinuities (-37 / -43 dBFS, bars
   55 / 57, likely a loop point of one zone). (8) `out/lyrics.txt` is still a hand copy (generate it from the `sing()`
   calls, markup stripped). The jazz_trio / soul_ballad rows of `jazz.VOCAL_LEAD` are estimates (no song yet).
+
+- Endless orchestra-symphonic titles repeat their form label: a 5-piece set (seed 171000, master aa736aa) had 3 "Symphonic Dance: ..." titles. Give the title generator set memory over the form label / prefix (at most one "Symphonic Dance" / "Overture" per ~4 pieces).

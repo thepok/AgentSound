@@ -151,7 +151,9 @@ SCHEMA = 2
 ARR_PIECE = (('layout', 'ALayout'), ('touch', 'ATouch'), ('rubato', 'ARubato'), ('inhale', 'AInhale'),
              ('lilt', 'ALilt'), ('breath', 'ABreath'), ('push', 'APush'), ('inner', 'AInner'), ('cap', 'ACap'),
              ('lh_vel', 'ALhVel'), ('pedal', 'APedal'), ('end_dyn', 'AEndDyn'), ('end_roll', 'AEndRoll'),
-             ('end_hold', 'AEndHold'), ('size', 'ASize'))
+             ('end_hold', 'AEndHold'), ('balance', 'ABalance'), ('lh_lead', 'ALhLead'), ('size', 'ASize'),
+             ('end_voice', 'AEndVoice'), ('motto', 'AMotto'), ('sig', 'ASig'), ('pause', 'APause'),
+             ('goose', 'AGoose'), ('exit', 'AExit'))
 ARR_FIELDS = (('melody', 'AMel'), ('dyn', 'ADyn'), ('figures', 'AFig'), ('harmonize', 'AHarm'),
               ('harm_share', 'AHShare'), ('tempo', 'ATempo'), ('rit', 'ARit'), ('fermata', 'AFerm'),
               ('keep_bars', 'AKeep'), ('lh_only', 'ALhOnly'), ('peak', 'APeak'), ('drums', 'ADrums'),
@@ -160,7 +162,7 @@ ARR_FIELDS = (('melody', 'AMel'), ('dyn', 'ADyn'), ('figures', 'AFig'), ('harmon
               ('turn', 'ATurn'), ('swell', 'ASw'), ('cadenza', 'ACadenza'), ('moves', 'AMove'), ('lh', 'ALH'),
               ('steps', 'AStep'), ('choruses', 'AChorus'), ('opening', 'AOpen'), ('quotes', 'AQuote'),
               ('over', 'AOver'), ('window', 'AWin'), ('burst', 'ABurst'), ('vary', 'AVary'), ('key', 'AKey'),
-              ('texture', 'ATex'), ('lead', 'ALead'), ('counter', 'ACtr'))
+              ('texture', 'ATex'), ('lead', 'ALead'), ('counter', 'ACtr'), ('close', 'AClose'))
 """The Arr block's keys (endless.arrangement) in token order: the piece's, then per section (a list key: one token
 per item). The orchestra's (kind 'orchestra': the piano plan's keys + the orchestrator's size / texture / lead /
 counter) come last: a piano / jazz genre's vocabulary is unchanged."""
@@ -238,6 +240,8 @@ def encode(tune, arrangement=None, schema: int | None = None) -> list[str]:
     (endless.perform.arrange) -> the Arr block (schema 2; default schema: 2 with an arrangement, else 1 - no block;
     schema 2 without one: Arr_none)."""
     schema = schema or (2 if arrangement is not None else 1)
+    if getattr(tune, 'symphony', None) is not None:      # (endless/symphony.py: no lead-sheet tune - its own
+        raise TokenError("the symphonic composer's material has no token schema yet (TODO.md)")   # material)
     tonic, mode = tune.key.split()
     tpc = name_pc(tonic)
     t = ['BOS', f"Mood_{tune.mood}", f"Feel_{tune.feel}", f"Form_{tune.form}", f"Meter_{tune.meter}",

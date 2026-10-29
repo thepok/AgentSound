@@ -159,5 +159,50 @@ class Counterpoint(unittest.TestCase):
         self.assertIn(('S', 3.0), free)
 
 
+class JointLines(unittest.TestCase):
+    """Round o19b: the joint voice-leading core (cp_issues / repair / complement_rhythm / counterline)."""
+    C = {0, 2, 4, 5, 7, 9, 11}
+
+    def test_issues(self):
+        par = {'S': [(0.0, 1.0, 67), (1.0, 1.0, 69)], 'B': [(0.0, 1.0, 48), (1.0, 1.0, 50)]}
+        self.assertEqual([i.kind for i in vc.cp_issues(par)], ['parallel_outer'])
+        uni = {'S': [(0.0, 3.0, 60)], 'B': [(0.0, 3.0, 48)]}
+        self.assertEqual([i.kind for i in vc.cp_issues(uni)], ['unison_run'])
+        dis = {'S': [(0.0, 1.0, 62)], 'B': [(0.0, 1.0, 60)]}
+        self.assertEqual([i.kind for i in vc.cp_issues(dis)], ['dissonance'])
+        # a suspension: held over the bass's move, resolving down by step - no issue
+        sus = {'S': [(0.0, 2.0, 65), (2.0, 1.0, 64)], 'B': [(0.0, 1.0, 50), (1.0, 2.0, 55)]}
+        self.assertEqual(vc.cp_issues(sus, strong=1.0), [])
+        lock = {'S': [(float(i), 1.0, 72 + i % 2) for i in range(5)], 'B': [(float(i), 1.0, 48 - i % 2 * 2)
+                                                                           for i in range(5)]}
+        self.assertIn('rhythm_lock', [i.kind for i in vc.cp_issues(lock)])
+        cross = {'S': [(0.0, 1.0, 55)], 'B': [(0.0, 1.0, 60)]}
+        self.assertIn('crossing', [i.kind for i in vc.cp_issues(cross, order=('S', 'B'))])
+
+    def test_repair_moves_the_free_note(self):
+        par = {'S': [(0.0, 1.0, 67), (1.0, 1.0, 69)], 'B': [(0.0, 1.0, 48), (1.0, 1.0, 50)]}
+        out = vc.repair(par, scale=lambda t: self.C, movable=lambda v, n: v == 'S', order=('S', 'B'))
+        self.assertEqual(out['B'], par['B'])                     # (the fixed line kept)
+        self.assertEqual(vc.cp_issues(out, order=('S', 'B')), [])
+        self.assertNotEqual(out['S'][1][2], 69)
+
+    def test_complement_and_counterline(self):
+        subj = [(0.0, 0.5, 60), (0.5, 0.5, 62), (1.0, 0.5, 64), (1.5, 0.5, 65), (2.0, 2.0, 67)]
+        rh = vc.complement_rhythm(subj, 0.0, 4.0, grid=0.5, hold=1.0, longest=2.0)
+        self.assertEqual(rh[0], (0.0, 2.0))                      # (held while the subject runs)
+        self.assertTrue(all(d == 0.5 for a, d in rh if a >= 2.0))   # (moving while it holds)
+        self.assertAlmostEqual(sum(d for _, d in rh), 4.0)
+        harm = [(0.0, 2.0, 'C'), (2.0, 2.0, 'G')]
+        line = vc.counterline({'B': subj}, rh, scale=lambda t: self.C, lo=67, hi=84, harmony=harm, strong=2.0,
+                              above=('B',))
+        self.assertEqual([(a, d) for a, d, _ in line], rh)
+        both = {'S': line, 'B': subj}
+        self.assertFalse([i for i in vc.cp_issues(both, order=('S', 'B'), strong=2.0)
+                          if i.kind in ('parallel_outer', 'parallel', 'crossing', 'unison_run')])
+        self.assertTrue(all(p % 12 in {0, 4, 7} for a, _, p in line if a == 0.0))   # (a chord tone on the downbeat)
+        self.assertEqual(line, vc.counterline({'B': subj}, rh, scale=lambda t: self.C, lo=67, hi=84, harmony=harm,
+                                              strong=2.0, above=('B',)))      # (deterministic)
+
+
 if __name__ == '__main__':
     unittest.main()

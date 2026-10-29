@@ -29,3 +29,15 @@ tests/.timings.json
 
 # Third-party wavetables (inst.wavetable): never committed - put them here or in $AGENTSOUND_WAVETABLES
 assets/wavetables/
+
+# machine-local installs (ears venv, the local-only choir pack, the web build), never committed
+/local/
+
+# Local tools, rendered auditions, and visualization demo audio
+/work/
+songs/**/_aud/
+songs/**/versions/**/*.mp3
+songs/**/versions/**/report.json
+songs/**/versions/**/master-analysis.json
+songs/**/versions/**/*.mid
+songs/**/*.log

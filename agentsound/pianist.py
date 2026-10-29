@@ -942,6 +942,9 @@ FIGURES = {
     'half': '0 1 3 - - - - -',           # three notes, then the bar rings: a phrase end breathes
     'up': '0 1 2 3 4 5 - -',             # climbing into the next section
     'big': 'o 1 2 3 4 5 4 2',            # the climax: bass octave, two octaves of chord
+    'broad': 'o - c - 3 - c -',          # the climax under a sung theme: the bass octave, the chord, its 10th, the
+    #                                      chord - quarter notes that carry the melody (blind round g5: 10-12 left-hand
+    #                                      attacks a bar under a 3-note climax tune)
     'sweep': 'o 1 2 3 4 5 4 3 2 3 4 5 4 3 2 1',   # the climax peaks: 16ths, two octaves up and down
     'roll': 'R - - - - - - -',           # a rolled chord, held
     'tenths': '0+3 - - - 1 - 3 -',       # the ballad hand: a 10th, then the chord answered
@@ -978,8 +981,76 @@ FIGURES = {
     'lofi_two': '0+3+4+x - - - 3+x - - -',    # on 1, the upper notes again on 3
     'lofi_skip': '0 - 3+4+x - - - 3+x -',     # the root, the chord on 2, a light restrike on 4
     'lofi_rest': '0+3+x - - - - - - -',       # a shell held under the melody's breath
+    # the climax hands of endless new-age's PIANO_DIVERSE (perform.PIANO_DIVERSE_ON['climax_lh']; the best-of-N blind
+    # test 2026-10-24: one climax left hand - 'broad', the octave, a chord, its 10th, a chord - in 4-6 pieces of 6)
+    'surge': 'o 2 3 4 o 2 3 4',          # the bass octave, the chord climbing in 8ths, twice a bar: a driving surge
+    'rolled2': 'R - - - R - - -',        # the chord rolled up from the bass twice a bar: a harp-like breadth
+    'octdrive': 'o - 3 - o - 2 -',       # the bass octave on 1 and 3, a chord tone between: the octave drive
+    'broad2': 'o - - - c - - -',         # the bass octave, the chord on 3: half notes under a sung theme
+    'waltz_roll': 'R - - - - -',         # 3/4: the chord rolled, held through the bar
+    'waltz_oct': 'o - 3 - 2 -',          # 3/4: the bass octave, its 10th, a chord tone
+    # (round p-div2: the climax hands keep running 8ths - no bass octave struck twice a bar)
+    'arc8': '0 2 3 4 5 4 3 2',           # an arch in 8ths up two octaves and back: no bass octave
+    'rise8': '0 2 4 2 1 3 5 3',          # two waves in 8ths, the second a step higher
+    'waltz_arc': '0 2 4 5 4 2',          # 3/4: the arch in six 8ths, up to the second octave
+    # the final bar's hands (PIANO_DIVERSE_ON['ending'])
+    'end_bass': '0 - - - - - - -',       # one low note under an open chord, a single line, an arpeggio's arrival
+    'end_arp': '0 1 2 3 4 5 6 7',        # 8ths up the chord over two and a half octaves (ritardando, pedalled)
+    'end_arp3': '0 1 2 3 4 5',           # 3/4: the same in six 8ths
 }
 """Broken-chord figures for left_hand(style='broken', figure=...) / figure() / broken() - data: add a figure here."""
+
+OSTINATO_CONTOURS = ('rise', 'rise_fall', 'rock', 'pendulum', 'alberti', 'interlock')
+
+
+def ostinato_figure(grid: int, contour: str, span: int, colour: int = 0, bass: str = 'one') -> str:
+    """A piece's own broken-chord figure (the signature ostinato, endless docs/PIANO_MOVES.md 5.2) as a FIGURES token
+    string: `grid` tokens per bar (8 = 8ths in 4/4, 12 = triplets, 16 = 16ths; 6 / 12 in 3/4) over the ladder steps
+    0..`span` (3 = a 10th .. 6 = two octaves) in a `contour` - 'rise' (up, the top repeated as a turn), 'rise_fall'
+    (up and back), 'rock' (a low and a high step alternating, climbing), 'pendulum' (the bass, the crest, the middle,
+    the crest), 'alberti' (low - high - middle - high), 'interlock' (the crest on the beats, the bass between: a
+    driving pattern); colour 1: the chord's 7th / 9th at one token; bass 'octave': the bass with its octave below.
+    No inner step struck twice running."""
+    if contour not in OSTINATO_CONTOURS:
+        raise ComposeError(f"ostinato contour {contour!r}: one of {', '.join(OSTINATO_CONTOURS)}")
+    if not 2 <= span <= 7 or grid not in (6, 8, 12, 16):
+        raise ComposeError(f"ostinato: span 2..7 ladder steps, grid 6 / 8 / 12 / 16 tokens per bar, got {span}, {grid}")
+    half = grid // 2
+    if contour == 'rise':                              # up to the top by 2/3 of the bar, turning there
+        k = max(1, (2 * grid) // 3)
+        vals = [round(span * i / k) if i <= k else span - (i - k) % 2 for i in range(grid)]
+    elif contour == 'rise_fall':                       # up to the top at the half bar and back
+        vals = [round(span * (i if i <= half else grid - i) / half) for i in range(grid)]
+    elif contour == 'rock':                            # a low and a high step, climbing, then back
+        lad = [0] + [x for j in range(1, span) for x in (j + 1, j)]
+        lad = lad[:half + 1]
+        vals = (lad + lad[-2:0:-1])[:grid]
+        vals += [lad[1]] * (grid - len(vals))
+    elif contour == 'pendulum':                        # the bass, the crest, the middle, the crest
+        cyc = [span, max(1, span // 2), span - 1, max(1, span // 2)]
+        vals = [0] + [cyc[(i - 1) % 4] for i in range(1, grid)]
+    elif contour == 'alberti':                         # low - high - middle - high
+        cyc = [1, span, max(2, span - 1), span]
+        vals = [cyc[i % 4] for i in range(grid)]
+    else:                                              # interlock: the crest on the beats, the low tones between
+        cyc = [span, 1, span - 1, 2]
+        vals = [cyc[i % 4] for i in range(grid)]
+    vals[0] = 0                                        # (the bass on the downbeat only)
+    for i in range(1, grid):
+        if vals[i] == 0:
+            vals[i] = 1
+        if vals[i] == vals[i - 1]:                     # (no step twice running: the hand moves)
+            vals[i] = vals[i] + 1 if vals[i] < span else vals[i] - 1
+            if vals[i] == 0:
+                vals[i] = 2
+    toks = [str(v) for v in vals]
+    if colour:
+        k = grid // 2 + 1
+        toks[k] = 'x'
+    if bass == 'octave':
+        toks[0] = 'o'
+    return ' '.join(toks)
+
 
 FIGURE_VOICING = {'bass': 1.16, 'crest': (0.8, 1.04), 'chord': 0.85, 'jitter': 0.08}
 """The left hand's voicing in figure(): the bass x bass over the figure's level (melody > bass > inner voices: the

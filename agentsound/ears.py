@@ -30,7 +30,8 @@ import tempfile
 from pathlib import Path
 
 ENV_PYTHON = 'AGENTSOUND_EARS_PYTHON'
-DEFAULT_EARS_PYTHONS = ('D:/venvs/agentsound-ears/Scripts/python.exe',
+DEFAULT_EARS_PYTHONS = (str(Path(__file__).resolve().parents[1] / 'local' / 'venvs' / 'ears' / 'Scripts' / 'python.exe'),
+                        'local/venvs/ears/Scripts/python.exe',
                         str(Path.home() / 'venvs' / 'agentsound-ears' / 'Scripts' / 'python.exe'),
                         str(Path.home() / 'venvs' / 'agentsound-ears' / 'bin' / 'python'))
 WORKER = Path(__file__).resolve().parent / 'ears_worker.py'
@@ -73,10 +74,10 @@ class EarsUnavailable(EarsError):
 
 INSTALL_HINT = (
     "the ears need their own venv with torch (the main Python does not): see README.md 'The learned ears'.\n"
-    "  py -3.12 -m venv D:/venvs/agentsound-ears\n"
-    "  D:/venvs/agentsound-ears/Scripts/python -m pip install torch torchaudio "
+    "  py -3.12 -m venv local/venvs/ears\n"
+    "  local/venvs/ears/Scripts/python -m pip install torch torchaudio "
     "--index-url https://download.pytorch.org/whl/cu126\n"
-    "  D:/venvs/agentsound-ears/Scripts/python -m pip install audiobox_aesthetics fadtk "
+    "  local/venvs/ears/Scripts/python -m pip install audiobox_aesthetics fadtk "
     "--extra-index-url https://download.pytorch.org/whl/cu126\n"
     f"then set {ENV_PYTHON} to its python if it lives elsewhere")
 

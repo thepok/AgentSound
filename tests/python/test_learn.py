@@ -35,6 +35,10 @@ class RoundTrip(unittest.TestCase):
     def test_every_genre_round_trips(self):
         for g in GENRES:
             G = endless.genre(g)
+            if G.plan.get('perform') == 'symphony':          # (no token schema yet: encode refuses it)
+                with self.assertRaises(T.TokenError):
+                    T.encode(endless.compose(G, 0))
+                continue
             for s in self.SEEDS:
                 tune = endless.compose(G, s)
                 toks = T.encode(tune)
@@ -61,6 +65,8 @@ class Grammar(unittest.TestCase):
         from agentsound.learn import grammar
         for g in GENRES:
             G = endless.genre(g)
+            if G.plan.get('perform') == 'symphony':          # (no token schema yet)
+                continue
             for s in range(4):
                 toks = T.encode(endless.compose(G, s))
                 self.assertIsNone(grammar.check(toks), (g, s))
@@ -123,12 +129,13 @@ class Spread(unittest.TestCase):
 
     def test_the_spread_also_spreads_the_arrangement(self):
         """Schema 2: the set-level draws (plan['set']: layout, climax kind) take turns too, the rare ones (below
-        MIN_PAIR of the commonest: the climax 'step') left out; the arrangement mask forces them where the grammar
+        MIN_PAIR of the commonest: the climax 'step', since blind round g1 'lift', since g5 'grow'; g10 drops 'climb') left out; the arrangement mask forces them where the grammar
         reaches their key, and leaves every other token alone."""
         from agentsound.learn.sample import spread_headers
         G = endless.genre('new-age-piano')
         hs = spread_headers(G, 12, 0)
-        for k, vals in (('layout', {'song', 'chorus', 'return'}), ('climax', {'grow', 'theme', 'climb', 'lift'})):
+        for k, vals in (('layout', {'song', 'chorus', 'return', 'arch', 'variations', 'late'}),
+                        ('climax', {'theme'})):    # (round g5: 'grow' rare too; round g10: no grow / climb - the head at every climax)
             c = Counter(h[k] for h in hs)
             self.assertEqual(set(c), vals, k)
             self.assertLessEqual(max(c.values()) - min(c.values()), 1, (k, c))

@@ -492,12 +492,14 @@ def band(s, roles, genre='orchestra-film'):
     g = get(genre) if isinstance(genre, str) else genre
     BD = g.band
     table = orch.role_table(BD['preset'])
-    bad = sorted(set(roles) - set(table))
+    solos = tuple(r for r in roles if r in orch.SOLOS and r not in table)    # (round os1: the solo players)
+    bad = sorted(set(roles) - set(table) - set(solos))
     if bad:
         raise ComposeError(f"orchestra band: unknown roles {bad}; roles: {', '.join(table)}")
     if BD.get('master'):
         s.master.use(BD['master'])
-    b_ = bands.make(BD['preset'], s, without=tuple(r for r in table if r not in roles), **(BD.get('options') or {}))
+    opts = dict(BD.get('options') or {}, **({'solos': solos} if solos else {}))
+    b_ = bands.make(BD['preset'], s, without=tuple(r for r in table if r not in roles), **opts)
     for role in b_.roles:
         b_[role].gain_db += BD.get('gain', 0.0)
     for role, db in (BD.get('trims') or {}).items():

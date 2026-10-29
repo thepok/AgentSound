@@ -786,6 +786,52 @@ class Cli(unittest.TestCase):
         a = build_parser().parse_args(['endless'])
         self.assertIsNone(a.swing)
 
+    def test_a_slot_failing_the_gate_is_rerolled_then_skipped(self):
+        # (set 162000 slot 2: every candidate failed the click gate and the CLI stopped the whole set) - a slot whose
+        # candidates all fail gets SLOT_REROLLS fresh rounds of seeds, then is skipped; the set goes on, the skipped
+        # slot keeps its number free and counts toward --count; --rerolls 0 skips at once (the blind rounds)
+        import contextlib
+        import io
+        import tempfile
+        from unittest import mock
+        from agentsound.cli import build_parser
+        from agentsound.endless import run as R
+
+        def fake_candidates(genre, seed, n, args, log, plan=None, prev=None, memory=None):
+            return [{'seed': s, 'tune': None, 'song': None, 'score': {'score': 50.0}, 'plan': plan}
+                    for s in range(seed, seed + n)]
+
+        def run(rerolls, fail):
+            tried = []
+
+            def fake_render(genre, seed, out_root, index, args, log, plan=None, prev=None, made=None):
+                tried.append((index, made['seed']))
+                if index in fail:
+                    return None
+                return {'key': 'C', 'seed': made['seed'], 'timing': {'audio_s': 1.0, 'total_s': 1.0},
+                        'files': {'mp3': str(pathlib.Path(out_root) / f'{index:03d}.mp3')}}
+            with tempfile.TemporaryDirectory() as d, mock.patch.object(R, 'candidates', fake_candidates), \
+                    mock.patch.object(R, 'render_tune', fake_render):
+                argv = ['endless', 'jazz-piano', '--count', '4', '--seed', '100', '--candidates', '2', '--tries',
+                        '2', '--out', d] + ([] if rerolls is None else ['--rerolls', str(rerolls)])
+                a = build_parser().parse_args(argv)
+                with contextlib.redirect_stdout(io.StringIO()):
+                    rc = R.cmd_endless(a)
+                log = (pathlib.Path(d) / 'endless.log').read_text(encoding='utf-8')
+            return rc, tried, log
+        rc, tried, log = run(None, {2})
+        self.assertEqual(rc, 0)
+        self.assertEqual(sorted({i for i, _ in tried}), [1, 2, 3, 4])               # slots 3 and 4 still made
+        self.assertEqual([s for i, s in tried if i == 2], [102, 103, 104, 105, 106, 107])   # 2 rerolls, fresh seeds
+        self.assertEqual([s for i, s in tried if i == 3], [108])                     # (the seeds go on after them)
+        self.assertIn('slot 2 (002) skipped', log)
+        rc, tried, log = run(0, {2})
+        self.assertEqual([s for i, s in tried if i == 2], [102, 103])               # skipped at once
+        self.assertEqual([s for i, s in tried if i == 3], [104])                     # seeds as in a passing code
+        rc, tried, log = run(0, {1, 2, 3, 4})
+        self.assertEqual((rc, len(tried)), (1, 2 * R.MAX_SKIPPED))                  # every slot failing: stops
+        self.assertIn('slots in a row: stopping', log)
+
     def test_list(self):
         from agentsound.endless.run import describe_genres
         text = describe_genres()

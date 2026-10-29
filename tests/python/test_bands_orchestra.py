@@ -74,6 +74,18 @@ class TestRegistry(unittest.TestCase):
         self.assertAlmostEqual(ln.start, 3.9)                  # the long note starts 100 ms early ...
         self.assertAlmostEqual(ln.start + ln.dur, 6.0)         # ... and still ends on the beat
         self.assertAlmostEqual(sh.start, 6.0)                  # shorts stay on the beat
+        # the song's start: a run at 0 (16ths at 60 BPM = 250 ms, led 200 ms) - the first note cannot lead and keeps
+        # its place, the next ones keep LEAD_KEEP of their distance until the full lead is reached (no flam)
+        run = Clip([(k * 0.25, 0.25, 'C4', 60) for k in range(8)], length=4).articulate('legato')
+        st = sorted(n.start for n in orch.lead(run, bpm=60, ms=200))
+        self.assertAlmostEqual(st[0], 0.0)
+        self.assertAlmostEqual(st[1], orch.LEAD_KEEP * 0.25)    # not 0.05: the first note keeps 188 of its 250 ms
+        self.assertTrue(all(b - a >= orch.LEAD_KEEP * 0.25 - 1e-9 for a, b in zip(st, st[1:])))
+        self.assertAlmostEqual(st[-1], 1.75 - 0.2)             # the full lead later in the run
+        # a fast pickup (16ths at 150 BPM = 100 ms): shorter than LEAD_FLOOR, so the first note keeps all of it
+        st = sorted(n.start for n in orch.lead(run, bpm=150, ms=200))
+        self.assertAlmostEqual(st[1], 0.25)
+        self.assertTrue(all((b - a) * 60 / 150 >= min(0.1, orch.LEAD_FLOOR) - 1e-9 for a, b in zip(st, st[1:])))
 
 
 class _PresetCase(unittest.TestCase):

@@ -4591,6 +4591,23 @@
    "format": "WAV 24-bit/96k",
    "filename": "Plates.zip",
    "notes": "LICENSE UNCLEAR: offered as a free download, no terms stated; true stereo as .L/.R WAV pairs; true-stereo set (Reverberate)"
+  },
+  {
+   "id": "vocalset-choir",
+   "title": "VocalSet choir: SATB vowel choir (ah oh oo ee eh, p/mf/f) built from the 20 real singers of VocalSet, 3-10 singers a note",
+   "url": "https://zenodo.org/records/1442513",
+   "license": "CC-BY-4.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+   "category": "choir",
+   "genres": [
+    "classical",
+    "choral"
+   ],
+   "size": 773849088,
+   "format": "SFZ+WAV",
+   "attribution": "Wilkins, J., Prem Seetharaman, Alison Wahl, & Bryan Pardo. (2018). VocalSet: A Singing Voice Dataset (Version 1.2) [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.1442513",
+   "homepage": "https://doi.org/10.5281/zenodo.1442513",
+   "notes": "derived (cut, <=2 st shifted, sustains extended, placed in a hall) by songs/_choir_proto/vocalset.py from VocalSet11.zip (md5 0c09396242f946e7111ad7d8fc649b81); not fetchable as is (built locally); ranges S C4-G#5, A A3-F5, T B2-G#4, B A2-F4 (no low bass); credit VocalSet in music made with it"
   }
  ]
 }

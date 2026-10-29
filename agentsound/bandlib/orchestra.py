@@ -412,19 +412,25 @@ def _packs_of(path: str) -> tuple:
 
 
 def _sso(path: str, labels: dict, gains: dict | None = None, sustain: str | None = None,
-         fallback_gain: float = 0.0, **params):
+         fallback_gain: float = 0.0, extra: dict | None = None, **params):
     """A Sonatina Symphonic Orchestra 4.0 'Performance' keyswitch program as one instrument with our articulation
     names; its mod-wheel dynamics (24 dB of level + a low-pass opening from 1.1 to 5.9 kHz) play live from
     'dynamics'; velocity sets the attack speed only. Sustains loop (the WAVs' smpl loops). sustain='samples/...sfz':
     the sustain comes from that program instead (where the SSO loops click: violas, celli, basses, oboes), with its
     velocity layers at their recorded levels and the SSO dynamics curve. When that program's pack is not installed,
-    the SSO sustain plays (at fallback_gain dB) - the preset still builds, a few loop points may click softly."""
+    the SSO sustain plays (at fallback_gain dB) - the preset still builds, a few loop points may click softly.
+    extra={name: 'samples/...sfz'}: more articulations from other programs, after the library's own (their
+    keyswitches after the SSO ones), on the SSO dynamics curve (TECH_SOUNDS: the VSCO 2 CE mutes)."""
     use_alt = bool(sustain) and all(installed(k) for k in _packs_of(sustain))
 
     def build():
         p = {'dynamics': DYN['mf'], 'polyphony': 128}
         p.update(params)
         progs = _programs(path, labels)
+        if extra:
+            ins = inst.sfz_multi(_gained({**progs, **{k: {'path': v} for k, v in extra.items()}}, gains), lazy=True,
+                                 **p)
+            return _even_notes(_follow_dynamics(ins, tuple(extra)))
         if sustain and not use_alt:
             g = dict(gains or {})
             g['sustain'] = fallback_gain
@@ -528,7 +534,7 @@ def _hall(song, kind: str, *, fallback: dict, bus_id: str = 'hall'):
 # --------------------------------------------------------------------------------------------- building
 
 def _build(song, preset: str, table: dict, *, without, sounds, ids, hall_kind: str, hall_fallback: dict,
-           analysis: dict, notes: str, master: str = 'classical') -> Band:
+           analysis: dict, notes: str, master: str = 'classical', hall=None) -> Band:
     builder = bands.Builder(song, preset, bus_policy='distinct', callable_overrides=True, without=without, sounds=sounds, ids=ids,
                             notes=notes, analysis=analysis)
     band, sounds = builder.band, builder.sounds
@@ -537,7 +543,11 @@ def _build(song, preset: str, table: dict, *, without, sounds, ids, hall_kind: s
         hall, hall_desc = _hall(song, hall_kind, fallback=hall_fallback, bus_id=bid)
         return hall
     hall_desc = ''
-    hall = builder.bus('hall', create=make_hall)
+    if hall is not None:                 # (round ox1: a guest ensemble seated in another band's hall - one room)
+        hall_desc = f"shared: {getattr(hall, 'id', 'hall')}"
+        hall = band.bus('hall', hall)
+    else:
+        hall = builder.bus('hall', create=make_hall)
     info = {'articulations': {}, 'range': {}, 'sweet': {}, 'lead_ms': {}, 'kind': {}, 'mono': [], 'vibrato': {},
             'seating': {}, 'sound': {}, 'dyn': dict(DYN), 'hall': hall_desc}
     for role, r in table.items():
@@ -702,6 +712,23 @@ def _vsco_strings(prefix: str, sus: str) -> dict:
             'pizzicato': prefix + 'Pizz.sfz', 'tremolo': prefix + 'Trem.sfz'}
 
 
+_VSCO_WINDS = {
+    'flutes': ({'sustain': 'FluteSusVib.sfz', 'legato': 'FluteSusVib.sfz', 'non-vibrato': 'FluteSusNV.sfz',
+                'staccato': 'FluteStac.sfz'}, {'non-vibrato': 0.9, 'staccato': 4.3}),
+    'oboes': ({'sustain': 'OboeSusVib.sfz', 'legato': 'OboeSusVib.sfz', 'non-vibrato': 'OboeSusNV.sfz',
+               'staccato': 'OboeStac.sfz'}, {'non-vibrato': -1.9, 'staccato': -10.0}),
+    'clarinets': ({'sustain': 'ClarinetSus.sfz', 'legato': 'ClarinetSus.sfz', 'staccato': 'ClarinetStac.sfz'},
+                  {'staccato': -2.7}),
+    'bassoons': ({'sustain': 'BassoonVib.sfz', 'legato': 'BassoonVib.sfz', 'non-vibrato': 'BassoonSus.sfz',
+                  'staccato': 'BassoonStac.sfz'}, {'non-vibrato': 2.8, 'staccato': -0.1}),
+    'horns': ({'sustain': 'FHornSus.sfz', 'legato': 'FHornSus.sfz', 'staccato': 'FHornStac.sfz',
+               'muted': 'FHornMute.sfz'}, {'staccato': -2.5, 'muted': -5.9}),
+}
+"""The VSCO 2 CE wind programs per section (one player recorded: flute, oboe, clarinet and bassoon with vibrato /
+non-vibrato sustains where the set has them, the French horn's 4 dynamic layers) and their articulation levels: the
+chamber orchestra's winds and the symphony's solo players (SOLOS)."""
+
+
 def _chamber_table() -> dict:
     t = {
         'violins1': _Role(_vsco(_vsco_strings('ViolinEns', 'ViolinEnsSusVib.sfz'), gains=_VLN_ENS),
@@ -726,30 +753,23 @@ def _chamber_table() -> dict:
                         pan=0.58, width=0.35, send=-7.0, shelf=-1.0, hp=28, lead_ms=70, rng=('C1', 'C4'),
                         sweet=('E1', 'D3'), arts=_VSCO_STRINGS, monobass=150, eq={**_body(2.5, 90), **_mud(-2.0, 300)},
                         desc='VSCO 2 CE double bass'),
-        'flutes': _Role(_vsco({'sustain': 'FluteSusVib.sfz', 'legato': 'FluteSusVib.sfz',
-                               'non-vibrato': 'FluteSusNV.sfz', 'staccato': 'FluteStac.sfz'},
-                              gains={'non-vibrato': 0.9, 'staccato': 4.3}),
+        'flutes': _Role(_vsco(*_VSCO_WINDS['flutes']),
                         pan=-0.15, width=0.6, send=-5.0, shelf=-1.0, hp=220, lead_ms=40, rng=('C4', 'C7'),
                         sweet=('G4', 'G6'), arts=('sustain', 'legato', 'non-vibrato', 'staccato'),
                         desc='VSCO 2 CE flute (two parts: play 2-note chords)'),
-        'oboes': _Role(_vsco({'sustain': 'OboeSusVib.sfz', 'legato': 'OboeSusVib.sfz', 'non-vibrato': 'OboeSusNV.sfz',
-                              'staccato': 'OboeStac.sfz'}, gains={'non-vibrato': -1.9, 'staccato': -10.0}),
+        'oboes': _Role(_vsco(*_VSCO_WINDS['oboes']),
                        pan=0.1, width=0.6, send=-5.0, shelf=-1.0, hp=200, lead_ms=40, rng=('A#3', 'F6'),
                        sweet=('D4', 'D6'), arts=('sustain', 'legato', 'non-vibrato', 'staccato'),
                        desc='VSCO 2 CE oboe (two parts)'),
-        'clarinets': _Role(_vsco({'sustain': 'ClarinetSus.sfz', 'legato': 'ClarinetSus.sfz',
-                                  'staccato': 'ClarinetStac.sfz'}, gains={'staccato': -2.7}),
+        'clarinets': _Role(_vsco(*_VSCO_WINDS['clarinets']),
                            pan=-0.1, width=0.6, send=-4.5, shelf=-1.0, hp=120, lead_ms=40, rng=('D3', 'F#6'),
                            sweet=('D3', 'C6'), arts=('sustain', 'legato', 'staccato'), eq=_mud(-2.0, 400),
                            desc='VSCO 2 CE clarinet in Bb, sounding pitch (two parts)'),
-        'bassoons': _Role(_vsco({'sustain': 'BassoonVib.sfz', 'legato': 'BassoonVib.sfz',
-                                 'non-vibrato': 'BassoonSus.sfz', 'staccato': 'BassoonStac.sfz'},
-                                gains={'non-vibrato': 2.8, 'staccato': -0.1}),
+        'bassoons': _Role(_vsco(*_VSCO_WINDS['bassoons']),
                           pan=0.15, width=0.5, send=-4.5, shelf=-1.0, hp=50, lead_ms=40, rng=('A#1', 'D#5'),
                           sweet=('A#1', 'G4'), arts=('sustain', 'legato', 'non-vibrato', 'staccato'),
                           eq=_mud(-2.5, 350), desc='VSCO 2 CE bassoon (two parts)'),
-        'horns': _Role(_vsco({'sustain': 'FHornSus.sfz', 'legato': 'FHornSus.sfz', 'staccato': 'FHornStac.sfz',
-                              'muted': 'FHornMute.sfz'}, gains={'staccato': -2.5, 'muted': -5.9}),
+        'horns': _Role(_vsco(*_VSCO_WINDS['horns']),
                        pan=-0.3, width=0.7, send=-3.5, shelf=-2.0, hp=60, lead_ms=60, rng=('A1', 'F5'),
                        sweet=('C3', 'C5'), arts=('sustain', 'legato', 'staccato', 'muted'),
                        eq=_mud(-3.0, 380), desc='VSCO 2 CE French horn, 4 dynamic layers (two parts)'),
@@ -794,6 +814,44 @@ def chamber_orchestra(song, *, without=(), sounds=None, ids=None, **options) -> 
 
 _SEC_ARTS = ('sustain', 'staccato', 'spiccato', 'marcato', 'pizzicato', 'tremolo', 'col legno', 'harmonics')
 
+TECH_SOUNDS = False
+"""Round o23 (endless symphony.TECH switches it): the string sections' col legno / harmonics brought up (TECH_GAINS)
+and the symphony / film horns and trumpets gain a 'muted' articulation - the VSCO 2 CE (CC0) muted horn (A#2-F5)
+and straight-muted trumpet (A#3-C6), keyswitched after the SSO programs and following the same dynamics lane (MUTES:
+program, range, level matched at mf). Off: the tables as they were (renders bit-identical)."""
+MUTES = {'horns': {'path': 'FHornMute.sfz', 'range': (46, 77), 'gain': 4.7},
+         'trumpets': {'path': 'TrumpetStraightMuteSus.sfz', 'range': (58, 84), 'gain': -1.5}}
+"""The mutes TECH_SOUNDS adds: the VSCO 2 CE program, its sounding range (MIDI; a note outside it plays open), the
+level (dB) against the SSO sustain at the same lane."""
+
+
+TECH_GAINS = {'violins1': {'col legno': 6.0, 'harmonics': 2.0}, 'violins2': {'col legno': 6.0, 'harmonics': 2.0},
+              'violas': {'col legno': 6.0, 'harmonics': 1.0}, 'cellos': {'col legno': 6.0, 'harmonics': 4.0},
+              'basses': {'col legno': 6.0}}
+"""With TECH_SOUNDS: dB on the SSO section strings' col legno (recorded ~9 dB under their staccato: lost in any
+texture) and harmonics (4-7 dB under the sustain), measured at mf (8ths / held notes, 3 s loudness): col legno
+3 dB under the staccato, harmonics 1-3 dB under the sustain - soft colours, still heard."""
+
+
+def _tg(role: str, gains: dict) -> dict:
+    """A string section's articulation gains with TECH_GAINS on top (TECH_SOUNDS)."""
+    if not TECH_SOUNDS:
+        return gains
+    return {**gains, **{k: round(gains.get(k, 0.0) + v, 2) for k, v in TECH_GAINS.get(role, {}).items()}}
+
+
+def _merge_gains(gains: dict, mute: dict) -> dict:
+    """{'gains': ...} for _sso with a mute's (_mute) extra program and gain merged in."""
+    return dict(mute, gains={**gains, **mute.get('gains', {})})
+
+
+def _mute(role: str) -> dict:
+    """_sso(extra=, gains=) for a role's mute (TECH_SOUNDS)."""
+    if not (TECH_SOUNDS and role in MUTES and installed('vsco2-ce')):
+        return {}
+    m = MUTES[role]
+    return {'extra': {'muted': VSCO + m['path']}, 'gains': {'muted': m['gain']}}
+
 
 # the sustain level of the SSO's own program where the cleaner-looping replacement is not installed
 # (vpo-scripts-standard + vpo-wav for violas / cellos / basses, vsco2-ce for the oboes), matched to it at mf
@@ -805,34 +863,34 @@ def _symphony_table() -> dict:
     vpo = all(installed(k) for k in _packs_of(VPO))
     t = {
         'violins1': _Role(_sso(SSO_STR + '1st Violins KS.sfz', _SSO_SECTION,
-                               gains={'staccato': -3.9, 'spiccato': -3.9, 'marcato': 4.1, 'pizzicato': -1.0,
-                                      'tremolo': 4.4}),
+                               gains=_tg('violins1', {'staccato': -3.9, 'spiccato': -3.9, 'marcato': 4.1,
+                                                      'pizzicato': -1.0, 'tremolo': 4.4})),
                           pan=-0.5, width=0.9, send=-6.0, hp=150, lead_ms=90, rng=('G3', 'C7'), sweet=('G3', 'E6'),
                           arts=_SEC_ARTS, eq={**_honk(-3.0), **_air(2.5)}, desc='SSO 4.0 1st violins'),
         'violins2': _Role(_sso(SSO_STR + '2nd Violins KS.sfz', _SSO_SECTION,
-                               gains={'staccato': -5.3, 'spiccato': -5.3, 'marcato': 5.5, 'pizzicato': -3.7,
-                                      'tremolo': 2.0}),
+                               gains=_tg('violins2', {'staccato': -5.3, 'spiccato': -5.3, 'marcato': 5.5,
+                                                      'pizzicato': -3.7, 'tremolo': 2.0})),
                           pan=-0.22, width=0.85, send=-6.0, hp=150, lead_ms=90, rng=('G3', 'C7'), sweet=('G3', 'A5'),
                           arts=_SEC_ARTS, eq={**_honk(-3.0), **_air(2.0)}, desc='SSO 4.0 2nd violins'),
         'violas': _Role(_sso(SSO_STR + 'Violas KS.sfz', _SSO_SECTION, sustain=VPO + 'Strings/viola-SEC-sustain.sfz',
                              fallback_gain=_FB['violas'],
-                             gains={'sustain': -2.6, 'staccato': -3.8, 'spiccato': -3.8, 'marcato': 2.9,
-                                    'pizzicato': -5.7, 'tremolo': 3.4}),
+                             gains=_tg('violas', {'sustain': -2.6, 'staccato': -3.8, 'spiccato': -3.8, 'marcato': 2.9,
+                                    'pizzicato': -5.7, 'tremolo': 3.4})),
                         pan=0.2, width=0.8, send=-5.5, hp=110, lead_ms=90, rng=('C3', 'C6'), sweet=('C3', 'C5'),
                         arts=_SEC_ARTS, eq={**_mud(-1.5, 350), **_honk(-2.0)},
                         desc='SSO 4.0 violas (sustain: the Westlund viola section re-looped by Virtual Playing '
                              'Orchestra)'),
         'cellos': _Role(_sso(SSO_STR + 'Celli KS.sfz', _SSO_SECTION, sustain=VPO + 'Strings/cello-SEC-sustain.sfz',
                              fallback_gain=_FB['cellos'],
-                             gains={'sustain': -0.7, 'staccato': -1.9, 'spiccato': -1.9, 'marcato': 3.5,
-                                    'pizzicato': -2.1, 'tremolo': 5.6}),
+                             gains=_tg('cellos', {'sustain': -0.7, 'staccato': -1.9, 'spiccato': -1.9, 'marcato': 3.5,
+                                    'pizzicato': -2.1, 'tremolo': 5.6})),
                         pan=0.42, width=0.5, send=-6.0, hp=40, lead_ms=90, rng=('C2', 'C#5'), sweet=('C2', 'A4'),
                         arts=_SEC_ARTS, monobass=120, eq=_body(2.5),
                         desc='SSO 4.0 cellos (sustain: the No Budget Orchestra cello section, VPO loops)'),
         'basses': _Role(_sso(SSO_STR + 'Basses KS.sfz', _SSO_BASSES, sustain=VPO + 'Strings/bass-SEC-sustain.sfz',
                              fallback_gain=_FB['basses'],
-                             gains={'sustain': -2.4, 'staccato': -2.4, 'spiccato': -2.4, 'marcato': 2.2,
-                                    'pizzicato': -5.8, 'tremolo': 2.1}),
+                             gains=_tg('basses', {'sustain': -2.4, 'staccato': -2.4, 'spiccato': -2.4, 'marcato': 2.2,
+                                    'pizzicato': -5.8, 'tremolo': 2.1})),
                         pan=0.6, width=0.4, send=-6.0, shelf=-1.0, hp=28, lead_ms=90, rng=('C1', 'C4'),
                         sweet=('E1', 'D3'), arts=_names(_SSO_BASSES), monobass=150, eq=_body(2.0, 100),
                         desc='SSO 4.0 double basses (sustain re-looped by Virtual Playing Orchestra)'),
@@ -850,14 +908,17 @@ def _symphony_table() -> dict:
         'bassoons': _Role(_sso(SSO_WW + 'Bassoons KS.sfz', _SSO_REEDS, gains={'staccato': -10.3}),
                           pan=0.16, width=0.5, send=-4.0, shelf=-1.0, hp=50, lead_ms=50, rng=('A#1', 'E5'),
                           sweet=('A#1', 'G4'), arts=_names(_SSO_REEDS), desc='SSO 4.0 bassoons a2'),
-        'horns': _Role(_sso(SSO_BR + 'Horns KS.sfz', _SSO_HORNS, gains={'marcato': 0.9, 'staccato': -0.2}),
+        'horns': _Role(_sso(SSO_BR + 'Horns KS.sfz', _SSO_HORNS,
+                            **_merge_gains({'marcato': 0.9, 'staccato': -0.2}, _mute('horns'))),
                        pan=-0.32, width=0.8, send=-3.0, shelf=-2.0, hp=60, lead_ms=70, rng=('E2', 'F5'),
-                       sweet=('C3', 'C5'), arts=_names(_SSO_HORNS), desc='SSO 4.0 horns a4'),
-        'trumpets': _Role(_sso(SSO_BR + 'Trumpets KS.sfz', _SSO_BRASS, gains={'marcato': 0.0, 'staccato': -4.2},
-                               dynrange=12),
+                       sweet=('C3', 'C5'), arts=_names(_SSO_HORNS) + (('muted',) if _mute('horns') else ()),
+                       desc='SSO 4.0 horns a4' + (' (muted: VSCO 2 CE)' if _mute('horns') else '')),
+        'trumpets': _Role(_sso(SSO_BR + 'Trumpets KS.sfz', _SSO_BRASS, dynrange=12,
+                               **_merge_gains({'marcato': 0.0, 'staccato': -4.2}, _mute('trumpets'))),
                           pan=0.14, width=0.6, send=-3.5, shelf=-1.5, hp=150, lead_ms=50, rng=('E3', 'E6'),
-                          sweet=('C4', 'G5'), arts=_names(_SSO_BRASS), eq={**_honk(-3.0), **_pres(-1.5)},
-                          desc='SSO 4.0 trumpets a3'),
+                          sweet=('C4', 'G5'), arts=_names(_SSO_BRASS) + (('muted',) if _mute('trumpets') else ()),
+                          eq={**_honk(-3.0), **_pres(-1.5)},
+                          desc='SSO 4.0 trumpets a3' + (' (straight mute: VSCO 2 CE)' if _mute('trumpets') else '')),
         'trombones': _Role(_sso(SSO_BR + 'Trombones KS.sfz', _SSO_BRASS, gains={'marcato': 2.3, 'staccato': 1.2},
                                 dynrange=12),
                            pan=0.34, width=0.6, send=-3.0, shelf=-1.5, hp=60, lead_ms=60, rng=('E2', 'F5'),
@@ -940,14 +1001,75 @@ octave), brass enters for weight, percussion only at arrivals. Sends: strings -6
 chord before a general pause."""
 
 
+SOLOS = {'flute_solo': 'flutes', 'oboe_solo': 'oboes', 'clarinet_solo': 'clarinets', 'bassoon_solo': 'bassoons',
+         'horn_solo': 'horns', 'violin_solo': 'violins1', 'cello_solo': 'cellos', 'violin_concertmaster': 'violins1'}
+"""The symphony's solo players (symphony_orchestra(solos=...)) and the section each sits in: the principal flute /
+oboe / clarinet / bassoon / horn (the VSCO 2 CE single players, _VSCO_WINDS: a legato player with the recorded
+vibrato where the set has it), the solo violin and cello (the string quartet's violin 1 and cello), and the
+concertmaster (the quartet's violin 2, SSO Violin Solo 2: a quiet solo violin ON the violins I's line - the section's
+expressive edge, ~12 dB under it). Round os1 (the endless SOLO)."""
+
+SOLO_GAIN = {'flute_solo': 2.9, 'oboe_solo': -5.4, 'clarinet_solo': 8.9, 'bassoon_solo': 0.5, 'horn_solo': 9.8,
+             'violin_solo': 1.4, 'cello_solo': 4.7, 'violin_concertmaster': -13.6}
+"""The solo players' faders (dB) relative to their section's (measured on one legato line at mf, the tracks' RMS):
+a wind solo as loud as its section's line (it is the same part: the principal plays it alone), the solo violin /
+cello 2 dB under their section's line (it sings over a softer accompaniment), the concertmaster 12 dB under the
+violins I it doubles."""
+
+
+SOLO_RANGE = {'flute_solo': ('F4', 'C7'), 'oboe_solo': ('A#3', 'F6'), 'clarinet_solo': ('D3', 'F6'),
+              'bassoon_solo': ('C2', 'C5'), 'horn_solo': ('A1', 'F5'), 'violin_solo': ('G3', 'C7'),
+              'cello_solo': ('C2', 'C6'), 'violin_concertmaster': ('G3', 'C7')}
+"""The solo players' ranges: the keys EVERY program of the player has a zone on (VSCO: the flute's staccato from F4,
+the bassoon's vibrato sustain from C2 - a note under them is silent on that keyswitch, round os1's gate); the endless
+solo pass gives a player only lines inside it."""
+
+SOLO_DYNRANGE = 20
+"""dB of extra level range on the wind solos' dynamics lane (_vsco's dynrange; the sections' SSO mod-wheel has ~24 dB):
+at the VSCO default 12 a principal's phrase moved only 3.5 dB (round os1's gate: flat_dynamics on an oboe solo)."""
+
+
+def _solo_table(names, gains: dict, preset: str) -> dict:
+    """The solo roles `names` (SOLOS) as _Role entries seated like their sections (pan, hall send a little drier: the
+    principal sits in front of the section), their faders the section's (`gains`, the preset's) + SOLO_GAIN."""
+    bad = sorted(set(names) - set(SOLOS))
+    if bad:
+        raise ComposeError(f"{preset}: solos= {bad} unknown; solo players: {', '.join(SOLOS)}")
+    _require(preset, 'vsco2-ce')
+    from dataclasses import replace
+    sec = _symphony_table()
+    q = _quartet_table() if {'violin_solo', 'cello_solo', 'violin_concertmaster'} & set(names) else {}
+    t = {}
+    for name in names:
+        base = sec[SOLOS[name]]
+        if SOLOS[name] in _VSCO_WINDS:
+            progs, arts_db = _VSCO_WINDS[SOLOS[name]]
+            chamber = _chamber_table()[SOLOS[name]]
+            r = _Role(_vsco(progs, arts_db, mono='legato', legatotime=60, polyphony=16, dynrange=SOLO_DYNRANGE),
+                      pan=base.pan, width=0.45, send=base.send - 0.5, shelf=base.shelf, hp=chamber.hp,
+                      lead_ms=40, rng=SOLO_RANGE[name], sweet=chamber.sweet, arts=tuple(progs), mono=True,
+                      eq=dict(chamber.eq), desc=f"VSCO 2 CE {name.split('_')[0]} solo (one player), a legato player")
+        else:
+            src = q['violin2' if name == 'violin_concertmaster' else 'violin1' if name == 'violin_solo' else 'cello']
+            r = replace(src, pan=base.pan + (0.06 if name == 'violin_solo' else 0.0), send=base.send - 0.5,
+                        rng=SOLO_RANGE[name],
+                        desc=src.desc + (' - the concertmaster' if name == 'violin_concertmaster' else ''))
+        r.gain = round(gains[SOLOS[name]] + SOLO_GAIN[name], 2)
+        t[name] = r
+    return t
+
+
 def symphony_orchestra(song, *, without=(), sounds=None, ids=None, **options) -> Band:
     """Symphony orchestra: SSO 4.0 full sections, 4 horns, 3 trumpets, 3 trombones, tuba, timpani, percussion,
-    harp and celesta in a concert hall."""
-    _unknown(options, 'symphony_orchestra', ())
+    harp and celesta in a concert hall; solos=('oboe_solo', ...): the solo players too (SOLOS)."""
+    solos = tuple(options.pop('solos', ()) or ())
+    _unknown(options, 'symphony_orchestra', ('solos',))
     _require('symphony_orchestra', 'sso')
     table = _symphony_table()
     for k, r in table.items():
         r.gain = _SYMPHONY_GAIN[k]
+    if solos:
+        table.update(_solo_table(solos, _SYMPHONY_GAIN, 'symphony_orchestra'))
     band = _build(song, 'symphony_orchestra', table, without=without, sounds=sounds, ids=ids, hall_kind='concert',
                   hall_fallback=dict(decay=2.1, predelay=22, lowcut=110, highcut=9000, damping=6000, width=1.2,
                                      size=0.85),
@@ -1032,11 +1154,15 @@ Keep drums and sub out of the reverb (drums -9, sub none)."""
 
 
 def film_orchestra(song, *, without=(), sounds=None, ids=None, hybrid: bool = False, choir: str = 'aah',
-                   **options) -> Band:
+                   repair: float = 0.0, **options) -> Band:
     """Film orchestra: symphonic sections + choir, low brass, taiko drums; hybrid=True adds a synth sub and a synth
     pulse. choir='aah' (SSO large chorus, live dynamics; a few loop points click softly when exposed) or 'oh' (No
-    Budget Orchestra 2 choir: clean loops, for exposed pianissimo choir)."""
-    _unknown(options, 'film_orchestra', ())
+    Budget Orchestra 2 choir: clean loops, for exposed pianissimo choir). repair=dB: the samplers repair their
+    samples' isolated glitches at load (the sustaining sections; the sampler's 'repair': over half the SSO sustains
+    have an edit splice that clicks once per loop pass; 9 finds the audible ones; 0 = the files as recorded).
+    solos=('oboe_solo', ...): the solo players too (SOLOS)."""
+    solos = tuple(options.pop('solos', ()) or ())
+    _unknown(options, 'film_orchestra', ('solos',))
     if choir not in ('aah', 'oh'):
         raise ComposeError(f"film_orchestra: choir must be 'aah' or 'oh', got {choir!r}")
     if not hybrid:
@@ -1048,6 +1174,8 @@ def film_orchestra(song, *, without=(), sounds=None, ids=None, hybrid: bool = Fa
     table = _film_table(bool(hybrid), choir)
     for k, r in table.items():
         r.gain = _FILM_GAIN[k]
+    if solos:
+        table.update(_solo_table(solos, _FILM_GAIN, 'film_orchestra'))
     band = _build(song, 'film_orchestra', table, without=without, sounds=sounds, ids=ids, hall_kind='film',
                   hall_fallback=dict(decay=2.8, predelay=25, lowcut=120, highcut=8500, damping=5500, width=1.3,
                                      size=0.95),
@@ -1055,7 +1183,54 @@ def film_orchestra(song, *, without=(), sounds=None, ids=None, hybrid: bool = Fa
     band.info['keys'] = dict(PERCUSSION_KEYS)
     band.info['hybrid'] = bool(hybrid)
     band.info['choir'] = choir
+    if repair:
+        for role, kind in band.info['kind'].items():       # (the sustaining sections: a struck sample's attack and
+            t = band[role]                                  # a roll's noise are no glitches)
+            if kind == 'sustain' and getattr(t.instrument, 'type', '') == 'sampler':
+                t.instrument = t.instrument.but(repair=float(repair))
     return band
+
+
+VOCALSET = 'vocalset-choir'
+VOCALSET_PARTS = {'S': ('C4', 'G#5'), 'A': ('A3', 'F5'), 'T': ('B2', 'G#4'), 'B': ('A2', 'F4')}
+"""The vocalset-choir pack's parts and their ranges (SFZ <part>_<vowel>.sfz; nothing under A2 - a low bass stays
+with the orchestra)."""
+VOCALSET_VOWELS = ('ah', 'oh', 'oo', 'ee', 'eh')
+VOCALSET_EQ = {'hp.freq': 140, 'hp.slope': 24, 'peak1.freq': 400, 'peak1.gain': -2.5, 'peak1.q': 0.8,
+               'peak2.freq': 1100, 'peak2.gain': -2.5, 'peak2.q': 0.7, 'peak3.freq': 3500, 'peak3.gain': -2.5,
+               'peak3.q': 0.8}
+VOCALSET_DISTANCE = {'high.freq': 2200, 'high.gain': -3.5, 'peak1.freq': 3300, 'peak1.gain': -2.5, 'peak1.q': 0.9}
+"""The choir prototype's (songs/_choir_proto, stage 4) light choir eq (low cut - 70 Hz for T / B -, box / honk /
+presence dips) and the distance: VocalSet was recorded close to each singer, its section samples read ~2 dB brighter
+than a choir heard from the hall - a gentle treble cut."""
+
+
+def vocalset_choir(song, band, vowels, *, parts=tuple(VOCALSET_PARTS), gain_db: float = 0.0, send: float = -6.0,
+                   prefix: str = 'choir', **choir) -> 'Choir':
+    """A real SATB choir in `band`'s hall: the vocalset-choir pack (wordless vowels from the 20 VocalSet singers, CC BY
+    4.0 - the credits print the attribution), one track per part and vowel ('<prefix>_<part>_<vowel>', lower case;
+    every singer already seated in the pack's hall: no pan) with the prototype's eq and distance, `gain_db` and a
+    send of `send` dB into the band's 'hall' bus -> an orch.Choir on the 'dynamics' lane (the p / mf / f layers
+    crossfade on CC1; keys '<PART>_<vowel>': choir.sing('S_ah', notes) / Score.sing(choir, 'S_ah', notes); choir=
+    overrides the Choir's options)."""
+    from .scoring import Choir
+    _require('vocalset_choir', VOCALSET)
+    bad = sorted(set(vowels) - set(VOCALSET_VOWELS)) + sorted(set(parts) - set(VOCALSET_PARTS))
+    if bad:
+        raise ComposeError(f"vocalset_choir: unknown vowels / parts {bad}; vowels {VOCALSET_VOWELS}, parts "
+                           f"{tuple(VOCALSET_PARTS)}")
+    hall = band.buses.get('hall')
+    tracks = {}
+    for p in parts:
+        eq = dict(VOCALSET_EQ, **({'hp.freq': 70} if p in 'TB' else {}))
+        for v in vowels:
+            tracks[f'{p}_{v}'] = song.track(f'{prefix}_{p.lower()}_{v}', inst.sfz(f'samples/{VOCALSET}/{p}_{v}.sfz',
+                                                                               lazy=True),
+                                            pan=0.0, gain_db=gain_db, sends={hall: send} if hall is not None else None,
+                                            fx=[fx.eq(eq), fx.eq(dict(VOCALSET_DISTANCE))])
+    opts = dict(lane='dynamics', speak=112, spread=0.15, swell_s=3.5)
+    opts.update(choir)
+    return Choir(song, tracks, **opts)
 
 
 # --------------------------------------------------------------------------------------------- church organ
@@ -1177,13 +1352,15 @@ _REG_ROLE = {
 
 
 def church_organ(song, *, without=(), sounds=None, ids=None, organ: str = 'burea', tremulant=False,
-                 registers=(), **options) -> Band:
+                 registers=(), hall=None, **options) -> Band:
     """Church organ: Lars Palo GrandOrgue registrations (soft / principal / full + pedal) in a big church.
     organ='burea' (default) or 'pitea'; tremulant=True puts the swell's tremulant on (its roles: 'soft' and the
     Svallverk registers) - or a tuple of roles that get it (one register's tremulant: the meditation's oboe, not
     its strings). registers: further registrations as roles (ORGAN_REGISTERS; 'all' = every one) - each on
     its division (band.info['division']; two roles of one division never sound at once: one manual, one
-    registration); the Svallverk roles stand in the swell box (band.info['swell']: orch.swell() opens / closes it)."""
+    registration); the Svallverk roles stand in the swell box (band.info['swell']: orch.swell() opens / closes it).
+    hall: another band's hall bus to seat the organ in (an organ with the orchestra: one room) instead of its own
+    church."""
     _unknown(options, 'church_organ', ())
     if organ not in _ORGANS:
         raise ComposeError(f"church_organ: organ must be one of {', '.join(_ORGANS)}, got {organ!r}")
@@ -1237,12 +1414,66 @@ def church_organ(song, *, without=(), sounds=None, ids=None, organ: str = 'burea
     band = _build(song, 'church_organ', table, without=without, sounds=sounds, ids=ids, hall_kind='church',
                   hall_fallback=dict(decay=4.0, predelay=20, lowcut=150, highcut=8000, damping=5000, width=1.3,
                                      size=1.0),
-                  analysis={'profile': 'classical'}, notes=_ORGAN_NOTES)
+                  analysis={'profile': 'classical'}, notes=_ORGAN_NOTES, hall=hall)
     band.info['organ'] = organ
     band.info['division'] = {r: div[r] for r in band.roles}
     band.info['swell'] = [r for r in band.roles if div[r] == 'Svallverk']
     band.info['tremulant'] = [r for r in band.roles if trembles(r)]
     return band
+
+
+# --------------------------------------------------------------------------------------------- guest colours
+
+def _patch_sound(name: str):
+    """A registered patch's instrument (its calibrated level and round robins; the preset seats it: no patch sends)."""
+    def make():
+        from .. import patches
+        return patches.get(name).instrument
+    return make
+
+
+GUESTS = {
+    'guitar': ('freepats-spanish-classical-guitar', _Role(
+        _patch_sound('sampled/nylon_guitar'), pan=0.06, width=0.6, send=-11.0, hp=75, gain=-3.0, rng=('E2', 'B5'),
+        sweet=('E2', 'E5'), kind='struck', eq={'peak1.freq': 250, 'peak1.gain': -2.0, 'peak1.q': 0.9,
+                                              'peak3.freq': 3200, 'peak3.gain': 1.5, 'peak3.q': 0.8},
+        desc='FreePats Spanish classical guitar (CC0), the soloist close and centred')),
+    'harpsichord': ('vcsl', _Role(
+        _patch_sound('sampled/harpsichord'), pan=-0.12, width=0.6, send=-9.0, hp=60, gain=-10.0, rng=('F1', 'C6'),
+        sweet=('C2', 'C6'), arts=('8ft', 'full', '4ft'), kind='struck',
+        desc="VCSL Flemish harpsichord (CC0): registrations 8ft / full (8' + 4') / 4ft")),
+    'celesta': ('sso', _Role(
+        _sfz(SSO + 'Percussion/Celeste.sfz', polyphony=64), pan=-0.3, width=0.6, send=-5.0, hp=150, gain=-1.5,
+        rng=('C4', 'C8'), sweet=('C5', 'C7'), kind='struck', desc='SSO 4.0 celesta')),
+    'glockenspiel': ('vcsl', _Role(
+        _patch_sound('sampled/glockenspiel'), pan=0.24, width=0.5, send=-5.0, hp=400, gain=-4.0,
+        rng=('G5', 'C8'), sweet=('C6', 'C8'), kind='struck', desc='VCSL glockenspiel (CC0; sounding pitch)')),
+    'bells': ('vcsl', _Role(
+        _patch_sound('sampled/tubular_bells'), pan=0.3, width=0.6, send=-4.0, hp=120, gain=-1.0,
+        rng=('C4', 'G5'), sweet=('C4', 'G5'), kind='struck', desc='VCSL tubular bells (CC0)')),
+}
+"""The guest colours a symphonic piece can be built around (round ox1, endless.colour): role -> (pack, how it sits).
+Every one a struck / plucked instrument (velocity = dynamics); their faders sit on the endless band's scale (+ the
+band's 'gain'); the organ is church_organ(hall=...) itself."""
+
+
+def guests(song, roles, *, hall=None, gain_db: float = 0.0, ids=None) -> Band:
+    """Guest colour instruments (GUESTS: guitar, harpsichord, celesta, glockenspiel, bells) as a band of their own,
+    seated in `hall` (another band's hall bus: the orchestra's room) - a soloist / continuo / bell part beside an
+    orchestra. gain_db on every role (the host band's 'gain')."""
+    bad = sorted(set(roles) - set(GUESTS))
+    if bad:
+        raise ComposeError(f"guests: unknown roles {bad}; roles: {', '.join(GUESTS)}")
+    table = {}
+    for r in roles:
+        pack, role = GUESTS[r]
+        _require('guests', pack)
+        table[r] = _Role(**{f: getattr(role, f) for f in role.__dataclass_fields__})
+        table[r].gain = role.gain + gain_db
+    return _build(song, 'guests', table, without=(), sounds=None, ids=ids, hall_kind='concert',
+                  hall_fallback=dict(decay=2.1, predelay=22, lowcut=110, highcut=9000, damping=6000, width=1.2,
+                                     size=0.85),
+                  analysis={'profile': 'classical'}, notes='Guest colours beside an orchestra.', hall=hall)
 
 
 # --------------------------------------------------------------------------------------------- playing helpers
@@ -1343,27 +1574,66 @@ def lead(clip, bpm, ms: float, *, long=0.75) -> Clip:
     `ms` earlier, their ends kept: slow sample attacks then SOUND on the beat. Shorts (staccato, pizzicato ...)
     stay. Marks are kept. bpm: a number, a function beat -> BPM (song.tempo_at) or a TempoMap (song.tempo_map(): the
     ms are real time before each note, exact across tempo changes and fermatas - perform() passes it). Positions are clamped at 0: shift a part into
-    song time (or use perform()) so a note on a section's downbeat can move early too."""
+    song time (or use perform()) so a note on a section's downbeat can move early too.
+    The song's start: a note that cannot move early enough (clamped at 0) is not overtaken - the long notes after it
+    keep at least LEAD_KEEP of their written distance from the note before them, and at least LEAD_FLOOR seconds of
+    it (all of a shorter one), until the full lead is reached (a run starting at 0 was played as a flam: its first
+    note squeezed to 38 ms under the second's onset and rendered silent, round o6's gate; a 16th pickup kept 76 ms)."""
     c = as_clip(clip)
     if not ms:
         return c
     if hasattr(bpm, 'seconds_at'):                 # a TempoMap: exact through tempo changes / fermatas before
-        def early(b):
-            return max(0.0, bpm.beat_at(max(0.0, bpm.seconds_at(b) - float(ms) / 1000.0)))
+        def raw(b):
+            s = bpm.seconds_at(b) - float(ms) / 1000.0
+            return bpm.beat_at(s) if s >= 0.0 else -1.0
+
+        def secs(b0, b1):
+            return bpm.seconds_at(b1) - bpm.seconds_at(b0)
     else:
         at = bpm if callable(bpm) else (lambda b: float(bpm))
 
-        def early(b):
-            return max(0.0, b - float(ms) / 1000.0 * float(at(b)) / 60.0)
-    out = []
-    for n in c:
+        def raw(b):
+            return b - float(ms) / 1000.0 * float(at(b)) / 60.0
+
+        def secs(b0, b1):
+            return (b1 - b0) * 60.0 / float(at(b0))
+
+    def is_long(n):
         a = art.articulation_of(n)
-        if (n.dur >= long - 1e-9 and not art.detached(n)) or (isinstance(a, str) and a in ('sustain', 'legato')):
-            start = early(n.start)
+        return (n.dur >= long - 1e-9 and not art.detached(n)) or (isinstance(a, str) and a in ('sustain', 'legato'))
+    longs = [is_long(n) for n in c]
+    led = {round(n.start, 9): raw(n.start) for n, lg in zip(c, longs) if lg}
+    if any(v < 0.0 for v in led.values()):         # (only at the song's start: the chain below)
+        onsets = sorted({round(n.start, 9) for n in c})
+        p_prev = t_prev = None
+        held = False
+        for t in onsets:
+            if t not in led:                           # a short at its written time ends the chain
+                p_prev, t_prev, held = t, t, False
+                continue
+            p = max(0.0, led[t])
+            clamped = led[t] < p
+            if held and p_prev is not None:
+                keep = max(LEAD_KEEP, min(1.0, LEAD_FLOOR / max(1e-9, secs(t_prev, t))))
+                q = p_prev + keep * (t - t_prev)
+                if q > p:
+                    p, clamped = min(q, t), True
+            led[t] = p
+            p_prev, t_prev, held = p, t, clamped
+    out = []
+    for n, lg in zip(c, longs):
+        if lg:
+            start = max(0.0, led[round(n.start, 9)])
             out.append(n._replace(start=start, dur=n.dur + (n.start - start)))
         else:
             out.append(n)
     return Clip._raw(out, c.length)
+
+
+LEAD_KEEP = 0.75
+"""lead(): at the song's start, the share of the written distance a long note keeps from a clamped note before it."""
+LEAD_FLOOR = 0.15
+"""lead(): ... and the seconds of it it keeps at least (a fast pickup at 0 sounds whole: the gate's silent-note span)."""
 
 
 def rebow(clip, bpm: float, max_seconds: float = 6.0, gap_ms: float = 30.0) -> Clip:
@@ -1538,7 +1808,14 @@ ROLE_TRAITS = {
     # the orchestrator's instrument table (bandlib/orchestration.py), next to each preset's range / sweet spot:
     # family; agility 0..1 (fast notes: 8ths and quicker lines); power (what the section adds to a tutti, ~a string
     # section line = 1); the functions it is good at {function: weight} (a texture's pick is weighted by them); its
-    # doubling partners (unison / octave colours that blend with it); breath (a wind: phrases need breaths)
+    # doubling partners (unison / octave colours that blend with it); breath (a wind: phrases need breaths). The
+    # IDIOM, read under orchestration.RULES['idiom'] (the symphonic plans; round q1's orchestrator: trombones over
+    # Bb4 and bassoons over C5 against the brass, horns given running 16ths): 'top' the idiomatic ceiling (the role's
+    # range ends there), 'run' the fastest notes it plays in a row (seconds: three onsets in a row closer than this
+    # are no line for it - the line goes to another role of the slot); 'bottom' the idiomatic floor (round o3's
+    # orchestrators: basses under E1 - no extension -, a flute under G4 under the horns; horns over D5 and trumpets over
+    # C6 at the climax - 'top' for them too; round o4: the flutes' A6 - B6 / C7 as the tutti's top); 'tune' the
+    # lowest note of a tune it carries (round o5: trumpets "carrying tunes at Bb3-Eb4" - their harmony may go lower)
     'violins1': {'family': 'strings', 'agility': 0.9, 'power': 1.0, 'breath': False,
                  'functions': {'melody': 1.0, 'counter': 0.6, 'harmony': 0.6, 'ostinato': 0.7, 'colour': 0.6,
                                'voice': 1.0, 'doubling': 1.0, 'pedal': 0.4},
@@ -1555,10 +1832,10 @@ ROLE_TRAITS = {
                'functions': {'melody': 0.8, 'counter': 1.0, 'harmony': 0.7, 'bass': 1.0, 'ostinato': 0.8,
                              'voice': 1.0, 'doubling': 0.8, 'pedal': 0.8},
                'partners': ('basses', 'bassoons', 'horns', 'violas')},
-    'basses': {'family': 'strings', 'agility': 0.4, 'power': 0.9, 'breath': False,
+    'basses': {'family': 'strings', 'agility': 0.4, 'power': 0.9, 'breath': False, 'bottom': 'E1',
                'functions': {'bass': 1.0, 'pedal': 1.0, 'doubling': 0.6, 'voice': 0.5},
                'partners': ('cellos', 'bassoons', 'tuba')},
-    'flutes': {'family': 'woodwinds', 'agility': 1.0, 'power': 0.5, 'breath': True,
+    'flutes': {'family': 'woodwinds', 'agility': 1.0, 'power': 0.5, 'breath': True, 'bottom': 'G4', 'top': 'A6',
                'functions': {'melody': 1.0, 'counter': 0.6, 'colour': 1.0, 'harmony': 0.5, 'voice': 0.8,
                              'doubling': 1.0},
                'partners': ('violins1', 'oboes', 'clarinets')},
@@ -1569,21 +1846,21 @@ ROLE_TRAITS = {
                   'functions': {'melody': 0.9, 'counter': 0.8, 'harmony': 0.9, 'inner': 0.9, 'colour': 0.7,
                                 'voice': 0.8, 'doubling': 0.8},
                   'partners': ('violas', 'flutes', 'oboes', 'violins2')},
-    'bassoons': {'family': 'woodwinds', 'agility': 0.7, 'power': 0.5, 'breath': True,
+    'bassoons': {'family': 'woodwinds', 'agility': 0.7, 'power': 0.5, 'breath': True, 'top': 'C5',
                  'functions': {'melody': 0.4, 'counter': 0.7, 'harmony': 0.8, 'bass': 0.8, 'voice': 0.7,
                                'doubling': 0.8},
                  'partners': ('cellos', 'horns', 'clarinets')},
-    'horns': {'family': 'brass', 'agility': 0.45, 'power': 1.6, 'breath': True,
+    'horns': {'family': 'brass', 'agility': 0.45, 'power': 1.6, 'breath': True, 'run': 0.2, 'top': 'D5',
               'functions': {'melody': 0.8, 'counter': 0.9, 'harmony': 1.0, 'pedal': 0.8, 'doubling': 0.9,
                             'voice': 0.6},
               'partners': ('cellos', 'bassoons', 'violas', 'trombones')},
-    'trumpets': {'family': 'brass', 'agility': 0.5, 'power': 2.0, 'breath': True,
+    'trumpets': {'family': 'brass', 'agility': 0.5, 'power': 2.0, 'breath': True, 'run': 0.14, 'top': 'C6', 'tune': 'G4',
                  'functions': {'melody': 0.5, 'harmony': 1.0, 'doubling': 0.6},
                  'partners': ('horns', 'trombones', 'violins1')},
-    'trombones': {'family': 'brass', 'agility': 0.35, 'power': 2.0, 'breath': True,
+    'trombones': {'family': 'brass', 'agility': 0.35, 'power': 2.0, 'breath': True, 'top': 'A#4', 'run': 0.2,
                   'functions': {'harmony': 1.0, 'bass': 0.5, 'doubling': 0.5},
                   'partners': ('horns', 'tuba', 'trumpets')},
-    'tuba': {'family': 'brass', 'agility': 0.25, 'power': 1.6, 'breath': True,
+    'tuba': {'family': 'brass', 'agility': 0.25, 'power': 1.6, 'breath': True, 'run': 0.25,
              'functions': {'bass': 1.0, 'pedal': 0.7, 'doubling': 0.5},
              'partners': ('basses', 'trombones')},
     'low_brass': {'family': 'brass', 'agility': 0.25, 'power': 1.8, 'breath': True,
@@ -1609,6 +1886,8 @@ ROLE_TRAITS = {
 """The orchestrator's instrument table, per role name (the same names in every orchestra preset): family, agility,
 power, the functions it suits (weights multiplied into a texture's picks), doubling partners, breath. Range and
 sweet spot are the preset's own (role_table(preset), band.info['range'] / ['sweet'])."""
+for _solo, _sec in SOLOS.items():          # (the solo players: their section's traits, one player's power)
+    ROLE_TRAITS[_solo] = dict(ROLE_TRAITS[_sec], power=round(ROLE_TRAITS[_sec]['power'] * 0.5, 2), partners=())
 
 _PRESET_TABLES = {'symphony_orchestra': lambda: _symphony_table(), 'film_orchestra': lambda: _film_table(False),
                   'chamber_orchestra': lambda: _chamber_table()}

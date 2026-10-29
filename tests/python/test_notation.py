@@ -410,7 +410,8 @@ class EverySong(unittest.TestCase):
     plus every song with uncommitted changes (compiling all songs takes ~30 min); AGENTSOUND_FULL_TESTS=1
     (`tests/run.py --full`) checks all of them."""
 
-    SKIP = {'kestrel-bay', 'afterglow-express', 'last-table-on-hudson', 'last-train-blue-hour'}
+    SKIP = {'kestrel-bay', 'afterglow-express', 'last-table-on-hudson', 'last-train-blue-hour',
+            '_choir_proto'}   # the neural-choir prototype: its pack is rendered locally (D:/tmp/choir_proto), never shipped
     SAMPLE = 6
 
     def pick(self, songs):

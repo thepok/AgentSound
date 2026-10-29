@@ -48,7 +48,10 @@ VEL = {'ppp': 16, 'pp': 28, 'p': 40, 'mp': 58, 'mf': 78, 'f': 95, 'ff': 115, 'ff
 """Dynamic markings -> velocities (the levels orch.perform reads: 40 p, 78 mf, 95 f, 115 ff)."""
 
 PHRASING = {'violins1': 0.9, 'violins2': 0.7, 'violas': 0.5, 'cellos': 0.6, 'basses': 0.4, 'flutes': 0.8,
-            'oboes': 0.8, 'clarinets': 0.7, 'bassoons': 0.6, 'horns': 0.5}
+            'oboes': 0.8, 'clarinets': 0.7, 'bassoons': 0.6, 'horns': 0.5,
+            # (the symphony's solo players, orch.SOLOS: a principal shapes a phrase more than a section)
+            'flute_solo': 1.0, 'oboe_solo': 1.0, 'clarinet_solo': 0.9, 'bassoon_solo': 0.8, 'horn_solo': 0.7,
+            'violin_solo': 1.0, 'cello_solo': 0.9, 'violin_concertmaster': 0.9}
 """How much of a phrase's arc (humanize.touch) each role's lines get on top of the map: k x (touch - 60)."""
 
 FALLBACK = {'marcato': 'sustain', 'tremolo': 'sustain', 'pizzicato': 'staccato', 'spiccato': 'staccato'}

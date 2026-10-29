@@ -34,8 +34,9 @@ class Table(unittest.TestCase):
                 self.assertIn(len(spec), (4, 5), (style, k))
                 lo, hi, w, hard = spec[:4]
                 self.assertLessEqual(lo, hi, (style, k))
-                self.assertGreater(w, 0, (style, k))
                 self.assertIsInstance(hard, bool, (style, k))
+                # (weight 0: an assertion that ranks nothing - a hard gate only, genres.SYMPHONY_GATES)
+                self.assertTrue(w > 0 or (w == 0 and hard), (style, k))
                 if len(spec) == 5:
                     self.assertGreater(spec[4], 0, (style, k))
                 else:
@@ -118,8 +119,8 @@ def check_baseline():
 class MetricParity(unittest.TestCase):
     """Captured on master 7d9fce9 before the NoteView refactor; exact metrics and rankings."""
     def test_master_metrics_scores_and_candidate_order(self):
-        # perform's modal LH figure uses set iteration to break ties: fix the hash seed
-        # in both the master capture and this measurement, without changing composition.
+        # the hash seed stays fixed as in the master capture (perform's modal LH figure now breaks ties by first use)
+        # so the comparison is like for like.
         code = "import sys; sys.path.insert(0, 'tests/python'); from test_endless_score import check_baseline; check_baseline()"
         checked = subprocess.run([sys.executable, '-c', code], cwd=ROOT,
                                  env=dict(os.environ, PYTHONHASHSEED='0'), capture_output=True, text=True)
