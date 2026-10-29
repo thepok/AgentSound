@@ -1,0 +1,2533 @@
+{
+ "title": "Iron Banners",
+ "genre": "orchestra-symphonic",
+ "mood": "lyrical",
+ "seed": 27110,
+ "key": "F major",
+ "tempo": 76,
+ "meter": "4/4",
+ "feel": "andante",
+ "swing": null,
+ "form": "variations",
+ "parts": [
+  "theme",
+  "var1",
+  "var2",
+  "var3",
+  "dev1",
+  "retrans",
+  "recap",
+  "coda",
+  "end"
+ ],
+ "blocks": {},
+ "changes": {
+  "theme": "F:1 Dm:1 Gm:1 C7:1 Dm:0.5 C7:0.5 F:0.5 Dm:0.5 Gm:0.5 C:0.5 F:1",
+  "var1": "F:1 Dm:0.5 C7:0.5 Dm:0.5 Gm:0.5 C7:1 Dm:0.5 C:0.5 F:1",
+  "var2": "F:1 Dm:1 Gm:0.5 C:0.5 F:1",
+  "var3": "Fm:1 Db:1 Gdim:1 C7:1 Db:0.5 Bbm:0.5 Fm:0.5 Db:0.5 Gdim:0.5 C:0.5 Fm:1",
+  "dev1": "Dm:1 F7:1 Bb:1 D7:1 Gm:1 G7:1 C:1 A7:1 Dm:1 F7:1 Bb:1 D7:1 Gm:1 G7:1 C:1 A7:1 Dm:1 F7:1 Bb:1 C7:1",
+  "retrans": "C:1 F/C:1 C7:1 Bb/C:1 C:1 C7:1",
+  "recap": "Fm:1 Db:0.5 C:0.5 Fm:0.5 Bbm:0.5 C:1 Db:1 Gdim:1 C7:0.5 Fm:0.5 Db:1 Gdim:0.5 C:0.5 Fm:1",
+  "coda": "F:1 Bb:1 F:1 C7:1 F:1",
+  "end": "F:1 Bb:1 F/C:0.5 C7:0.5 F:2"
+ },
+ "lead_sheet": [
+  "theme | F | Dm | Gm | C7 | Dm(0.5) C7(0.5) | F(0.5) Dm(0.5) | Gm(0.5) C(0.5) | F |",
+  "var1 | F | Dm(0.5) C7(0.5) | Dm(0.5) Gm(0.5) | C7 | Dm(0.5) C(0.5) | F |",
+  "var2 | F | Dm | Gm(0.5) C(0.5) | F |",
+  "var3 | Fm | Db | Gdim | C7 | Db(0.5) Bbm(0.5) | Fm(0.5) Db(0.5) | Gdim(0.5) C(0.5) | Fm |",
+  "dev1 | Dm | F7 | Bb | D7 | Gm | G7 | C | A7 | Dm | F7 | Bb | D7 | Gm | G7 | C | A7 | Dm | F7 | Bb | C7 |",
+  "retrans | C | F/C | C7 | Bb/C | C | C7 |",
+  "recap | Fm | Db(0.5) C(0.5) | Fm(0.5) Bbm(0.5) | C | Db | Gdim | C7(0.5) Fm(0.5) | Db | Gdim(0.5) C(0.5) | Fm |",
+  "coda | F | Bb | F | C7 | F |",
+  "end  | F | Bb | F/C(0.5) C7(0.5) | F | % |"
+ ],
+ "melody": {
+  "theme": [
+   [
+    0.0,
+    1.5,
+    "C5"
+   ],
+   [
+    1.5,
+    0.5,
+    "A#4"
+   ],
+   [
+    2.0,
+    0.75,
+    "F5"
+   ],
+   [
+    2.75,
+    0.25,
+    "E5"
+   ],
+   [
+    3.0,
+    3.5,
+    "A4"
+   ],
+   [
+    8.0,
+    1.5,
+    "D5"
+   ],
+   [
+    9.5,
+    0.5,
+    "C5"
+   ],
+   [
+    10.0,
+    0.75,
+    "G5"
+   ],
+   [
+    10.75,
+    0.25,
+    "F5"
+   ],
+   [
+    11.0,
+    3.5,
+    "A#4"
+   ],
+   [
+    16.0,
+    1.5,
+    "D5"
+   ],
+   [
+    17.5,
+    0.5,
+    "C5"
+   ],
+   [
+    18.0,
+    0.5,
+    "A#4"
+   ],
+   [
+    18.5,
+    0.5,
+    "C5"
+   ],
+   [
+    19.0,
+    0.5,
+    "D5"
+   ],
+   [
+    19.5,
+    0.5,
+    "E5"
+   ],
+   [
+    20.0,
+    1.5,
+    "F5"
+   ],
+   [
+    21.5,
+    0.5,
+    "G5"
+   ],
+   [
+    22.0,
+    0.5,
+    "F5"
+   ],
+   [
+    22.5,
+    0.5,
+    "E5"
+   ],
+   [
+    23.0,
+    0.5,
+    "F5"
+   ],
+   [
+    23.5,
+    0.5,
+    "G5"
+   ],
+   [
+    24.0,
+    0.5,
+    "G5"
+   ],
+   [
+    24.5,
+    0.5,
+    "A5"
+   ],
+   [
+    25.0,
+    0.5,
+    "A#5"
+   ],
+   [
+    25.5,
+    0.5,
+    "C6"
+   ],
+   [
+    26.0,
+    0.5,
+    "C6"
+   ],
+   [
+    26.5,
+    0.5,
+    "A5"
+   ],
+   [
+    27.0,
+    0.5,
+    "G5"
+   ],
+   [
+    27.5,
+    0.5,
+    "F5"
+   ],
+   [
+    28.0,
+    4.0,
+    "F5"
+   ]
+  ],
+  "var1": [
+   [
+    0.0,
+    0.75,
+    "C5"
+   ],
+   [
+    0.75,
+    0.25,
+    "A#4"
+   ],
+   [
+    1.0,
+    0.25,
+    "A4"
+   ],
+   [
+    1.25,
+    0.25,
+    "A#4"
+   ],
+   [
+    1.5,
+    0.5,
+    "A#4"
+   ],
+   [
+    2.0,
+    0.75,
+    "F5"
+   ],
+   [
+    2.75,
+    0.25,
+    "E5"
+   ],
+   [
+    3.0,
+    1.75,
+    "A4"
+   ],
+   [
+    4.75,
+    0.5,
+    "A#4"
+   ],
+   [
+    5.25,
+    0.5,
+    "D5"
+   ],
+   [
+    5.75,
+    0.5,
+    "A#4"
+   ],
+   [
+    6.25,
+    0.5,
+    "C5"
+   ],
+   [
+    8.0,
+    0.75,
+    "D5"
+   ],
+   [
+    8.75,
+    0.25,
+    "F5"
+   ],
+   [
+    9.0,
+    0.25,
+    "D5"
+   ],
+   [
+    9.25,
+    0.25,
+    "C5"
+   ],
+   [
+    9.5,
+    0.5,
+    "C5"
+   ],
+   [
+    10.0,
+    0.75,
+    "G5"
+   ],
+   [
+    10.75,
+    0.25,
+    "F5"
+   ],
+   [
+    11.0,
+    1.75,
+    "A#4"
+   ],
+   [
+    12.75,
+    0.5,
+    "C5"
+   ],
+   [
+    13.25,
+    0.5,
+    "E5"
+   ],
+   [
+    13.75,
+    0.5,
+    "C5"
+   ],
+   [
+    14.25,
+    0.5,
+    "D5"
+   ],
+   [
+    16.0,
+    0.75,
+    "D5"
+   ],
+   [
+    16.75,
+    0.25,
+    "C5"
+   ],
+   [
+    17.0,
+    0.25,
+    "A4"
+   ],
+   [
+    17.25,
+    0.25,
+    "C5"
+   ],
+   [
+    17.5,
+    0.5,
+    "C5"
+   ],
+   [
+    18.0,
+    0.5,
+    "C5"
+   ],
+   [
+    18.5,
+    0.5,
+    "C5"
+   ],
+   [
+    19.0,
+    0.5,
+    "D5"
+   ],
+   [
+    19.5,
+    0.5,
+    "E5"
+   ],
+   [
+    20.0,
+    0.75,
+    "F5"
+   ],
+   [
+    20.75,
+    0.25,
+    "G5"
+   ],
+   [
+    21.0,
+    0.25,
+    "A5"
+   ],
+   [
+    21.25,
+    0.25,
+    "G5"
+   ],
+   [
+    21.5,
+    0.5,
+    "G5"
+   ],
+   [
+    22.0,
+    0.5,
+    "F5"
+   ],
+   [
+    22.5,
+    0.5,
+    "E5"
+   ],
+   [
+    23.0,
+    0.5,
+    "F5"
+   ],
+   [
+    23.5,
+    0.5,
+    "G5"
+   ]
+  ],
+  "var2": [
+   [
+    0.0,
+    1.5,
+    "C5"
+   ],
+   [
+    1.5,
+    0.5,
+    "A#4"
+   ],
+   [
+    2.0,
+    0.75,
+    "F5"
+   ],
+   [
+    2.75,
+    0.25,
+    "E5"
+   ],
+   [
+    3.0,
+    3.5,
+    "A4"
+   ],
+   [
+    8.0,
+    1.5,
+    "D5"
+   ],
+   [
+    9.5,
+    0.5,
+    "C5"
+   ],
+   [
+    10.0,
+    0.75,
+    "G5"
+   ],
+   [
+    10.75,
+    0.25,
+    "F5"
+   ],
+   [
+    11.0,
+    3.5,
+    "C5"
+   ]
+  ],
+  "var3": [
+   [
+    0.0,
+    1.5,
+    "C5"
+   ],
+   [
+    1.5,
+    0.5,
+    "A#4"
+   ],
+   [
+    2.0,
+    0.75,
+    "F5"
+   ],
+   [
+    2.75,
+    0.25,
+    "D#5"
+   ],
+   [
+    3.0,
+    3.5,
+    "G#4"
+   ],
+   [
+    8.0,
+    1.5,
+    "C#5"
+   ],
+   [
+    9.5,
+    0.5,
+    "C5"
+   ],
+   [
+    10.0,
+    0.75,
+    "G5"
+   ],
+   [
+    10.75,
+    0.25,
+    "F5"
+   ],
+   [
+    11.0,
+    3.5,
+    "A#4"
+   ],
+   [
+    16.0,
+    1.5,
+    "C#5"
+   ],
+   [
+    17.5,
+    0.5,
+    "C5"
+   ],
+   [
+    18.0,
+    0.5,
+    "A#4"
+   ],
+   [
+    18.5,
+    0.5,
+    "C5"
+   ],
+   [
+    19.0,
+    0.5,
+    "C#5"
+   ],
+   [
+    19.5,
+    0.5,
+    "D#5"
+   ],
+   [
+    20.0,
+    1.5,
+    "F5"
+   ],
+   [
+    21.5,
+    0.5,
+    "G5"
+   ],
+   [
+    22.0,
+    0.5,
+    "F5"
+   ],
+   [
+    22.5,
+    0.5,
+    "D#5"
+   ],
+   [
+    23.0,
+    0.5,
+    "F5"
+   ],
+   [
+    23.5,
+    0.5,
+    "G5"
+   ],
+   [
+    24.0,
+    0.5,
+    "G5"
+   ],
+   [
+    24.5,
+    0.5,
+    "G#5"
+   ],
+   [
+    25.0,
+    0.5,
+    "A#5"
+   ],
+   [
+    25.5,
+    0.5,
+    "C6"
+   ],
+   [
+    26.0,
+    0.5,
+    "C6"
+   ],
+   [
+    26.5,
+    0.5,
+    "G#5"
+   ],
+   [
+    27.0,
+    0.5,
+    "G5"
+   ],
+   [
+    27.5,
+    0.5,
+    "F5"
+   ],
+   [
+    28.0,
+    4.0,
+    "F5"
+   ]
+  ],
+  "dev1": [
+   [
+    0.0,
+    1.5,
+    "A2"
+   ],
+   [
+    1.5,
+    0.5,
+    "G2"
+   ],
+   [
+    2.0,
+    0.75,
+    "D3"
+   ],
+   [
+    2.75,
+    0.25,
+    "C3"
+   ],
+   [
+    3.0,
+    1.0,
+    "F2"
+   ],
+   [
+    8.0,
+    1.5,
+    "F3"
+   ],
+   [
+    9.5,
+    0.5,
+    "D#3"
+   ],
+   [
+    10.0,
+    0.75,
+    "A#3"
+   ],
+   [
+    10.75,
+    0.25,
+    "A3"
+   ],
+   [
+    11.0,
+    1.0,
+    "D3"
+   ],
+   [
+    16.0,
+    1.5,
+    "D3"
+   ],
+   [
+    17.5,
+    0.5,
+    "C3"
+   ],
+   [
+    18.0,
+    0.75,
+    "G3"
+   ],
+   [
+    18.75,
+    0.25,
+    "F3"
+   ],
+   [
+    19.0,
+    1.0,
+    "A#2"
+   ],
+   [
+    24.0,
+    1.5,
+    "G3"
+   ],
+   [
+    25.5,
+    0.5,
+    "A3"
+   ],
+   [
+    26.0,
+    0.75,
+    "D3"
+   ],
+   [
+    26.75,
+    0.25,
+    "E3"
+   ],
+   [
+    27.0,
+    0.75,
+    "B3"
+   ],
+   [
+    32.0,
+    1.5,
+    "A3"
+   ],
+   [
+    33.5,
+    0.5,
+    "G3"
+   ],
+   [
+    34.0,
+    0.75,
+    "D4"
+   ],
+   [
+    34.75,
+    0.25,
+    "C4"
+   ],
+   [
+    35.0,
+    0.75,
+    "F3"
+   ],
+   [
+    40.0,
+    1.5,
+    "F3"
+   ],
+   [
+    41.5,
+    0.5,
+    "G3"
+   ],
+   [
+    42.0,
+    0.75,
+    "C3"
+   ],
+   [
+    42.75,
+    0.25,
+    "D3"
+   ],
+   [
+    43.0,
+    0.75,
+    "A3"
+   ],
+   [
+    48.0,
+    1.5,
+    "D3"
+   ],
+   [
+    49.5,
+    0.5,
+    "C3"
+   ],
+   [
+    50.0,
+    0.75,
+    "G3"
+   ],
+   [
+    50.75,
+    0.25,
+    "F3"
+   ],
+   [
+    51.0,
+    0.75,
+    "A#2"
+   ],
+   [
+    52.0,
+    1.5,
+    "F3"
+   ],
+   [
+    53.5,
+    0.5,
+    "G3"
+   ],
+   [
+    54.0,
+    0.75,
+    "C3"
+   ],
+   [
+    54.75,
+    0.25,
+    "D3"
+   ],
+   [
+    55.0,
+    0.75,
+    "A3"
+   ],
+   [
+    56.0,
+    1.5,
+    "G3"
+   ],
+   [
+    57.5,
+    0.5,
+    "A3"
+   ],
+   [
+    58.0,
+    0.75,
+    "D3"
+   ],
+   [
+    58.75,
+    0.25,
+    "E3"
+   ],
+   [
+    59.0,
+    0.75,
+    "B3"
+   ],
+   [
+    60.0,
+    1.5,
+    "A3"
+   ],
+   [
+    61.5,
+    0.5,
+    "G3"
+   ],
+   [
+    62.0,
+    0.75,
+    "D4"
+   ],
+   [
+    62.75,
+    0.25,
+    "C#4"
+   ],
+   [
+    63.0,
+    0.75,
+    "F3"
+   ],
+   [
+    64.0,
+    1.5,
+    "A3"
+   ],
+   [
+    65.5,
+    0.5,
+    "G3"
+   ],
+   [
+    66.0,
+    0.75,
+    "D4"
+   ],
+   [
+    66.75,
+    0.25,
+    "C4"
+   ],
+   [
+    67.0,
+    0.75,
+    "F3"
+   ],
+   [
+    68.0,
+    1.5,
+    "A3"
+   ],
+   [
+    69.5,
+    0.5,
+    "A#3"
+   ],
+   [
+    70.0,
+    0.75,
+    "D#3"
+   ],
+   [
+    70.75,
+    0.25,
+    "F3"
+   ],
+   [
+    71.0,
+    0.75,
+    "C4"
+   ],
+   [
+    72.0,
+    0.75,
+    "F3"
+   ],
+   [
+    72.75,
+    0.25,
+    "F3"
+   ],
+   [
+    74.0,
+    0.75,
+    "A3"
+   ],
+   [
+    74.75,
+    0.25,
+    "G3"
+   ],
+   [
+    76.0,
+    0.75,
+    "A#3"
+   ],
+   [
+    76.75,
+    0.25,
+    "A3"
+   ],
+   [
+    78.0,
+    0.75,
+    "C4"
+   ],
+   [
+    78.75,
+    0.25,
+    "A#3"
+   ]
+  ],
+  "retrans": [
+   [
+    0.0,
+    1.5,
+    "G2"
+   ],
+   [
+    1.5,
+    0.5,
+    "F2"
+   ],
+   [
+    2.0,
+    0.75,
+    "C3"
+   ],
+   [
+    2.75,
+    0.25,
+    "A#2"
+   ],
+   [
+    3.0,
+    1.0,
+    "E2"
+   ],
+   [
+    8.0,
+    1.5,
+    "A#2"
+   ],
+   [
+    9.5,
+    0.5,
+    "A2"
+   ],
+   [
+    10.0,
+    0.75,
+    "E3"
+   ],
+   [
+    10.75,
+    0.25,
+    "D3"
+   ],
+   [
+    11.0,
+    1.0,
+    "G2"
+   ],
+   [
+    16.0,
+    1.5,
+    "C3"
+   ],
+   [
+    17.5,
+    0.5,
+    "C3"
+   ],
+   [
+    18.0,
+    0.75,
+    "G3"
+   ],
+   [
+    18.75,
+    0.25,
+    "F3"
+   ],
+   [
+    19.0,
+    0.75,
+    "A#2"
+   ],
+   [
+    20.0,
+    1.5,
+    "E5"
+   ],
+   [
+    21.5,
+    0.5,
+    "D5"
+   ],
+   [
+    22.0,
+    0.75,
+    "A5"
+   ],
+   [
+    22.75,
+    0.25,
+    "G5"
+   ]
+  ],
+  "recap": [
+   [
+    0.0,
+    1.5,
+    "F5"
+   ],
+   [
+    1.5,
+    0.5,
+    "D#5"
+   ],
+   [
+    2.0,
+    0.5,
+    "G#5"
+   ],
+   [
+    2.5,
+    0.5,
+    "G#5"
+   ],
+   [
+    3.0,
+    1.0,
+    "C5"
+   ],
+   [
+    4.0,
+    1.0,
+    "G#5"
+   ],
+   [
+    5.0,
+    1.5,
+    "G#5"
+   ],
+   [
+    6.5,
+    0.5,
+    "G#5"
+   ],
+   [
+    7.0,
+    1.0,
+    "G5"
+   ],
+   [
+    8.0,
+    1.5,
+    "F5"
+   ],
+   [
+    9.5,
+    0.5,
+    "D#5"
+   ],
+   [
+    10.0,
+    1.0,
+    "F5"
+   ],
+   [
+    11.0,
+    1.0,
+    "F5"
+   ],
+   [
+    12.0,
+    2.0,
+    "G5"
+   ],
+   [
+    14.0,
+    2.0,
+    "E5"
+   ],
+   [
+    16.0,
+    1.5,
+    "F5"
+   ],
+   [
+    17.5,
+    0.5,
+    "D#5"
+   ],
+   [
+    18.0,
+    0.5,
+    "G#5"
+   ],
+   [
+    18.5,
+    0.5,
+    "G#5"
+   ],
+   [
+    19.0,
+    1.0,
+    "C#5"
+   ],
+   [
+    20.0,
+    1.0,
+    "A#5"
+   ],
+   [
+    21.0,
+    1.5,
+    "G5"
+   ],
+   [
+    22.5,
+    0.5,
+    "D#5"
+   ],
+   [
+    23.0,
+    1.0,
+    "A#4"
+   ],
+   [
+    24.0,
+    1.0,
+    "G4"
+   ],
+   [
+    25.0,
+    0.5,
+    "G#4"
+   ],
+   [
+    25.5,
+    0.5,
+    "A#4"
+   ],
+   [
+    26.0,
+    1.5,
+    "C5"
+   ],
+   [
+    27.5,
+    0.5,
+    "C#5"
+   ],
+   [
+    28.0,
+    2.0,
+    "C#5"
+   ],
+   [
+    30.0,
+    1.0,
+    "C#5"
+   ],
+   [
+    31.0,
+    1.0,
+    "F5"
+   ],
+   [
+    32.0,
+    1.0,
+    "G5"
+   ],
+   [
+    33.0,
+    0.5,
+    "G#5"
+   ],
+   [
+    33.5,
+    0.5,
+    "G#5"
+   ],
+   [
+    34.0,
+    1.5,
+    "G5"
+   ],
+   [
+    35.5,
+    0.5,
+    "G5"
+   ],
+   [
+    36.0,
+    4.0,
+    "F5"
+   ]
+  ],
+  "coda": [
+   [
+    0.0,
+    1.5,
+    "C5"
+   ],
+   [
+    1.5,
+    0.5,
+    "A#4"
+   ],
+   [
+    2.0,
+    0.75,
+    "F5"
+   ],
+   [
+    2.75,
+    0.25,
+    "E5"
+   ],
+   [
+    3.0,
+    0.75,
+    "A4"
+   ],
+   [
+    8.0,
+    1.5,
+    "A4"
+   ],
+   [
+    9.5,
+    0.5,
+    "G4"
+   ],
+   [
+    10.0,
+    0.75,
+    "D5"
+   ],
+   [
+    10.75,
+    0.25,
+    "C5"
+   ],
+   [
+    11.0,
+    0.75,
+    "F4"
+   ],
+   [
+    12.0,
+    1.0,
+    "A#4"
+   ],
+   [
+    13.0,
+    1.0,
+    "A#4"
+   ],
+   [
+    14.0,
+    1.0,
+    "A#4"
+   ],
+   [
+    15.0,
+    1.0,
+    "G4"
+   ],
+   [
+    16.0,
+    4.0,
+    "F4"
+   ]
+  ],
+  "end": [
+   [
+    0.0,
+    1.5,
+    "A5"
+   ],
+   [
+    1.5,
+    0.5,
+    "G5"
+   ],
+   [
+    2.0,
+    0.75,
+    "D6"
+   ],
+   [
+    2.75,
+    0.25,
+    "C6"
+   ],
+   [
+    3.0,
+    4.75,
+    "F5"
+   ],
+   [
+    8.0,
+    2.0,
+    "A5"
+   ],
+   [
+    10.0,
+    2.0,
+    "G5"
+   ],
+   [
+    12.0,
+    8.0,
+    "F5"
+   ]
+  ]
+ },
+ "composer_retries": 0,
+ "energy": 0.1,
+ "levels": {
+  "theme": [
+   0.65,
+   0.65,
+   0.65,
+   0.65
+  ],
+  "var1": [
+   0.6,
+   0.6,
+   0.6
+  ],
+  "var2": [
+   0.6,
+   0.6
+  ],
+  "var3": [
+   0.6,
+   0.6,
+   0.6,
+   0.6
+  ],
+  "dev1": [
+   0.6,
+   0.6,
+   0.6,
+   0.6,
+   0.6,
+   0.6,
+   0.6,
+   0.6,
+   0.6,
+   0.6
+  ],
+  "retrans": [
+   0.85,
+   0.85,
+   0.85
+  ],
+  "recap": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "coda": [
+   0.3,
+   0.3
+  ],
+  "end": [
+   0.2,
+   0.2
+  ]
+ },
+ "climax": null,
+ "solo_changes": {},
+ "intro": null,
+ "tag": null,
+ "shout": false,
+ "dynamics": "solo",
+ "solo_shape": null,
+ "double": false,
+ "solo_charts": [],
+ "end_kind": "roll",
+ "second": null,
+ "out_parts": [],
+ "reharm_in": "both",
+ "tag_approach": null,
+ "tag_frame": null,
+ "arrange": {
+  "acc": "motto",
+  "answer": "step_up",
+  "apex": "second",
+  "arc": "return",
+  "build": "bass",
+  "climax": "strings",
+  "clx_mode": "parallel",
+  "coda": "dissolve",
+  "coda_plan": "echo",
+  "colour": "strings",
+  "contour": "rise",
+  "derive": "plain",
+  "dev": "dialogue_fugato",
+  "dev_mode": "same",
+  "dev_path": "thirds",
+  "dev_tech": "bass",
+  "elide": 0,
+  "ending": "strokes",
+  "entry": "down",
+  "form_seed": 50,
+  "frag": "terrace",
+  "frame": "circle",
+  "intro": "mist",
+  "key2": "dominant",
+  "land": -4,
+  "layout": "variations",
+  "member": "fifth",
+  "motto": {
+   "compound": "hemiola",
+   "duple": "trochee"
+  },
+  "peak_at": 0.78,
+  "phrase": "free",
+  "retrans_end": "gp",
+  "sections": -1,
+  "size": "full",
+  "slow": 0,
+  "span": "tight",
+  "src": "murmur",
+  "src_chart": "pedal",
+  "src_entry": "early",
+  "t2col": "choir",
+  "tex_dev": "walk_poly",
+  "tex_t1": "walk_dialogue3",
+  "tex_t1b": "motto_brass",
+  "voicing": "layers",
+  "fug_order": "outer",
+  "shape": {
+   "open": "soft",
+   "arc": "classic",
+   "climax": "strings",
+   "end": "surprise",
+   "at": 0.758,
+   "bass_figs": [
+    "eighths",
+    "quarters"
+   ]
+  },
+  "tech": [
+   "muted_brass",
+   "harmonics",
+   "measured_trem",
+   "trem_build",
+   "harp_gliss",
+   "timp_roll",
+   "stopped_horn",
+   "trill",
+   "pizz_walk",
+   "sfz"
+  ],
+  "tech_crown": false,
+  "choir": "acappella",
+  "solo": "violin",
+  "guest": {
+   "colour": "bells",
+   "seed": 466997203,
+   "plan": "toll"
+  }
+ },
+ "shape": {
+  "climax": {
+   "pitch": "D6",
+   "part": "end",
+   "beat": 2.0,
+   "x": 0.938,
+   "single": true,
+   "planned": false
+  },
+  "hook": {
+   "notes": 6,
+   "head": 12,
+   "tag": 0
+  },
+  "arc": {
+   "part_pitch_r": -0.287,
+   "follows": false,
+   "phrase_pitch_r": -0.053,
+   "phrase_density_r": 0.114,
+   "parts": {
+    "theme": {
+     "level": 0.65,
+     "pitch": 76.2,
+     "notes_per_bar": 3.88
+    },
+    "var1": {
+     "level": 0.6,
+     "pitch": 73.9,
+     "notes_per_bar": 7.0
+    },
+    "var2": {
+     "level": 0.6,
+     "pitch": 73.8,
+     "notes_per_bar": 2.5
+    },
+    "var3": {
+     "level": 0.6,
+     "pitch": 75.9,
+     "notes_per_bar": 3.88
+    },
+    "dev1": {
+     "level": 0.6,
+     "pitch": 53.9,
+     "notes_per_bar": 3.4
+    },
+    "retrans": {
+     "level": 0.85,
+     "pitch": 53.4,
+     "notes_per_bar": 3.17
+    },
+    "recap": {
+     "level": 1.0,
+     "pitch": 76.4,
+     "notes_per_bar": 3.8
+    },
+    "coda": {
+     "level": 0.3,
+     "pitch": 70.2,
+     "notes_per_bar": 3.0
+    },
+    "end": {
+     "level": 0.2,
+     "pitch": 80.5,
+     "notes_per_bar": 1.6
+    }
+   }
+  },
+  "issues": []
+ },
+ "style": "symphony",
+ "tells": {
+  "range_out": 0.0,
+  "sweet_mel": 1.0,
+  "gap_hi": 0.109,
+  "low_thirds": 0.023,
+  "mel_db": 2.37,
+  "colour_chg": 1.0,
+  "tutti": 0.0,
+  "roles_sd": 2.26,
+  "db_bar_sd": 7.19,
+  "dyn_rng": 21.0,
+  "textures": 8,
+  "motto": 46,
+  "motto_tf": 6,
+  "motto_roles": 10,
+  "motto_bass": 20,
+  "nps": 2.82,
+  "run_share": 0.599,
+  "clash": 1.1,
+  "dev_share": 0.278,
+  "seq_links": 2,
+  "t1_home": 1,
+  "recap_weight": 1.25,
+  "cadence_end": 1,
+  "peak_pos": 0.792,
+  "top_peak": 1,
+  "pre_semis": 5,
+  "seconds": 236.8,
+  "dev_own": 0.763,
+  "tutti_peak": 1,
+  "vln_over": 5,
+  "brass_peak": 1,
+  "acc_run": 8
+ },
+ "score": {
+  "score": 48.6,
+  "style": "symphony",
+  "hard": [
+   "dev_own"
+  ],
+  "worst": [
+   {
+    "metric": "dev_own",
+    "value": 0.763,
+    "lo": 0.8,
+    "hi": 1.0,
+    "sub": 0.88,
+    "lost": 0.9
+   },
+   {
+    "metric": "motto_bass",
+    "value": 20,
+    "lo": 1,
+    "hi": 12,
+    "sub": 0.015,
+    "lost": 3.6
+   },
+   {
+    "metric": "tutti",
+    "value": 0.0,
+    "lo": 0.1,
+    "hi": 0.4,
+    "sub": 0.39,
+    "lost": 2.3
+   },
+   {
+    "metric": "nps",
+    "value": 2.82,
+    "lo": 4.0,
+    "hi": 14.0,
+    "sub": 0.742,
+    "lost": 1.0
+   },
+   {
+    "metric": "roles_sd",
+    "value": 2.26,
+    "lo": 2.4,
+    "hi": 5.0,
+    "sub": 0.97,
+    "lost": 0.2
+   }
+  ],
+  "parts": {
+   "range_out": [
+    0.0,
+    1.0,
+    3
+   ],
+   "sweet_mel": [
+    1.0,
+    1.0,
+    1.5
+   ],
+   "gap_hi": [
+    0.109,
+    1.0,
+    1
+   ],
+   "low_thirds": [
+    0.023,
+    1.0,
+    1
+   ],
+   "mel_db": [
+    2.37,
+    1.0,
+    1.5
+   ],
+   "colour_chg": [
+    1.0,
+    1.0,
+    1.5
+   ],
+   "tutti": [
+    0.0,
+    0.39,
+    1
+   ],
+   "roles_sd": [
+    2.26,
+    0.97,
+    1.5
+   ],
+   "db_bar_sd": [
+    7.19,
+    1.0,
+    1.5
+   ],
+   "dyn_rng": [
+    21.0,
+    1.0,
+    1
+   ],
+   "textures": [
+    8,
+    1.0,
+    1
+   ],
+   "motto": [
+    46,
+    1.0,
+    1
+   ],
+   "motto_tf": [
+    6,
+    1.0,
+    1
+   ],
+   "motto_roles": [
+    10,
+    1.0,
+    1.5
+   ],
+   "motto_bass": [
+    20,
+    0.015,
+    1
+   ],
+   "nps": [
+    2.82,
+    0.742,
+    1
+   ],
+   "run_share": [
+    0.599,
+    1.0,
+    1
+   ],
+   "clash": [
+    1.1,
+    1.0,
+    2
+   ],
+   "dev_share": [
+    0.278,
+    1.0,
+    0
+   ],
+   "seq_links": [
+    2,
+    1.0,
+    0
+   ],
+   "t1_home": [
+    1,
+    1.0,
+    0
+   ],
+   "recap_weight": [
+    1.25,
+    1.0,
+    1
+   ],
+   "cadence_end": [
+    1,
+    1.0,
+    0
+   ],
+   "peak_pos": [
+    0.792,
+    1.0,
+    0
+   ],
+   "top_peak": [
+    1,
+    1.0,
+    0
+   ],
+   "pre_semis": [
+    5,
+    1.0,
+    0
+   ],
+   "seconds": [
+    236.8,
+    1.0,
+    0
+   ],
+   "dev_own": [
+    0.763,
+    0.88,
+    2
+   ],
+   "tutti_peak": [
+    1,
+    1.0,
+    0
+   ],
+   "vln_over": [
+    5,
+    1.0,
+    0
+   ],
+   "brass_peak": [
+    1,
+    1.0,
+    0
+   ],
+   "acc_run": [
+    8,
+    1.0,
+    0
+   ]
+  },
+  "candidates": {
+   "n": 4,
+   "mean": 27.4,
+   "scores": {
+    "27110": 48.6,
+    "27111": 30.0,
+    "27108": 17.5,
+    "27109": 13.7
+   },
+   "rank": 1
+  }
+ },
+ "compose": {
+  "seed": 27110,
+  "mood": null,
+  "swing": null,
+  "plan": {
+   "energy": 0.1,
+   "feel": "andante",
+   "mood": "lyrical",
+   "tempo": 76,
+   "key": "F major",
+   "acc": "motto",
+   "answer": "step_up",
+   "apex": "second",
+   "arc": "return",
+   "build": "bass",
+   "climax": "chorale",
+   "clx_mode": "parallel",
+   "coda": "dissolve",
+   "coda_plan": "echo",
+   "colour": "strings",
+   "contour": "rise",
+   "derive": "plain",
+   "dev": "dialogue_fugato",
+   "dev_mode": "same",
+   "dev_path": "thirds",
+   "dev_tech": "bass",
+   "elide": 0,
+   "ending": "strokes",
+   "entry": "down",
+   "form_seed": 50,
+   "frag": "terrace",
+   "frame": "circle",
+   "intro": "mist",
+   "key2": "dominant",
+   "land": -4,
+   "layout": "variations",
+   "member": "fifth",
+   "motto": {
+    "compound": "hemiola",
+    "duple": "trochee"
+   },
+   "peak_at": 0.78,
+   "phrase": "free",
+   "retrans_end": "gp",
+   "sections": -1,
+   "size": "full",
+   "skeleton": 2,
+   "slow": 0,
+   "span": "tight",
+   "src": "murmur",
+   "src_chart": "pedal",
+   "src_entry": "early",
+   "t2col": "choir",
+   "tex_dev": "walk_poly",
+   "tex_t1": "walk_dialogue3",
+   "tex_t1b": "motto_brass",
+   "voicing": "layers",
+   "fug_order": "outer",
+   "tech": [
+    "harmonics",
+    "pizz_choir",
+    "measured_trem",
+    "muted_brass",
+    "pizz_walk",
+    "harp_gliss",
+    "sfz",
+    "trem_build",
+    "stopped_horn",
+    "trill",
+    "timp_roll"
+   ],
+   "shape": {
+    "open": "soft",
+    "arc": "classic",
+    "climax": "strings",
+    "end": "surprise",
+    "at": 0.758,
+    "bass_figs": [
+     "eighths",
+     "quarters"
+    ]
+   },
+   "choir": "acappella",
+   "solo": "violin",
+   "guest": {
+    "colour": "bells",
+    "seed": 466997203,
+    "plan": "toll"
+   },
+   "tech2": [
+    "muted_brass",
+    "harmonics",
+    "measured_trem",
+    "trem_build",
+    "harp_gliss",
+    "timp_roll",
+    "stopped_horn",
+    "trill",
+    "pizz_walk",
+    "sfz"
+   ],
+   "tech_crown": false
+  }
+ },
+ "sections": [
+  [
+   "theme",
+   0.0,
+   32.0
+  ],
+  [
+   "var1",
+   32.0,
+   72.0
+  ],
+  [
+   "var3",
+   72.0,
+   104.0
+  ],
+  [
+   "dev1",
+   104.0,
+   184.0
+  ],
+  [
+   "retrans",
+   184.0,
+   208.0
+  ],
+  [
+   "recap",
+   208.0,
+   248.0
+  ],
+  [
+   "coda",
+   248.0,
+   268.0
+  ],
+  [
+   "end",
+   268.0,
+   288.0
+  ]
+ ],
+ "plan": {
+  "energy": 0.1,
+  "feel": "andante",
+  "mood": "lyrical",
+  "tempo": 76,
+  "key": "F major",
+  "acc": "motto",
+  "answer": "step_up",
+  "apex": "second",
+  "arc": "return",
+  "build": "bass",
+  "climax": "chorale",
+  "clx_mode": "parallel",
+  "coda": "dissolve",
+  "coda_plan": "echo",
+  "colour": "strings",
+  "contour": "rise",
+  "derive": "plain",
+  "dev": "dialogue_fugato",
+  "dev_mode": "same",
+  "dev_path": "thirds",
+  "dev_tech": "bass",
+  "elide": 0,
+  "ending": "strokes",
+  "entry": "down",
+  "form_seed": 50,
+  "frag": "terrace",
+  "frame": "circle",
+  "intro": "mist",
+  "key2": "dominant",
+  "land": -4,
+  "layout": "variations",
+  "member": "fifth",
+  "motto": {
+   "compound": "hemiola",
+   "duple": "trochee"
+  },
+  "peak_at": 0.78,
+  "phrase": "free",
+  "retrans_end": "gp",
+  "sections": -1,
+  "size": "full",
+  "skeleton": 2,
+  "slow": 0,
+  "span": "tight",
+  "src": "murmur",
+  "src_chart": "pedal",
+  "src_entry": "early",
+  "t2col": "choir",
+  "tex_dev": "walk_poly",
+  "tex_t1": "walk_dialogue3",
+  "tex_t1b": "motto_brass",
+  "voicing": "layers",
+  "fug_order": "outer",
+  "tech": [
+   "harmonics",
+   "pizz_choir",
+   "measured_trem",
+   "muted_brass",
+   "pizz_walk",
+   "harp_gliss",
+   "sfz",
+   "trem_build",
+   "stopped_horn",
+   "trill",
+   "timp_roll"
+  ],
+  "shape": {
+   "open": "soft",
+   "arc": "classic",
+   "climax": "strings",
+   "end": "surprise",
+   "at": 0.758,
+   "bass_figs": [
+    "eighths",
+    "quarters"
+   ]
+  },
+  "choir": "acappella",
+  "solo": "violin",
+  "guest": {
+   "colour": "bells",
+   "seed": 466997203,
+   "plan": "toll"
+  },
+  "tech2": [
+   "muted_brass",
+   "harmonics",
+   "measured_trem",
+   "trem_build",
+   "harp_gliss",
+   "timp_roll",
+   "stopped_horn",
+   "trill",
+   "pizz_walk",
+   "sfz"
+  ],
+  "tech_crown": false
+ },
+ "timing": {
+  "compose_s": 0.0,
+  "build_s": 0.18,
+  "render_s": 50.34,
+  "deliver_s": 5.06,
+  "total_s": 55.59,
+  "audio_s": 244.8,
+  "realtime_x": 4.4
+ },
+ "lufs": -17.9,
+ "lra": 15.3,
+ "gate": "pass",
+ "files": {
+  "mp3": "D:\\tmp\\orchester-hero-sax-auswahl\\003-iron-banners\\mix.mp3",
+  "cover": "D:\\tmp\\orchester-hero-sax-auswahl\\003-iron-banners\\cover.png"
+ },
+ "orchestration": {
+  "key": "F major",
+  "meter": 4,
+  "blocks": [
+   {
+    "name": "theme",
+    "start": 0.0,
+    "length": 32.0,
+    "texture": "walk_dialogue3",
+    "peak": false,
+    "meta": {
+     "lead": "violins1",
+     "counter": "oboes",
+     "colour0": "none"
+    },
+    "lines": [
+     [
+      "melody",
+      "",
+      31
+     ],
+     [
+      "counter",
+      "",
+      15
+     ],
+     [
+      "ostinato",
+      "o1",
+      52
+     ],
+     [
+      "ostinato",
+      "o2",
+      36
+     ],
+     [
+      "bass",
+      "",
+      64
+     ]
+    ]
+   },
+   {
+    "name": "var1",
+    "start": 32.0,
+    "length": 24.0,
+    "texture": "running_strings",
+    "peak": false,
+    "meta": {
+     "lead": "clarinets"
+    },
+    "lines": [
+     [
+      "melody",
+      "",
+      42
+     ],
+     [
+      "harmony",
+      "h1",
+      9
+     ],
+     [
+      "harmony",
+      "h2",
+      9
+     ],
+     [
+      "bass",
+      "",
+      24
+     ],
+     [
+      "figuration",
+      "f1",
+      96
+     ]
+    ]
+   },
+   {
+    "name": "var2",
+    "start": 56.0,
+    "length": 16.0,
+    "texture": "dev_poly",
+    "peak": false,
+    "meta": {
+     "lead": "violins1",
+     "counter": "clarinets",
+     "colour0": "none"
+    },
+    "lines": [
+     [
+      "melody",
+      "",
+      10
+     ],
+     [
+      "counter",
+      "",
+      5
+     ],
+     [
+      "harmony",
+      "h1",
+      5
+     ],
+     [
+      "harmony",
+      "h2",
+      5
+     ],
+     [
+      "bass",
+      "",
+      8
+     ]
+    ]
+   },
+   {
+    "name": "var3",
+    "start": 72.0,
+    "length": 32.0,
+    "texture": "cantabile",
+    "peak": false,
+    "meta": {
+     "lead": "clarinets",
+     "counter": "horns",
+     "colour0": "harp"
+    },
+    "lines": [
+     [
+      "melody",
+      "",
+      31
+     ],
+     [
+      "counter",
+      "",
+      15
+     ],
+     [
+      "harmony",
+      "h1",
+      11
+     ],
+     [
+      "harmony",
+      "h2",
+      11
+     ],
+     [
+      "ostinato",
+      "o1",
+      64
+     ],
+     [
+      "ostinato",
+      "o2",
+      41
+     ],
+     [
+      "bass",
+      "",
+      11
+     ],
+     [
+      "colour",
+      "",
+      64
+     ]
+    ]
+   },
+   {
+    "name": "dev1",
+    "start": 104.0,
+    "length": 80.0,
+    "texture": "dev_bass",
+    "peak": false,
+    "meta": {
+     "counter": "clarinets",
+     "colour0": "timpani"
+    },
+    "lines": [
+     [
+      "bass",
+      "",
+      68
+     ],
+     [
+      "counter",
+      "",
+      59
+     ],
+     [
+      "harmony",
+      "h1",
+      92
+     ],
+     [
+      "harmony",
+      "h2",
+      60
+     ],
+     [
+      "harmony",
+      "h3",
+      40
+     ],
+     [
+      "colour",
+      "",
+      35
+     ]
+    ]
+   },
+   {
+    "name": "retrans",
+    "start": 184.0,
+    "length": 24.0,
+    "texture": "bass_build",
+    "peak": false,
+    "meta": {
+     "colour0": "timpani"
+    },
+    "lines": [
+     [
+      "bass",
+      "",
+      19
+     ],
+     [
+      "harmony",
+      "h1",
+      5
+     ],
+     [
+      "harmony",
+      "h2",
+      3
+     ],
+     [
+      "pedal",
+      "",
+      1
+     ],
+     [
+      "figuration",
+      "f1",
+      96
+     ],
+     [
+      "colour",
+      "",
+      19
+     ]
+    ]
+   },
+   {
+    "name": "recap",
+    "start": 208.0,
+    "length": 40.0,
+    "texture": "apex_low",
+    "peak": true,
+    "meta": {
+     "lead": "cellos",
+     "colour0": "timpani",
+     "colour1": "none"
+    },
+    "lines": [
+     [
+      "melody",
+      "",
+      44
+     ],
+     [
+      "harmony",
+      "h1",
+      12
+     ],
+     [
+      "harmony",
+      "h2",
+      13
+     ],
+     [
+      "harmony",
+      "h3",
+      13
+     ],
+     [
+      "bass",
+      "",
+      14
+     ],
+     [
+      "figuration",
+      "f1",
+      160
+     ],
+     [
+      "colour",
+      "",
+      23
+     ]
+    ]
+   },
+   {
+    "name": "coda",
+    "start": 248.0,
+    "length": 20.0,
+    "texture": "dissolve",
+    "peak": false,
+    "meta": {
+     "lead": "horns",
+     "counter": "cellos",
+     "colour0": "harp",
+     "colour1": "none"
+    },
+    "lines": [
+     [
+      "melody",
+      "",
+      15
+     ],
+     [
+      "counter",
+      "",
+      5
+     ],
+     [
+      "harmony",
+      "h1",
+      4
+     ],
+     [
+      "harmony",
+      "h2",
+      5
+     ],
+     [
+      "harmony",
+      "h3",
+      4
+     ],
+     [
+      "bass",
+      "",
+      5
+     ],
+     [
+      "colour",
+      "",
+      40
+     ]
+    ]
+   },
+   {
+    "name": "end",
+    "start": 268.0,
+    "length": 20.0,
+    "texture": "strings_pad",
+    "peak": false,
+    "meta": {
+     "lead": "violins1",
+     "colour0": "none"
+    },
+    "lines": [
+     [
+      "melody",
+      "",
+      8
+     ],
+     [
+      "harmony",
+      "h1",
+      5
+     ],
+     [
+      "harmony",
+      "h2",
+      5
+     ],
+     [
+      "harmony",
+      "h3",
+      4
+     ],
+     [
+      "bass",
+      "",
+      5
+     ]
+    ]
+   }
+  ],
+  "size": "full",
+  "roles": [
+   "violins1",
+   "oboes",
+   "oboe_solo",
+   "cellos",
+   "basses",
+   "violins2",
+   "violas",
+   "clarinet_solo",
+   "bassoons",
+   "horns",
+   "harp",
+   "trombones",
+   "timpani",
+   "trumpets",
+   "violin_solo",
+   "clarinets",
+   "violin_concertmaster"
+  ]
+ },
+ "piano_dynamics_db": null
+}

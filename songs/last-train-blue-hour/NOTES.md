@@ -1,0 +1,75 @@
+# Last Train, Blue Hour
+
+Original cinematic piano / trip-hop. Nominal 78 BPM, D minor, 64 bars.
+Created after the requested concept: intimate solo piano, a lazy groove, a distant synth
+space, a four-bar flash of virtuosity, and the opening idea returned with a brighter harmony.
+
+## Composition and performance
+- Empty Platform: solo sampled grand, open ninth voicings and the D-A-E melodic cell.
+- Engine Starts: restrained DX7 bass and a dry, syncopated rim/hat beat enter.
+- Window Lights: the piano theme and a falling answer trade space over Dm9-Bbmaj9-Fmaj9-Cadd9.
+- Blue Hour: the first wide analog pad arrives behind the piano with a 5.1-second modulated hall.
+- Between Stations: drums and bass leave; Gm9/A7 tension hangs under sparse piano replies.
+- A Private Smile: four hand-authored bars of turns, chromatic approaches and rising arpeggios.
+- Homeward: the band returns with the original theme.
+- Last Train: the band falls away; D minor turns to D major 9, with F# in the final piano answer.
+
+CC64 sustain follows the harmony, with more frequent clearing in the four-bar flourish.
+Rolled chord attacks, purposeful rests and varying velocities shape the piano part.
+The entire ensemble follows one performed-time curve: about 73 BPM at the opening,
+77-80 through the groove, 82 in the short flourish and a gradual final ritardando toward 62.
+Bass stays behind the piano; drums have no clap layer or gated noise reverb.
+
+## Rendering and provenance
+Piano: GeneralUser GS acoustic grand (GM 0).
+Drums: GeneralUser GS Room kit (GM percussion program 8), subdued sampled kick/snare/rim/hats.
+Source: https://github.com/mrbumpy409/GeneralUser-GS, S. Christian Collins.
+License: assets/soundfonts/GeneralUser-GS-LICENSE.txt.
+Samples are rendered by the local FluidSynth 2.6.1 executable under work/jazz-tools/.
+Bass: AgentSound's original DX7 BASS 1 ROM patch, with octave compensation.
+Pad and hall: native AgentSound VA / reverb engine. No C++ engine changes.
+
+Build from D:/Repos/AgentSound:
+python songs/last-train-blue-hour/render.py
+
+out/mix.mp3 and out/mix.wav are the finished mix.
+out/piano.mid, drums.mid and performance.mid are editable performed-note exports.
+performance.mid substitutes GM bass for the native DX7 and does not include the analog pad.
+out/master-analysis.json describes the final combined master and stem gain calibration.
+The native out/report.json and native analysis images describe ONLY the synth/bass bed;
+the silent intro and synthwave loudness warnings there are expected for that partial stem.
+Audio validation uses decoding, master loudness/peak readings, click detection and waveform
+inspection; it is not a direct listening review.
+
+Final validation: 207.49 seconds, -15.50 LUFS-I, -1.95 dBTP, 5.3 LU loudness range, zero detected clicks. MP3 decodes without errors. Pad entry 1:15.2; four-bar piano flourish 2:04.2; solo-piano coda 2:52.5.
+
+## Jazz-language piano revision
+Research is recorded with primary teaching sources in recipes/jazz-piano.md.
+The earlier piano leaned on downbeat chord blocks, closed one-bar phrases and isolated runs.
+piano_revision.py rewrites the part as an eight-bar melodic sentence, including E-F# -> F
+across the C/Dm boundary, with selected chromatic enclosures and explicit accent hierarchy.
+The four-bar solo connects F-Eb -> E over Gm/C13, Bb -> A into F major, then C# -> D
+into the return. Sparse shells answer the melody and preserve common voices; some melodic
+arrivals receive a quiet second voice. Pedal catches chosen resonances and releases during
+chromatic movement; it does not blanket every bar. This is an original composition, not a
+transcription or reproduction of a recorded solo.
+The bass/drum/pad/section note data compare exactly equal to the previous version. Native
+build validation passes. render.py --piano-only reuses the previously rendered backing stems.
+The old full mix and source are in versions/before-jazz-revision/.
+This revision does not claim that reading theory guarantees professional-sounding jazz.
+
+## Connected-phrasing revision
+The user's reference is the first five seconds of the preceding version. Their note,
+velocity and CC64 events are preserved exactly; subsequent piano material is rewritten.
+The prior MIDI released many melodic keys after 0.2-0.4 beats, leaving gaps within what
+was described as a longer phrase. The new sentence representation derives each release
+from the next actual onset, with 0.04-beat finger overlap and explicit phrase-end breaths.
+Longer left-hand holds support these lines. Pedal is cleared and recaught within each
+harmony; the fast solo clears more often, with finger legato preserving continuity.
+Shared-pitch overlaps between hands are trimmed so an old MIDI note-off cannot cut a
+new strike. The opening events and absence of these collisions were checked directly.
+Bass, drums, pad, soundfont, reverb and shared tempo curve remain unchanged. Existing
+backing WAVs were reused via render.py --piano-only. Previous source and mix are kept in
+versions/before-flow-revision/. Opening render level can differ slightly due to mastering.
+Full master: 207.490 seconds, -15.49 LUFS-I, -1.83 dBTP, 4.6 LU LRA; zero detected clicks.
+Note-length comparison and waveform inspected; this is not a direct listening review.
