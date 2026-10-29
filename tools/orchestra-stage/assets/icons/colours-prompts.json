@@ -1,0 +1,44 @@
+﻿[
+    {
+        "name":  "organ",
+        "prompt":  "Use case: stylized-concept. Asset type: orchestra UI transparent icon. Subject: A compact polished walnut pipe-organ console with two keyboards, pedalboard and a small bank of silver organ pipes attached behind it. Style: realistic elegant miniature cutout, finely crafted natural materials, readable at small UI size. Entire subject fully visible and centered with modest transparent margin on square canvas, three-quarter audience-facing view. Warm neutral studio light from upper left, polished wood/brass/metal as appropriate. Truly transparent background. No text, labels, watermark, pedestal, scenery, floor, or ground shadow. Only the stated subject.",
+        "source":  "C:\\Users\\richt\\.codex\\generated_images\\01a18199-a1c3-7b41-bd26-e4889efe725d\\exec-89257831-aea1-41f0-b39a-9ce44a8e35ae.png",
+        "mode":  "built-in image_gen",
+        "transparent_background":  true
+    },
+    {
+        "name":  "harpsichord",
+        "prompt":  "Use case: stylized-concept. Asset type: orchestra UI transparent icon. Subject: An elegant historic wing-shaped walnut harpsichord, lid open, keyboard visible, slender legs. Style: realistic elegant miniature cutout, finely crafted natural materials, readable at small UI size. Entire subject fully visible and centered with modest transparent margin on square canvas, three-quarter audience-facing view. Warm neutral studio light from upper left, polished wood/brass/metal as appropriate. Truly transparent background. No text, labels, watermark, pedestal, scenery, floor, or ground shadow. Only the stated subject.",
+        "source":  "C:\\Users\\richt\\.codex\\generated_images\\01a18199-a1c3-7b41-bd26-e4889efe725d\\exec-0cf59ed1-f16e-43cb-8f44-63965cf1925a.png",
+        "mode":  "built-in image_gen",
+        "transparent_background":  true
+    },
+    {
+        "name":  "celesta",
+        "prompt":  "Use case: stylized-concept. Asset type: orchestra UI transparent icon. Subject: A compact upright celesta keyboard instrument in warm walnut case, unmistakable small upright orchestral keyboard with visible keys. Style: realistic elegant miniature cutout, finely crafted natural materials, readable at small UI size. Entire subject fully visible and centered with modest transparent margin on square canvas, three-quarter audience-facing view. Warm neutral studio light from upper left, polished wood/brass/metal as appropriate. Truly transparent background. No text, labels, watermark, pedestal, scenery, floor, or ground shadow. Only the stated subject.",
+        "source":  "C:\\Users\\richt\\.codex\\generated_images\\01a18199-a1c3-7b41-bd26-e4889efe725d\\exec-d022af44-98fd-46c9-b143-2dfd402a2957.png",
+        "mode":  "built-in image_gen",
+        "transparent_background":  true
+    },
+    {
+        "name":  "glockenspiel",
+        "prompt":  "Use case: stylized-concept. Asset type: orchestra UI transparent icon. Subject: An orchestral glockenspiel, two rows of bright silver metal bars on a compact dark frame and two neatly placed mallets. Style: realistic elegant miniature cutout, finely crafted natural materials, readable at small UI size. Entire subject fully visible and centered with modest transparent margin on square canvas, three-quarter audience-facing view. Warm neutral studio light from upper left, polished wood/brass/metal as appropriate. Truly transparent background. No text, labels, watermark, pedestal, scenery, floor, or ground shadow. Only the stated subject.",
+        "source":  "C:\\Users\\richt\\.codex\\generated_images\\01a18199-a1c3-7b41-bd26-e4889efe725d\\exec-e9c6e423-72aa-4134-8e6d-36b5c1387012.png",
+        "mode":  "built-in image_gen",
+        "transparent_background":  true
+    },
+    {
+        "name":  "bells",
+        "prompt":  "Use case: stylized-concept. Asset type: orchestra UI transparent icon. Subject: An orchestral tubular bells instrument: graduated long golden brass tubes hanging vertically in an upright dark metal frame. Style: realistic elegant miniature cutout, finely crafted natural materials, readable at small UI size. Entire subject fully visible and centered with modest transparent margin on square canvas, three-quarter audience-facing view. Warm neutral studio light from upper left, polished wood/brass/metal as appropriate. Truly transparent background. No text, labels, watermark, pedestal, scenery, floor, or ground shadow. Only the stated subject.",
+        "source":  "C:\\Users\\richt\\.codex\\generated_images\\01a18199-a1c3-7b41-bd26-e4889efe725d\\exec-e2f677c8-3344-40c9-96da-614f8e71317a.png",
+        "mode":  "built-in image_gen",
+        "transparent_background":  true
+    },
+    {
+        "name":  "choir",
+        "prompt":  "Use case: stylized-concept. Asset type: orchestra UI transparent icon. Subject: A small tasteful ensemble of exactly four adult human choir figures, women and men in black concert dress, each holding an open score folder, standing close in a shallow choir arc; faces simplified, not portraits. Style: realistic elegant miniature cutout, finely crafted natural materials, readable at small UI size. Entire subject fully visible and centered with modest transparent margin on square canvas, three-quarter audience-facing view. Warm neutral studio light from upper left, polished wood/brass/metal as appropriate. Truly transparent background. No text, labels, watermark, pedestal, scenery, floor, or ground shadow. Only the stated subject.",
+        "source":  "C:\\Users\\richt\\.codex\\generated_images\\01a18199-a1c3-7b41-bd26-e4889efe725d\\exec-4bc72515-b1bf-454f-8136-f6b619c7ca01.png",
+        "mode":  "built-in image_gen",
+        "transparent_background":  true
+    }
+]

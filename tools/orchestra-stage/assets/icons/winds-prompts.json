@@ -1,0 +1,31 @@
+﻿{
+  "mode": "built-in image_gen",
+  "transparent_background": true,
+  "assets": [
+    {
+      "name": "flute",
+      "prompt": "Use case: product-mockup. Asset type: orchestra stage UI instrument icon. Subject: One slender silver concert flute, diagonal from lower left to upper right, with accurate embouchure hole and keywork. Style: realistic elegant miniature instrument cutout, refined detailed natural polished wood or metal. Composition: entire single instrument centered isolated on a square genuinely transparent canvas, generous safe margin, slight three-quarter audience-facing view, readable silhouette at small size. Lighting: warm neutral studio light from upper-left, tasteful natural highlights. No text, labels, logos, pedestal, scenery, floor, ground shadow, hands, people, duplicate instruments or other objects. Preserve actual transparent alpha around the object.",
+      "source": "C:\\Users\\richt\\.codex\\generated_images\\01a18196-d18a-7191-82d3-182e67e86d72\\exec-de22b5f0-689a-4c01-868c-4c180ba78b1c.png"
+    },
+    {
+      "name": "oboe",
+      "prompt": "Use case: product-mockup. Asset type: orchestra stage UI instrument icon. Subject: One black oboe, near upright with a small diagonal lean, accurate silver keywork and distinct slender double reed at top. Style: realistic elegant miniature instrument cutout, refined detailed natural polished wood or metal. Composition: entire single instrument centered isolated on a square genuinely transparent canvas, generous safe margin, slight three-quarter audience-facing view, readable silhouette at small size. Lighting: warm neutral studio light from upper-left, tasteful natural highlights. No text, labels, logos, pedestal, scenery, floor, ground shadow, hands, people, duplicate instruments or other objects. Preserve actual transparent alpha around the object.",
+      "source": "C:\\Users\\richt\\.codex\\generated_images\\01a18196-d18a-7191-82d3-182e67e86d72\\exec-0bb3bbfd-48e6-4e9f-9c77-a8517df43766.png"
+    },
+    {
+      "name": "clarinet",
+      "prompt": "Use case: product-mockup. Asset type: orchestra stage UI instrument icon. Subject: One black clarinet, near upright with a small diagonal lean, accurate silver keywork, single-reed mouthpiece and distinctly flared bell. Style: realistic elegant miniature instrument cutout, refined detailed natural polished wood or metal. Composition: entire single instrument centered isolated on a square genuinely transparent canvas, generous safe margin, slight three-quarter audience-facing view, readable silhouette at small size. Lighting: warm neutral studio light from upper-left, tasteful natural highlights. No text, labels, logos, pedestal, scenery, floor, ground shadow, hands, people, duplicate instruments or other objects. Preserve actual transparent alpha around the object.",
+      "source": "C:\\Users\\richt\\.codex\\generated_images\\01a18196-d18a-7191-82d3-182e67e86d72\\exec-0f7c34f0-63c7-4dd3-87f3-10bf9f1c9e5d.png"
+    },
+    {
+      "name": "bassoon",
+      "prompt": "Use case: product-mockup. Asset type: orchestra stage UI instrument icon. Subject: One long reddish polished wood bassoon, near upright with a small diagonal lean, accurate folded double tube, silver keys and curved thin metal bocal with reed. Style: realistic elegant miniature instrument cutout, refined detailed natural polished wood or metal. Composition: entire single instrument centered isolated on a square genuinely transparent canvas, generous safe margin, slight three-quarter audience-facing view, readable silhouette at small size. Lighting: warm neutral studio light from upper-left, tasteful natural highlights. No text, labels, logos, pedestal, scenery, floor, ground shadow, hands, people, duplicate instruments or other objects. Preserve actual transparent alpha around the object.",
+      "source": "C:\\Users\\richt\\.codex\\generated_images\\01a18196-d18a-7191-82d3-182e67e86d72\\exec-b71f704b-cb47-4000-8086-cb8a431215b4.png"
+    },
+    {
+      "name": "saxophone",
+      "prompt": "Use case: product-mockup. Asset type: orchestra stage UI instrument icon. Subject: One golden brass tenor saxophone, near upright, accurate curved neck, dark mouthpiece, keywork and forward-facing flared bell. Style: realistic elegant miniature instrument cutout, refined detailed natural polished wood or metal. Composition: entire single instrument centered isolated on a square genuinely transparent canvas, generous safe margin, slight three-quarter audience-facing view, readable silhouette at small size. Lighting: warm neutral studio light from upper-left, tasteful natural highlights. No text, labels, logos, pedestal, scenery, floor, ground shadow, hands, people, duplicate instruments or other objects. Preserve actual transparent alpha around the object.",
+      "source": "C:\\Users\\richt\\.codex\\generated_images\\01a18196-d18a-7191-82d3-182e67e86d72\\exec-9eb7c8b4-6cc5-4d80-97f1-5bd8a4512216.png"
+    }
+  ]
+}

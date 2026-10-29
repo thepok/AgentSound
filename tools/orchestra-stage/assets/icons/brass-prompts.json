@@ -1,0 +1,50 @@
+[
+  {
+    "name": "horn",
+    "prompt": "Use case: product-mockup. Asset type: orchestra seating UI instrument icon. Subject: one French horn, recognizable circular coiled brass tubing and flared bell. Realistic elegant miniature instrument cutout, entire object centered isolated on genuinely transparent canvas, three-quarter audience-facing view, warm neutral studio lighting from upper-left, natural polished brass/copper/wood as appropriate. Square composition with small safe margins, instrument fills canvas and silhouette reads at small size. No text, labels, logo, pedestal, scenery, ground, or cast ground shadow. No people or hands. Maintain physically plausible instrument construction.",
+    "tool": "built-in image_gen",
+    "transparent_background": true,
+    "source": "C:\\Users\\richt\\.codex\\generated_images\\01a18198-249b-7432-8aaf-f64291192552\\exec-7f65b9d4-3fa0-4fcd-8348-633c15f5b5cf.png",
+    "destination": "D:/repos/AgentSound/tools/orchestra-stage/assets/icons/horn.png"
+  },
+  {
+    "name": "trumpet",
+    "prompt": "Use case: product-mockup. Asset type: orchestra seating UI instrument icon. Subject: one orchestral trumpet, three piston valves and flared bell. Realistic elegant miniature instrument cutout, entire object centered isolated on genuinely transparent canvas, three-quarter audience-facing view, warm neutral studio lighting from upper-left, natural polished brass/copper/wood as appropriate. Square composition with small safe margins, instrument fills canvas and silhouette reads at small size. No text, labels, logo, pedestal, scenery, ground, or cast ground shadow. No people or hands. Maintain physically plausible instrument construction.",
+    "tool": "built-in image_gen",
+    "transparent_background": true,
+    "source": "C:\\Users\\richt\\.codex\\generated_images\\01a18198-249b-7432-8aaf-f64291192552\\exec-8392e44c-4932-43e7-8b5e-e75a3942c4fb.png",
+    "destination": "D:/repos/AgentSound/tools/orchestra-stage/assets/icons/trumpet.png"
+  },
+  {
+    "name": "trombone",
+    "prompt": "Use case: product-mockup. Asset type: orchestra seating UI instrument icon. Subject: one orchestral tenor trombone, complete long slide and bell. Realistic elegant miniature instrument cutout, entire object centered isolated on genuinely transparent canvas, three-quarter audience-facing view, warm neutral studio lighting from upper-left, natural polished brass/copper/wood as appropriate. Square composition with small safe margins, instrument fills canvas and silhouette reads at small size. No text, labels, logo, pedestal, scenery, ground, or cast ground shadow. No people or hands. Maintain physically plausible instrument construction.",
+    "tool": "built-in image_gen",
+    "transparent_background": true,
+    "source": "C:\\Users\\richt\\.codex\\generated_images\\01a18198-249b-7432-8aaf-f64291192552\\exec-dcc72bda-717d-4b21-8eef-fd2dbf618beb.png",
+    "destination": "D:/repos/AgentSound/tools/orchestra-stage/assets/icons/trombone.png"
+  },
+  {
+    "name": "tuba",
+    "prompt": "Use case: product-mockup. Asset type: orchestra seating UI instrument icon. Subject: one orchestral tuba, broad upward flared bell and coiled tubing. Realistic elegant miniature instrument cutout, entire object centered isolated on genuinely transparent canvas, three-quarter audience-facing view, warm neutral studio lighting from upper-left, natural polished brass/copper/wood as appropriate. Square composition with small safe margins, instrument fills canvas and silhouette reads at small size. No text, labels, logo, pedestal, scenery, ground, or cast ground shadow. No people or hands. Maintain physically plausible instrument construction.",
+    "tool": "built-in image_gen",
+    "transparent_background": true,
+    "source": "C:\\Users\\richt\\.codex\\generated_images\\01a18198-249b-7432-8aaf-f64291192552\\exec-094b0f8e-44ba-4488-aaee-ef30f46fe6c0.png",
+    "destination": "D:/repos/AgentSound/tools/orchestra-stage/assets/icons/tuba.png"
+  },
+  {
+    "name": "timpani",
+    "prompt": "Use case: product-mockup. Asset type: orchestra seating UI instrument icon. Subject: a pair of copper orchestral kettledrums, two different sizes with pale drumheads and integral black supporting legs. Realistic elegant miniature instrument cutout, entire object centered isolated on genuinely transparent canvas, three-quarter audience-facing view, warm neutral studio lighting from upper-left, natural polished brass/copper/wood as appropriate. Square composition with small safe margins, instrument fills canvas and silhouette reads at small size. No text, labels, logo, pedestal, scenery, ground, or cast ground shadow. No people or hands. Maintain physically plausible instrument construction.",
+    "tool": "built-in image_gen",
+    "transparent_background": true,
+    "source": "C:\\Users\\richt\\.codex\\generated_images\\01a18198-249b-7432-8aaf-f64291192552\\exec-ed5fbafd-e0a5-4a4d-a946-c2d85f6bb8a4.png",
+    "destination": "D:/repos/AgentSound/tools/orchestra-stage/assets/icons/timpani.png"
+  },
+  {
+    "name": "percussion",
+    "prompt": "Use case: product-mockup. Asset type: orchestra seating UI instrument icon. Subject: a compact orchestral bass drum on its simple concert support plus one suspended cymbal on a slender stand, a cohesive grouping, NOT a rock drumkit. Realistic elegant miniature instrument cutout, entire object centered isolated on genuinely transparent canvas, three-quarter audience-facing view, warm neutral studio lighting from upper-left, natural polished brass/copper/wood as appropriate. Square composition with small safe margins, instrument fills canvas and silhouette reads at small size. No text, labels, logo, pedestal, scenery, ground, or cast ground shadow. No people or hands. Maintain physically plausible instrument construction.",
+    "tool": "built-in image_gen",
+    "transparent_background": true,
+    "source": "C:\\Users\\richt\\.codex\\generated_images\\01a18198-249b-7432-8aaf-f64291192552\\exec-1cc6f5df-b8d7-42aa-9ea2-25a148d50900.png",
+    "destination": "D:/repos/AgentSound/tools/orchestra-stage/assets/icons/percussion.png"
+  }
+]

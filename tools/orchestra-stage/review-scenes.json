@@ -1,0 +1,55 @@
+[
+  {
+    "id": "review-001",
+    "label": "New video: first segment",
+    "title": "Toward the Plains",
+    "subtitle": "C# minor \u00b7 108 BPM \u00b7 6/8",
+    "ids": [
+      "violins1",
+      "violins2",
+      "violas",
+      "cellos",
+      "basses",
+      "flutes",
+      "oboes",
+      "clarinets",
+      "bassoons",
+      "horns",
+      "timpani",
+      "harp",
+      "violin_solo",
+      "bassoon_solo",
+      "clarinet_solo",
+      "flute_solo",
+      "choir",
+      "harpsichord"
+    ],
+    "background": "assets/backgrounds/review-001.png"
+  },
+  {
+    "id": "review-010",
+    "label": "New video: last shown image",
+    "title": "Symphonic Dance: Fields of the Sea",
+    "subtitle": "D dorian \u00b7 77 BPM \u00b7 4/4",
+    "ids": [
+      "violins1",
+      "violins2",
+      "violas",
+      "cellos",
+      "basses",
+      "flutes",
+      "oboes",
+      "clarinets",
+      "bassoons",
+      "horns",
+      "trumpets",
+      "trombones",
+      "tuba",
+      "timpani",
+      "harp",
+      "organ",
+      "hero_sax"
+    ],
+    "background": "assets/backgrounds/review-010.png"
+  }
+]
