@@ -792,6 +792,8 @@ agentsound/            Python compose layer (stdlib only)
   bands.py bandlib/    band presets (one file per genre family)
   mixer.py mastering.py compare.py delivery.py library.py catalog.py cli.py
 engine/                C++ engine (see section 2)
+web/                   Endless browser app, workers, license notices and pinned runtime manifest (web/README.md)
+tools/wasm/            portable WASM build, browser adapter, runtime restore and site staging tools
 docs/ roles/ recipes/  references, role briefs, genre guides
 songs/<slug>/song.py   one song each (_template, _demo_*, _bands/<preset> are system songs); out/ is git-ignored
 assets/                dx7/ (ROM cartridges: not bundled, see its README), soundfonts/ (GeneralUser GS), samples/manifest.json,
@@ -820,3 +822,5 @@ orchestra's performance rules), `expressive` (the KTH rules every player shares)
 **Keep this file current**: update it in the same commit as any user-facing change. `tests/python/test_readme.py`
 fails when an engine module, helper module, band preset, role, analysis profile, CLI command, recipe, patch family
 or hero preset is not mentioned here.
+
+Browser/WASM: `python tools/wasm/runtime.py` restores the checksum-pinned runtime assets into `web/` (ignored binaries); `python -m http.server 8778 --directory web` serves the app. See [web/README.md](web/README.md) and [tools/wasm/README.md](tools/wasm/README.md). The existing p11 browser release is preserved independently of current native generator development.

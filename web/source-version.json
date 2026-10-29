@@ -1,0 +1,13 @@
+{
+  "version": "web7-925b025c26",
+  "revision": "p9",
+  "base_commit": "a53e6a4e72c5e9369e3d9ee4e777f0c352c708fd",
+  "composer_source_sha256": "925b025c264f92c41a4b21d692a7378bc694463d360853f19f5f7aa83dadc250",
+  "changes": [
+    "Reduced automatic phrase shaping",
+    "Role-aware theme accents",
+    "Foreground level for exposed answers"
+  ],
+  "soloists": true,
+  "engine_changed": false
+}

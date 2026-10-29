@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Endless Piano</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#15171a">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="description" content="Endlose Klavier- und Orchestermusik, live im Browser komponiert und gespielt von AgentSound.">
+<style>
+  :root {
+    --bg: #f6f4ef; --fg: #1f1f1f; --muted: #6a6a6a; --line: #d9d5cc; --card: #ffffff;
+    --accent: #2e5c86; --accent-fg: #ffffff; --sec: #e8e3d8; --sec-now: #c9d8e6; --buf: #d3dde6; --fav: #b4424d;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #15171a; --fg: #ebe8e2; --muted: #9b9890; --line: #33363b; --card: #1e2125;
+            --accent: #86b4de; --accent-fg: #10161c; --sec: #2a2d32; --sec-now: #35506a; --buf: #3a434d; --fav: #e07a84; }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg); }
+  body { font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; overflow-x: hidden; }
+  main { max-width: 680px; margin: 0 auto; padding: 28px 16px 24px; }
+  h1 { font-size: 1.7rem; font-weight: 650; margin: 0; letter-spacing: -0.01em; }
+  h2 { font-size: 1.05rem; font-weight: 600; margin: 28px 0 8px; }
+  .sub { color: var(--muted); margin: 4px 0 24px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px 16px; }
+  #title { font-size: 1.25rem; font-weight: 600; margin: 0; min-height: 1.5em; overflow-wrap: anywhere; }
+  #meta { color: var(--muted); margin: 2px 0 14px; min-height: 1.5em; }
+  .transport { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  button { font: inherit; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--fg);
+           padding: 10px 14px; cursor: pointer; min-height: 44px; touch-action: manipulation; }
+  button.primary { background: var(--accent); color: var(--accent-fg); border-color: transparent; font-weight: 600; min-width: 112px; }
+  button:disabled { opacity: .45; cursor: default; }
+  #time { color: var(--muted); font-variant-numeric: tabular-nums; margin-left: auto; }
+  #seek { position: relative; height: 32px; margin: 14px 0 0; cursor: pointer; touch-action: none; }
+  #seek .track { position: absolute; left: 0; right: 0; top: 13px; height: 6px; border-radius: 3px; background: var(--sec); }
+  #seek .buf { position: absolute; left: 0; top: 13px; height: 6px; border-radius: 3px; background: var(--buf); width: 0; }
+  #seek .played { position: absolute; left: 0; top: 13px; height: 6px; border-radius: 3px; background: var(--accent); width: 0; }
+  #seek .knob { position: absolute; top: 7px; width: 18px; height: 18px; margin-left: -9px; border-radius: 50%;
+                background: var(--accent); left: 0; box-shadow: 0 0 0 3px var(--card); }
+  .form { display: flex; gap: 2px; margin: 6px 0 4px; height: 30px; }
+  .form div { background: var(--sec); border-radius: 4px; font-size: 11px; color: var(--muted); overflow: hidden;
+              white-space: nowrap; text-overflow: ellipsis; padding: 6px 4px 0; min-width: 0; cursor: pointer; }
+  .form div.now { background: var(--sec-now); color: var(--fg); }
+  .form div.off { opacity: .45; cursor: default; }
+  #state { color: var(--muted); font-size: 14px; margin: 10px 0 0; min-height: 1.4em; }
+  #pool { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 14px; margin-top: 4px; flex-wrap: wrap; }
+  #dots { letter-spacing: 3px; color: var(--accent); }
+  #upnext { color: var(--muted); font-size: 13px; margin: 2px 0 0; overflow-wrap: anywhere; min-height: 1.2em; }
+  .settings { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 18px; }
+  label { display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: var(--muted); min-width: 0; }
+  select, input { font: inherit; padding: 9px 10px; border-radius: 10px; border: 1px solid var(--line);
+                  background: var(--card); color: var(--fg); width: 100%; min-width: 0; min-height: 44px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+  .row button { flex: 1 1 140px; }
+  #share-out { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; margin-top: 8px; min-height: 1.2em; }
+  #history { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+  #history li { display: flex; gap: 8px; align-items: center; border-bottom: 1px solid var(--line); padding: 8px 0; }
+  #history .what { flex: 1; min-width: 0; cursor: pointer; }
+  #history .t { display: block; font-weight: 550; overflow-wrap: anywhere; }
+  #history .m { display: block; color: var(--muted); font-size: 13px; }
+  #history button { min-height: 40px; padding: 6px 10px; font-size: 14px; }
+  #history .fav { color: var(--muted); }
+  #history .fav.on { color: var(--fav); }
+  #history li.playing .t { color: var(--accent); }
+  #hist-empty { color: var(--muted); font-size: 14px; }
+  .note { color: var(--muted); font-size: 14px; margin: 10px 0 0; }
+  label.check span { display: flex; align-items: center; gap: 8px; min-height: 44px; color: var(--fg); }
+  #offline { align-items: center; margin-top: 12px; }
+  #offline .note { margin: 0; flex: 1 1 100%; }
+  label.check input { width: 22px; height: 22px; min-height: 0; }
+  footer { color: var(--muted); font-size: 13px; margin-top: 28px; line-height: 1.5; }
+  footer a { color: inherit; }
+  @media (max-width: 420px) { .settings { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <aside id="error-panel" hidden style="border:1px solid #b26745;background:#38261f;color:#ffe4d0;padding:12px 16px;border-radius:8px;margin-bottom:16px">
+    <strong role="alert" id="error-message"></strong>
+    <details style="margin-top:8px"><summary>Technische Details (letzte 20 Meldungen)</summary><pre id="error-details" style="white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px"></pre></details>
+  </aside>
+  <h1>Endless Piano</h1>
+  <p class="sub">Endlose Klavier- und Orchestermusik, Stück für Stück neu komponiert.</p>
+
+  <section class="card" aria-live="polite">
+    <p id="title">Noch nichts gespielt</p>
+    <p id="meta">Drück auf Abspielen.</p>
+    <div class="transport">
+      <button id="back" disabled aria-label="Zurück">Zurück</button>
+      <button id="play" class="primary">Abspielen</button>
+      <button id="skip" disabled>Überspringen</button>
+      <span id="time"></span>
+    </div>
+    <div id="seek" role="slider" aria-label="Position im Stück" tabindex="0">
+      <div class="track"></div><div class="buf"></div><div class="played"></div><div class="knob"></div>
+    </div>
+    <div class="form" id="form" aria-label="Form des Stücks"></div>
+    <p id="state"></p>
+    <div id="pool"><span id="dots"></span><span id="pool-text"></span></div>
+    <p id="upnext"></p>
+  </section>
+
+  <section class="settings">
+    <label>Stil
+      <select id="genre">
+        <option value="new-age">New Age</option>
+        <option value="klassik">Klassisch (Nocturne und Walzer)</option>
+        <option value="walzer">Walzer</option>
+        <option value="orchester">Orchester (sinfonisch)</option>
+      </select>
+    </label>
+    <label>Klavier
+      <select id="piano">
+        <option value="beste">Flügel</option>
+        <option value="spar">Sparmodus (weniger Daten)</option>
+      </select>
+    </label>
+    <label>Seed
+      <input id="seed" type="number" inputmode="numeric" min="0" max="999999">
+    </label>
+    <label>&nbsp;
+      <button id="restart">Neu starten</button>
+    </label>
+    <label id="wake-row" class="check" hidden><span><input id="wake" type="checkbox"> Bildschirm anlassen</span></label>
+  </section>
+  <audio id="out" hidden preload="auto"></audio>
+  <div class="row" id="offline" hidden>
+    <span id="offline-size" class="note">Offline gespeichert: …</span>
+    <button id="offline-load">Für offline laden</button>
+    <button id="offline-clear">Cache leeren</button>
+  </div>
+
+  <p id="orch-note" class="note" hidden>Das Orchester lädt rund 40 MB Klänge pro Stück (nur die Instrumente und Töne, die es spielt; einmal geladen, bleiben sie gespeichert) und braucht beim Rendern viel Arbeitsspeicher.</p>
+
+  <div class="row">
+    <button id="share">Link teilen</button>
+    <button id="wav" disabled>WAV laden</button>
+    <button id="notes" disabled>Noten (JSON)</button>
+  </div>
+  <p id="share-out"></p>
+
+  <h2>Verlauf</h2>
+  <ul id="history"></ul>
+  <p id="hist-empty">Noch nichts gehört.</p>
+
+  <footer>
+    Komponiert und gespielt live in deinem Browser von AgentSound
+    (<a href="https://github.com/thepok/AgentSound">github.com/thepok/AgentSound</a>, MIT).
+    Flügel: Splendid Grand Piano (Public Domain).
+    Orchester: Sonatina Symphonic Orchestra (Mattias Westlund, Peter Eastman; CC Sampling Plus 1.0),
+    Virtual Playing Orchestra (Paul Battersby, virtualplaying.com; mit Samples von Mattias Westlund, CC BY-SA 3.0/4.0,
+    und Jeff Glatt / No Budget Orchestra, CC BY-SA 4.0), VSCO 2 Community Edition (Versilian Studios, CC0).
+    Choir samples derived from VocalSet (Wilkins, Seetharaman, Wahl, Pardo 2018), CC BY 4.0
+    (<a href="https://doi.org/10.5281/zenodo.1442513">doi.org/10.5281/zenodo.1442513</a>).
+    Orgeln: Burea-Kirche und Musikhochschule Piteå, Samples von Lars Palo (Piteå mit Graham Goode und Panos Ghekas),
+    CC BY-SA 2.5 (<a href="https://familjenpalo.se/vpo/download/">familjenpalo.se</a>).
+    Gitarre: FreePats Spanish Classical Guitar (CC0). Cembalo, Glockenspiel, Röhrenglocken: VCSL (Versilian Studios, CC0).
+    Raumhall: Voxengo IM Reverbs. <a href="LICENSES.md">Lizenzen</a>
+  </footer>
+</main>
+<script type="module" src="app.js?v=web7-925b025c26&a=p11"></script>
+</body>
+</html>

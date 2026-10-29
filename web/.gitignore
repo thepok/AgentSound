@@ -1,0 +1,6 @@
+engine/
+py/repo.zip
+bank/*/
+samples/**/*.opus
+samples/**/*.wav
+*.part
