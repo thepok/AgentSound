@@ -173,6 +173,12 @@ struct AnalysisSpec {
     // "analysis.registration": tracks without touch dynamics (an organ) - their dynamics are registration changes and
     // the swell box, judged as the organ's section-to-section level (flat_dynamics 'registration'), not per phrase
     std::vector<std::string> registration;
+    // "analysis.leads": {track: [section, ...]} - the composer's word on which track carries the melody in which
+    // sections (agentsound.song Song.lead_hint: the endless orchestra's melody parts). With it the note-dynamics ear
+    // stops guessing leads by name / level: a listed track is a lead judged over its listed sections' phrases, every
+    // other track at most a melodic part (flat: info, never the gate's warn)
+    std::vector<std::pair<std::string, std::vector<std::string>>> leads;
+    bool hasLeads{false};
     std::vector<PackFallbackHint> packFallbacks;
 };
 

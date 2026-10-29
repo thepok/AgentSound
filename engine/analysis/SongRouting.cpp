@@ -61,6 +61,9 @@ void MixAnalyzer::setRouting(const SongSpec& song) {
                 if (h.track == spec.id) r.knownSilent.push_back({h.kind, h.message, h.pitches, h.count});
             for (const std::string& t : song.analysis.audioOnsets) r.audioOnsets = r.audioOnsets || t == spec.id;
             for (const std::string& t : song.analysis.registration) r.registration = r.registration || t == spec.id;
+            r.leadHinted = song.analysis.hasLeads;
+            for (const auto& [t, secs] : song.analysis.leads)
+                if (t == spec.id) r.leadSections = secs;
             for (const ModulatorSpec& mod : spec.modulators) r.automated.push_back(mod.target);
             setNodeRouting(static_cast<int>(i), std::move(r));
             break;

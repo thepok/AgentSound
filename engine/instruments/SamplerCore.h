@@ -113,6 +113,27 @@ Region makeRegion(const std::vector<float>* channels, int channelCount, double r
 Region makeRegion(std::shared_ptr<const Segment> a, int channelCount, double rate, std::int64_t frames, LoopMode loop,
                   std::int64_t loopStart, std::int64_t loopEnd);
 
+// Repairs the isolated glitches of a sample (an edit splice or a dropped sample inside a held note - many SSO
+// sustains have them): a third-difference spike `contrastDb` or more above the largest one within +-30 ms (the
+// click detector's test; at least -60 dBFS, past the first 50 ms: the attack is no glitch) is bridged by a cubic
+// Hermite curve over the samples around it, widened (8, 16, 32 ... up to ~2 ms) until the spike is gone. Returns a
+// repaired copy of the guarded segment A (`frames` real frames per channel); `count` receives the glitches bridged.
+// `keep`: frames left as recorded within 2 ms (the loop points: the data at a loop's seam is made to meet the other
+// end, not its neighbours - a "glitch" there is the seam). Deterministic (a pure function of the data).
+std::shared_ptr<const Segment> repairSegment(const Segment& a, int channels, std::int64_t frames, double rate,
+                                             double contrastDb, int* count = nullptr,
+                                             const std::vector<std::int64_t>& keep = {});
+
+// Smooths a forward loop's broken seam (the pack's loop end does not meet its start: the SSO string harmonics
+// end their loops at the file's end, a 15-30 dB step every pass): when the jump the loop plays at its seam (end ->
+// start, a third-difference spike) is `contrastDb` or more above the largest within 30 ms on either side, the
+// loop's last ~25 ms are crossfaded (raised cosine) into the frames before its start, so the end meets the start.
+// Returns `a` itself when the seam is clean (or the loop too short / starting too early), else a smoothed copy;
+// `fixed` receives whether it changed. Deterministic (a pure function of the data).
+std::shared_ptr<const Segment> smoothSeam(const std::shared_ptr<const Segment>& a, int channels, std::int64_t frames,
+                                          double rate, std::int64_t loopStart, std::int64_t loopEnd, double contrastDb,
+                                          bool* fixed = nullptr);
+
 // Playback position in a region. Plain data, copyable (voices are moved between slots).
 struct Reader {
     const Region* region{nullptr};

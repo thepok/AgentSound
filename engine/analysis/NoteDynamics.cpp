@@ -348,6 +348,10 @@ std::vector<json> assessDynamics(MixImpl& m, std::vector<DynamicsFinding>& findi
     // 2. What each part is. Ids first (the composer's intent), then the rhythm, then the space roles.
     std::vector<std::string> kind(nn), reason(nn);
     std::vector<int> pitchMedian(nn, -1);
+    // analysis.leads (the composer's lead hint): the listed tracks are the leads, no other is guessed by its name, its
+    // space role or its level - an orchestra's tuba doubling, a violins II ostinato or the trumpets' harmony
+    bool hinted = false;
+    for (std::size_t i = 0; i < nn; ++i) hinted = hinted || m.nodes[i].routing.leadHinted;
     for (std::size_t i = 0; i < nn; ++i) {
         const NodeData& n = m.nodes[i];
         if (evs[i].size() < 2) continue;
@@ -358,7 +362,7 @@ std::vector<json> assessDynamics(MixImpl& m, std::vector<DynamicsFinding>& findi
             std::nth_element(p.begin(), p.begin() + static_cast<std::ptrdiff_t>(p.size() / 2), p.end());
             pitchMedian[i] = p[p.size() / 2];
         }
-        const bool leadNamed = leadIntentName(n.id);
+        const bool leadNamed = hinted ? !n.routing.leadSections.empty() : leadIntentName(n.id);
         auto set = [&](const char* k, const char* why) {
             kind[i] = k;
             reason[i] = why;
@@ -370,8 +374,8 @@ std::vector<json> assessDynamics(MixImpl& m, std::vector<DynamicsFinding>& findi
         else if (!leadNamed && pulsePart(evs[i])) set("even", "8th/16th pulse or arpeggio figure");
         else if (n.role == Role::Bass) set("bass", "role bass");
         else if (n.role == Role::Bed && !leadNamed) set("bed", "role bed (sustained notes)");
-        else if (n.role == Role::Lead) set("lead", "role lead");
-        else if (leadNamed) set("lead", "melody id");
+        else if (!hinted && n.role == Role::Lead) set("lead", "role lead");
+        else if (leadNamed) set("lead", hinted ? "analysis.leads: carries the melody" : "melody id");
         else set("melodic", "melodic part");
     }
     // Sections without a lead: the loudest melodic part there leads it. A melodic part (not a low line)
@@ -395,7 +399,8 @@ std::vector<json> assessDynamics(MixImpl& m, std::vector<DynamicsFinding>& findi
         if (best >= 0) ++led[static_cast<std::size_t>(best)];
     }
     for (std::size_t i = 0; i < nn; ++i)
-        if (kind[i] == "melodic" && active[i] > 0 && 2 * led[i] >= active[i] && (pitchMedian[i] < 0 || pitchMedian[i] >= 52)) {
+        if (!hinted && kind[i] == "melodic" && active[i] > 0 && 2 * led[i] >= active[i] &&
+            (pitchMedian[i] < 0 || pitchMedian[i] >= 52)) {
             kind[i] = "lead";
             reason[i] = fmt("leads %d of its %d sections in level", led[i], active[i]);
         }
@@ -539,8 +544,22 @@ std::vector<json> assessDynamics(MixImpl& m, std::vector<DynamicsFinding>& findi
             p.playedDb = velKnown && !automated ? std::min(p.audioDb, p.velDb) : p.audioDb;
             return p;
         };
+        // (a hinted lead is a lead in its listed sections: judged over their phrases; with none there it is a melodic
+        // part judged over all of them)
+        auto leadSection = [&](int s) {
+            const auto& ls = n.routing.leadSections;
+            return s >= 0 && std::find(ls.begin(), ls.end(), m.sections[static_cast<std::size_t>(s)].name) != ls.end();
+        };
+        const bool byHint = hinted && kind[i] == "lead";
         for (const Chunk& ch : chunks)
-            if (static_cast<int>(ch.idx.size()) >= kMinNotes) phrases.push_back(measure(ch.idx, ch.section));
+            if (static_cast<int>(ch.idx.size()) >= kMinNotes && (!byHint || leadSection(ch.section)))
+                phrases.push_back(measure(ch.idx, ch.section));
+        if (byHint && phrases.empty()) {
+            kind[i] = "melodic";
+            reason[i] = "analysis.leads: no phrase in its melody sections";
+            for (const Chunk& ch : chunks)
+                if (static_cast<int>(ch.idx.size()) >= kMinNotes) phrases.push_back(measure(ch.idx, ch.section));
+        }
         if (phrases.empty() && static_cast<int>(ev.size()) >= kMinNotes) {  // sparse: the song as one phrase
             std::vector<std::size_t> all(ev.size());
             for (std::size_t k = 0; k < ev.size(); ++k) all[k] = k;

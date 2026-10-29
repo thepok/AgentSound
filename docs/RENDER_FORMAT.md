@@ -86,6 +86,8 @@ them into time.
     ],
     "audioOnsets": ["vocal"],                   // optional, written by the compiler: tracks whose notes trigger whole
                                                 // phrases (a singer's takes) - note dynamics from the audio's onsets
+    "leads": {"violins1": ["t1", "recap"]},     // optional, written by the compiler (Song.lead_hint): the tracks
+                                                // that carry the melody and the sections where they do
     "packFallbacks": [                          // optional, written by the compiler ($AGENTSOUND_PACK_FALLBACK=1 only):
       {"pack": "salamander-grand",              // band substitutes for missing sample packs
        "instead": "GeneralUser GS Grand Piano (fallback)", "message": "sample pack 'salamander-grand' is not installed: ..."}
@@ -591,13 +593,19 @@ allows 50 % and `film` 45 % (cellos, basses and timpani in the hall are its warm
   vocal track of `agentsound.singer` (one one-shot note per sung phrase at velocity 127; the dynamics are inside the
   takes). Their note dynamics (`nodes[].dynamics`) are measured from the audio's own onsets (`onsets: "audio"`), so
   the triggers' single velocity never reads as `flat_dynamics`.
+- `leads`: `{track: [section names]}` - which track carries the melody in which sections (written by `Song.compile()`
+  from `Song.lead_hint`; the symphonic composer sets it from its 'melody' parts). With it the note-dynamics judge
+  takes the lead / melodic kind from the hint, not from the track names or levels: a hinted track is a lead (judged
+  only on its phrases in its listed sections; with no phrase there, a melodic part over all of them), every other
+  track is accompaniment or melodic - a trumpet holding a chorale under the violins' theme is no robotic lead.
 - `packFallbacks`: sample packs a band preset wanted but found missing and what it played instead (`pack`, `instead`,
   `message`; agentsound.library.want). `Song.compile()` raises on them (`PackMissingError`, naming
   `python -m agentsound samples fetch ID` / `AGENTSOUND_SAMPLES`) unless `$AGENTSOUND_PACK_FALLBACK=1`; then they land
   here and the report raises each as an error-level `pack_fallback` warning (ranked first among the errors): the
   render is not the sound the song was written for.
 - **Strict**: `analysis` must be an object with only `profile` / `loudness` / `silentNotes` / `audioOnsets` /
-  `registration` / `packFallbacks`; a `packFallbacks` entry with an unknown key or an empty `pack` is an error; an
+  `leads` / `registration` / `packFallbacks`; a `leads` key that is no track id or a section name that is no section
+  (or an empty / non-string list) is an error; a `packFallbacks` entry with an unknown key or an empty `pack` is an error; an
   unknown profile name is an error listing the profiles; `loudness` must be two numbers; a `silentNotes` entry with an
   unknown key, a track id that is no track, another kind or a pitch outside 0..127 is an error; `audioOnsets` must be
   an array of track ids.

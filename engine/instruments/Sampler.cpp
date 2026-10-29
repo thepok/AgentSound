@@ -70,7 +70,7 @@ enum Param { kLevel, kPan, kWidth, kTranspose, kTune, kPitchbend, kCutoff, kReso
              kVelsens, kStart, kOneshot, kReverse, kMono, kPolyphony, kPedal, kExpression, kDynamics, kDynTone, kDynRange,
              kLayers, kXfSpread, kLegatoTime, kLegatoOffset, kLegatoMatch, kGlide, kGlideShape, kVibrato, kVibratoRate,
              kSympathetic, kBendFollow, kHarmonic, kHarmonicNum, kHarmonicFocus, kRestrike, kFlutter, kFlutterPitch, kFlutterRate,
-             kRrPitch, kRrTone, kRrAttack, kRrStart, kRrLevel, kRrBorrow, kBlendWidth, kVelTone };
+             kRrPitch, kRrTone, kRrAttack, kRrStart, kRrLevel, kRrBorrow, kBlendWidth, kVelTone, kRepair };
 
 constexpr double kHalfDampDb = 16.0;      // half pedal: extra decay (dB/s) of pedal-held treble notes at pedal 0.5
                                           // (0 at 1; the heavy bass strings get 40 % of it: the bass rings through)
@@ -275,6 +275,14 @@ std::vector<ParamSpec> makeSpecs() {
             "one, as recorded at its top), so a layer no longer has one fixed colour for 30 velocity steps - dyntone's "
             "curve, per note. 0.3-0.6 on 2-5 layer pianos / guitars (with layers='blend'); 16-layer packs (Salamander) "
             "barely move. 0 = off.", false),
+        num("repair", 0.0f, 40.0f, 0.0f, "dB",
+            "Repair the samples' isolated glitches at load (an edit splice or a dropped sample inside a held note: many "
+            "SSO sustains click at one point of every loop pass): a sample discontinuity this many dB above the largest "
+            "within 30 ms (the click detector's contrast; 8-10 finds the audible ones) is bridged by a smooth curve "
+            "over a few samples (up to 2 ms); a forward loop whose end does not meet its start (a seam jump this many dB "
+            "above its surroundings: the SSO string harmonics) gets its last 25 ms crossfaded into the frames before its "
+            "start. Applies to WAV zones (not SoundFonts); a repaired copy of each file is kept in memory. 0 = off (the "
+            "files as recorded).", false),
     };
 }
 
@@ -756,17 +764,38 @@ ZoneSpec parseZone(const json& z, const std::string& where) {
 // ------------------------------------------------------------------------------------ regions
 
 // Shared regions of WAV files: one per (file, reverse, loop); segment A of the file is shared by all of them.
+// repairDb > 0: on the file's repaired segment A (smp::repairSegment, one copy per (file, reverse, repairDb, loop));
+// a forward loop's broken seam is crossfaded too (smp::smoothSeam).
 std::shared_ptr<const smp::Region> fileRegion(const std::shared_ptr<const smp::SampleFile>& file, smp::LoopMode mode, std::int64_t ls,
-                                              std::int64_t le) {
-    using Key = std::tuple<std::string, bool, int, std::int64_t, std::int64_t>;
+                                              std::int64_t le, float repairDb = 0.0f) {
+    using Key = std::tuple<std::string, bool, int, std::int64_t, std::int64_t, float>;
+    using SegKey = std::tuple<std::string, bool, float, int, std::int64_t, std::int64_t>;
     static std::mutex mu;
     static std::map<Key, std::shared_ptr<const smp::Region>> cache;
+    static std::map<SegKey, std::shared_ptr<const smp::Segment>> repaired;
     if (mode == smp::LoopMode::None) ls = le = 0;
-    const Key key{file->path, file->reversed, static_cast<int>(mode), ls, le};
+    const Key key{file->path, file->reversed, static_cast<int>(mode), ls, le, repairDb};
     std::lock_guard<std::mutex> lock(mu);
     const auto it = cache.find(key);
     if (it != cache.end()) return it->second;
-    auto r = std::make_shared<const smp::Region>(smp::makeRegion(file->a, file->channels, file->rate, file->frames, mode, ls, le));
+    std::shared_ptr<const smp::Segment> a = file->a;
+    if (repairDb > 0.0f) {
+        const SegKey sk{file->path, file->reversed, repairDb, static_cast<int>(mode), ls, le};
+        auto& seg = repaired[sk];
+        std::vector<std::int64_t> keep;                 // (the loop's seam: its ends, and the file's own loop)
+        if (mode != smp::LoopMode::None) keep = {ls, le - 1};
+        if (file->loop) {
+            keep.push_back(file->loop->start);
+            keep.push_back(file->loop->end - 1);
+        }
+        if (!seg) {
+            seg = smp::repairSegment(*file->a, file->channels, file->frames, file->rate, repairDb, nullptr, keep);
+            if (mode == smp::LoopMode::Forward)          // a loop whose end does not meet its start: crossfaded
+                seg = smp::smoothSeam(seg, file->channels, file->frames, file->rate, ls, le, repairDb);
+        }
+        a = seg;
+    }
+    auto r = std::make_shared<const smp::Region>(smp::makeRegion(a, file->channels, file->rate, file->frames, mode, ls, le));
     cache.emplace(key, r);
     return r;
 }
@@ -1155,6 +1184,7 @@ public:
         sr_ = ctx.sampleRate;
         smp::Kernel::get();  // build the interpolation tables now, not in the first process()
         reverse_ = params_.choice("reverse") == 1;
+        repair_ = params_.get(kRepair);
         oneshot_ = params_.choice("oneshot") == 1;
         mono_ = params_.choice("mono") == 1;
         legatoMode_ = params_.choice("mono") == 2;
@@ -1733,7 +1763,7 @@ private:
                 if (spec.loop == ZoneLoop::Auto) mode = smp::LoopMode::None;  // the file's loop lies beyond the played end
                 else fail(spec.where, "loop end " + std::to_string(le) + " lies beyond the played end " + std::to_string(end));
             }
-            z.region = fileRegion(file, mode, ls, le);
+            z.region = fileRegion(file, mode, ls, le, repair_);
             if (spec.rootFromFile) {
                 z.root = file->unityNote.value_or(60.0);
             } else {
@@ -2923,6 +2953,7 @@ private:
     int poly_{32};
     int transpose_{0};
     bool reverse_{false}, oneshot_{false}, mono_{false};
+    float repair_{0.0f};
     float stealStep_{0.0f}, offStep_{0.0f}, chokeCoef_{0.0f}, rsCoef_{0.0f};
     std::uint64_t age_{0}, seed_{0};
     std::int64_t startSample_{0}, clock_{0};

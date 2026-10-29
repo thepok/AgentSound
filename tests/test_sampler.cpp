@@ -2331,6 +2331,100 @@ void testFlutter() {
                           "partials (plain %.1f)", -gf, -gp));
 }
 
+// 'repair': smp::repairSegment bridges a sample's isolated glitches (an edit splice inside a held note), leaves a
+// clean sample bit-identical and the attack (the first 50 ms) alone; float and 16-bit storage.
+void testRepair() {
+    std::printf("repair: isolated sample glitches bridged at load\n");
+    const double sr = 44100.0;
+    const std::int64_t frames = 88200;
+    auto clean = [&](std::int64_t f) {
+        const double t = static_cast<double>(f) / sr;
+        return 0.3 * std::sin(2.0 * kPi * 392.0 * t) + 0.08 * std::sin(2.0 * kPi * 784.0 * t + 0.4);
+    };
+    auto make = [&](bool is16, bool glitch) {
+        smp::Segment s;
+        s.is16 = is16;
+        const auto n = static_cast<std::size_t>(frames + 2 * smp::kGuardA);
+        if (is16) s.s[0].assign(n, 0);
+        else s.f[0].assign(n, 0.0f);
+        for (std::int64_t f = 0; f < frames; ++f) {
+            double v = clean(f);
+            if (glitch && f >= 50000 && f < 50003) v += 0.04;    // a 3-sample splice glitch at 1.13 s
+            if (glitch && f >= 1000 && f < 1003) v += 0.04;      // one in the attack (23 ms): left as recorded
+            const auto i = static_cast<std::size_t>(f + smp::kGuardA);
+            if (is16) s.s[0][i] = static_cast<std::int16_t>(std::lround(v * 32768.0));
+            else s.f[0][i] = static_cast<float>(v);
+        }
+        return s;
+    };
+    auto value = [&](const smp::Segment& s, std::int64_t f) {
+        const auto i = static_cast<std::size_t>(f + smp::kGuardA);
+        return s.is16 ? s.s[0][i] / 32768.0 : static_cast<double>(s.f[0][i]);
+    };
+    auto clicks = [&](const smp::Segment& s, std::int64_t from) {
+        std::vector<float> x(static_cast<std::size_t>(frames));
+        for (std::int64_t f = 0; f < frames; ++f) x[static_cast<std::size_t>(f)] = static_cast<float>(value(s, f));
+        analysis::ClickDetector det(sr);
+        det.feed(x.data(), x.data(), static_cast<int>(frames));
+        det.finish();
+        int n = 0;
+        for (const auto& e : det.events()) n += e.sample >= from;
+        return n;
+    };
+    for (const bool is16 : {false, true}) {
+        const smp::Segment bad = make(is16, true), good = make(is16, false);
+        int fixed = -1, none = -1;
+        const auto rep = smp::repairSegment(bad, 1, frames, sr, 9.0, &fixed);
+        const auto same = smp::repairSegment(good, 1, frames, sr, 9.0, &none);
+        double dev = 0.0;
+        for (std::int64_t f = 49980; f < 50030; ++f) dev = std::max(dev, std::fabs(value(*rep, f) - clean(f)));
+        bool identical = true;
+        for (std::int64_t f = 0; f < frames; ++f) identical = identical && value(*same, f) == value(good, f);
+        const char* kind = is16 ? "16-bit" : "float";
+        check(clicks(bad, 40000) >= 1 && clicks(*rep, 40000) == 0,
+              fmt("%s: the splice glitch clicks as recorded (%d), not after the repair (%d)", kind, clicks(bad, 40000),
+                  clicks(*rep, 40000)));
+        check(fixed == 1 && dev < 0.004, fmt("%s: one glitch bridged (%d), the curve within %.4f of the clean tone", kind,
+                                             fixed, dev));
+        check(none == 0 && identical, fmt("%s: a clean sample is left bit-identical (%d bridged)", kind, none));
+        check(value(*rep, 1001) == value(bad, 1001), fmt("%s: the attack's first 50 ms are left as recorded", kind));
+        int kept = -1;
+        const auto seam = smp::repairSegment(bad, 1, frames, sr, 9.0, &kept, {50010});
+        check(kept == 0 && value(*seam, 50001) == value(bad, 50001),
+              fmt("%s: a glitch at a loop point (keep) is the seam, left as recorded (%d bridged)", kind, kept));
+    }
+    // smoothSeam: a forward loop whose end does not meet its start (the SSO harmonics: the loop ends at the file's
+    // end, a step every pass - the endless symphony 162000 slot 2 click) is crossfaded; a clean seam is left alone.
+    std::printf("repair: a broken loop seam crossfaded\n");
+    for (const bool is16 : {false, true}) {
+        const auto good = std::make_shared<const smp::Segment>(make(is16, false));
+        const std::int64_t ls = 30000;
+        const std::int64_t clean_le = ls + 225 * 150;                       // whole cycles of both partials: meets
+        const std::int64_t bad_le = 70017;                                  // mid-cycle: a jump at the seam
+        auto loopClicks = [&](const smp::Segment& s, std::int64_t le) {      // the played loop, three passes
+            std::vector<float> x;
+            for (int pass = 0; pass < 3; ++pass)
+                for (std::int64_t f = ls; f < le; ++f) x.push_back(static_cast<float>(value(s, f)));
+            analysis::ClickDetector det(sr);
+            det.feed(x.data(), x.data(), static_cast<int>(x.size()));
+            det.finish();
+            int n = 0;
+            for (const auto& e : det.events()) n += e.sample >= 1000;   // (not the start)
+            return n;
+        };
+        bool fixedBad = false, fixedGood = true;
+        const auto smoothed = smp::smoothSeam(good, 1, frames, sr, ls, bad_le, 9.0, &fixedBad);
+        const auto kept = smp::smoothSeam(good, 1, frames, sr, ls, clean_le, 9.0, &fixedGood);
+        const char* kind = is16 ? "16-bit" : "float";
+        check(loopClicks(*good, bad_le) >= 1 && loopClicks(*smoothed, bad_le) == 0 && fixedBad,
+              fmt("%s: the broken seam clicks as recorded (%d), not crossfaded (%d)", kind, loopClicks(*good, bad_le),
+                  loopClicks(*smoothed, bad_le)));
+        check(!fixedGood && kept == good, fmt("%s: a seam that meets is left as recorded (the same data)", kind));
+        check(value(*smoothed, bad_le - 2000) == value(*good, bad_le - 2000) &&
+              value(*smoothed, ls) == value(*good, ls), fmt("%s: only the loop's last 25 ms change", kind));
+    }
+}
+
 int main(int argc, char** argv) {
     if (argc > 1) {
         gAssets = argv[1];
@@ -2380,6 +2474,7 @@ int main(int argc, char** argv) {
         testGuitarTechniques();
         testFlutter();
         testRoundRobinsAndBlend();
+        testRepair();
     } catch (const std::exception& e) {
         std::printf("FAIL: unexpected exception: %s\n", e.what());
         return 1;

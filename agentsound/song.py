@@ -1643,6 +1643,15 @@ class Song:
                if (getattr(t, '_registration', False) or organ(t)) and not t.mute and notes[t.id]]
         if reg:
             extra.setdefault('analysis', {})['registration'] = reg
+        # the composer's lead hint (Song.lead_hint {track id: [section names]}: the endless orchestra's melody parts)
+        # - the report's note-dynamics ear judges these as the leads over those sections and guesses no lead by name
+        # (analysis.leads: a tuba doubling, a violins II ostinato, the trumpets' harmony are not leads)
+        hint = getattr(self, 'lead_hint', None)
+        if hint is not None:
+            secs = {x.name for x in self.sections}
+            leads = {t: sorted(set(v) & secs) for t, v in sorted(hint.items())
+                     if t in self.tracks and not self.tracks[t].mute and notes.get(t)}
+            extra.setdefault('analysis', {})['leads'] = {t: v for t, v in leads.items() if v}
         return {
             'format': 'agentsound.render',
             'version': 1,

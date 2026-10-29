@@ -123,6 +123,8 @@ struct NodeRouting {
     std::vector<KnownSilent> knownSilent;
     bool audioOnsets{false};   // analysis.audioOnsets: its notes trigger whole phrases - note dynamics from the audio
     bool registration{false};  // analysis.registration: no touch dynamics (an organ) - judged by registration / swell
+    bool leadHinted{false};    // analysis.leads: the song names its leads (no lead guessed by name or level)
+    std::vector<std::string> leadSections;  // ... the sections where this track carries the melody (empty: never a lead)
 };
 
 struct SongSpec;

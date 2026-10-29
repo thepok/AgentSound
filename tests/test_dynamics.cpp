@@ -51,6 +51,8 @@ struct Part {
     std::function<double(int k, const Note&)> levelDb;   // level of note k (dB re full scale); default: from velocity
     std::vector<Note> triggers;                           // the routing's notes instead of `notes` (a singer's phrase triggers)
     bool audioOnsets{false};                              // NodeRouting::audioOnsets (render JSON analysis.audioOnsets)
+    bool leadHinted{false};                               // NodeRouting::leadHinted / leadSections (analysis.leads)
+    std::vector<std::string> leadSections;
     std::vector<float> L, R;
 };
 
@@ -119,6 +121,8 @@ json analyse(std::vector<Part>& parts, const std::string& profile, const std::st
         r.automated = parts[i].automated;
         r.instrumentParams = parts[i].instrumentParams;
         r.audioOnsets = parts[i].audioOnsets;
+        r.leadHinted = parts[i].leadHinted;
+        r.leadSections = parts[i].leadSections;
         for (const Note& n : parts[i].triggers.empty() ? parts[i].notes : parts[i].triggers) {
             r.notes.emplace_back(n.beat, n.dur);
             r.tones.push_back({n.pitch, n.vel});
@@ -411,6 +415,44 @@ void testAudioOnsetsAndProfiles() {
           "with audioOnsets: the onsets come from the audio and the sung dynamics pass");
 }
 
+// analysis.leads (the composer's lead hint): the named melody-instrument tracks and the loudest line are leads only
+// where the hint says - a flat trumpets harmony / tuba doubling outside the hint is a melodic part (info), a hinted lead
+// is judged over its listed sections' phrases only.
+void testLeadHint() {
+    auto band = [](bool hint, std::vector<std::string> violinSecs) {
+        std::vector<Part> p;
+        Part vio{"violins1"};   // dynamic in the verse, flat in the chorus
+        vio.notes = melody(72, [](int k) {
+            return k < 40 ? 55 + static_cast<int>(63.0 * (0.5 + 0.5 * std::sin(2.0 * kPi * k / 9.0))) : 96;
+        });
+        Part tpt{"trumpets"};   // flat: one velocity - a name-guessed lead
+        tpt.notes = melody(67, [](int) { return 100; });
+        for (auto& n : tpt.notes) n.beat += 0.25;
+        Part tuba{"tuba"};      // flat, the loudest line in the low register (a doubling)
+        tuba.notes = melody(52, [](int) { return 120; });
+        for (auto& n : tuba.notes) n.beat += 0.5;
+        for (Part* x : {&vio, &tpt, &tuba}) x->leadHinted = hint;
+        vio.leadSections = std::move(violinSecs);
+        p.push_back(vio);
+        p.push_back(tpt);
+        p.push_back(tuba);
+        return p;
+    };
+    std::vector<Part> guess = band(false, {}), verse = band(true, {"verse"}), chorus = band(true, {"chorus"}),
+                      none = band(true, {});
+    const json rg = analyse(guess, ""), rv = analyse(verse, ""), rc = analyse(chorus, ""), rn = analyse(none, "");
+    check(finding(rg, "trumpets") == "warn", "no hint: the flat trumpets are a lead by name -> warn (the false alarm)");
+    check(finding(rv, "trumpets") == "info" && (*node(rv, "trumpets"))["dynamics"]["kind"] == "melodic" &&
+              finding(rv, "tuba") != "warn",
+          "hint without the trumpets / tuba: melodic parts, flat -> info at most, never the gate's warn");
+    const json& dv = (*node(rv, "violins1"))["dynamics"];
+    check(dv["kind"] == "lead" && finding(rv, "violins1").empty() && dv["phrases"] == 1,
+          "violins1 the hinted lead of the verse (dynamic there): judged over the verse's phrase only -> fine");
+    check(finding(rc, "violins1") == "warn", "violins1 the hinted lead of the chorus (flat there) -> warn");
+    check((*node(rn, "violins1"))["dynamics"]["kind"] == "melodic" && finding(rn, "violins1") != "warn",
+          "a song hint that does not list violins1: a melodic part, not a lead by its name");
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -421,6 +463,7 @@ int main(int argc, char** argv) {
         testHelpers();
         testFlatAndDynamic(outDir);
         testAudioOnsetsAndProfiles();
+        testLeadHint();
     } catch (const std::exception& e) {
         std::printf("[FAIL] exception: %s\n", e.what());
         ++failures;

@@ -152,6 +152,123 @@ void buildLoop(const std::vector<T>& a, std::vector<T>& b, std::int64_t bFirst, 
 
 }  // namespace
 
+std::shared_ptr<const Segment> repairSegment(const Segment& a, int channels, std::int64_t frames, double rate,
+                                             double contrastDb, int* count, const std::vector<std::int64_t>& keep) {
+    auto out = std::make_shared<Segment>(a);
+    int fixed = 0;
+    const int nch = std::clamp(channels, 1, 2);
+    const std::int64_t blk = std::max<std::int64_t>(1, std::llround(rate * 0.00067));      // the detector's ~0.67 ms
+    const std::int64_t ctxN = std::max<std::int64_t>(3, std::llround(0.03 * rate / static_cast<double>(blk)));
+    const std::int64_t skip = std::llround(0.05 * rate);
+    const std::int64_t maxHalf = std::max<std::int64_t>(4, std::llround(0.002 * rate));
+    const double ratio = std::pow(10.0, contrastDb / 20.0);
+    std::vector<double> y(static_cast<std::size_t>(std::max<std::int64_t>(frames, 0)));
+    for (int c = 0; c < nch && frames > 2 * skip; ++c) {
+        const auto cc = static_cast<std::size_t>(c);
+        for (std::int64_t f = 0; f < frames; ++f) {
+            const auto i = static_cast<std::size_t>(f + kGuardA);
+            y[static_cast<std::size_t>(f)] = a.is16 ? a.s[cc][i] / 32768.0 : static_cast<double>(a.f[cc][i]);
+        }
+        auto d3 = [&](std::int64_t n) {
+            const auto k = static_cast<std::size_t>(n);
+            return std::abs(y[k] - 3.0 * y[k - 1] + 3.0 * y[k - 2] - y[k - 3]);
+        };
+        const std::int64_t nb = frames / blk;
+        std::vector<double> pk(static_cast<std::size_t>(nb), 0.0);
+        std::vector<std::int64_t> at(static_cast<std::size_t>(nb), 0);
+        for (std::int64_t n = 3; n < nb * blk; ++n) {
+            const auto j = static_cast<std::size_t>(n / blk);
+            const double v = d3(n);
+            if (v > pk[j]) {
+                pk[j] = v;
+                at[j] = n;
+            }
+        }
+        bool changed = false;
+        for (std::int64_t j = 0; j < nb; ++j) {
+            const std::int64_t n = at[static_cast<std::size_t>(j)];
+            const double p = pk[static_cast<std::size_t>(j)];
+            if (n < skip || p < 1e-3) continue;
+            if (std::any_of(keep.begin(), keep.end(), [&](std::int64_t k) { return std::llabs(n - k) <= maxHalf + 8; })) continue;
+            double ctx = 0.0;                       // the neighbourhood without the adjacent blocks
+            for (std::int64_t k = std::max<std::int64_t>(0, j - ctxN); k <= std::min(nb - 1, j + ctxN); ++k) {
+                if (k < j - 1 || k > j + 1) ctx = std::max(ctx, pk[static_cast<std::size_t>(k)]);
+            }
+            if (ctx <= 0.0 || p < ratio * ctx) continue;
+            for (std::int64_t half = 4; half <= maxHalf; half *= 2) {   // bridge (g0, g1), wider while it spikes
+                const std::int64_t g0 = n - half - 1, g1 = n + half / 2 + 1;
+                if (g0 < 3 || g1 + 3 >= frames) break;
+                const double y0 = y[static_cast<std::size_t>(g0)], y1 = y[static_cast<std::size_t>(g1)];
+                const double m0 = (y0 - y[static_cast<std::size_t>(g0 - 2)]) * 0.5;
+                const double m1 = (y[static_cast<std::size_t>(g1 + 2)] - y1) * 0.5;
+                const double L = static_cast<double>(g1 - g0);
+                for (std::int64_t i = g0 + 1; i < g1; ++i) {
+                    const double t = static_cast<double>(i - g0) / L, t2 = t * t, t3 = t2 * t;
+                    y[static_cast<std::size_t>(i)] = (2 * t3 - 3 * t2 + 1) * y0 + (t3 - 2 * t2 + t) * L * m0 +
+                                                     (-2 * t3 + 3 * t2) * y1 + (t3 - t2) * L * m1;
+                }
+                double m = 0.0;
+                for (std::int64_t k = std::max<std::int64_t>(3, g0 - 3); k <= std::min(frames - 1, g1 + 4); ++k) m = std::max(m, d3(k));
+                if (m < ratio * ctx) break;
+            }
+            ++fixed;
+            changed = true;
+        }
+        if (!changed) continue;
+        for (std::int64_t f = 0; f < frames; ++f) {
+            const auto i = static_cast<std::size_t>(f + kGuardA);
+            const double v = y[static_cast<std::size_t>(f)];
+            if (out->is16) out->s[cc][i] = static_cast<std::int16_t>(std::clamp(std::lround(v * 32768.0), -32768L, 32767L));
+            else out->f[cc][i] = static_cast<float>(v);
+        }
+    }
+    if (count) *count = fixed;
+    return out;
+}
+
+std::shared_ptr<const Segment> smoothSeam(const std::shared_ptr<const Segment>& a, int channels, std::int64_t frames,
+                                          double rate, std::int64_t loopStart, std::int64_t loopEnd, double contrastDb,
+                                          bool* fixed) {
+    if (fixed) *fixed = false;
+    const int nch = std::clamp(channels, 1, 2);
+    const std::int64_t ls = loopStart, le = loopEnd, len = loopEnd - loopStart;
+    const std::int64_t ctx = std::llround(0.03 * rate), guard = std::max<std::int64_t>(8, std::llround(0.0015 * rate));
+    const std::int64_t fade = std::min<std::int64_t>({std::llround(0.025 * rate), ls, len / 2});
+    if (!a || le > frames || fade < 16 || len < 2 * (ctx + guard) || ls < ctx) return a;
+    const double ratio = std::pow(10.0, contrastDb / 20.0);
+    auto val = [&](int c, std::int64_t f) {
+        const auto i = static_cast<std::size_t>(f + kGuardA);
+        const auto cc = static_cast<std::size_t>(c);
+        return a->is16 ? a->s[cc][i] / 32768.0 : static_cast<double>(a->f[cc][i]);
+    };
+    auto d3 = [](double y3, double y2, double y1, double y0) { return std::abs(y0 - 3.0 * y1 + 3.0 * y2 - y3); };
+    bool broken = false;
+    for (int c = 0; c < nch && !broken; ++c) {
+        auto played = [&](std::int64_t k) { return k < 0 ? val(c, le + k) : val(c, ls + k); };   // the seam at k = 0
+        double seam = 0.0;
+        for (std::int64_t k = 0; k < 3; ++k) seam = std::max(seam, d3(played(k - 3), played(k - 2), played(k - 1), played(k)));
+        double near = 0.0;                         // the loop's own movement within 30 ms of the seam
+        for (std::int64_t f = le - ctx; f < le - guard; ++f) near = std::max(near, d3(val(c, f - 3), val(c, f - 2), val(c, f - 1), val(c, f)));
+        for (std::int64_t f = ls + guard; f < ls + ctx; ++f) near = std::max(near, d3(val(c, f - 3), val(c, f - 2), val(c, f - 1), val(c, f)));
+        broken = seam >= 1e-3 && seam >= ratio * std::max(near, 1e-9);
+    }
+    if (!broken) return a;
+    auto out = std::make_shared<Segment>(*a);
+    const double kPiD = 3.14159265358979323846;
+    for (int c = 0; c < nch; ++c) {
+        const auto cc = static_cast<std::size_t>(c);
+        for (std::int64_t i = 0; i < fade; ++i) {   // [le - fade, le) -> [ls - fade, ls): the end runs into the start
+            const double w = 0.5 - 0.5 * std::cos(kPiD * static_cast<double>(i + 1) / static_cast<double>(fade));
+            const double v = (1.0 - w) * val(c, le - fade + i) + w * val(c, ls - fade + i);
+            const auto k = static_cast<std::size_t>(le - fade + i + kGuardA);
+            if (out->is16) out->s[cc][k] = static_cast<std::int16_t>(std::clamp(std::lround(v * 32768.0), -32768L, 32767L));
+            else out->f[cc][k] = static_cast<float>(v);
+        }
+    }
+    if (fixed) *fixed = true;
+    return out;
+}
+
 Region makeRegion(const std::vector<float>* channels, int channelCount, double rate, LoopMode loop,
                   std::int64_t loopStart, std::int64_t loopEnd, bool reverse) {
     const int count = std::clamp(channelCount, 1, 2);

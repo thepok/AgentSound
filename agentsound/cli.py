@@ -231,7 +231,7 @@ def apply_analysis(render: dict, song_analysis=None, profile: str | None = None,
     settings written ({} = none: the engine uses profile 'default'). The compiler's own "silentNotes" (the
     compile-time silent notes, agentsound.silent_notes) are kept as they are; the song file cannot set them."""
     own = dict(render['analysis']) if isinstance(render.get('analysis'), dict) else render.get('analysis')
-    compiler = {k: own.pop(k) for k in ('silentNotes', 'audioOnsets', 'registration') if k in own} \
+    compiler = {k: own.pop(k) for k in ('silentNotes', 'audioOnsets', 'registration', 'leads') if k in own} \
         if isinstance(own, dict) else {}
     merged = check_analysis(own, 'render "analysis"') if own is not None else {}
     if song_analysis is not None:

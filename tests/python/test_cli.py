@@ -349,6 +349,9 @@ class AnalysisSettings(unittest.TestCase):
         r = {'analysis': {'audioOnsets': ['vocal'], 'silentNotes': [{'track': 'x'}]}}
         self.assertEqual(cli.apply_analysis(r, {'profile': 'jazz'}), {'profile': 'jazz'})
         self.assertEqual(r['analysis'], {'profile': 'jazz', 'audioOnsets': ['vocal'], 'silentNotes': [{'track': 'x'}]})
+        r = {'analysis': {'leads': {'violins1': ['t1']}}}      # (Song.lead_hint: the melody's track per section)
+        self.assertEqual(cli.apply_analysis(r, {'profile': 'classical'}), {'profile': 'classical'})
+        self.assertEqual(r['analysis'], {'profile': 'classical', 'leads': {'violins1': ['t1']}})
 
     def test_song_file_analysis_and_profile_flag(self):
         d = self.song("\nANALYSIS = {'profile': 'synthwave', 'loudness': [-12, -9]}\n")

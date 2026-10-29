@@ -824,3 +824,5 @@ fails when an engine module, helper module, band preset, role, analysis profile,
 or hero preset is not mentioned here.
 
 Browser/WASM: `python tools/wasm/runtime.py` restores the checksum-pinned runtime assets into `web/` (ignored binaries); `python -m http.server 8778 --directory web` serves the app. See [web/README.md](web/README.md) and [tools/wasm/README.md](tools/wasm/README.md). The existing p11 browser release is preserved independently of current native generator development.
+
+Sampler playback repairs isolated sample glitches and broken loop seams at load time. `Song.lead_hint` identifies melody tracks per section for note-dynamics analysis; see `docs/RENDER_FORMAT.md`.

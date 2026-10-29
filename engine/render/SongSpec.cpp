@@ -410,7 +410,7 @@ std::vector<MeterPoint> parseMeter(const json& a, const std::string& path) {
 
 // "analysis": {"profile": "synthwave", "loudness": [-12, -9]}, both optional.
 AnalysisSpec parseAnalysis(const json& a, const std::string& path) {
-    allowOnly(a, path, {"profile", "loudness", "silentNotes", "audioOnsets", "registration", "packFallbacks"});
+    allowOnly(a, path, {"profile", "loudness", "silentNotes", "audioOnsets", "registration", "leads", "packFallbacks"});
     AnalysisSpec spec;
     if (a.contains("profile")) {
         spec.profile = string(a, "profile", path);
@@ -480,6 +480,24 @@ AnalysisSpec parseAnalysis(const json& a, const std::string& path) {
         for (const json& t : list) {
             if (!t.is_string() || t.get<std::string>().empty()) fail(lp, "must hold track ids (strings)");
             spec.registration.push_back(t.get<std::string>());
+        }
+    }
+    if (a.contains("leads")) {
+        // {"violins1": ["t1", "recap"], ...}: the melody's track per section (the composer's lead hint)
+        const json& obj = a.at("leads");
+        const std::string lp = path + ".leads";
+        if (!obj.is_object()) fail(lp, "must be an object {track id: [section names]}");
+        spec.hasLeads = true;
+        for (auto it = obj.begin(); it != obj.end(); ++it) {
+            const std::string tp = lp + "." + it.key();
+            if (it.key().empty()) fail(lp, "track ids must not be empty");
+            if (!it.value().is_array() || it.value().empty()) fail(tp, "must be a non-empty array of section names");
+            std::vector<std::string> secs;
+            for (const json& s : it.value()) {
+                if (!s.is_string() || s.get<std::string>().empty()) fail(tp, "must hold section names (strings)");
+                secs.push_back(s.get<std::string>());
+            }
+            spec.leads.emplace_back(it.key(), std::move(secs));
         }
     }
     if (a.contains("packFallbacks")) {
@@ -822,6 +840,12 @@ SongSpec parseSong(const json& doc) {
         if (!isTrack(t)) fail(root + ".analysis.audioOnsets", "'" + t + "' is not a track id");
     for (const std::string& t : song.analysis.registration)
         if (!isTrack(t)) fail(root + ".analysis.registration", "'" + t + "' is not a track id");
+    for (const auto& [t, secs] : song.analysis.leads) {
+        if (!isTrack(t)) fail(root + ".analysis.leads", "'" + t + "' is not a track id");
+        for (const std::string& s : secs)
+            if (std::none_of(song.sections.begin(), song.sections.end(), [&](const SectionSpec& x) { return x.name == s; }))
+                fail(root + ".analysis.leads." + t, "'" + s + "' is not a section name");
+    }
     for (const auto& n : song.nodes) {
         if (n.kind != NodeSpec::Kind::Master && n.output != "master" && !isBus(n.output)) {
             fail(n.path + ".output", "'" + n.output + "' is not a bus id or 'master'");
