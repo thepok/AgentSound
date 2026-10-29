@@ -1,0 +1,305 @@
+{
+ "AJTZ": {
+  "source": "generated",
+  "path": "D:/tmp/os1/r/old/009-open-winds",
+  "title": "Open Winds",
+  "moves": [],
+  "code": "old",
+  "slot": "009",
+  "panel": "1"
+ },
+ "ALPY": {
+  "source": "generated",
+  "path": "D:/tmp/os1/r/old/004-northern-wings",
+  "title": "Northern Wings",
+  "moves": [],
+  "code": "old",
+  "slot": "004",
+  "panel": "2"
+ },
+ "ATUG": {
+  "source": "generated",
+  "path": "D:/tmp/os1/r/old/011-symphonic-dance-bells-of-the-north",
+  "title": "Symphonic Dance: Bells of the North",
+  "moves": [],
+  "code": "old",
+  "slot": "011",
+  "panel": "1"
+ },
+ "AUTN": {
+  "source": "generated",
+  "path": "D:/tmp/os1/r/old/003-the-stormy-rivers",
+  "title": "The Stormy Rivers",
+  "moves": [],
+  "code": "old",
+  "slot": "003",
+  "panel": "1"
+ },
+ "BMXP": {
+  "source": "generated",
+  "path": "D:/tmp/os1/r/old/012-tides-of-the-harvest",
+  "title": "Tides of the Harvest",
+  "moves": [],
+  "code": "old",
+  "slot": "012",
+  "panel": "2"
+ },
+ "CJSJ": {
+  "source": "generated",
+  "path": "D:/tmp/os1/r/new/006-overture-heroic-mountains",
+  "title": "Overture: Heroic Mountains",
+  "moves": [],
+  "code": "new",
+  "slot": "006",
+  "panel": "1"
+ },
+ "CUHP": {
+  "source": "generated",
+  "path": "D:/tmp/os1/r/old/002-toward-home",
+  "title": "Toward Home",
+  "moves": [],
+  "code": "old",
+  "slot": "002",
+  "panel": "2"
+ },
+ "EANZ": {
+  "source": "generated",
+  "path": "D:/tmp/os1/r/new/015-iron-voyages",
+  "title": "Iron Voyages",
+  "moves": [],
+  "code": "new",
+  "slot": "015",
+  "panel": "2"
+ },
+ "EFXJ": {
+  "source": "generated",
+  "path": "D:/tmp/os1/r/old/010-wings-of-the-sea",
+  "title": "Wings of the Sea",
+  "moves": [],
+  "code": "old",
+  "slot": "010",
+  "panel": "2"
+ },
+ "ENKB": {
+  "source": "generated",
+  "path": "D:/tmp/os1/r/old/001-forests-of-home",
+  "title": "Forests of Home",
+  "moves": [],
+  "code": "old",
+  "slot": "001",
+  "panel": "1"
+ },
+ "ENUD": {
+  "source": "generated",
+  "path": "D:/tmp/os1/r/new/008-winds-of-the-storm",
+  "title": "Winds of the Storm",
+  "moves": [],
+  "code": "new",
+  "slot": "008",
+  "panel": "1"
+ },
+ "FAFA": {
+  "source": "generated",
+  "path": "D:/tmp/os1/r/new/011-symphonic-dance-bells-of-the-north",
+  "title": "Symphonic Dance: Bells of the North",
+  "moves": [],
+  "code": "new",
+  "slot": "011",
+  "panel": "2"
+ },
+ "FKBL": {
+  "source": "generated",
+  "path": "D:/tmp/os1/r/new/010-wings-of-the-sea",
+  "title": "Wings of the Sea",
+  "moves": [],
+  "code": "new",
+  "slot": "010",
+  "panel": "1"
+ },
+ "GCAJ": {
+  "source": "composed",
+  "path": "D:/Repos/AgentSound/songs/pro-orch-symphonic-stormy",
+  "panel": "all"
+ },
+ "HKCT": {
+  "source": "generated",
+  "path": "D:/tmp/os1/r/new/014-toward-the-valley",
+  "title": "Toward the Valley",
+  "moves": [],
+  "code": "new",
+  "slot": "014",
+  "panel": "1"
+ },
+ "KNKZ": {
+  "source": "generated",
+  "path": "D:/tmp/os1/r/new/001-forests-of-home",
+  "title": "Forests of Home",
+  "moves": [],
+  "code": "new",
+  "slot": "001",
+  "panel": "2"
+ },
+ "LGLU": {
+  "source": "generated",
+  "path": "D:/tmp/os1/r/new/013-symphonic-dance-wings-of-home",
+  "title": "Symphonic Dance: Wings of Home",
+  "moves": [],
+  "code": "new",
+  "slot": "013",
+  "panel": "2"
+ },
+ "LWXV": {
+  "source": "generated",
+  "path": "D:/tmp/os1/r/old/006-overture-heroic-mountains",
+  "title": "Overture: Heroic Mountains",
+  "moves": [],
+  "code": "old",
+  "slot": "006",
+  "panel": "2"
+ },
+ "MDLF": {
+  "source": "generated",
+  "path": "D:/tmp/os1/r/new/016-restless-riders",
+  "title": "Restless Riders",
+  "moves": [],
+  "code": "new",
+  "slot": "016",
+  "panel": "1"
+ },
+ "MFYK": {
+  "source": "generated",
+  "path": "D:/tmp/os1/r/new/009-open-winds",
+  "title": "Open Winds",
+  "moves": [],
+  "code": "new",
+  "slot": "009",
+  "panel": "2"
+ },
+ "NHZX": {
+  "source": "generated",
+  "path": "D:/tmp/os1/r/old/005-overture-restless-riders",
+  "title": "Overture: Restless Riders",
+  "moves": [],
+  "code": "old",
+  "slot": "005",
+  "panel": "1"
+ },
+ "PGBN": {
+  "source": "generated",
+  "path": "D:/tmp/os1/r/old/008-winds-of-the-storm",
+  "title": "Winds of the Storm",
+  "moves": [],
+  "code": "old",
+  "slot": "008",
+  "panel": "2"
+ },
+ "PJAX": {
+  "source": "composed",
+  "path": "D:/Repos/AgentSound/songs/pro-orch-symphonic-scherzo",
+  "panel": "all"
+ },
+ "PVPJ": {
+  "source": "generated",
+  "path": "D:/tmp/os1/r/old/007-the-open-rivers",
+  "title": "The Open Rivers",
+  "moves": [],
+  "code": "old",
+  "slot": "007",
+  "panel": "1"
+ },
+ "QJBZ": {
+  "source": "generated",
+  "path": "D:/tmp/os1/r/old/014-toward-the-valley",
+  "title": "Toward the Valley",
+  "moves": [],
+  "code": "old",
+  "slot": "014",
+  "panel": "2"
+ },
+ "RLJN": {
+  "source": "generated",
+  "path": "D:/tmp/os1/r/new/002-toward-home",
+  "title": "Toward Home",
+  "moves": [],
+  "code": "new",
+  "slot": "002",
+  "panel": "1"
+ },
+ "RQTQ": {
+  "source": "generated",
+  "path": "D:/tmp/os1/r/new/012-tides-of-the-harvest",
+  "title": "Tides of the Harvest",
+  "moves": [],
+  "code": "new",
+  "slot": "012",
+  "panel": "1"
+ },
+ "THVR": {
+  "source": "composed",
+  "path": "D:/Repos/AgentSound/songs/pro-orch-symphonic-river",
+  "panel": "all"
+ },
+ "TLNS": {
+  "source": "generated",
+  "path": "D:/tmp/os1/r/old/013-symphonic-dance-wings-of-home",
+  "title": "Symphonic Dance: Wings of Home",
+  "moves": [],
+  "code": "old",
+  "slot": "013",
+  "panel": "1"
+ },
+ "URSL": {
+  "source": "generated",
+  "path": "D:/tmp/os1/r/old/016-restless-riders",
+  "title": "Restless Riders",
+  "moves": [],
+  "code": "old",
+  "slot": "016",
+  "panel": "2"
+ },
+ "VGKE": {
+  "source": "generated",
+  "path": "D:/tmp/os1/r/new/003-the-stormy-rivers",
+  "title": "The Stormy Rivers",
+  "moves": [],
+  "code": "new",
+  "slot": "003",
+  "panel": "2"
+ },
+ "VTCE": {
+  "source": "generated",
+  "path": "D:/tmp/os1/r/new/007-the-open-rivers",
+  "title": "The Open Rivers",
+  "moves": [],
+  "code": "new",
+  "slot": "007",
+  "panel": "2"
+ },
+ "XAHD": {
+  "source": "generated",
+  "path": "D:/tmp/os1/r/new/004-northern-wings",
+  "title": "Northern Wings",
+  "moves": [],
+  "code": "new",
+  "slot": "004",
+  "panel": "1"
+ },
+ "XNKQ": {
+  "source": "generated",
+  "path": "D:/tmp/os1/r/old/015-iron-voyages",
+  "title": "Iron Voyages",
+  "moves": [],
+  "code": "old",
+  "slot": "015",
+  "panel": "1"
+ },
+ "XSFW": {
+  "source": "generated",
+  "path": "D:/tmp/os1/r/new/005-overture-restless-riders",
+  "title": "Overture: Restless Riders",
+  "moves": [],
+  "code": "new",
+  "slot": "005",
+  "panel": "2"
+ }
+}

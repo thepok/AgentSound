@@ -1,0 +1,58 @@
+{
+ "BMRT": {
+  "source": "generated",
+  "path": "songs/_endless_orchestra/out/q1/002-toward-the-morning",
+  "code": "orchestra-film"
+ },
+ "BQZM": {
+  "source": "generated",
+  "path": "songs/_endless_orchestra/out/q1/002-the-rising-harbours-waltz",
+  "code": "orchestra-film"
+ },
+ "EPQT": {
+  "source": "composed",
+  "path": "songs/pro-orch-longing"
+ },
+ "GLMG": {
+  "source": "composed",
+  "path": "songs/pro-orch-hopeful"
+ },
+ "GYQV": {
+  "source": "generated",
+  "path": "songs/_endless_orchestra/out/q1/004-the-iron-horizons",
+  "code": "orchestra-symphonic"
+ },
+ "MBWU": {
+  "source": "composed",
+  "path": "songs/pro-orch-night"
+ },
+ "MDJT": {
+  "source": "composed",
+  "path": "songs/pro-orch-epic"
+ },
+ "QCWA": {
+  "source": "generated",
+  "path": "songs/_endless_orchestra/out/q1/003-distant-skies-of-winter",
+  "code": "orchestra-film"
+ },
+ "RDGN": {
+  "source": "generated",
+  "path": "songs/_endless_orchestra/out/q1/004-silver-banners-of-the-north",
+  "code": "orchestra-symphonic"
+ },
+ "TUHL": {
+  "source": "generated",
+  "path": "songs/_endless_orchestra/out/q1/004-overture-golden-mountains",
+  "code": "orchestra-symphonic"
+ },
+ "YQLV": {
+  "source": "generated",
+  "path": "songs/_endless_orchestra/out/q1/004-toward-the-dawn",
+  "code": "orchestra-symphonic"
+ },
+ "ZJDZ": {
+  "source": "generated",
+  "path": "songs/_endless_orchestra/out/q1/002-mountains-of-the-sea",
+  "code": "orchestra-film"
+ }
+}

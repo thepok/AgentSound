@@ -1,0 +1,305 @@
+{
+ "AEFB": {
+  "source": "generated",
+  "path": "D:/tmp/op1/r/old/011-heroic-winds-of-the-harvest",
+  "title": "Heroic Winds of the Harvest",
+  "moves": [],
+  "code": "old",
+  "slot": "011",
+  "panel": "1"
+ },
+ "AFRC": {
+  "source": "generated",
+  "path": "D:/tmp/op1/r/old/015-hidden-tides",
+  "title": "Hidden Tides",
+  "moves": [],
+  "code": "old",
+  "slot": "015",
+  "panel": "1"
+ },
+ "ANBD": {
+  "source": "generated",
+  "path": "D:/tmp/op1/r/new/016-rising-banners",
+  "title": "Rising Banners",
+  "moves": [],
+  "code": "new",
+  "slot": "016",
+  "panel": "1"
+ },
+ "AVNX": {
+  "source": "generated",
+  "path": "D:/tmp/op1/r/old/009-overture-iron-winds",
+  "title": "Overture: Iron Winds",
+  "moves": [],
+  "code": "old",
+  "slot": "009",
+  "panel": "1"
+ },
+ "BVCE": {
+  "source": "generated",
+  "path": "D:/tmp/op1/r/new/006-northern-mountains-of-home",
+  "title": "Northern Mountains of Home",
+  "moves": [],
+  "code": "new",
+  "slot": "006",
+  "panel": "1"
+ },
+ "BZZS": {
+  "source": "composed",
+  "path": "D:/Repos/AgentSound/songs/pro-orch-symphonic-stormy",
+  "panel": "all"
+ },
+ "CXLM": {
+  "source": "generated",
+  "path": "D:/tmp/op1/r/old/013-storms-of-the-valley",
+  "title": "Storms of the Valley",
+  "moves": [],
+  "code": "old",
+  "slot": "013",
+  "panel": "1"
+ },
+ "DGGK": {
+  "source": "generated",
+  "path": "D:/tmp/op1/r/new/015-overture-hidden-tides",
+  "title": "Overture: Hidden Tides",
+  "moves": [],
+  "code": "new",
+  "slot": "015",
+  "panel": "2"
+ },
+ "DMKG": {
+  "source": "generated",
+  "path": "D:/tmp/op1/r/new/012-toward-the-plains",
+  "title": "Toward the Plains",
+  "moves": [],
+  "code": "new",
+  "slot": "012",
+  "panel": "1"
+ },
+ "FCUT": {
+  "source": "generated",
+  "path": "D:/tmp/op1/r/old/006-symphonic-dance-mountains-of-home",
+  "title": "Symphonic Dance: Mountains of Home",
+  "moves": [],
+  "code": "old",
+  "slot": "006",
+  "panel": "2"
+ },
+ "FEPP": {
+  "source": "generated",
+  "path": "D:/tmp/op1/r/new/013-storms-of-the-valley",
+  "title": "Storms of the Valley",
+  "moves": [],
+  "code": "new",
+  "slot": "013",
+  "panel": "2"
+ },
+ "FHNW": {
+  "source": "generated",
+  "path": "D:/tmp/op1/r/old/005-bright-fields-of-the-harvest",
+  "title": "Bright Fields of the Harvest",
+  "moves": [],
+  "code": "old",
+  "slot": "005",
+  "panel": "1"
+ },
+ "HVMF": {
+  "source": "generated",
+  "path": "D:/tmp/op1/r/new/004-toward-the-dawn",
+  "title": "Toward the Dawn",
+  "moves": [],
+  "code": "new",
+  "slot": "004",
+  "panel": "1"
+ },
+ "JDLB": {
+  "source": "generated",
+  "path": "D:/tmp/op1/r/new/010-endless-winds",
+  "title": "Endless Winds",
+  "moves": [],
+  "code": "new",
+  "slot": "010",
+  "panel": "1"
+ },
+ "KKEF": {
+  "source": "generated",
+  "path": "D:/tmp/op1/r/old/008-overture-stormy-winds",
+  "title": "Overture: Stormy Winds",
+  "moves": [],
+  "code": "old",
+  "slot": "008",
+  "panel": "2"
+ },
+ "KSKU": {
+  "source": "generated",
+  "path": "D:/tmp/op1/r/new/009-winds-of-the-plains",
+  "title": "Winds of the Plains",
+  "moves": [],
+  "code": "new",
+  "slot": "009",
+  "panel": "2"
+ },
+ "LAZW": {
+  "source": "generated",
+  "path": "D:/tmp/op1/r/new/008-winds-of-the-dawn",
+  "title": "Winds of the Dawn",
+  "moves": [],
+  "code": "new",
+  "slot": "008",
+  "panel": "1"
+ },
+ "LEVA": {
+  "source": "composed",
+  "path": "D:/Repos/AgentSound/songs/pro-orch-symphonic-river",
+  "panel": "all"
+ },
+ "MVHA": {
+  "source": "generated",
+  "path": "D:/tmp/op1/r/old/014-toward-the-valley",
+  "title": "Toward the Valley",
+  "moves": [],
+  "code": "old",
+  "slot": "014",
+  "panel": "2"
+ },
+ "NEKA": {
+  "source": "generated",
+  "path": "D:/tmp/op1/r/old/002-overture-burning-storms",
+  "title": "Overture: Burning Storms",
+  "moves": [],
+  "code": "old",
+  "slot": "002",
+  "panel": "2"
+ },
+ "QLXP": {
+  "source": "generated",
+  "path": "D:/tmp/op1/r/old/016-rising-banners",
+  "title": "Rising Banners",
+  "moves": [],
+  "code": "old",
+  "slot": "016",
+  "panel": "2"
+ },
+ "QNMJ": {
+  "source": "generated",
+  "path": "D:/tmp/op1/r/new/001-overture-distant-wings",
+  "title": "Overture: Distant Wings",
+  "moves": [],
+  "code": "new",
+  "slot": "001",
+  "panel": "2"
+ },
+ "RKFQ": {
+  "source": "composed",
+  "path": "D:/Repos/AgentSound/songs/pro-orch-symphonic-scherzo",
+  "panel": "all"
+ },
+ "RWLQ": {
+  "source": "generated",
+  "path": "D:/tmp/op1/r/old/004-northern-fields-of-the-dawn",
+  "title": "Northern Fields of the Dawn",
+  "moves": [],
+  "code": "old",
+  "slot": "004",
+  "panel": "2"
+ },
+ "SJKY": {
+  "source": "generated",
+  "path": "D:/tmp/op1/r/old/010-endless-winds",
+  "title": "Endless Winds",
+  "moves": [],
+  "code": "old",
+  "slot": "010",
+  "panel": "2"
+ },
+ "TEUA": {
+  "source": "generated",
+  "path": "D:/tmp/op1/r/new/005-toward-the-harvest",
+  "title": "Toward the Harvest",
+  "moves": [],
+  "code": "new",
+  "slot": "005",
+  "panel": "2"
+ },
+ "VAJB": {
+  "source": "generated",
+  "path": "D:/tmp/op1/r/new/011-symphonic-dance-winds-of-the-harvest",
+  "title": "Symphonic Dance: Winds of the Harvest",
+  "moves": [],
+  "code": "new",
+  "slot": "011",
+  "panel": "2"
+ },
+ "VDSS": {
+  "source": "generated",
+  "path": "D:/tmp/op1/r/new/003-the-iron-tides",
+  "title": "The Iron Tides",
+  "moves": [],
+  "code": "new",
+  "slot": "003",
+  "panel": "2"
+ },
+ "VZZA": {
+  "source": "generated",
+  "path": "D:/tmp/op1/r/old/012-toward-the-plains",
+  "title": "Toward the Plains",
+  "moves": [],
+  "code": "old",
+  "slot": "012",
+  "panel": "2"
+ },
+ "WFRQ": {
+  "source": "generated",
+  "path": "D:/tmp/op1/r/old/003-tides-of-home",
+  "title": "Tides of Home",
+  "moves": [],
+  "code": "old",
+  "slot": "003",
+  "panel": "1"
+ },
+ "XQLS": {
+  "source": "generated",
+  "path": "D:/tmp/op1/r/old/007-bright-riders-of-the-sea",
+  "title": "Bright Riders of the Sea",
+  "moves": [],
+  "code": "old",
+  "slot": "007",
+  "panel": "1"
+ },
+ "XZBV": {
+  "source": "generated",
+  "path": "D:/tmp/op1/r/old/001-the-distant-wings",
+  "title": "The Distant Wings",
+  "moves": [],
+  "code": "old",
+  "slot": "001",
+  "panel": "1"
+ },
+ "ZLVY": {
+  "source": "generated",
+  "path": "D:/tmp/op1/r/new/002-storms-of-summer",
+  "title": "Storms of Summer",
+  "moves": [],
+  "code": "new",
+  "slot": "002",
+  "panel": "1"
+ },
+ "ZUXH": {
+  "source": "generated",
+  "path": "D:/tmp/op1/r/new/007-toward-the-sea",
+  "title": "Toward the Sea",
+  "moves": [],
+  "code": "new",
+  "slot": "007",
+  "panel": "2"
+ },
+ "ZXPS": {
+  "source": "generated",
+  "path": "D:/tmp/op1/r/new/014-toward-the-valley",
+  "title": "Toward the Valley",
+  "moves": [],
+  "code": "new",
+  "slot": "014",
+  "panel": "1"
+ }
+}

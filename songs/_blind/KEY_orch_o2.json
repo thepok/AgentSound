@@ -1,0 +1,161 @@
+{
+ "AFBF": {
+  "source": "generated",
+  "path": "D:/tmp/o2/r/new/001-toward-home",
+  "title": "Toward Home",
+  "moves": [],
+  "code": "new",
+  "slot": "001",
+  "panel": "2"
+ },
+ "BCXK": {
+  "source": "generated",
+  "path": "D:/tmp/o2/r/new/004-the-hidden-horizons",
+  "title": "The Hidden Horizons",
+  "moves": [],
+  "code": "new",
+  "slot": "004",
+  "panel": "1"
+ },
+ "BGJG": {
+  "source": "generated",
+  "path": "D:/tmp/o2/r/new/005-the-golden-fields",
+  "title": "The Golden Fields",
+  "moves": [],
+  "code": "new",
+  "slot": "005",
+  "panel": "2"
+ },
+ "BZXQ": {
+  "source": "generated",
+  "path": "D:/tmp/o2/r/new/007-the-stormy-mountains",
+  "title": "The Stormy Mountains",
+  "moves": [],
+  "code": "new",
+  "slot": "007",
+  "panel": "2"
+ },
+ "CUUV": {
+  "source": "generated",
+  "path": "D:/tmp/o2/r/new/003-symphonic-dance-bells-of-summer",
+  "title": "Symphonic Dance: Bells of Summer",
+  "moves": [],
+  "code": "new",
+  "slot": "003",
+  "panel": "2"
+ },
+ "DEAY": {
+  "source": "generated",
+  "path": "D:/tmp/o2/r/old/001-toward-home",
+  "title": "Toward Home",
+  "moves": [],
+  "code": "old",
+  "slot": "001",
+  "panel": "1"
+ },
+ "DXWH": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-scherzo",
+  "panel": "all"
+ },
+ "EYSB": {
+  "source": "generated",
+  "path": "D:/tmp/o2/r/new/008-overture-hidden-tides",
+  "title": "Overture: Hidden Tides",
+  "moves": [],
+  "code": "new",
+  "slot": "008",
+  "panel": "1"
+ },
+ "FNCL": {
+  "source": "generated",
+  "path": "D:/tmp/o2/r/old/006-silver-tides",
+  "title": "Silver Tides",
+  "moves": [],
+  "code": "old",
+  "slot": "006",
+  "panel": "2"
+ },
+ "FYJH": {
+  "source": "generated",
+  "path": "D:/tmp/o2/r/old/003-northern-winds",
+  "title": "Northern Winds",
+  "moves": [],
+  "code": "old",
+  "slot": "003",
+  "panel": "1"
+ },
+ "GGZX": {
+  "source": "generated",
+  "path": "D:/tmp/o2/r/old/007-the-stormy-mountains",
+  "title": "The Stormy Mountains",
+  "moves": [],
+  "code": "old",
+  "slot": "007",
+  "panel": "1"
+ },
+ "KWDP": {
+  "source": "generated",
+  "path": "D:/tmp/o2/r/old/004-iron-forests-of-the-storm",
+  "title": "Iron Forests of the Storm",
+  "moves": [],
+  "code": "old",
+  "slot": "004",
+  "panel": "2"
+ },
+ "LMCT": {
+  "source": "generated",
+  "path": "D:/tmp/o2/r/old/008-overture-hidden-tides",
+  "title": "Overture: Hidden Tides",
+  "moves": [],
+  "code": "old",
+  "slot": "008",
+  "panel": "2"
+ },
+ "PWVP": {
+  "source": "generated",
+  "path": "D:/tmp/o2/r/old/002-toward-the-sea",
+  "title": "Toward the Sea",
+  "moves": [],
+  "code": "old",
+  "slot": "002",
+  "panel": "2"
+ },
+ "QCXB": {
+  "source": "generated",
+  "path": "D:/tmp/o2/r/old/005-iron-fires-of-home",
+  "title": "Iron Fires of Home",
+  "moves": [],
+  "code": "old",
+  "slot": "005",
+  "panel": "1"
+ },
+ "QJRM": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-stormy",
+  "panel": "all"
+ },
+ "QZAW": {
+  "source": "generated",
+  "path": "D:/tmp/o2/r/new/002-symphonic-dance-storms-of-the-plains",
+  "title": "Symphonic Dance: Storms of the Plains",
+  "moves": [],
+  "code": "new",
+  "slot": "002",
+  "panel": "1"
+ },
+ "UALF": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-river",
+  "panel": "all"
+ },
+ "WEBU": {
+  "source": "generated",
+  "path": "D:/tmp/o2/r/new/006-silver-tides",
+  "title": "Silver Tides",
+  "moves": [],
+  "code": "new",
+  "slot": "006",
+  "panel": "1"
+ }
+}

@@ -1,0 +1,477 @@
+{
+ "round": "op1",
+ "pairs": {
+  "set167500": {
+   "dir": "D:/tmp/op1/sets/set167500",
+   "judges": {
+    "composerA": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "composerA__p2": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    },
+    "composerB": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    },
+    "composerB__p2": {
+     "X": "new",
+     "Y": "old",
+     "first": "X"
+    },
+    "composerC": {
+     "X": "new",
+     "Y": "old",
+     "first": "X"
+    },
+    "composerC__p2": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    },
+    "composerD": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    },
+    "composerD__p2": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "composerE": {
+     "X": "new",
+     "Y": "old",
+     "first": "X"
+    },
+    "composerE__p2": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    },
+    "statistician": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    },
+    "statistician__p2": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "orchestrator": {
+     "X": "new",
+     "Y": "old",
+     "first": "X"
+    },
+    "orchestrator__p2": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    }
+   },
+   "sets": {
+    "new": [
+     "D:/tmp/op1/sets/set167500/new/001-toward-home",
+     "D:/tmp/op1/sets/set167500/new/002-mountains-of-the-storm",
+     "D:/tmp/op1/sets/set167500/new/003-toward-the-valley",
+     "D:/tmp/op1/sets/set167500/new/004-symphonic-dance-mountains-of-home",
+     "D:/tmp/op1/sets/set167500/new/005-the-open-fires",
+     "D:/tmp/op1/sets/set167500/new/006-northern-horizons-of-summer",
+     "D:/tmp/op1/sets/set167500/new/007-rivers-of-the-storm",
+     "D:/tmp/op1/sets/set167500/new/008-toward-the-sea"
+    ],
+    "old": [
+     "D:/tmp/op1/sets/set167500/old/001-bright-mountains-of-home",
+     "D:/tmp/op1/sets/set167500/old/002-overture-endless-mountains",
+     "D:/tmp/op1/sets/set167500/old/003-hidden-banners-of-the-valley",
+     "D:/tmp/op1/sets/set167500/old/004-bright-mountains-of-home",
+     "D:/tmp/op1/sets/set167500/old/005-the-open-fires",
+     "D:/tmp/op1/sets/set167500/old/006-symphonic-dance-horizons-of-summer",
+     "D:/tmp/op1/sets/set167500/old/007-overture-stormy-rivers",
+     "D:/tmp/op1/sets/set167500/old/008-bright-forests-of-the-sea"
+    ]
+   },
+   "titles": {
+    "new": [
+     "Toward Home",
+     "Mountains of the Storm",
+     "Toward the Valley",
+     "Symphonic Dance: Mountains of Home",
+     "The Open Fires",
+     "Northern Horizons of Summer",
+     "Rivers of the Storm",
+     "Toward the Sea"
+    ],
+    "old": [
+     "Bright Mountains of Home",
+     "Overture: Endless Mountains",
+     "Hidden Banners of the Valley",
+     "Bright Mountains of Home",
+     "The Open Fires",
+     "Symphonic Dance: Horizons of Summer",
+     "Overture: Stormy Rivers",
+     "Bright Forests of the Sea"
+    ]
+   }
+  },
+  "set167600": {
+   "dir": "D:/tmp/op1/sets/set167600",
+   "judges": {
+    "composerA": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    },
+    "composerA__p2": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "composerB": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "composerB__p2": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    },
+    "composerC": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    },
+    "composerC__p2": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "composerD": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "composerD__p2": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    },
+    "composerE": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    },
+    "composerE__p2": {
+     "X": "new",
+     "Y": "old",
+     "first": "X"
+    },
+    "statistician": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "statistician__p2": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    },
+    "orchestrator": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    },
+    "orchestrator__p2": {
+     "X": "new",
+     "Y": "old",
+     "first": "X"
+    }
+   },
+   "sets": {
+    "new": [
+     "D:/tmp/op1/sets/set167600/new/001-overture-wild-tides",
+     "D:/tmp/op1/sets/set167600/new/002-toward-the-plains",
+     "D:/tmp/op1/sets/set167600/new/003-burning-tides-of-the-sea",
+     "D:/tmp/op1/sets/set167600/new/004-endless-riders",
+     "D:/tmp/op1/sets/set167600/new/005-symphonic-dance-winds-of-summer",
+     "D:/tmp/op1/sets/set167600/new/006-golden-forests-of-the-sea",
+     "D:/tmp/op1/sets/set167600/new/007-wild-storms-of-the-north",
+     "D:/tmp/op1/sets/set167600/new/008-stormy-fires-of-winter"
+    ],
+    "old": [
+     "D:/tmp/op1/sets/set167600/old/001-overture-wild-tides",
+     "D:/tmp/op1/sets/set167600/old/002-toward-the-plains",
+     "D:/tmp/op1/sets/set167600/old/003-symphonic-dance-tides-of-the-sea",
+     "D:/tmp/op1/sets/set167600/old/004-endless-riders",
+     "D:/tmp/op1/sets/set167600/old/005-winds-of-summer",
+     "D:/tmp/op1/sets/set167600/old/006-golden-forests-of-the-sea",
+     "D:/tmp/op1/sets/set167600/old/007-symphonic-dance-storms-of-the-north",
+     "D:/tmp/op1/sets/set167600/old/008-stormy-fires-of-winter"
+    ]
+   },
+   "titles": {
+    "new": [
+     "Overture: Wild Tides",
+     "Toward the Plains",
+     "Burning Tides of the Sea",
+     "Endless Riders",
+     "Symphonic Dance: Winds of Summer",
+     "Golden Forests of the Sea",
+     "Wild Storms of the North",
+     "Stormy Fires of Winter"
+    ],
+    "old": [
+     "Overture: Wild Tides",
+     "Toward the Plains",
+     "Symphonic Dance: Tides of the Sea",
+     "Endless Riders",
+     "Winds of Summer",
+     "Golden Forests of the Sea",
+     "Symphonic Dance: Storms of the North",
+     "Stormy Fires of Winter"
+    ]
+   }
+  },
+  "set167700": {
+   "dir": "D:/tmp/op1/sets/set167700",
+   "judges": {
+    "composerA": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "composerA__p2": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    },
+    "composerB": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    },
+    "composerB__p2": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "composerC": {
+     "X": "new",
+     "Y": "old",
+     "first": "X"
+    },
+    "composerC__p2": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    },
+    "composerD": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    },
+    "composerD__p2": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "composerE": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "composerE__p2": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    },
+    "statistician": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    },
+    "statistician__p2": {
+     "X": "new",
+     "Y": "old",
+     "first": "X"
+    },
+    "orchestrator": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "orchestrator__p2": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    }
+   },
+   "sets": {
+    "new": [
+     "D:/tmp/op1/sets/set167700/new/001-restless-riders",
+     "D:/tmp/op1/sets/set167700/new/002-riders-of-the-harvest",
+     "D:/tmp/op1/sets/set167700/new/003-golden-rivers",
+     "D:/tmp/op1/sets/set167700/new/004-wild-rivers",
+     "D:/tmp/op1/sets/set167700/new/005-heroic-wings",
+     "D:/tmp/op1/sets/set167700/new/006-overture-distant-banners",
+     "D:/tmp/op1/sets/set167700/new/007-toward-the-dawn"
+    ],
+    "old": [
+     "D:/tmp/op1/sets/set167700/old/001-restless-riders",
+     "D:/tmp/op1/sets/set167700/old/002-overture-stormy-riders",
+     "D:/tmp/op1/sets/set167700/old/003-the-golden-rivers",
+     "D:/tmp/op1/sets/set167700/old/004-wild-rivers",
+     "D:/tmp/op1/sets/set167700/old/005-the-heroic-wings",
+     "D:/tmp/op1/sets/set167700/old/006-distant-banners-of-the-dawn",
+     "D:/tmp/op1/sets/set167700/old/007-silver-wings-of-the-dawn"
+    ]
+   },
+   "titles": {
+    "new": [
+     "Restless Riders",
+     "Riders of the Harvest",
+     "Golden Rivers",
+     "Wild Rivers",
+     "Heroic Wings",
+     "Overture: Distant Banners",
+     "Toward the Dawn"
+    ],
+    "old": [
+     "Restless Riders",
+     "Overture: Stormy Riders",
+     "The Golden Rivers",
+     "Wild Rivers",
+     "The Heroic Wings",
+     "Distant Banners of the Dawn",
+     "Silver Wings of the Dawn"
+    ]
+   }
+  },
+  "set167800": {
+   "dir": "D:/tmp/op1/sets/set167800",
+   "judges": {
+    "composerA": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    },
+    "composerA__p2": {
+     "X": "new",
+     "Y": "old",
+     "first": "X"
+    },
+    "composerB": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "composerB__p2": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    },
+    "composerC": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    },
+    "composerC__p2": {
+     "X": "new",
+     "Y": "old",
+     "first": "X"
+    },
+    "composerD": {
+     "X": "new",
+     "Y": "old",
+     "first": "X"
+    },
+    "composerD__p2": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    },
+    "composerE": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    },
+    "composerE__p2": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "statistician": {
+     "X": "new",
+     "Y": "old",
+     "first": "X"
+    },
+    "statistician__p2": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    },
+    "orchestrator": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    },
+    "orchestrator__p2": {
+     "X": "new",
+     "Y": "old",
+     "first": "X"
+    }
+   },
+   "sets": {
+    "new": [
+     "D:/tmp/op1/sets/set167800/new/001-the-hidden-fires",
+     "D:/tmp/op1/sets/set167800/new/002-symphonic-dance-storms-of-the-valley",
+     "D:/tmp/op1/sets/set167800/new/003-toward-the-dawn",
+     "D:/tmp/op1/sets/set167800/new/004-rivers-of-winter",
+     "D:/tmp/op1/sets/set167800/new/005-the-heroic-fields",
+     "D:/tmp/op1/sets/set167800/new/006-overture-silver-storms",
+     "D:/tmp/op1/sets/set167800/new/007-toward-the-storm",
+     "D:/tmp/op1/sets/set167800/new/008-toward-the-dawn"
+    ],
+    "old": [
+     "D:/tmp/op1/sets/set167800/old/001-the-hidden-fires",
+     "D:/tmp/op1/sets/set167800/old/002-rising-storms-of-the-valley",
+     "D:/tmp/op1/sets/set167800/old/003-toward-the-dawn",
+     "D:/tmp/op1/sets/set167800/old/004-overture-northern-rivers",
+     "D:/tmp/op1/sets/set167800/old/005-the-heroic-fields",
+     "D:/tmp/op1/sets/set167800/old/006-overture-silver-storms",
+     "D:/tmp/op1/sets/set167800/old/007-toward-the-storm",
+     "D:/tmp/op1/sets/set167800/old/008-toward-the-dawn"
+    ]
+   },
+   "titles": {
+    "new": [
+     "The Hidden Fires",
+     "Symphonic Dance: Storms of the Valley",
+     "Toward the Dawn",
+     "Rivers of Winter",
+     "The Heroic Fields",
+     "Overture: Silver Storms",
+     "Toward the Storm",
+     "Toward the Dawn"
+    ],
+    "old": [
+     "The Hidden Fires",
+     "Rising Storms of the Valley",
+     "Toward the Dawn",
+     "Overture: Northern Rivers",
+     "The Heroic Fields",
+     "Overture: Silver Storms",
+     "Toward the Storm",
+     "Toward the Dawn"
+    ]
+   }
+  }
+ }
+}

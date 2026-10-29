@@ -1,0 +1,1033 @@
+{
+ "BDHN": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v4/sets/off_391000/new-age/004-the-quiet-bridges",
+  "title": "The Quiet Bridges",
+  "moves": [
+   [
+    "ostinato",
+    "intro",
+    1,
+    4
+   ],
+   [
+    "ostinato",
+    "A1",
+    5,
+    12
+   ],
+   [
+    "ostinato",
+    "A2",
+    13,
+    19
+   ],
+   [
+    "ostinato",
+    "A3",
+    30,
+    33
+   ],
+   [
+    "ostinato",
+    "A4",
+    50,
+    57
+   ],
+   [
+    "ostinato",
+    "coda",
+    58,
+    63
+   ]
+  ],
+  "code": "off",
+  "slot": "012",
+  "panel": "1"
+ },
+ "BGKS": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v4/sets/on_391000/new-age/006-stars-in-winter",
+  "title": "Stars in Winter",
+  "moves": [
+   [
+    "pause",
+    "climax",
+    32,
+    32
+   ]
+  ],
+  "code": "on",
+  "slot": "014",
+  "panel": "2"
+ },
+ "BPHF": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v4/sets/on_391000/new-age/007-stars-of-snowfall",
+  "title": "Stars of Snowfall",
+  "moves": [
+   [
+    "ostinato",
+    "intro",
+    1,
+    4
+   ],
+   [
+    "ostinato",
+    "A1",
+    5,
+    20
+   ],
+   [
+    "ostinato",
+    "A3",
+    63,
+    74
+   ],
+   [
+    "ostinato",
+    "coda",
+    75,
+    82
+   ]
+  ],
+  "code": "on",
+  "slot": "015",
+  "panel": "1"
+ },
+ "BXUD": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v4/sets/off_391000/new-age/001-kites-to-the-evening",
+  "title": "Kites to the Evening",
+  "moves": [
+   [
+    "motto",
+    "plant",
+    1,
+    1
+   ],
+   [
+    "motto",
+    "recur:sequence",
+    23,
+    23
+   ],
+   [
+    "motto",
+    "payoff",
+    35,
+    35
+   ],
+   [
+    "goose",
+    "A3",
+    39,
+    39
+   ],
+   [
+    "motto",
+    "close",
+    51,
+    51
+   ]
+  ],
+  "code": "off",
+  "slot": "009",
+  "panel": "2"
+ },
+ "BYHE": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v4/sets/off_391000/new-age/005-bridges-of-spring",
+  "title": "Bridges of Spring",
+  "moves": [
+   [
+    "motto",
+    "plant",
+    1,
+    2
+   ],
+   [
+    "motto",
+    "recur:octave",
+    27,
+    28
+   ],
+   [
+    "motto",
+    "recur:octave",
+    29,
+    30
+   ],
+   [
+    "motto",
+    "payoff",
+    40,
+    41
+   ],
+   [
+    "goose",
+    "climax",
+    39,
+    39
+   ],
+   [
+    "motto",
+    "close",
+    55,
+    55
+   ]
+  ],
+  "code": "off",
+  "slot": "013",
+  "panel": "2"
+ },
+ "CGZA": {
+  "source": "composed",
+  "path": "D:/tmp/pdiv/refs/pro-newage-longing",
+  "panel": "all"
+ },
+ "CRWK": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v4/sets/on_391000/new-age/005-lanterns-to-winter",
+  "title": "Lanterns to Winter",
+  "moves": [
+   [
+    "motto",
+    "plant",
+    1,
+    2
+   ],
+   [
+    "motto",
+    "recur:reharm",
+    35,
+    36
+   ],
+   [
+    "motto",
+    "recur:octave",
+    37,
+    38
+   ],
+   [
+    "motto",
+    "payoff",
+    54,
+    55
+   ],
+   [
+    "goose",
+    "climax",
+    53,
+    53
+   ],
+   [
+    "motto",
+    "close",
+    69,
+    69
+   ]
+  ],
+  "code": "on",
+  "slot": "013",
+  "panel": "1"
+ },
+ "EBCG": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v4/sets/off_390000/new-age/007-leaves-in-the-tide",
+  "title": "Leaves in the Tide",
+  "moves": [
+   [
+    "ostinato",
+    "intro",
+    1,
+    4
+   ],
+   [
+    "ostinato",
+    "A1",
+    5,
+    18
+   ],
+   [
+    "ostinato",
+    "A3",
+    31,
+    42
+   ],
+   [
+    "ostinato",
+    "A4",
+    59,
+    70
+   ],
+   [
+    "ostinato",
+    "coda",
+    71,
+    78
+   ]
+  ],
+  "code": "off",
+  "slot": "007",
+  "panel": "2"
+ },
+ "EUQE": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v4/sets/on_391000/new-age/004-gentle-leaves-of-the-sea",
+  "title": "Gentle Leaves of the Sea",
+  "moves": [
+   [
+    "ostinato",
+    "intro",
+    1,
+    4
+   ],
+   [
+    "ostinato",
+    "A1",
+    5,
+    14
+   ],
+   [
+    "ostinato",
+    "A2",
+    15,
+    24
+   ],
+   [
+    "ostinato",
+    "A3",
+    37,
+    44
+   ],
+   [
+    "ostinato",
+    "A4",
+    64,
+    71
+   ],
+   [
+    "ostinato",
+    "coda",
+    72,
+    77
+   ]
+  ],
+  "code": "on",
+  "slot": "012",
+  "panel": "2"
+ },
+ "EYRQ": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v4/sets/off_390000/new-age/003-the-glass-postcards",
+  "title": "The Glass Postcards",
+  "moves": [
+   [
+    "motto",
+    "plant",
+    1,
+    1
+   ],
+   [
+    "motto",
+    "recur:reharm",
+    23,
+    23
+   ],
+   [
+    "pause",
+    "climax",
+    30,
+    30
+   ],
+   [
+    "motto",
+    "payoff",
+    35,
+    35
+   ],
+   [
+    "motto",
+    "close",
+    55,
+    55
+   ]
+  ],
+  "code": "off",
+  "slot": "003",
+  "panel": "2"
+ },
+ "FPJW": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v4/sets/off_390000/new-age/004-before-autumn",
+  "title": "Before Autumn",
+  "moves": [
+   [
+    "goose",
+    "A4",
+    47,
+    47
+   ]
+  ],
+  "code": "off",
+  "slot": "004",
+  "panel": "1"
+ },
+ "GLLZ": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v4/sets/on_390000/new-age/004-hidden-bridges",
+  "title": "Hidden Bridges",
+  "moves": [
+   [
+    "goose",
+    "A4",
+    55,
+    56
+   ]
+  ],
+  "code": "on",
+  "slot": "004",
+  "panel": "2"
+ },
+ "GUVU": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v4/sets/off_391000/new-age/002-stars-to-winter",
+  "title": "Stars to Winter",
+  "moves": [
+   [
+    "ostinato",
+    "intro",
+    1,
+    2
+   ],
+   [
+    "ostinato",
+    "A1",
+    3,
+    10
+   ],
+   [
+    "ostinato",
+    "A2",
+    11,
+    19
+   ],
+   [
+    "pause",
+    "climax",
+    35,
+    35
+   ],
+   [
+    "ostinato",
+    "A3",
+    46,
+    53
+   ],
+   [
+    "ostinato",
+    "coda",
+    54,
+    59
+   ]
+  ],
+  "code": "off",
+  "slot": "010",
+  "panel": "1"
+ },
+ "HSCL": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v4/sets/on_390000/new-age/007-leaves-in-the-tide",
+  "title": "Leaves in the Tide",
+  "moves": [
+   [
+    "ostinato",
+    "intro",
+    1,
+    4
+   ],
+   [
+    "ostinato",
+    "A1",
+    5,
+    18
+   ],
+   [
+    "ostinato",
+    "A3",
+    31,
+    42
+   ],
+   [
+    "ostinato",
+    "A4",
+    59,
+    70
+   ],
+   [
+    "ostinato",
+    "coda",
+    71,
+    78
+   ]
+  ],
+  "code": "on",
+  "slot": "007",
+  "panel": "1"
+ },
+ "HTNA": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v4/sets/off_391000/new-age/008-waves-of-dawn",
+  "title": "Waves of Dawn",
+  "moves": [
+   [
+    "pause",
+    "coda",
+    44,
+    44
+   ]
+  ],
+  "code": "off",
+  "slot": "016",
+  "panel": "1"
+ },
+ "JCRD": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v4/sets/off_390000/new-age/008-postcards-to-summer",
+  "title": "Postcards to Summer",
+  "moves": [
+   [
+    "pause",
+    "A4",
+    49,
+    49
+   ]
+  ],
+  "code": "off",
+  "slot": "008",
+  "panel": "1"
+ },
+ "JEDX": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v4/sets/off_391000/new-age/007-the-northern-gardens-waltz",
+  "title": "The Northern Gardens Waltz",
+  "moves": [
+   [
+    "ostinato",
+    "intro",
+    1,
+    4
+   ],
+   [
+    "ostinato",
+    "A1",
+    5,
+    18
+   ],
+   [
+    "ostinato",
+    "A3",
+    59,
+    70
+   ],
+   [
+    "ostinato",
+    "coda",
+    71,
+    76
+   ]
+  ],
+  "code": "off",
+  "slot": "015",
+  "panel": "2"
+ },
+ "JMWF": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v4/sets/off_391000/new-age/006-stars-in-winter",
+  "title": "Stars in Winter",
+  "moves": [
+   [
+    "pause",
+    "climax",
+    32,
+    32
+   ]
+  ],
+  "code": "off",
+  "slot": "014",
+  "panel": "1"
+ },
+ "LWCH": {
+  "source": "composed",
+  "path": "D:/tmp/pdiv/refs/pro-newage-embers",
+  "panel": "all"
+ },
+ "LWSW": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v4/sets/on_390000/new-age/008-postcards-to-summer",
+  "title": "Postcards to Summer",
+  "moves": [
+   [
+    "pause",
+    "A4",
+    49,
+    49
+   ]
+  ],
+  "code": "on",
+  "slot": "008",
+  "panel": "2"
+ },
+ "MXRR": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v4/sets/on_391000/new-age/002-stars-to-winter",
+  "title": "Stars to Winter",
+  "moves": [
+   [
+    "ostinato",
+    "intro",
+    1,
+    4
+   ],
+   [
+    "ostinato",
+    "A1",
+    5,
+    14
+   ],
+   [
+    "ostinato",
+    "A2",
+    15,
+    25
+   ],
+   [
+    "pause",
+    "climax",
+    45,
+    45
+   ],
+   [
+    "ostinato",
+    "A3",
+    54,
+    61
+   ],
+   [
+    "ostinato",
+    "coda",
+    62,
+    67
+   ]
+  ],
+  "code": "on",
+  "slot": "010",
+  "panel": "2"
+ },
+ "NKVS": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v4/sets/on_390000/new-age/002-before-the-tide",
+  "title": "Before the Tide",
+  "moves": [
+   [
+    "goose",
+    "A4",
+    53,
+    53
+   ]
+  ],
+  "code": "on",
+  "slot": "002",
+  "panel": "2"
+ },
+ "QAJT": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v4/sets/off_390000/new-age/006-falling-lights",
+  "title": "Falling Lights",
+  "moves": [
+   [
+    "goose",
+    "climax",
+    38,
+    38
+   ]
+  ],
+  "code": "off",
+  "slot": "006",
+  "panel": "1"
+ },
+ "QMRC": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v4/sets/on_391000/new-age/001-rivers-to-spring",
+  "title": "Rivers to Spring",
+  "moves": [
+   [
+    "motto",
+    "plant",
+    1,
+    1
+   ],
+   [
+    "motto",
+    "recur:sequence",
+    20,
+    20
+   ],
+   [
+    "motto",
+    "payoff",
+    34,
+    34
+   ],
+   [
+    "goose",
+    "A3",
+    38,
+    38
+   ],
+   [
+    "motto",
+    "close",
+    50,
+    50
+   ]
+  ],
+  "code": "on",
+  "slot": "009",
+  "panel": "1"
+ },
+ "RURD": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v4/sets/on_391000/new-age/008-after-winter",
+  "title": "After Winter",
+  "moves": [
+   [
+    "pause",
+    "coda",
+    48,
+    48
+   ]
+  ],
+  "code": "on",
+  "slot": "016",
+  "panel": "2"
+ },
+ "RVPT": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v4/sets/on_390000/new-age/006-promises-in-the-sea",
+  "title": "Promises in the Sea",
+  "moves": [
+   [
+    "goose",
+    "climax",
+    40,
+    40
+   ]
+  ],
+  "code": "on",
+  "slot": "006",
+  "panel": "2"
+ },
+ "SAYP": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v4/sets/off_390000/new-age/001-before-the-evening",
+  "title": "Before the Evening",
+  "moves": [
+   [
+    "ostinato",
+    "intro",
+    1,
+    4
+   ],
+   [
+    "ostinato",
+    "A1",
+    5,
+    12
+   ],
+   [
+    "ostinato",
+    "A3",
+    39,
+    48
+   ],
+   [
+    "ostinato",
+    "coda",
+    49,
+    54
+   ]
+  ],
+  "code": "off",
+  "slot": "001",
+  "panel": "2"
+ },
+ "STHC": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v4/sets/on_391000/new-age/003-quiet-waves",
+  "title": "Quiet Waves",
+  "moves": [
+   [
+    "motto",
+    "plant",
+    1,
+    1
+   ],
+   [
+    "motto",
+    "recur:octave",
+    23,
+    23
+   ],
+   [
+    "motto",
+    "payoff",
+    39,
+    39
+   ],
+   [
+    "goose",
+    "climax",
+    37,
+    37
+   ],
+   [
+    "motto",
+    "close",
+    56,
+    56
+   ]
+  ],
+  "code": "on",
+  "slot": "011",
+  "panel": "1"
+ },
+ "UCDV": {
+  "source": "composed",
+  "path": "D:/tmp/pdiv/refs/pro-newage-tide",
+  "panel": "all"
+ },
+ "WAUK": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v4/sets/off_390000/new-age/005-postcards-in-dawn",
+  "title": "Postcards in Dawn",
+  "moves": [
+   [
+    "motto",
+    "plant",
+    1,
+    2
+   ],
+   [
+    "motto",
+    "recur:reharm",
+    29,
+    30
+   ],
+   [
+    "motto",
+    "payoff",
+    42,
+    43
+   ],
+   [
+    "motto",
+    "recur:sequence",
+    45,
+    46
+   ],
+   [
+    "pause",
+    "A3",
+    46,
+    46
+   ],
+   [
+    "motto",
+    "close",
+    59,
+    59
+   ]
+  ],
+  "code": "off",
+  "slot": "005",
+  "panel": "2"
+ },
+ "WFQZ": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v4/sets/on_390000/new-age/001-before-the-evening",
+  "title": "Before the Evening",
+  "moves": [
+   [
+    "ostinato",
+    "intro",
+    1,
+    4
+   ],
+   [
+    "ostinato",
+    "A1",
+    5,
+    12
+   ],
+   [
+    "ostinato",
+    "A3",
+    39,
+    48
+   ],
+   [
+    "ostinato",
+    "coda",
+    49,
+    54
+   ]
+  ],
+  "code": "on",
+  "slot": "001",
+  "panel": "1"
+ },
+ "WPUF": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v4/sets/on_390000/new-age/003-the-paper-stones",
+  "title": "The Paper Stones",
+  "moves": [
+   [
+    "motto",
+    "plant",
+    1,
+    1
+   ],
+   [
+    "motto",
+    "recur:reharm",
+    25,
+    25
+   ],
+   [
+    "pause",
+    "climax",
+    32,
+    32
+   ],
+   [
+    "motto",
+    "payoff",
+    37,
+    37
+   ],
+   [
+    "motto",
+    "close",
+    57,
+    57
+   ]
+  ],
+  "code": "on",
+  "slot": "003",
+  "panel": "1"
+ },
+ "XJVD": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v4/sets/off_390000/new-age/002-before-the-tide",
+  "title": "Before the Tide",
+  "moves": [
+   [
+    "goose",
+    "A4",
+    53,
+    53
+   ]
+  ],
+  "code": "off",
+  "slot": "002",
+  "panel": "1"
+ },
+ "XKVU": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v4/sets/off_391000/new-age/003-other-wings",
+  "title": "Other Wings",
+  "moves": [
+   [
+    "motto",
+    "plant",
+    1,
+    1
+   ],
+   [
+    "motto",
+    "recur:sequence",
+    19,
+    19
+   ],
+   [
+    "motto",
+    "payoff",
+    35,
+    35
+   ],
+   [
+    "goose",
+    "climax",
+    36,
+    36
+   ],
+   [
+    "motto",
+    "close",
+    51,
+    51
+   ]
+  ],
+  "code": "off",
+  "slot": "011",
+  "panel": "2"
+ },
+ "YAUJ": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v4/sets/on_390000/new-age/005-postcards-in-dawn",
+  "title": "Postcards in Dawn",
+  "moves": [
+   [
+    "motto",
+    "plant",
+    1,
+    2
+   ],
+   [
+    "motto",
+    "recur:reharm",
+    29,
+    30
+   ],
+   [
+    "motto",
+    "payoff",
+    42,
+    43
+   ],
+   [
+    "motto",
+    "recur:sequence",
+    45,
+    46
+   ],
+   [
+    "pause",
+    "A3",
+    46,
+    46
+   ],
+   [
+    "motto",
+    "close",
+    59,
+    59
+   ]
+  ],
+  "code": "on",
+  "slot": "005",
+  "panel": "1"
+ }
+}

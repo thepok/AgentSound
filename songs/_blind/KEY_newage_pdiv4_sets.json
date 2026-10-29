@@ -1,0 +1,481 @@
+{
+ "round": "pdiv4",
+ "pairs": {
+  "A": {
+   "dir": "D:/tmp/pdiv/v4/pairs/A",
+   "judges": {
+    "composerA": {
+     "X": "off",
+     "Y": "on",
+     "first": "X"
+    },
+    "composerA__p2": {
+     "X": "on",
+     "Y": "off",
+     "first": "X"
+    },
+    "composerB": {
+     "X": "off",
+     "Y": "on",
+     "first": "Y"
+    },
+    "composerB__p2": {
+     "X": "on",
+     "Y": "off",
+     "first": "Y"
+    },
+    "composerC": {
+     "X": "on",
+     "Y": "off",
+     "first": "Y"
+    },
+    "composerC__p2": {
+     "X": "off",
+     "Y": "on",
+     "first": "Y"
+    },
+    "composerD": {
+     "X": "off",
+     "Y": "on",
+     "first": "Y"
+    },
+    "composerD__p2": {
+     "X": "on",
+     "Y": "off",
+     "first": "Y"
+    },
+    "composerE": {
+     "X": "on",
+     "Y": "off",
+     "first": "Y"
+    },
+    "composerE__p2": {
+     "X": "off",
+     "Y": "on",
+     "first": "Y"
+    },
+    "statistician": {
+     "X": "off",
+     "Y": "on",
+     "first": "Y"
+    },
+    "statistician__p2": {
+     "X": "on",
+     "Y": "off",
+     "first": "Y"
+    },
+    "performer": {
+     "X": "on",
+     "Y": "off",
+     "first": "Y"
+    },
+    "performer__p2": {
+     "X": "off",
+     "Y": "on",
+     "first": "Y"
+    }
+   },
+   "sets": {
+    "off": [
+     "D:/tmp/pdiv/v4/sets/off_390000/new-age/001-before-the-evening",
+     "D:/tmp/pdiv/v4/sets/off_390000/new-age/002-before-the-tide",
+     "D:/tmp/pdiv/v4/sets/off_390000/new-age/003-the-glass-postcards",
+     "D:/tmp/pdiv/v4/sets/off_390000/new-age/004-before-autumn",
+     "D:/tmp/pdiv/v4/sets/off_390000/new-age/005-postcards-in-dawn",
+     "D:/tmp/pdiv/v4/sets/off_390000/new-age/006-falling-lights",
+     "D:/tmp/pdiv/v4/sets/off_390000/new-age/007-leaves-in-the-tide",
+     "D:/tmp/pdiv/v4/sets/off_390000/new-age/008-postcards-to-summer"
+    ],
+    "on": [
+     "D:/tmp/pdiv/v4/sets/on_390000/new-age/001-before-the-evening",
+     "D:/tmp/pdiv/v4/sets/on_390000/new-age/002-before-the-tide",
+     "D:/tmp/pdiv/v4/sets/on_390000/new-age/003-the-paper-stones",
+     "D:/tmp/pdiv/v4/sets/on_390000/new-age/004-hidden-bridges",
+     "D:/tmp/pdiv/v4/sets/on_390000/new-age/005-postcards-in-dawn",
+     "D:/tmp/pdiv/v4/sets/on_390000/new-age/006-promises-in-the-sea",
+     "D:/tmp/pdiv/v4/sets/on_390000/new-age/007-leaves-in-the-tide",
+     "D:/tmp/pdiv/v4/sets/on_390000/new-age/008-postcards-to-summer"
+    ]
+   },
+   "titles": {
+    "off": [
+     "Before the Evening",
+     "Before the Tide",
+     "The Glass Postcards",
+     "Before Autumn",
+     "Postcards in Dawn",
+     "Falling Lights",
+     "Leaves in the Tide",
+     "Postcards to Summer"
+    ],
+    "on": [
+     "Before the Evening",
+     "Before the Tide",
+     "The Paper Stones",
+     "Hidden Bridges",
+     "Postcards in Dawn",
+     "Promises in the Sea",
+     "Leaves in the Tide",
+     "Postcards to Summer"
+    ]
+   }
+  },
+  "B": {
+   "dir": "D:/tmp/pdiv/v4/pairs/B",
+   "judges": {
+    "composerA": {
+     "X": "on",
+     "Y": "off",
+     "first": "X"
+    },
+    "composerA__p2": {
+     "X": "off",
+     "Y": "on",
+     "first": "X"
+    },
+    "composerB": {
+     "X": "off",
+     "Y": "on",
+     "first": "X"
+    },
+    "composerB__p2": {
+     "X": "on",
+     "Y": "off",
+     "first": "X"
+    },
+    "composerC": {
+     "X": "on",
+     "Y": "off",
+     "first": "X"
+    },
+    "composerC__p2": {
+     "X": "off",
+     "Y": "on",
+     "first": "X"
+    },
+    "composerD": {
+     "X": "on",
+     "Y": "off",
+     "first": "Y"
+    },
+    "composerD__p2": {
+     "X": "off",
+     "Y": "on",
+     "first": "Y"
+    },
+    "composerE": {
+     "X": "off",
+     "Y": "on",
+     "first": "Y"
+    },
+    "composerE__p2": {
+     "X": "on",
+     "Y": "off",
+     "first": "Y"
+    },
+    "statistician": {
+     "X": "off",
+     "Y": "on",
+     "first": "X"
+    },
+    "statistician__p2": {
+     "X": "on",
+     "Y": "off",
+     "first": "X"
+    },
+    "performer": {
+     "X": "on",
+     "Y": "off",
+     "first": "X"
+    },
+    "performer__p2": {
+     "X": "off",
+     "Y": "on",
+     "first": "X"
+    }
+   },
+   "sets": {
+    "off": [
+     "D:/tmp/pdiv/v4/sets/off_391000/new-age/001-kites-to-the-evening",
+     "D:/tmp/pdiv/v4/sets/off_391000/new-age/002-stars-to-winter",
+     "D:/tmp/pdiv/v4/sets/off_391000/new-age/003-other-wings",
+     "D:/tmp/pdiv/v4/sets/off_391000/new-age/004-the-quiet-bridges",
+     "D:/tmp/pdiv/v4/sets/off_391000/new-age/005-bridges-of-spring",
+     "D:/tmp/pdiv/v4/sets/off_391000/new-age/006-stars-in-winter",
+     "D:/tmp/pdiv/v4/sets/off_391000/new-age/007-the-northern-gardens-waltz",
+     "D:/tmp/pdiv/v4/sets/off_391000/new-age/008-waves-of-dawn"
+    ],
+    "on": [
+     "D:/tmp/pdiv/v4/sets/on_391000/new-age/001-rivers-to-spring",
+     "D:/tmp/pdiv/v4/sets/on_391000/new-age/002-stars-to-winter",
+     "D:/tmp/pdiv/v4/sets/on_391000/new-age/003-quiet-waves",
+     "D:/tmp/pdiv/v4/sets/on_391000/new-age/004-gentle-leaves-of-the-sea",
+     "D:/tmp/pdiv/v4/sets/on_391000/new-age/005-lanterns-to-winter",
+     "D:/tmp/pdiv/v4/sets/on_391000/new-age/006-stars-in-winter",
+     "D:/tmp/pdiv/v4/sets/on_391000/new-age/007-stars-of-snowfall",
+     "D:/tmp/pdiv/v4/sets/on_391000/new-age/008-after-winter"
+    ]
+   },
+   "titles": {
+    "off": [
+     "Kites to the Evening",
+     "Stars to Winter",
+     "Other Wings",
+     "The Quiet Bridges",
+     "Bridges of Spring",
+     "Stars in Winter",
+     "The Northern Gardens Waltz",
+     "Waves of Dawn"
+    ],
+    "on": [
+     "Rivers to Spring",
+     "Stars to Winter",
+     "Quiet Waves",
+     "Gentle Leaves of the Sea",
+     "Lanterns to Winter",
+     "Stars in Winter",
+     "Stars of Snowfall",
+     "After Winter"
+    ]
+   }
+  },
+  "C": {
+   "dir": "D:/tmp/pdiv/v4/pairs/C",
+   "judges": {
+    "composerA": {
+     "X": "on",
+     "Y": "off",
+     "first": "Y"
+    },
+    "composerA__p2": {
+     "X": "off",
+     "Y": "on",
+     "first": "Y"
+    },
+    "composerB": {
+     "X": "off",
+     "Y": "on",
+     "first": "Y"
+    },
+    "composerB__p2": {
+     "X": "on",
+     "Y": "off",
+     "first": "Y"
+    },
+    "composerC": {
+     "X": "on",
+     "Y": "off",
+     "first": "Y"
+    },
+    "composerC__p2": {
+     "X": "off",
+     "Y": "on",
+     "first": "Y"
+    },
+    "composerD": {
+     "X": "on",
+     "Y": "off",
+     "first": "X"
+    },
+    "composerD__p2": {
+     "X": "off",
+     "Y": "on",
+     "first": "X"
+    },
+    "composerE": {
+     "X": "off",
+     "Y": "on",
+     "first": "X"
+    },
+    "composerE__p2": {
+     "X": "on",
+     "Y": "off",
+     "first": "X"
+    },
+    "statistician": {
+     "X": "on",
+     "Y": "off",
+     "first": "X"
+    },
+    "statistician__p2": {
+     "X": "off",
+     "Y": "on",
+     "first": "X"
+    },
+    "performer": {
+     "X": "on",
+     "Y": "off",
+     "first": "Y"
+    },
+    "performer__p2": {
+     "X": "off",
+     "Y": "on",
+     "first": "Y"
+    }
+   },
+   "sets": {
+    "off": [
+     "D:/tmp/pdiv/v4/sets/off_392000/new-age/001-early-wings",
+     "D:/tmp/pdiv/v4/sets/off_392000/new-age/002-after-dawn",
+     "D:/tmp/pdiv/v4/sets/off_392000/new-age/003-the-hidden-promises",
+     "D:/tmp/pdiv/v4/sets/off_392000/new-age/004-the-gentle-petals",
+     "D:/tmp/pdiv/v4/sets/off_392000/new-age/005-kites-to-the-sea",
+     "D:/tmp/pdiv/v4/sets/off_392000/new-age/006-bridges-in-autumn",
+     "D:/tmp/pdiv/v4/sets/off_392000/new-age/007-bridges-to-the-sea",
+     "D:/tmp/pdiv/v4/sets/off_392000/new-age/008-the-quiet-postcards"
+    ],
+    "on": [
+     "D:/tmp/pdiv/v4/sets/on_392000/new-age/001-early-wings",
+     "D:/tmp/pdiv/v4/sets/on_392000/new-age/002-after-dawn",
+     "D:/tmp/pdiv/v4/sets/on_392000/new-age/003-the-hidden-promises",
+     "D:/tmp/pdiv/v4/sets/on_392000/new-age/004-after-the-morning",
+     "D:/tmp/pdiv/v4/sets/on_392000/new-age/005-promises-in-the-evening",
+     "D:/tmp/pdiv/v4/sets/on_392000/new-age/006-after-snowfall",
+     "D:/tmp/pdiv/v4/sets/on_392000/new-age/007-bridges-to-the-sea",
+     "D:/tmp/pdiv/v4/sets/on_392000/new-age/008-after-the-rain"
+    ]
+   },
+   "titles": {
+    "off": [
+     "Early Wings",
+     "After Dawn",
+     "The Hidden Promises",
+     "The Gentle Petals",
+     "Kites to the Sea",
+     "Bridges in Autumn",
+     "Bridges to the Sea",
+     "The Quiet Postcards"
+    ],
+    "on": [
+     "Early Wings",
+     "After Dawn",
+     "The Hidden Promises",
+     "After the Morning",
+     "Promises in the Evening",
+     "After Snowfall",
+     "Bridges to the Sea",
+     "After the Rain"
+    ]
+   }
+  },
+  "D": {
+   "dir": "D:/tmp/pdiv/v4/pairs/D",
+   "judges": {
+    "composerA": {
+     "X": "on",
+     "Y": "off",
+     "first": "X"
+    },
+    "composerA__p2": {
+     "X": "off",
+     "Y": "on",
+     "first": "X"
+    },
+    "composerB": {
+     "X": "off",
+     "Y": "on",
+     "first": "X"
+    },
+    "composerB__p2": {
+     "X": "on",
+     "Y": "off",
+     "first": "X"
+    },
+    "composerC": {
+     "X": "on",
+     "Y": "off",
+     "first": "X"
+    },
+    "composerC__p2": {
+     "X": "off",
+     "Y": "on",
+     "first": "X"
+    },
+    "composerD": {
+     "X": "on",
+     "Y": "off",
+     "first": "Y"
+    },
+    "composerD__p2": {
+     "X": "off",
+     "Y": "on",
+     "first": "Y"
+    },
+    "composerE": {
+     "X": "off",
+     "Y": "on",
+     "first": "Y"
+    },
+    "composerE__p2": {
+     "X": "on",
+     "Y": "off",
+     "first": "Y"
+    },
+    "statistician": {
+     "X": "off",
+     "Y": "on",
+     "first": "X"
+    },
+    "statistician__p2": {
+     "X": "on",
+     "Y": "off",
+     "first": "X"
+    },
+    "performer": {
+     "X": "off",
+     "Y": "on",
+     "first": "Y"
+    },
+    "performer__p2": {
+     "X": "on",
+     "Y": "off",
+     "first": "Y"
+    }
+   },
+   "sets": {
+    "off": [
+     "D:/tmp/pdiv/v4/sets/off_393000/new-age/001-before-dawn",
+     "D:/tmp/pdiv/v4/sets/off_393000/new-age/002-stones-of-the-sea",
+     "D:/tmp/pdiv/v4/sets/off_393000/new-age/003-lights-to-the-evening",
+     "D:/tmp/pdiv/v4/sets/off_393000/new-age/004-waves-in-the-evening",
+     "D:/tmp/pdiv/v4/sets/off_393000/new-age/005-footsteps-to-the-hills",
+     "D:/tmp/pdiv/v4/sets/off_393000/new-age/006-the-small-waves",
+     "D:/tmp/pdiv/v4/sets/off_393000/new-age/007-small-leaves-of-the-sea-waltz",
+     "D:/tmp/pdiv/v4/sets/off_393000/new-age/008-footsteps-of-the-tide"
+    ],
+    "on": [
+     "D:/tmp/pdiv/v4/sets/on_393000/new-age/001-before-dawn",
+     "D:/tmp/pdiv/v4/sets/on_393000/new-age/002-footsteps-of-the-evening",
+     "D:/tmp/pdiv/v4/sets/on_393000/new-age/003-after-spring",
+     "D:/tmp/pdiv/v4/sets/on_393000/new-age/004-little-windows-of-spring",
+     "D:/tmp/pdiv/v4/sets/on_393000/new-age/005-bridges-of-winter",
+     "D:/tmp/pdiv/v4/sets/on_393000/new-age/006-seasons-in-the-tide",
+     "D:/tmp/pdiv/v4/sets/on_393000/new-age/007-after-dawn-waltz",
+     "D:/tmp/pdiv/v4/sets/on_393000/new-age/008-footsteps-of-the-tide"
+    ]
+   },
+   "titles": {
+    "off": [
+     "Before Dawn",
+     "Stones of the Sea",
+     "Lights to the Evening",
+     "Waves in the Evening",
+     "Footsteps to the Hills",
+     "The Small Waves",
+     "Small Leaves of the Sea Waltz",
+     "Footsteps of the Tide"
+    ],
+    "on": [
+     "Before Dawn",
+     "Footsteps of the Evening",
+     "After Spring",
+     "Little Windows of Spring",
+     "Bridges of Winter",
+     "Seasons in the Tide",
+     "After Dawn Waltz",
+     "Footsteps of the Tide"
+    ]
+   }
+  }
+ }
+}

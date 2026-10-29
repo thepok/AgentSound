@@ -1,0 +1,341 @@
+{
+ "round": "pdiv2",
+ "pairs": {
+  "A": {
+   "dir": "D:/tmp/pdiv/v2/pairs/A",
+   "judges": {
+    "composerA": {
+     "X": "off",
+     "Y": "on",
+     "first": "X"
+    },
+    "composerB": {
+     "X": "on",
+     "Y": "off",
+     "first": "X"
+    },
+    "composerC": {
+     "X": "on",
+     "Y": "off",
+     "first": "Y"
+    },
+    "composerD": {
+     "X": "on",
+     "Y": "off",
+     "first": "X"
+    },
+    "composerE": {
+     "X": "on",
+     "Y": "off",
+     "first": "Y"
+    },
+    "statistician": {
+     "X": "on",
+     "Y": "off",
+     "first": "X"
+    },
+    "performer": {
+     "X": "off",
+     "Y": "on",
+     "first": "X"
+    }
+   },
+   "sets": {
+    "off": [
+     "D:/tmp/pdiv/v2/sets/off_370000/new-age/001-before-the-hills",
+     "D:/tmp/pdiv/v2/sets/off_370000/new-age/002-promises-to-winter",
+     "D:/tmp/pdiv/v2/sets/off_370000/new-age/003-kites-to-summer",
+     "D:/tmp/pdiv/v2/sets/off_370000/new-age/004-stars-to-the-tide",
+     "D:/tmp/pdiv/v2/sets/off_370000/new-age/005-lanterns-to-snowfall",
+     "D:/tmp/pdiv/v2/sets/off_370000/new-age/006-the-silver-petals",
+     "D:/tmp/pdiv/v2/sets/off_370000/new-age/007-before-summer-waltz",
+     "D:/tmp/pdiv/v2/sets/off_370000/new-age/008-lights-to-the-hills"
+    ],
+    "on": [
+     "D:/tmp/pdiv/v2/sets/on_370000/new-age/001-before-the-hills",
+     "D:/tmp/pdiv/v2/sets/on_370000/new-age/002-quiet-stars-of-the-evening",
+     "D:/tmp/pdiv/v2/sets/on_370000/new-age/003-early-stars-of-the-rain",
+     "D:/tmp/pdiv/v2/sets/on_370000/new-age/004-bridges-of-the-hills",
+     "D:/tmp/pdiv/v2/sets/on_370000/new-age/005-paper-footsteps",
+     "D:/tmp/pdiv/v2/sets/on_370000/new-age/006-after-spring",
+     "D:/tmp/pdiv/v2/sets/on_370000/new-age/007-before-summer-waltz",
+     "D:/tmp/pdiv/v2/sets/on_370000/new-age/008-lights-to-the-hills"
+    ]
+   },
+   "titles": {
+    "off": [
+     "Before the Hills",
+     "Promises to Winter",
+     "Kites to Summer",
+     "Stars to the Tide",
+     "Lanterns to Snowfall",
+     "The Silver Petals",
+     "Before Summer Waltz",
+     "Lights to the Hills"
+    ],
+    "on": [
+     "Before the Hills",
+     "Quiet Stars of the Evening",
+     "Early Stars of the Rain",
+     "Bridges of the Hills",
+     "Paper Footsteps",
+     "After Spring",
+     "Before Summer Waltz",
+     "Lights to the Hills"
+    ]
+   }
+  },
+  "B": {
+   "dir": "D:/tmp/pdiv/v2/pairs/B",
+   "judges": {
+    "composerA": {
+     "X": "on",
+     "Y": "off",
+     "first": "X"
+    },
+    "composerB": {
+     "X": "off",
+     "Y": "on",
+     "first": "X"
+    },
+    "composerC": {
+     "X": "on",
+     "Y": "off",
+     "first": "X"
+    },
+    "composerD": {
+     "X": "off",
+     "Y": "on",
+     "first": "X"
+    },
+    "composerE": {
+     "X": "on",
+     "Y": "off",
+     "first": "X"
+    },
+    "statistician": {
+     "X": "on",
+     "Y": "off",
+     "first": "Y"
+    },
+    "performer": {
+     "X": "off",
+     "Y": "on",
+     "first": "Y"
+    }
+   },
+   "sets": {
+    "off": [
+     "D:/tmp/pdiv/v2/sets/off_371000/new-age/001-before-the-evening",
+     "D:/tmp/pdiv/v2/sets/off_371000/new-age/002-other-wings",
+     "D:/tmp/pdiv/v2/sets/off_371000/new-age/003-the-distant-petals",
+     "D:/tmp/pdiv/v2/sets/off_371000/new-age/004-paper-lights-of-the-evening",
+     "D:/tmp/pdiv/v2/sets/off_371000/new-age/005-after-snowfall",
+     "D:/tmp/pdiv/v2/sets/off_371000/new-age/006-mirrors-of-spring",
+     "D:/tmp/pdiv/v2/sets/off_371000/new-age/007-windows-in-summer-waltz",
+     "D:/tmp/pdiv/v2/sets/off_371000/new-age/008-after-the-rain"
+    ],
+    "on": [
+     "D:/tmp/pdiv/v2/sets/on_371000/new-age/001-before-the-evening",
+     "D:/tmp/pdiv/v2/sets/on_371000/new-age/002-other-wings",
+     "D:/tmp/pdiv/v2/sets/on_371000/new-age/003-before-the-hills",
+     "D:/tmp/pdiv/v2/sets/on_371000/new-age/004-before-the-hills",
+     "D:/tmp/pdiv/v2/sets/on_371000/new-age/005-after-snowfall",
+     "D:/tmp/pdiv/v2/sets/on_371000/new-age/006-after-winter",
+     "D:/tmp/pdiv/v2/sets/on_371000/new-age/007-windows-in-summer-waltz",
+     "D:/tmp/pdiv/v2/sets/on_371000/new-age/008-leaves-in-the-hills"
+    ]
+   },
+   "titles": {
+    "off": [
+     "Before the Evening",
+     "Other Wings",
+     "The Distant Petals",
+     "Paper Lights of the Evening",
+     "After Snowfall",
+     "Mirrors of Spring",
+     "Windows in Summer Waltz",
+     "After the Rain"
+    ],
+    "on": [
+     "Before the Evening",
+     "Other Wings",
+     "Before the Hills",
+     "Before the Hills",
+     "After Snowfall",
+     "After Winter",
+     "Windows in Summer Waltz",
+     "Leaves in the Hills"
+    ]
+   }
+  },
+  "C": {
+   "dir": "D:/tmp/pdiv/v2/pairs/C",
+   "judges": {
+    "composerA": {
+     "X": "off",
+     "Y": "on",
+     "first": "X"
+    },
+    "composerB": {
+     "X": "off",
+     "Y": "on",
+     "first": "Y"
+    },
+    "composerC": {
+     "X": "off",
+     "Y": "on",
+     "first": "X"
+    },
+    "composerD": {
+     "X": "off",
+     "Y": "on",
+     "first": "Y"
+    },
+    "composerE": {
+     "X": "on",
+     "Y": "off",
+     "first": "Y"
+    },
+    "statistician": {
+     "X": "on",
+     "Y": "off",
+     "first": "X"
+    },
+    "performer": {
+     "X": "off",
+     "Y": "on",
+     "first": "X"
+    }
+   },
+   "sets": {
+    "off": [
+     "D:/tmp/pdiv/v2/sets/off_372000/new-age/001-after-snowfall",
+     "D:/tmp/pdiv/v2/sets/off_372000/new-age/002-after-snowfall",
+     "D:/tmp/pdiv/v2/sets/off_372000/new-age/003-stars-of-the-evening",
+     "D:/tmp/pdiv/v2/sets/off_372000/new-age/004-the-soft-promises",
+     "D:/tmp/pdiv/v2/sets/off_372000/new-age/005-after-the-sea",
+     "D:/tmp/pdiv/v2/sets/off_372000/new-age/006-the-distant-waves",
+     "D:/tmp/pdiv/v2/sets/off_372000/new-age/007-mirrors-to-the-rain",
+     "D:/tmp/pdiv/v2/sets/off_372000/new-age/008-before-the-evening"
+    ],
+    "on": [
+     "D:/tmp/pdiv/v2/sets/on_372000/new-age/001-after-snowfall",
+     "D:/tmp/pdiv/v2/sets/on_372000/new-age/002-after-snowfall",
+     "D:/tmp/pdiv/v2/sets/on_372000/new-age/003-stars-of-the-evening",
+     "D:/tmp/pdiv/v2/sets/on_372000/new-age/004-the-soft-promises",
+     "D:/tmp/pdiv/v2/sets/on_372000/new-age/005-after-the-sea",
+     "D:/tmp/pdiv/v2/sets/on_372000/new-age/006-silver-postcards-of-summer",
+     "D:/tmp/pdiv/v2/sets/on_372000/new-age/007-mirrors-to-the-rain",
+     "D:/tmp/pdiv/v2/sets/on_372000/new-age/008-before-the-evening"
+    ]
+   },
+   "titles": {
+    "off": [
+     "After Snowfall",
+     "After Snowfall",
+     "Stars of the Evening",
+     "The Soft Promises",
+     "After the Sea",
+     "The Distant Waves",
+     "Mirrors to the Rain",
+     "Before the Evening"
+    ],
+    "on": [
+     "After Snowfall",
+     "After Snowfall",
+     "Stars of the Evening",
+     "The Soft Promises",
+     "After the Sea",
+     "Silver Postcards of Summer",
+     "Mirrors to the Rain",
+     "Before the Evening"
+    ]
+   }
+  },
+  "D": {
+   "dir": "D:/tmp/pdiv/v2/pairs/D",
+   "judges": {
+    "composerA": {
+     "X": "off",
+     "Y": "on",
+     "first": "Y"
+    },
+    "composerB": {
+     "X": "off",
+     "Y": "on",
+     "first": "X"
+    },
+    "composerC": {
+     "X": "off",
+     "Y": "on",
+     "first": "Y"
+    },
+    "composerD": {
+     "X": "off",
+     "Y": "on",
+     "first": "X"
+    },
+    "composerE": {
+     "X": "on",
+     "Y": "off",
+     "first": "X"
+    },
+    "statistician": {
+     "X": "off",
+     "Y": "on",
+     "first": "X"
+    },
+    "performer": {
+     "X": "off",
+     "Y": "on",
+     "first": "Y"
+    }
+   },
+   "sets": {
+    "off": [
+     "D:/tmp/pdiv/v2/sets/off_373000/new-age/001-waves-in-summer",
+     "D:/tmp/pdiv/v2/sets/off_373000/new-age/002-leaves-to-the-morning",
+     "D:/tmp/pdiv/v2/sets/off_373000/new-age/003-after-winter",
+     "D:/tmp/pdiv/v2/sets/off_373000/new-age/004-kites-to-dawn",
+     "D:/tmp/pdiv/v2/sets/off_373000/new-age/005-before-the-evening",
+     "D:/tmp/pdiv/v2/sets/off_373000/new-age/006-leaves-to-the-sea",
+     "D:/tmp/pdiv/v2/sets/off_373000/new-age/007-petals-in-spring-waltz",
+     "D:/tmp/pdiv/v2/sets/off_373000/new-age/008-distant-gardens-of-summer"
+    ],
+    "on": [
+     "D:/tmp/pdiv/v2/sets/on_373000/new-age/001-waves-in-summer",
+     "D:/tmp/pdiv/v2/sets/on_373000/new-age/002-wings-of-the-tide",
+     "D:/tmp/pdiv/v2/sets/on_373000/new-age/003-after-winter",
+     "D:/tmp/pdiv/v2/sets/on_373000/new-age/004-kites-to-dawn",
+     "D:/tmp/pdiv/v2/sets/on_373000/new-age/005-kites-to-snowfall",
+     "D:/tmp/pdiv/v2/sets/on_373000/new-age/006-leaves-to-the-sea",
+     "D:/tmp/pdiv/v2/sets/on_373000/new-age/007-petals-in-spring-waltz",
+     "D:/tmp/pdiv/v2/sets/on_373000/new-age/008-distant-gardens-of-summer"
+    ]
+   },
+   "titles": {
+    "off": [
+     "Waves in Summer",
+     "Leaves to the Morning",
+     "After Winter",
+     "Kites to Dawn",
+     "Before the Evening",
+     "Leaves to the Sea",
+     "Petals in Spring Waltz",
+     "Distant Gardens of Summer"
+    ],
+    "on": [
+     "Waves in Summer",
+     "Wings of the Tide",
+     "After Winter",
+     "Kites to Dawn",
+     "Kites to Snowfall",
+     "Leaves to the Sea",
+     "Petals in Spring Waltz",
+     "Distant Gardens of Summer"
+    ]
+   }
+  }
+ }
+}

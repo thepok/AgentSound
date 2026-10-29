@@ -1,0 +1,161 @@
+{
+ "APPS": {
+  "source": "generated",
+  "path": "D:/tmp/o9/r/new/004-bright-horizons",
+  "title": "Bright Horizons",
+  "moves": [],
+  "code": "new",
+  "slot": "004",
+  "panel": "1"
+ },
+ "APRV": {
+  "source": "generated",
+  "path": "D:/tmp/o9/r/old/005-overture-bright-tides",
+  "title": "Overture: Bright Tides",
+  "moves": [],
+  "code": "old",
+  "slot": "005",
+  "panel": "1"
+ },
+ "BLMX": {
+  "source": "generated",
+  "path": "D:/tmp/o9/r/new/006-the-restless-horizons",
+  "title": "The Restless Horizons",
+  "moves": [],
+  "code": "new",
+  "slot": "006",
+  "panel": "1"
+ },
+ "CKNM": {
+  "source": "generated",
+  "path": "D:/tmp/o9/r/new/001-overture-burning-mountains",
+  "title": "Overture: Burning Mountains",
+  "moves": [],
+  "code": "new",
+  "slot": "001",
+  "panel": "2"
+ },
+ "CVDU": {
+  "source": "generated",
+  "path": "D:/tmp/o9/r/old/006-overture-burning-forests",
+  "title": "Overture: Burning Forests",
+  "moves": [],
+  "code": "old",
+  "slot": "006",
+  "panel": "2"
+ },
+ "DEXR": {
+  "source": "generated",
+  "path": "D:/tmp/o9/r/new/003-storms-of-winter",
+  "title": "Storms of Winter",
+  "moves": [],
+  "code": "new",
+  "slot": "003",
+  "panel": "2"
+ },
+ "ECER": {
+  "source": "generated",
+  "path": "D:/tmp/o9/r/new/002-symphonic-dance-tides-of-the-harvest",
+  "title": "Symphonic Dance: Tides of the Harvest",
+  "moves": [],
+  "code": "new",
+  "slot": "002",
+  "panel": "1"
+ },
+ "EMWY": {
+  "source": "generated",
+  "path": "D:/tmp/o9/r/new/005-overture-bright-tides",
+  "title": "Overture: Bright Tides",
+  "moves": [],
+  "code": "new",
+  "slot": "005",
+  "panel": "2"
+ },
+ "EYPC": {
+  "source": "generated",
+  "path": "D:/tmp/o9/r/new/008-distant-voyages-of-home",
+  "title": "Distant Voyages of Home",
+  "moves": [],
+  "code": "new",
+  "slot": "008",
+  "panel": "1"
+ },
+ "FKDT": {
+  "source": "generated",
+  "path": "D:/tmp/o9/r/old/001-overture-burning-mountains",
+  "title": "Overture: Burning Mountains",
+  "moves": [],
+  "code": "old",
+  "slot": "001",
+  "panel": "1"
+ },
+ "JAGW": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-scherzo",
+  "panel": "all"
+ },
+ "KEKT": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-stormy",
+  "panel": "all"
+ },
+ "RXYQ": {
+  "source": "generated",
+  "path": "D:/tmp/o9/r/old/008-storms-of-the-valley",
+  "title": "Storms of the Valley",
+  "moves": [],
+  "code": "old",
+  "slot": "008",
+  "panel": "2"
+ },
+ "SPDS": {
+  "source": "generated",
+  "path": "D:/tmp/o9/r/old/002-symphonic-dance-tides-of-the-harvest",
+  "title": "Symphonic Dance: Tides of the Harvest",
+  "moves": [],
+  "code": "old",
+  "slot": "002",
+  "panel": "2"
+ },
+ "TKAJ": {
+  "source": "generated",
+  "path": "D:/tmp/o9/r/old/007-hidden-bells-of-winter",
+  "title": "Hidden Bells of Winter",
+  "moves": [],
+  "code": "old",
+  "slot": "007",
+  "panel": "1"
+ },
+ "TLTJ": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-river",
+  "panel": "all"
+ },
+ "UTMC": {
+  "source": "generated",
+  "path": "D:/tmp/o9/r/old/003-storms-of-winter",
+  "title": "Storms of Winter",
+  "moves": [],
+  "code": "old",
+  "slot": "003",
+  "panel": "1"
+ },
+ "UZWK": {
+  "source": "generated",
+  "path": "D:/tmp/o9/r/new/007-hidden-bells-of-winter",
+  "title": "Hidden Bells of Winter",
+  "moves": [],
+  "code": "new",
+  "slot": "007",
+  "panel": "2"
+ },
+ "XXAF": {
+  "source": "generated",
+  "path": "D:/tmp/o9/r/old/004-mountains-of-the-harvest",
+  "title": "Mountains of the Harvest",
+  "moves": [],
+  "code": "old",
+  "slot": "004",
+  "panel": "2"
+ }
+}

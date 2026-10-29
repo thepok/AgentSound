@@ -1,0 +1,305 @@
+{
+ "AMXG": {
+  "source": "generated",
+  "path": "D:/tmp/oc1/r/old/004-the-heroic-voyages",
+  "title": "The Heroic Voyages",
+  "moves": [],
+  "code": "old",
+  "slot": "004",
+  "panel": "2"
+ },
+ "ANUL": {
+  "source": "generated",
+  "path": "D:/tmp/oc1/r/old/013-symphonic-dance-winds-of-the-storm",
+  "title": "Symphonic Dance: Winds of the Storm",
+  "moves": [],
+  "code": "old",
+  "slot": "013",
+  "panel": "1"
+ },
+ "DDTM": {
+  "source": "generated",
+  "path": "D:/tmp/oc1/r/new/007-the-bright-winds",
+  "title": "The Bright Winds",
+  "moves": [],
+  "code": "new",
+  "slot": "007",
+  "panel": "2"
+ },
+ "DHPF": {
+  "source": "generated",
+  "path": "D:/tmp/oc1/r/old/011-distant-storms-of-the-sea",
+  "title": "Distant Storms of the Sea",
+  "moves": [],
+  "code": "old",
+  "slot": "011",
+  "panel": "1"
+ },
+ "DZMA": {
+  "source": "generated",
+  "path": "D:/tmp/oc1/r/old/015-symphonic-dance-forests-of-the-north",
+  "title": "Symphonic Dance: Forests of the North",
+  "moves": [],
+  "code": "old",
+  "slot": "015",
+  "panel": "1"
+ },
+ "FESJ": {
+  "source": "generated",
+  "path": "D:/tmp/oc1/r/new/008-symphonic-dance-rivers-of-the-sea",
+  "title": "Symphonic Dance: Rivers of the Sea",
+  "moves": [],
+  "code": "new",
+  "slot": "008",
+  "panel": "1"
+ },
+ "FTVQ": {
+  "source": "generated",
+  "path": "D:/tmp/oc1/r/old/005-toward-the-valley",
+  "title": "Toward the Valley",
+  "moves": [],
+  "code": "old",
+  "slot": "005",
+  "panel": "1"
+ },
+ "HCAS": {
+  "source": "generated",
+  "path": "D:/tmp/oc1/r/old/007-the-bright-winds",
+  "title": "The Bright Winds",
+  "moves": [],
+  "code": "old",
+  "slot": "007",
+  "panel": "1"
+ },
+ "HNLT": {
+  "source": "generated",
+  "path": "D:/tmp/oc1/r/old/014-wild-fields",
+  "title": "Wild Fields",
+  "moves": [],
+  "code": "old",
+  "slot": "014",
+  "panel": "2"
+ },
+ "JHML": {
+  "source": "generated",
+  "path": "D:/tmp/oc1/r/new/012-bright-bells-of-the-storm",
+  "title": "Bright Bells of the Storm",
+  "moves": [],
+  "code": "new",
+  "slot": "012",
+  "panel": "1"
+ },
+ "JPHK": {
+  "source": "generated",
+  "path": "D:/tmp/oc1/r/old/009-the-wild-fields",
+  "title": "The Wild Fields",
+  "moves": [],
+  "code": "old",
+  "slot": "009",
+  "panel": "1"
+ },
+ "JSKR": {
+  "source": "generated",
+  "path": "D:/tmp/oc1/r/new/009-the-wild-fields",
+  "title": "The Wild Fields",
+  "moves": [],
+  "code": "new",
+  "slot": "009",
+  "panel": "2"
+ },
+ "KHMY": {
+  "source": "generated",
+  "path": "D:/tmp/oc1/r/new/005-toward-the-valley",
+  "title": "Toward the Valley",
+  "moves": [],
+  "code": "new",
+  "slot": "005",
+  "panel": "2"
+ },
+ "KNYT": {
+  "source": "generated",
+  "path": "D:/tmp/oc1/r/new/016-the-open-horizons",
+  "title": "The Open Horizons",
+  "moves": [],
+  "code": "new",
+  "slot": "016",
+  "panel": "1"
+ },
+ "KRYT": {
+  "source": "generated",
+  "path": "D:/tmp/oc1/r/old/001-toward-the-storm",
+  "title": "Toward the Storm",
+  "moves": [],
+  "code": "old",
+  "slot": "001",
+  "panel": "1"
+ },
+ "LMAS": {
+  "source": "generated",
+  "path": "D:/tmp/oc1/r/new/013-symphonic-dance-winds-of-the-storm",
+  "title": "Symphonic Dance: Winds of the Storm",
+  "moves": [],
+  "code": "new",
+  "slot": "013",
+  "panel": "2"
+ },
+ "LPSN": {
+  "source": "generated",
+  "path": "D:/tmp/oc1/r/new/015-symphonic-dance-forests-of-the-north",
+  "title": "Symphonic Dance: Forests of the North",
+  "moves": [],
+  "code": "new",
+  "slot": "015",
+  "panel": "2"
+ },
+ "LPXN": {
+  "source": "generated",
+  "path": "D:/tmp/oc1/r/old/016-the-open-horizons",
+  "title": "The Open Horizons",
+  "moves": [],
+  "code": "old",
+  "slot": "016",
+  "panel": "2"
+ },
+ "MKNF": {
+  "source": "composed",
+  "path": "D:/Repos/AgentSound/songs/pro-orch-symphonic-river",
+  "panel": "all"
+ },
+ "MUTP": {
+  "source": "generated",
+  "path": "D:/tmp/oc1/r/new/003-toward-the-dawn",
+  "title": "Toward the Dawn",
+  "moves": [],
+  "code": "new",
+  "slot": "003",
+  "panel": "2"
+ },
+ "NVQF": {
+  "source": "generated",
+  "path": "D:/tmp/oc1/r/new/001-toward-the-storm",
+  "title": "Toward the Storm",
+  "moves": [],
+  "code": "new",
+  "slot": "001",
+  "panel": "2"
+ },
+ "NYYT": {
+  "source": "generated",
+  "path": "D:/tmp/oc1/r/old/002-the-hidden-forests",
+  "title": "The Hidden Forests",
+  "moves": [],
+  "code": "old",
+  "slot": "002",
+  "panel": "2"
+ },
+ "PVCX": {
+  "source": "generated",
+  "path": "D:/tmp/oc1/r/new/004-the-heroic-voyages",
+  "title": "The Heroic Voyages",
+  "moves": [],
+  "code": "new",
+  "slot": "004",
+  "panel": "1"
+ },
+ "REQW": {
+  "source": "generated",
+  "path": "D:/tmp/oc1/r/new/006-open-riders-of-the-harvest",
+  "title": "Open Riders of the Harvest",
+  "moves": [],
+  "code": "new",
+  "slot": "006",
+  "panel": "1"
+ },
+ "RFPG": {
+  "source": "composed",
+  "path": "D:/Repos/AgentSound/songs/pro-orch-symphonic-stormy",
+  "panel": "all"
+ },
+ "RYGP": {
+  "source": "generated",
+  "path": "D:/tmp/oc1/r/old/006-open-riders-of-the-harvest",
+  "title": "Open Riders of the Harvest",
+  "moves": [],
+  "code": "old",
+  "slot": "006",
+  "panel": "2"
+ },
+ "SFJM": {
+  "source": "generated",
+  "path": "D:/tmp/oc1/r/old/008-symphonic-dance-rivers-of-the-sea",
+  "title": "Symphonic Dance: Rivers of the Sea",
+  "moves": [],
+  "code": "old",
+  "slot": "008",
+  "panel": "2"
+ },
+ "SHBM": {
+  "source": "generated",
+  "path": "D:/tmp/oc1/r/new/010-northern-winds-of-winter",
+  "title": "Northern Winds of Winter",
+  "moves": [],
+  "code": "new",
+  "slot": "010",
+  "panel": "1"
+ },
+ "UBJN": {
+  "source": "composed",
+  "path": "D:/Repos/AgentSound/songs/pro-orch-symphonic-scherzo",
+  "panel": "all"
+ },
+ "VVBB": {
+  "source": "generated",
+  "path": "D:/tmp/oc1/r/old/010-northern-winds-of-winter",
+  "title": "Northern Winds of Winter",
+  "moves": [],
+  "code": "old",
+  "slot": "010",
+  "panel": "2"
+ },
+ "YSNS": {
+  "source": "generated",
+  "path": "D:/tmp/oc1/r/new/014-wild-fields",
+  "title": "Wild Fields",
+  "moves": [],
+  "code": "new",
+  "slot": "014",
+  "panel": "1"
+ },
+ "YYFQ": {
+  "source": "generated",
+  "path": "D:/tmp/oc1/r/new/002-the-hidden-forests",
+  "title": "The Hidden Forests",
+  "moves": [],
+  "code": "new",
+  "slot": "002",
+  "panel": "1"
+ },
+ "ZETJ": {
+  "source": "generated",
+  "path": "D:/tmp/oc1/r/old/003-toward-the-dawn",
+  "title": "Toward the Dawn",
+  "moves": [],
+  "code": "old",
+  "slot": "003",
+  "panel": "1"
+ },
+ "ZXQD": {
+  "source": "generated",
+  "path": "D:/tmp/oc1/r/new/011-distant-storms-of-the-sea",
+  "title": "Distant Storms of the Sea",
+  "moves": [],
+  "code": "new",
+  "slot": "011",
+  "panel": "2"
+ },
+ "ZZYP": {
+  "source": "generated",
+  "path": "D:/tmp/oc1/r/old/012-bright-bells-of-the-storm",
+  "title": "Bright Bells of the Storm",
+  "moves": [],
+  "code": "old",
+  "slot": "012",
+  "panel": "2"
+ }
+}

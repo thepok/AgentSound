@@ -1,0 +1,305 @@
+{
+ "BHLH": {
+  "source": "composed",
+  "path": "D:/Repos/AgentSound/songs/pro-orch-symphonic-scherzo",
+  "panel": "all"
+ },
+ "BYSU": {
+  "source": "composed",
+  "path": "D:/Repos/AgentSound/songs/pro-orch-symphonic-river",
+  "panel": "all"
+ },
+ "CDAC": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/B/r/new/005-golden-fires",
+  "title": "Golden Fires",
+  "moves": [],
+  "code": "new",
+  "slot": "005",
+  "panel": "2"
+ },
+ "CGBE": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/B/r/old/005-golden-fires",
+  "title": "Golden Fires",
+  "moves": [],
+  "code": "old",
+  "slot": "005",
+  "panel": "1"
+ },
+ "CLFK": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/B/r/new/006-symphonic-dance-fields-of-the-north",
+  "title": "Symphonic Dance: Fields of the North",
+  "moves": [],
+  "code": "new",
+  "slot": "006",
+  "panel": "1"
+ },
+ "CNDS": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/B/r/new/003-bells-of-the-storm",
+  "title": "Bells of the Storm",
+  "moves": [],
+  "code": "new",
+  "slot": "003",
+  "panel": "2"
+ },
+ "DKRE": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/B/r/old/006-symphonic-dance-fields-of-the-north",
+  "title": "Symphonic Dance: Fields of the North",
+  "moves": [],
+  "code": "old",
+  "slot": "006",
+  "panel": "2"
+ },
+ "DNJQ": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/B/r/new/011-symphonic-dance-riders-of-the-north",
+  "title": "Symphonic Dance: Riders of the North",
+  "moves": [],
+  "code": "new",
+  "slot": "011",
+  "panel": "2"
+ },
+ "ELPC": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/B/r/old/002-voyages-of-the-sea",
+  "title": "Voyages of the Sea",
+  "moves": [],
+  "code": "old",
+  "slot": "002",
+  "panel": "2"
+ },
+ "FLLY": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/B/r/old/003-bells-of-the-storm",
+  "title": "Bells of the Storm",
+  "moves": [],
+  "code": "old",
+  "slot": "003",
+  "panel": "1"
+ },
+ "FRCV": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/B/r/new/001-overture-golden-riders",
+  "title": "Overture: Golden Riders",
+  "moves": [],
+  "code": "new",
+  "slot": "001",
+  "panel": "2"
+ },
+ "GGBP": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/B/r/old/008-heroic-winds",
+  "title": "Heroic Winds",
+  "moves": [],
+  "code": "old",
+  "slot": "008",
+  "panel": "2"
+ },
+ "GLRA": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/B/r/new/016-overture-northern-horizons",
+  "title": "Overture: Northern Horizons",
+  "moves": [],
+  "code": "new",
+  "slot": "016",
+  "panel": "1"
+ },
+ "GYJT": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/B/r/new/010-toward-the-dawn",
+  "title": "Toward the Dawn",
+  "moves": [],
+  "code": "new",
+  "slot": "010",
+  "panel": "1"
+ },
+ "HGQU": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/B/r/new/002-voyages-of-the-sea",
+  "title": "Voyages of the Sea",
+  "moves": [],
+  "code": "new",
+  "slot": "002",
+  "panel": "1"
+ },
+ "HXGM": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/B/r/new/013-overture-iron-storms",
+  "title": "Overture: Iron Storms",
+  "moves": [],
+  "code": "new",
+  "slot": "013",
+  "panel": "2"
+ },
+ "JAEG": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/B/r/old/012-heroic-storms",
+  "title": "Heroic Storms",
+  "moves": [],
+  "code": "old",
+  "slot": "012",
+  "panel": "2"
+ },
+ "JAZG": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/B/r/new/008-heroic-winds",
+  "title": "Heroic Winds",
+  "moves": [],
+  "code": "new",
+  "slot": "008",
+  "panel": "1"
+ },
+ "KUTC": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/B/r/old/011-symphonic-dance-riders-of-the-north",
+  "title": "Symphonic Dance: Riders of the North",
+  "moves": [],
+  "code": "old",
+  "slot": "011",
+  "panel": "1"
+ },
+ "KZZL": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/B/r/new/014-bright-riders-of-home",
+  "title": "Bright Riders of Home",
+  "moves": [],
+  "code": "new",
+  "slot": "014",
+  "panel": "1"
+ },
+ "LVPL": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/B/r/old/007-overture-rising-mountains",
+  "title": "Overture: Rising Mountains",
+  "moves": [],
+  "code": "old",
+  "slot": "007",
+  "panel": "1"
+ },
+ "MCEZ": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/B/r/old/004-northern-storms-of-the-sea",
+  "title": "Northern Storms of the Sea",
+  "moves": [],
+  "code": "old",
+  "slot": "004",
+  "panel": "2"
+ },
+ "NDAK": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/B/r/old/009-overture-burning-banners",
+  "title": "Overture: Burning Banners",
+  "moves": [],
+  "code": "old",
+  "slot": "009",
+  "panel": "1"
+ },
+ "PXWB": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/B/r/old/001-overture-golden-riders",
+  "title": "Overture: Golden Riders",
+  "moves": [],
+  "code": "old",
+  "slot": "001",
+  "panel": "1"
+ },
+ "RUQZ": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/B/r/new/012-heroic-storms",
+  "title": "Heroic Storms",
+  "moves": [],
+  "code": "new",
+  "slot": "012",
+  "panel": "1"
+ },
+ "SKXZ": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/B/r/old/013-overture-iron-storms",
+  "title": "Overture: Iron Storms",
+  "moves": [],
+  "code": "old",
+  "slot": "013",
+  "panel": "1"
+ },
+ "TBDY": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/B/r/new/004-northern-storms-of-the-sea",
+  "title": "Northern Storms of the Sea",
+  "moves": [],
+  "code": "new",
+  "slot": "004",
+  "panel": "1"
+ },
+ "TBGB": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/B/r/old/016-overture-northern-horizons",
+  "title": "Overture: Northern Horizons",
+  "moves": [],
+  "code": "old",
+  "slot": "016",
+  "panel": "2"
+ },
+ "THUC": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/B/r/old/010-toward-the-dawn",
+  "title": "Toward the Dawn",
+  "moves": [],
+  "code": "old",
+  "slot": "010",
+  "panel": "2"
+ },
+ "TUXR": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/B/r/old/015-open-winds-of-summer",
+  "title": "Open Winds of Summer",
+  "moves": [],
+  "code": "old",
+  "slot": "015",
+  "panel": "1"
+ },
+ "TXTP": {
+  "source": "composed",
+  "path": "D:/Repos/AgentSound/songs/pro-orch-symphonic-stormy",
+  "panel": "all"
+ },
+ "UKUR": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/B/r/old/014-bright-riders-of-home",
+  "title": "Bright Riders of Home",
+  "moves": [],
+  "code": "old",
+  "slot": "014",
+  "panel": "2"
+ },
+ "XSBZ": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/B/r/new/015-open-winds-of-summer",
+  "title": "Open Winds of Summer",
+  "moves": [],
+  "code": "new",
+  "slot": "015",
+  "panel": "2"
+ },
+ "YCDJ": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/B/r/new/009-overture-burning-banners",
+  "title": "Overture: Burning Banners",
+  "moves": [],
+  "code": "new",
+  "slot": "009",
+  "panel": "2"
+ },
+ "ZYBU": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/B/r/new/007-overture-rising-mountains",
+  "title": "Overture: Rising Mountains",
+  "moves": [],
+  "code": "new",
+  "slot": "007",
+  "panel": "2"
+ }
+}

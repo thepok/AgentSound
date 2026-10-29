@@ -1,0 +1,161 @@
+{
+ "EYLM": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-scherzo",
+  "panel": "all"
+ },
+ "FDXG": {
+  "source": "generated",
+  "path": "D:/tmp/o6/r/old/006-tides-of-the-harvest",
+  "title": "Tides of the Harvest",
+  "moves": [],
+  "code": "old",
+  "slot": "006",
+  "panel": "2"
+ },
+ "GKJW": {
+  "source": "generated",
+  "path": "D:/tmp/o6/r/new/007-golden-storms-of-the-sea",
+  "title": "Golden Storms of the Sea",
+  "moves": [],
+  "code": "new",
+  "slot": "007",
+  "panel": "2"
+ },
+ "GKVA": {
+  "source": "generated",
+  "path": "D:/tmp/o6/r/new/006-symphonic-dance-fires-of-the-north",
+  "title": "Symphonic Dance: Fires of the North",
+  "moves": [],
+  "code": "new",
+  "slot": "006",
+  "panel": "1"
+ },
+ "GVZW": {
+  "source": "generated",
+  "path": "D:/tmp/o6/r/old/001-toward-the-dawn",
+  "title": "Toward the Dawn",
+  "moves": [],
+  "code": "old",
+  "slot": "001",
+  "panel": "1"
+ },
+ "HZSF": {
+  "source": "generated",
+  "path": "D:/tmp/o6/r/old/003-voyages-of-the-storm",
+  "title": "Voyages of the Storm",
+  "moves": [],
+  "code": "old",
+  "slot": "003",
+  "panel": "1"
+ },
+ "JADZ": {
+  "source": "generated",
+  "path": "D:/tmp/o6/r/new/004-overture-iron-tides",
+  "title": "Overture: Iron Tides",
+  "moves": [],
+  "code": "new",
+  "slot": "004",
+  "panel": "1"
+ },
+ "KZCG": {
+  "source": "generated",
+  "path": "D:/tmp/o6/r/old/005-hidden-riders-of-summer",
+  "title": "Hidden Riders of Summer",
+  "moves": [],
+  "code": "old",
+  "slot": "005",
+  "panel": "1"
+ },
+ "MMQU": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-river",
+  "panel": "all"
+ },
+ "MYKG": {
+  "source": "generated",
+  "path": "D:/tmp/o6/r/new/005-hidden-riders-of-summer",
+  "title": "Hidden Riders of Summer",
+  "moves": [],
+  "code": "new",
+  "slot": "005",
+  "panel": "2"
+ },
+ "QVAV": {
+  "source": "generated",
+  "path": "D:/tmp/o6/r/old/007-toward-the-plains",
+  "title": "Toward the Plains",
+  "moves": [],
+  "code": "old",
+  "slot": "007",
+  "panel": "1"
+ },
+ "RBEW": {
+  "source": "generated",
+  "path": "D:/tmp/o6/r/new/001-toward-the-dawn",
+  "title": "Toward the Dawn",
+  "moves": [],
+  "code": "new",
+  "slot": "001",
+  "panel": "2"
+ },
+ "RDLB": {
+  "source": "generated",
+  "path": "D:/tmp/o6/r/old/004-overture-iron-tides",
+  "title": "Overture: Iron Tides",
+  "moves": [],
+  "code": "old",
+  "slot": "004",
+  "panel": "2"
+ },
+ "SZEW": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-stormy",
+  "panel": "all"
+ },
+ "TSGG": {
+  "source": "generated",
+  "path": "D:/tmp/o6/r/old/002-wild-rivers-of-the-dawn",
+  "title": "Wild Rivers of the Dawn",
+  "moves": [],
+  "code": "old",
+  "slot": "002",
+  "panel": "2"
+ },
+ "UZFK": {
+  "source": "generated",
+  "path": "D:/tmp/o6/r/old/008-open-horizons-of-the-sea",
+  "title": "Open Horizons of the Sea",
+  "moves": [],
+  "code": "old",
+  "slot": "008",
+  "panel": "2"
+ },
+ "WCKZ": {
+  "source": "generated",
+  "path": "D:/tmp/o6/r/new/002-wild-rivers-of-the-dawn",
+  "title": "Wild Rivers of the Dawn",
+  "moves": [],
+  "code": "new",
+  "slot": "002",
+  "panel": "1"
+ },
+ "XZLB": {
+  "source": "generated",
+  "path": "D:/tmp/o6/r/new/008-open-horizons-of-the-sea",
+  "title": "Open Horizons of the Sea",
+  "moves": [],
+  "code": "new",
+  "slot": "008",
+  "panel": "1"
+ },
+ "ZUKZ": {
+  "source": "generated",
+  "path": "D:/tmp/o6/r/new/003-rising-rivers-of-the-north",
+  "title": "Rising Rivers of the North",
+  "moves": [],
+  "code": "new",
+  "slot": "003",
+  "panel": "2"
+ }
+}

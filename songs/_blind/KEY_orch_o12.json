@@ -1,0 +1,161 @@
+{
+ "AHQG": {
+  "source": "generated",
+  "path": "D:/tmp/o12/r/old/005-stormy-fields",
+  "title": "Stormy Fields",
+  "moves": [],
+  "code": "old",
+  "slot": "005",
+  "panel": "1"
+ },
+ "AYYZ": {
+  "source": "generated",
+  "path": "D:/tmp/o12/r/new/006-the-iron-storms",
+  "title": "The Iron Storms",
+  "moves": [],
+  "code": "new",
+  "slot": "006",
+  "panel": "1"
+ },
+ "DPQX": {
+  "source": "generated",
+  "path": "D:/tmp/o12/r/new/007-tides-of-the-harvest",
+  "title": "Tides of the Harvest",
+  "moves": [],
+  "code": "new",
+  "slot": "007",
+  "panel": "2"
+ },
+ "GFLP": {
+  "source": "generated",
+  "path": "D:/tmp/o12/r/new/003-wings-of-the-sea",
+  "title": "Wings of the Sea",
+  "moves": [],
+  "code": "new",
+  "slot": "003",
+  "panel": "2"
+ },
+ "GUQK": {
+  "source": "generated",
+  "path": "D:/tmp/o12/r/old/008-bright-bells-of-the-harvest",
+  "title": "Bright Bells of the Harvest",
+  "moves": [],
+  "code": "old",
+  "slot": "008",
+  "panel": "2"
+ },
+ "HUDH": {
+  "source": "generated",
+  "path": "D:/tmp/o12/r/old/004-stormy-voyages",
+  "title": "Stormy Voyages",
+  "moves": [],
+  "code": "old",
+  "slot": "004",
+  "panel": "2"
+ },
+ "KHSM": {
+  "source": "generated",
+  "path": "D:/tmp/o12/r/old/002-fields-of-home",
+  "title": "Fields of Home",
+  "moves": [],
+  "code": "old",
+  "slot": "002",
+  "panel": "2"
+ },
+ "KWYP": {
+  "source": "generated",
+  "path": "D:/tmp/o12/r/old/006-distant-storms",
+  "title": "Distant Storms",
+  "moves": [],
+  "code": "old",
+  "slot": "006",
+  "panel": "2"
+ },
+ "LWLA": {
+  "source": "generated",
+  "path": "D:/tmp/o12/r/new/001-overture-endless-winds",
+  "title": "Overture: Endless Winds",
+  "moves": [],
+  "code": "new",
+  "slot": "001",
+  "panel": "2"
+ },
+ "MBSQ": {
+  "source": "generated",
+  "path": "D:/tmp/o12/r/new/005-stormy-fields",
+  "title": "Stormy Fields",
+  "moves": [],
+  "code": "new",
+  "slot": "005",
+  "panel": "2"
+ },
+ "MLXL": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-scherzo",
+  "panel": "all"
+ },
+ "QJFY": {
+  "source": "generated",
+  "path": "D:/tmp/o12/r/new/008-overture-burning-forests",
+  "title": "Overture: Burning Forests",
+  "moves": [],
+  "code": "new",
+  "slot": "008",
+  "panel": "1"
+ },
+ "QQUR": {
+  "source": "generated",
+  "path": "D:/tmp/o12/r/old/001-overture-wild-horizons",
+  "title": "Overture: Wild Horizons",
+  "moves": [],
+  "code": "old",
+  "slot": "001",
+  "panel": "1"
+ },
+ "RSEB": {
+  "source": "generated",
+  "path": "D:/tmp/o12/r/old/007-overture-northern-tides",
+  "title": "Overture: Northern Tides",
+  "moves": [],
+  "code": "old",
+  "slot": "007",
+  "panel": "1"
+ },
+ "RTST": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-stormy",
+  "panel": "all"
+ },
+ "SXKT": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-river",
+  "panel": "all"
+ },
+ "WQZR": {
+  "source": "generated",
+  "path": "D:/tmp/o12/r/old/003-wings-of-the-sea",
+  "title": "Wings of the Sea",
+  "moves": [],
+  "code": "old",
+  "slot": "003",
+  "panel": "1"
+ },
+ "YYPR": {
+  "source": "generated",
+  "path": "D:/tmp/o12/r/new/004-overture-hidden-storms",
+  "title": "Overture: Hidden Storms",
+  "moves": [],
+  "code": "new",
+  "slot": "004",
+  "panel": "1"
+ },
+ "ZZGJ": {
+  "source": "generated",
+  "path": "D:/tmp/o12/r/new/002-fields-of-the-valley",
+  "title": "Fields of the Valley",
+  "moves": [],
+  "code": "new",
+  "slot": "002",
+  "panel": "1"
+ }
+}

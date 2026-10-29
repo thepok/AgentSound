@@ -1,0 +1,161 @@
+{
+ "CCFN": {
+  "source": "generated",
+  "path": "D:/tmp/o8/r/old/003-hidden-horizons",
+  "title": "Hidden Horizons",
+  "moves": [],
+  "code": "old",
+  "slot": "003",
+  "panel": "1"
+ },
+ "CLND": {
+  "source": "generated",
+  "path": "D:/tmp/o8/r/new/001-symphonic-dance-fields-of-the-plains",
+  "title": "Symphonic Dance: Fields of the Plains",
+  "moves": [],
+  "code": "new",
+  "slot": "001",
+  "panel": "2"
+ },
+ "CWFE": {
+  "source": "generated",
+  "path": "D:/tmp/o8/r/old/005-overture-northern-tides",
+  "title": "Overture: Northern Tides",
+  "moves": [],
+  "code": "old",
+  "slot": "005",
+  "panel": "1"
+ },
+ "EJQL": {
+  "source": "generated",
+  "path": "D:/tmp/o8/r/old/006-endless-rivers",
+  "title": "Endless Rivers",
+  "moves": [],
+  "code": "old",
+  "slot": "006",
+  "panel": "2"
+ },
+ "FFYD": {
+  "source": "generated",
+  "path": "D:/tmp/o8/r/new/004-hidden-mountains-of-the-dawn",
+  "title": "Hidden Mountains of the Dawn",
+  "moves": [],
+  "code": "new",
+  "slot": "004",
+  "panel": "1"
+ },
+ "FGHD": {
+  "source": "generated",
+  "path": "D:/tmp/o8/r/old/004-hidden-mountains-of-the-dawn",
+  "title": "Hidden Mountains of the Dawn",
+  "moves": [],
+  "code": "old",
+  "slot": "004",
+  "panel": "2"
+ },
+ "FVNG": {
+  "source": "generated",
+  "path": "D:/tmp/o8/r/new/003-restless-fires",
+  "title": "Restless Fires",
+  "moves": [],
+  "code": "new",
+  "slot": "003",
+  "panel": "2"
+ },
+ "KQFD": {
+  "source": "generated",
+  "path": "D:/tmp/o8/r/new/005-the-bright-bells",
+  "title": "The Bright Bells",
+  "moves": [],
+  "code": "new",
+  "slot": "005",
+  "panel": "2"
+ },
+ "LNVD": {
+  "source": "generated",
+  "path": "D:/tmp/o8/r/old/007-toward-summer",
+  "title": "Toward Summer",
+  "moves": [],
+  "code": "old",
+  "slot": "007",
+  "panel": "1"
+ },
+ "PZSU": {
+  "source": "generated",
+  "path": "D:/tmp/o8/r/new/007-toward-summer",
+  "title": "Toward Summer",
+  "moves": [],
+  "code": "new",
+  "slot": "007",
+  "panel": "2"
+ },
+ "QMBR": {
+  "source": "generated",
+  "path": "D:/tmp/o8/r/new/002-bright-horizons",
+  "title": "Bright Horizons",
+  "moves": [],
+  "code": "new",
+  "slot": "002",
+  "panel": "1"
+ },
+ "SKNA": {
+  "source": "generated",
+  "path": "D:/tmp/o8/r/old/002-toward-the-storm",
+  "title": "Toward the Storm",
+  "moves": [],
+  "code": "old",
+  "slot": "002",
+  "panel": "2"
+ },
+ "TZKN": {
+  "source": "generated",
+  "path": "D:/tmp/o8/r/new/006-iron-riders-of-home",
+  "title": "Iron Riders of Home",
+  "moves": [],
+  "code": "new",
+  "slot": "006",
+  "panel": "1"
+ },
+ "UUAC": {
+  "source": "generated",
+  "path": "D:/tmp/o8/r/old/008-heroic-voyages",
+  "title": "Heroic Voyages",
+  "moves": [],
+  "code": "old",
+  "slot": "008",
+  "panel": "2"
+ },
+ "UWJS": {
+  "source": "composed",
+  "path": "D:/Repos/AgentSound/.claude/worktrees/agent-a0cafc02d852bbf65/songs/pro-orch-symphonic-scherzo",
+  "panel": "all"
+ },
+ "VKNS": {
+  "source": "composed",
+  "path": "D:/Repos/AgentSound/.claude/worktrees/agent-a0cafc02d852bbf65/songs/pro-orch-symphonic-stormy",
+  "panel": "all"
+ },
+ "XBGS": {
+  "source": "generated",
+  "path": "D:/tmp/o8/r/new/008-heroic-voyages",
+  "title": "Heroic Voyages",
+  "moves": [],
+  "code": "new",
+  "slot": "008",
+  "panel": "1"
+ },
+ "YKFA": {
+  "source": "composed",
+  "path": "D:/Repos/AgentSound/.claude/worktrees/agent-a0cafc02d852bbf65/songs/pro-orch-symphonic-river",
+  "panel": "all"
+ },
+ "ZLAQ": {
+  "source": "generated",
+  "path": "D:/tmp/o8/r/old/001-symphonic-dance-fields-of-the-plains",
+  "title": "Symphonic Dance: Fields of the Plains",
+  "moves": [],
+  "code": "old",
+  "slot": "001",
+  "panel": "1"
+ }
+}

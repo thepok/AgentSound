@@ -1,0 +1,305 @@
+{
+ "ABNT": {
+  "source": "generated",
+  "path": "D:/tmp/o22/r/old/010-overture-golden-voyages",
+  "title": "Overture: Golden Voyages",
+  "moves": [],
+  "code": "old",
+  "slot": "010",
+  "panel": "2"
+ },
+ "AGXQ": {
+  "source": "generated",
+  "path": "D:/tmp/o22/r/new/006-rivers-of-the-sea",
+  "title": "Rivers of the Sea",
+  "moves": [],
+  "code": "new",
+  "slot": "006",
+  "panel": "1"
+ },
+ "AMUX": {
+  "source": "generated",
+  "path": "D:/tmp/o22/r/old/012-heroic-wings",
+  "title": "Heroic Wings",
+  "moves": [],
+  "code": "old",
+  "slot": "012",
+  "panel": "2"
+ },
+ "AXHK": {
+  "source": "generated",
+  "path": "D:/tmp/o22/r/new/002-symphonic-dance-horizons-of-the-harvest",
+  "title": "Symphonic Dance: Horizons of the Harvest",
+  "moves": [],
+  "code": "new",
+  "slot": "002",
+  "panel": "1"
+ },
+ "BASK": {
+  "source": "generated",
+  "path": "D:/tmp/o22/r/new/007-overture-rising-riders",
+  "title": "Overture: Rising Riders",
+  "moves": [],
+  "code": "new",
+  "slot": "007",
+  "panel": "2"
+ },
+ "BCYP": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-scherzo",
+  "panel": "all"
+ },
+ "DFWD": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-river",
+  "panel": "all"
+ },
+ "EENP": {
+  "source": "generated",
+  "path": "D:/tmp/o22/r/new/013-storms-of-the-plains",
+  "title": "Storms of the Plains",
+  "moves": [],
+  "code": "new",
+  "slot": "013",
+  "panel": "2"
+ },
+ "ENKT": {
+  "source": "generated",
+  "path": "D:/tmp/o22/r/old/001-the-burning-fields",
+  "title": "The Burning Fields",
+  "moves": [],
+  "code": "old",
+  "slot": "001",
+  "panel": "1"
+ },
+ "EPVQ": {
+  "source": "generated",
+  "path": "D:/tmp/o22/r/new/016-symphonic-dance-winds-of-summer",
+  "title": "Symphonic Dance: Winds of Summer",
+  "moves": [],
+  "code": "new",
+  "slot": "016",
+  "panel": "1"
+ },
+ "FLXT": {
+  "source": "generated",
+  "path": "D:/tmp/o22/r/old/009-symphonic-dance-rivers-of-the-dawn",
+  "title": "Symphonic Dance: Rivers of the Dawn",
+  "moves": [],
+  "code": "old",
+  "slot": "009",
+  "panel": "1"
+ },
+ "FZEB": {
+  "source": "generated",
+  "path": "D:/tmp/o22/r/old/002-symphonic-dance-horizons-of-the-harvest",
+  "title": "Symphonic Dance: Horizons of the Harvest",
+  "moves": [],
+  "code": "old",
+  "slot": "002",
+  "panel": "2"
+ },
+ "GBGL": {
+  "source": "generated",
+  "path": "D:/tmp/o22/r/old/004-the-golden-voyages",
+  "title": "The Golden Voyages",
+  "moves": [],
+  "code": "old",
+  "slot": "004",
+  "panel": "2"
+ },
+ "LFVN": {
+  "source": "generated",
+  "path": "D:/tmp/o22/r/old/008-the-iron-tides",
+  "title": "The Iron Tides",
+  "moves": [],
+  "code": "old",
+  "slot": "008",
+  "panel": "2"
+ },
+ "LNAT": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-stormy",
+  "panel": "all"
+ },
+ "LPZV": {
+  "source": "generated",
+  "path": "D:/tmp/o22/r/new/005-toward-home",
+  "title": "Toward Home",
+  "moves": [],
+  "code": "new",
+  "slot": "005",
+  "panel": "2"
+ },
+ "NBLN": {
+  "source": "generated",
+  "path": "D:/tmp/o22/r/new/004-the-golden-voyages",
+  "title": "The Golden Voyages",
+  "moves": [],
+  "code": "new",
+  "slot": "004",
+  "panel": "1"
+ },
+ "NESC": {
+  "source": "generated",
+  "path": "D:/tmp/o22/r/old/006-rivers-of-the-sea",
+  "title": "Rivers of the Sea",
+  "moves": [],
+  "code": "old",
+  "slot": "006",
+  "panel": "2"
+ },
+ "NQKG": {
+  "source": "generated",
+  "path": "D:/tmp/o22/r/old/007-overture-rising-riders",
+  "title": "Overture: Rising Riders",
+  "moves": [],
+  "code": "old",
+  "slot": "007",
+  "panel": "1"
+ },
+ "NRFE": {
+  "source": "generated",
+  "path": "D:/tmp/o22/r/new/008-the-iron-tides",
+  "title": "The Iron Tides",
+  "moves": [],
+  "code": "new",
+  "slot": "008",
+  "panel": "1"
+ },
+ "NTFJ": {
+  "source": "generated",
+  "path": "D:/tmp/o22/r/new/001-the-burning-fields",
+  "title": "The Burning Fields",
+  "moves": [],
+  "code": "new",
+  "slot": "001",
+  "panel": "2"
+ },
+ "PGMT": {
+  "source": "generated",
+  "path": "D:/tmp/o22/r/old/011-symphonic-dance-fires-of-the-north",
+  "title": "Symphonic Dance: Fires of the North",
+  "moves": [],
+  "code": "old",
+  "slot": "011",
+  "panel": "1"
+ },
+ "PPBE": {
+  "source": "generated",
+  "path": "D:/tmp/o22/r/new/012-heroic-wings",
+  "title": "Heroic Wings",
+  "moves": [],
+  "code": "new",
+  "slot": "012",
+  "panel": "1"
+ },
+ "QDCT": {
+  "source": "generated",
+  "path": "D:/tmp/o22/r/new/011-symphonic-dance-fires-of-the-north",
+  "title": "Symphonic Dance: Fires of the North",
+  "moves": [],
+  "code": "new",
+  "slot": "011",
+  "panel": "2"
+ },
+ "QKHK": {
+  "source": "generated",
+  "path": "D:/tmp/o22/r/new/014-the-bright-banners",
+  "title": "The Bright Banners",
+  "moves": [],
+  "code": "new",
+  "slot": "014",
+  "panel": "1"
+ },
+ "RZSV": {
+  "source": "generated",
+  "path": "D:/tmp/o22/r/old/016-symphonic-dance-winds-of-summer",
+  "title": "Symphonic Dance: Winds of Summer",
+  "moves": [],
+  "code": "old",
+  "slot": "016",
+  "panel": "2"
+ },
+ "SEDV": {
+  "source": "generated",
+  "path": "D:/tmp/o22/r/old/015-wild-mountains-of-winter",
+  "title": "Wild Mountains of Winter",
+  "moves": [],
+  "code": "old",
+  "slot": "015",
+  "panel": "1"
+ },
+ "TCSR": {
+  "source": "generated",
+  "path": "D:/tmp/o22/r/new/009-symphonic-dance-rivers-of-the-dawn",
+  "title": "Symphonic Dance: Rivers of the Dawn",
+  "moves": [],
+  "code": "new",
+  "slot": "009",
+  "panel": "2"
+ },
+ "UJLS": {
+  "source": "generated",
+  "path": "D:/tmp/o22/r/old/003-rivers-of-the-dawn",
+  "title": "Rivers of the Dawn",
+  "moves": [],
+  "code": "old",
+  "slot": "003",
+  "panel": "1"
+ },
+ "UKDQ": {
+  "source": "generated",
+  "path": "D:/tmp/o22/r/new/003-rivers-of-the-dawn",
+  "title": "Rivers of the Dawn",
+  "moves": [],
+  "code": "new",
+  "slot": "003",
+  "panel": "2"
+ },
+ "VNEE": {
+  "source": "generated",
+  "path": "D:/tmp/o22/r/old/014-the-bright-banners",
+  "title": "The Bright Banners",
+  "moves": [],
+  "code": "old",
+  "slot": "014",
+  "panel": "2"
+ },
+ "XDUF": {
+  "source": "generated",
+  "path": "D:/tmp/o22/r/new/010-overture-golden-voyages",
+  "title": "Overture: Golden Voyages",
+  "moves": [],
+  "code": "new",
+  "slot": "010",
+  "panel": "1"
+ },
+ "XYDE": {
+  "source": "generated",
+  "path": "D:/tmp/o22/r/old/013-storms-of-the-plains",
+  "title": "Storms of the Plains",
+  "moves": [],
+  "code": "old",
+  "slot": "013",
+  "panel": "1"
+ },
+ "YFKK": {
+  "source": "generated",
+  "path": "D:/tmp/o22/r/old/005-toward-home",
+  "title": "Toward Home",
+  "moves": [],
+  "code": "old",
+  "slot": "005",
+  "panel": "1"
+ },
+ "YYFC": {
+  "source": "generated",
+  "path": "D:/tmp/o22/r/new/015-wild-mountains-of-winter",
+  "title": "Wild Mountains of Winter",
+  "moves": [],
+  "code": "new",
+  "slot": "015",
+  "panel": "2"
+ }
+}

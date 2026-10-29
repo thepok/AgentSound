@@ -1,0 +1,161 @@
+{
+ "AJHL": {
+  "source": "generated",
+  "path": "D:/tmp/o4/r/old/008-the-northern-fires",
+  "title": "The Northern Fires",
+  "moves": [],
+  "code": "old",
+  "slot": "008",
+  "panel": "2"
+ },
+ "BFGX": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-stormy",
+  "panel": "all"
+ },
+ "BMZF": {
+  "source": "generated",
+  "path": "D:/tmp/o4/r/old/007-silver-mountains-of-the-dawn",
+  "title": "Silver Mountains of the Dawn",
+  "moves": [],
+  "code": "old",
+  "slot": "007",
+  "panel": "1"
+ },
+ "BXBH": {
+  "source": "generated",
+  "path": "D:/tmp/o4/r/old/001-the-northern-riders",
+  "title": "The Northern Riders",
+  "moves": [],
+  "code": "old",
+  "slot": "001",
+  "panel": "1"
+ },
+ "CDLV": {
+  "source": "generated",
+  "path": "D:/tmp/o4/r/new/002-horizons-of-summer",
+  "title": "Horizons of Summer",
+  "moves": [],
+  "code": "new",
+  "slot": "002",
+  "panel": "1"
+ },
+ "DSME": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-scherzo",
+  "panel": "all"
+ },
+ "GBKJ": {
+  "source": "generated",
+  "path": "D:/tmp/o4/r/new/003-the-distant-riders",
+  "title": "The Distant Riders",
+  "moves": [],
+  "code": "new",
+  "slot": "003",
+  "panel": "2"
+ },
+ "HVEE": {
+  "source": "generated",
+  "path": "D:/tmp/o4/r/new/008-restless-bells",
+  "title": "Restless Bells",
+  "moves": [],
+  "code": "new",
+  "slot": "008",
+  "panel": "1"
+ },
+ "KKWX": {
+  "source": "generated",
+  "path": "D:/tmp/o4/r/new/005-the-wild-fields",
+  "title": "The Wild Fields",
+  "moves": [],
+  "code": "new",
+  "slot": "005",
+  "panel": "2"
+ },
+ "KNHS": {
+  "source": "generated",
+  "path": "D:/tmp/o4/r/old/006-the-distant-fields",
+  "title": "The Distant Fields",
+  "moves": [],
+  "code": "old",
+  "slot": "006",
+  "panel": "2"
+ },
+ "KXSJ": {
+  "source": "generated",
+  "path": "D:/tmp/o4/r/old/005-symphonic-dance-mountains-of-the-storm",
+  "title": "Symphonic Dance: Mountains of the Storm",
+  "moves": [],
+  "code": "old",
+  "slot": "005",
+  "panel": "1"
+ },
+ "PLHU": {
+  "source": "generated",
+  "path": "D:/tmp/o4/r/new/001-overture-burning-rivers",
+  "title": "Overture: Burning Rivers",
+  "moves": [],
+  "code": "new",
+  "slot": "001",
+  "panel": "2"
+ },
+ "RUCM": {
+  "source": "generated",
+  "path": "D:/tmp/o4/r/old/004-overture-wild-wings",
+  "title": "Overture: Wild Wings",
+  "moves": [],
+  "code": "old",
+  "slot": "004",
+  "panel": "2"
+ },
+ "SHPB": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-river",
+  "panel": "all"
+ },
+ "SXQW": {
+  "source": "generated",
+  "path": "D:/tmp/o4/r/new/006-overture-golden-storms",
+  "title": "Overture: Golden Storms",
+  "moves": [],
+  "code": "new",
+  "slot": "006",
+  "panel": "1"
+ },
+ "TVLW": {
+  "source": "generated",
+  "path": "D:/tmp/o4/r/new/007-toward-the-north",
+  "title": "Toward the North",
+  "moves": [],
+  "code": "new",
+  "slot": "007",
+  "panel": "2"
+ },
+ "TWJT": {
+  "source": "generated",
+  "path": "D:/tmp/o4/r/old/003-the-distant-riders",
+  "title": "The Distant Riders",
+  "moves": [],
+  "code": "old",
+  "slot": "003",
+  "panel": "1"
+ },
+ "UHSK": {
+  "source": "generated",
+  "path": "D:/tmp/o4/r/old/002-horizons-of-summer",
+  "title": "Horizons of Summer",
+  "moves": [],
+  "code": "old",
+  "slot": "002",
+  "panel": "2"
+ },
+ "XKWU": {
+  "source": "generated",
+  "path": "D:/tmp/o4/r/new/004-symphonic-dance-horizons-of-the-harvest",
+  "title": "Symphonic Dance: Horizons of the Harvest",
+  "moves": [],
+  "code": "new",
+  "slot": "004",
+  "panel": "1"
+ }
+}

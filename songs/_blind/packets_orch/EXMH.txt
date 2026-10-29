@@ -1,0 +1,800 @@
+BLIND PACKET ------------------------------------------------------------
+key      F minor
+meter    6/8
+tempo    100 BPM at the start (ritardandi, fermatas and tempo changes as performed)
+length   103 bars, 3:12 incl. the hall's ring-out
+layout   S1 3 | S2 8 | S3 4 | S4 12 | S5 4 | S6 16 | S7 4 | S8 10 | S9 8 | S10 12 | S11 12 | S12 10 (bars)
+roles    flutes, oboes, clarinets, bassoons, horns, trumpets, trombones, tuba, timpani, harp, violins1, violins2, violas, cellos, basses
+
+ORCHESTRATION per section (the roles that sound; their dynamics: the lane / velocity range as marks)
+  S1   (bars 1-3): flutes pp-f, clarinets pp-p, horns f, violins1 p-f, violins2 pp-p, violas mp, cellos mf, basses pp-mp
+  S2   (bars 4-11): oboes mf, clarinets mf, horns mp-ff, violins1 mp-ff, violas p-mf, cellos mp-f, basses mp-mf
+  S3   (bars 12-15): flutes p, oboes mp-ff, clarinets p-f, violins2 p-f, violas mp-mf, cellos pp-f, basses mp-mf
+  S4   (bars 16-27): flutes p-f, clarinets pp-mf, bassoons pp-mf, horns mf, trumpets mf, harp p-mf, violins2 pp-mf, violas p-mf, cellos pp-mp, basses mf
+  S5   (bars 28-31): clarinets mp-ff, bassoons p-ff, horns mp-ff, trumpets mp-ff, timpani mf, harp mf, violins1 mf-ff, violins2 mp-f, violas mf-ff, cellos mp-f, basses p-ff
+  S6   (bars 32-47): clarinets p-ff, bassoons p, horns pp-mf, harp p, violins1 mp, violins2 p-mf, violas pp-mf, cellos p-f, basses p-mf
+  S7   (bars 48-51): flutes mf, bassoons pp-mf, horns pp-mf, harp p-mp, violins1 p-f, violins2 mp, violas p-mp, cellos pp-mp, basses pp-p
+  S8   (bars 52-61): bassoons mp-ff, horns mp-f, tuba mp-f, violins1 pp-ff, violins2 p-f, violas pp-f, cellos pp-f, basses mp-f
+  S9   (bars 62-69): flutes f, oboes p-ff, clarinets f, bassoons f, trumpets ff, trombones f, timpani p-ff, violins1 pp-ff, violins2 f, violas pp-f, cellos pp-f, basses pp-f
+  S10  (bars 70-81): flutes mf-ff, oboes mf-ff, clarinets mf-f, bassoons mf-ff, horns mf-ff, trumpets mf-ff, trombones mf-ff, tuba mf-ff, timpani f-ff, violins1 mf-ff, violins2 mf-ff, violas mf-f, cellos mf-f, basses mp-f
+  S11  (bars 82-93): bassoons p-f, trombones f, tuba f, violins1 mp-ff, violins2 p-f, violas mp-ff, cellos mp-mf, basses mp-f
+  S12  (bars 94-103): clarinets mf-f, bassoons mp-ff, horns mf-ff, trombones mp-ff, tuba mf-ff, timpani f, violins1 mf-ff, violins2 mp-ff, violas mp-ff, cellos mp-ff, basses mf-ff
+
+NOTATION (as played: every note per role)
+  bar numbers count from 1 over the whole piece; positions are beats in the bar (1 = downbeat), rounded to
+  1/12 beat (small offsets = the players' timing; 0.92 = just before the downbeat); each attack is
+  position:note(+note...)/duration in
+  beats (notes struck together joined with +; the duration of the top note); % = the role plays its
+  previous bar again (the same notes at the same positions)
+
+[S1]
+bar   1
+   clarinets   1:C4/0.33 1.33:Db4/0.33 1.58:F4/0.25 1.75:G4/0.33 2:Ab4/0.25 2.25:G4/0.33 2.58:F4/0.25 2.75:Eb4/0.25 3:C4/0.33 3.25:Bb3/0.33 3.58:Ab3/0.25 3.75:G3/0.33
+   violins1    1.08:Ab4/3
+   violins2    1:F4/3.08
+   basses      1:F2/0.92 2.5:F2/0.92
+bar   2
+   flutes      0.92:F5/1.17 1.92:Bb5/0.67 2.42:Db6/1 3.42:Bb5/0.58
+   clarinets   1:Bb3/0.33 1.25:C4/0.25 1.5:Db4/0.33 1.75:Eb4/0.33 2:F4/0.33 2.25:G4/0.33 2.5:Bb4/0.33 2.75:Ab4/0.25 3:F4/0.33 3.25:Eb4/0.33 3.5:Db4/0.33 3.75:C4/0.17
+   violins1    0.83:Db4/3.25
+   violins2    0.83:Bb3/3.25
+   basses      1:Bb2/0.92 2.5:Bb2/0.92
+bar   3
+   flutes      0.92:E6/2.5
+   clarinets   1:C4/0.33 1.25:Db4/0.25 1.5:E4/0.33 1.75:F4/0.33 2:G4/0.33 2.25:Ab4/0.33 2.5:G4/0.25 2.75:F4/0.33 3:E4/0.25 3.25:Db4/0.25 3.5:C4/0.25 3.75:Bb3/0.25
+   violins1    0.83:G4/3.17
+   violins2    0.83:C4/3.08
+   basses      1:C3/0.92 2.5:C3/0.83 3.75:Ab1/0.67
+
+[S2]
+bar   4
+   horns       1:C4/1 1.83:Eb4/0.75 2.42:Ab4/1 3.33:C5/0.67
+   violins1    1:F5/0.25 1.25:Eb5/0.25 1.5:C5/0.25 1.75:Bb4/0.25 2:Ab4/0.25 2.25:G4/0.25 2.42:Ab4/0.33 2.75:Bb4/0.25 3:C5/0.25 3.25:Db5/0.25 3.5:F5/0.25 3.75:G5/0.25
+   violas      0.92:F4+Ab4/3.33
+   cellos      1:Ab2/0.42 1.5:Ab3/0.42 2:Ab2/0.42 2.42:Ab3/0.5 2.92:Ab2/0.5 3.5:Ab3/0.42
+   basses      1.42:Ab2/0.5 1.83:Ab1/0.58 2.33:Ab2/0.58 2.92:Ab1/0.58 3.42:Ab2/0.58
+bar   5
+   horns       1:Ab4/2.75
+   violins1    1:F5/0.25 1.25:Eb5/0.25 1.5:Db5/0.25 1.75:C5/0.25 2:Ab4/0.25 2.17:G4/0.33 2.5:Ab4/0.25 2.67:Bb4/0.33 3:Db5/0.25 3.25:Eb5/0.25 3.5:F5/0.25 3.75:G5/0.25
+   violas      0.92:Db5/3
+   cellos      1:Db3/0.42 1.5:Db4/0.42 2:Db3/0.42 2.5:Db4/0.42 3:Db3/0.42 3.5:Db4/0.42
+   basses      0.92:Db2/0.58 1.42:Db3/0.5 1.92:Db2/0.58 2.42:Db3/0.58 2.92:Db2/0.58 3.42:Db3/0.5
+bar   6
+   horns       0.92:Bb3/1.17 1.92:Db4/0.58 2.5:F4/1 3.42:Db4/0.58
+   violins1    0.92:F5/0.33 1.25:Db5/0.25 1.5:Bb4/0.25 1.67:F4/0.33 2:Bb4/0.25 2.25:Db5/0.25 2.5:Bb4/0.25 2.75:Db5/0.25 3.08:F5/0.17 3.33:Bb5/0.17 3.58:F5/0.17
+   violas      0.92:Bb3+Db4/3
+   cellos      1.08:Bb2/0.42 1.58:Bb3/0.33 2:Bb2/0.42 2.5:Bb3/0.42 3:Bb2/0.42 3.5:Bb3/0.42
+   basses      0.83:Bb1/0.58 1.33:Bb2/0.58 1.83:Bb1/0.58 2.33:Bb2/0.58 2.83:Bb1/0.58 3.25:Bb2/0.67
+bar   7
+   horns       1:G4/2.75
+   violins1    0.83:Db5/0.17 1:E5/0.25 1.25:C5/0.25 1.5:G4/0.25 1.75:E4/0.25 2:G4/0.25 2.25:C5/0.25 2.5:E5/0.25 2.75:C5/0.25 3:G4/0.25 3.25:E4/0.25 3.42:G4/0.33 3.75:C5/0.25
+   violas      0.83:E4+C5/3.33
+   cellos      1.08:C3/0.33 1.5:C4/0.42 2:C3/0.42 2.5:C4/0.42 3:C3/0.42 3.5:C4/0.42
+   basses      0.83:C2/0.58 1.33:C3/0.58 1.83:C2/0.58 2.33:C3/0.58 2.83:C2/0.58 3.33:C3/0.58
+bar   8
+   horns       0.83:C4/1.25 1.92:Eb4/0.67 2.42:Db4/0.67 2.92:C4/0.67 3.42:Db4/0.58
+   violins1    1:C5/0.25 1.17:Db5/0.33 1.5:F5/0.25 1.75:G5/0.25 2:Ab5/0.25 2.25:Bb5/0.25 2.5:Ab5/0.25 2.75:G5/0.25 2.92:F5/0.33 3.17:Eb5/0.33 3.42:Db5/0.33 3.67:C5/0.33
+   violas      0.92:F4+Ab4/1.75 2.42:Db4+F4/3.17
+   cellos      1:Ab2/0.42 1.5:Ab3/0.42 2.08:Ab2/0.33 2.5:Db3/0.42 3:Db4/0.42 3.5:Db3/0.42
+   basses      0.83:Ab1/0.58 1.33:Ab2/0.58 1.83:Ab1/0.58 2.33:Db2/0.58 2.83:Db3/0.58 3.33:Db2/0.58
+bar   9
+   horns       1:Db4/1 1.83:F4/0.67 2.33:Eb4/0.67 2.83:Db4/0.75 3.33:Eb4/0.75
+   violins1    1:Db5/0.5 1.5:F5/0.5 2:Bb5/0.5 2.5:Bb5/0.5 3:G5/0.5 3.5:Eb5/0.5
+   violas      0.92:Bb3/1.58 2.42:Eb4+G4/1.67
+   cellos      1:Bb2/0.42 1.58:Bb3/0.42 2:Bb2/0.42 2.5:Eb2/0.42 2.92:Eb3/0.5 3.5:Eb2/0.42
+   basses      0.83:Bb1/0.58 1.42:Bb2/0.5 1.83:Bb1/0.58 2.33:Eb2/0.67 2.92:Eb2/0.58 3.42:Eb2/0.58
+bar  10
+   horns       0.83:F4/0.75 1.42:Db4/0.67 1.92:C4/0.58 2.42:C4/0.67 2.92:E4/0.67 3.42:F4/0.58
+   violins1    1:F5/0.5 1.5:F4/0.5 2:F5/0.5 2.58:C5/0.42 3:C4/0.5 3.58:C4/0.42
+   violas      0.92:F4+Ab4/1.75 2.33:C4+E4/1.75
+   cellos      1:F2/0.42 1.5:F3/0.42 2:F2/0.42 2.5:C2/0.42 3:C3/0.42 3.58:C2/0.33
+   basses      0.92:F1/0.58 1.42:F2/0.58 1.92:F1/0.5 2.42:C2/0.58 2.92:C2/0.58 3.42:C2/0.5 3.75:F1/0.67
+bar  11
+   horns       1:F4/3
+   violins1    1:F4/0.25 1.33:C5/0.17 1.58:F5/0.17 1.75:C5/0.25 2:F4/0.25 2.25:C5/0.25 2.5:F5/0.25 2.75:Ab4/0.25 3:F4/0.25 3.33:Ab4/0.17 3.58:F5/0.17
+   violas      0.83:Ab3/3.08
+   cellos      1:F2/0.42 1.5:F3/0.42 2:F2/0.42 2.5:F3/0.42 3:F2/0.42 3.5:F3/0.42
+   basses      1.33:F2/0.58 1.75:F1/0.67 2.33:F2/0.67 2.92:F1/0.58 3.42:F2/0.58
+
+[S3]
+bar  12
+   oboes       0.92:F4/1.17 1.92:Ab4/0.58 2.42:G4/0.67 2.92:F4/0.67 3.42:G4/0.5
+   clarinets   0.92:Db4/2.08
+   violins1    0.83:Ab4/0.17
+   cellos      1:Bb2/1.25 2.5:F2/1.25
+   basses      0.92:Bb1/1.33 2.42:F1/1.33
+bar  13
+   oboes       0.92:G4/1 2:Bb4/0.58 2.42:Ab4/0.67 2.92:Eb4/0.67 3.42:Ab4/0.67
+   clarinets   0.92:Eb4/6.75
+   violas      1.5:Eb3/0.83 3:Ab3/0.83
+   cellos      1:Eb2/1.25 2.5:Ab2/1.25
+   basses      0.92:Eb2/1.33 2.33:Ab1/1.42
+bar  14
+   oboes       1:Eb5/0.58 1.42:G5/0.33 1.58:Ab5/0.5 2:G5/0.42 2.42:G5/0.67 3:Bb5/0.33 3.17:C6/0.5 3.5:Bb5/0.5
+   violins2    1:G4/0.42 1.5:Eb4/0.42 2:G4/0.42 2.5:Bb4/0.42 3:Eb5/0.42 3.5:Bb4/0.42
+   violas      1.5:Eb3/0.83 3:Eb3/0.83
+   cellos      1:Eb2/1.33 2.5:Eb2/1.25
+   basses      0.83:Eb2/1.42 2.33:Eb2/1.42
+bar  15
+   oboes       0.92:G5/0.58 1.42:Bb5/0.33 1.67:C6/0.5 2.08:Bb5/0.33 2.42:Bb5/0.67 2.92:Db6/0.33 3.17:Eb6/0.5 3.58:Db6/0.42
+   clarinets   2.92:Bb3/1.08
+   violins2    1:Bb4/0.42 1.5:Eb5/0.42 2:Bb4/0.42 2.5:Eb5/0.42 3:Eb5/0.42 3.5:Eb5/0.42
+   violas      1.5:Eb3/0.92 3:Eb3/0.83
+   cellos      1:Eb2/1.25 2.5:Eb2/1.25
+   basses      0.83:Eb2/1.42 2.25:Eb2/1.5
+
+[S4]
+bar  16
+   flutes      0.83:C5/0.67 1.42:Ab4/0.58 1.83:F5/0.67 2.42:Ab4/1.5
+   harp        1:Ab3+Ab4/0.83 1.5:Eb4/0.83 2:C5/0.83 2.5:Eb3+Eb4/0.83 3:Eb4/0.83 3.5:Eb4/0.5
+   violins2    0.92:C4/0.58 1.42:Ab3/0.58 1.83:C4/0.58 2.33:Eb4/0.67 2.75:Eb4/0.67 3.33:Eb4/0.67
+   violas      0.83:Ab3/2.17
+   cellos      0.92:Ab2/1.58 2.33:F2/1.58
+bar  17
+   flutes      0.92:Eb5/1.17 1.92:Db5/0.67 2.42:Eb5/0.58 2.92:F5/0.58 3.42:G5/0.67
+   harp        1:Eb3+Eb4/0.83 1.5:Bb4/0.83 2:G4/0.75 2.5:Db3+Bb4/0.83 3:Eb4/0.83 3.5:Bb4/0.5
+   violins2    0.83:Eb4/0.58 1.33:G4/0.58 1.83:Bb4/0.58 2.33:Db4/0.58 2.83:Bb4/0.67 3.42:Db5/0.58
+   violas      0.83:G3/4.25
+   cellos      0.83:Eb2/1.58 2.33:G2/1.58
+bar  18
+   flutes      0.92:Ab5/1.5 2.42:Bb5/0.67 2.92:Ab5/0.67 3.42:G5/0.5
+   harp        1:Ab3+Ab4/0.83 1.5:Eb5/0.83 2:C5/0.5 2.5:Bb3+Bb4/0.83 3:F5/0.75 3.5:Db5/0.5
+   violins2    0.92:Ab4/0.58 1.42:C4/0.58 1.92:Ab4/0.58 2.42:Bb4/0.58 2.83:Db5/0.67 3.33:F5/0.67 3.75:Eb5/0.67
+   violas      1.83:C4/4.25
+   cellos      0.83:Ab2/1.75 2.42:Bb2/1.67
+bar  19
+   flutes      0.83:G5/1.67 2.33:Eb5/1.67
+   harp        1:Eb4+Eb5/0.83 1.5:Bb4/0.83 2:G4/0.83 2.5:Bb3+Bb4/0.83 3:Eb4/0.75 3.5:Bb4/0.5
+   violins2    1.33:G4/0.67 1.83:Eb5/0.58 2.33:Bb4/0.67 2.83:Bb4/0.67 3.33:C5/0.58
+   violas      2.83:Bb3/3.25
+   cellos      0.83:Eb2/1.67 2.33:Bb2/1.58
+bar  20
+   flutes      0.83:C5/0.67 1.33:Ab4/0.67 1.92:F5/0.67 2.42:Ab4/1.33
+   harp        1:Ab3+F4/0.83 1.5:F4/0.83 2:Ab4/0.83 2.5:F3+F4/0.83 3:F4/0.83 3.5:F4/0.5
+   violins2    0.83:C4/0.67 1.25:Ab3/0.67 1.83:C4/0.67 2.42:F4/0.58 2.92:F4/0.58 3.42:F4/0.58
+   violas      2.83:Ab3/1.17
+   cellos      0.83:F2/1.67 2.33:Ab2/1.58
+bar  21
+   flutes      0.92:Bb5/1.17 1.92:C6/0.67 2.42:Bb5/0.58 2.92:Ab5/0.67 3.42:G5/0.58
+   harp        1:Db4+Bb4/0.83 1.5:F5/0.83 2:Db5/0.5 2.5:Eb4+Eb5/0.83 3:Bb4/0.83 3.5:G4/0.5
+   violins2    0.92:Db4/0.58 1.42:Bb4/0.58 1.92:Db5/0.58 2.33:Eb5/0.58 2.83:Eb5/0.58 3.33:Ab4/0.58
+   violas      1.83:Bb3/1.17
+   cellos      0.83:Bb2/1.75 2.33:Eb2/1.75
+bar  22
+   flutes      0.92:Ab5/0.5 1.42:Ab5/1.17 2.42:G5/1.17 3.42:F5/0.5
+   clarinets   1:C5/1.58 2.5:G4/1.67
+   bassoons    0.92:Ab4/1.67 2.5:Eb4/1.58
+   harp        1:Ab4+Ab4/1.5 2.5:Eb4+Eb4/1.5
+   violins2    0.83:Ab4/1.67 2.33:Eb4/1.67
+   violas      0.83:C4/3.17
+   cellos      0.83:Ab2/1.75 2.33:Eb2/1.75 3.75:F2/1.67
+bar  23
+   flutes      0.92:F5/2 2.92:Eb5/0.67 3.42:F5/0.67
+   clarinets   1:Ab4/1.58 2.5:C5/1.58
+   bassoons    0.92:F4/1.58 2.42:C4/1.67
+   harp        1:F4+F4/1.5 2.5:C4+C5/1.5
+   violins2    0.83:F4/1.67 2.42:C5/1.58
+   violas      1.83:C4/2.75
+   cellos      2.33:C3/1.67 3.75:Eb2/1.83
+bar  24
+   flutes      0.92:G5/1.58 2.42:Ab5/0.67 2.92:G5/0.58 3.42:F5/0.5
+   clarinets   1:Bb4/1.58 2.5:C5/1.25
+   bassoons    0.92:Eb4/1.67 2.5:Ab4/1.67
+   harp        1:Eb4/0.42 1.5:Eb4/0.42 2:Eb4/0.42 2.5:Ab4/0.42 3:Ab4/0.42 3.5:Ab4/0.42
+   violins2    0.92:Bb4/0.58 1.42:Bb4/0.5 1.92:Bb4/0.58 2.33:C5/0.58 2.92:C5/0.58 3.33:C5/0.58
+   violas      1.42:Ab3/3.67
+   cellos      2.25:Ab2/1.83
+bar  25
+   flutes      0.92:F5/1.17 2.42:F5/1 3.33:F5/0.67
+   clarinets   0.92:Ab4/1.67 2.42:C5/1.67
+   bassoons    0.92:F4/1.58 2.42:C4/1.58
+   harp        1:F4/0.42 1.5:F4/0.42 2:F4/0.42 2.5:C4/0.42 3:C4/0.42 3.5:C4/0.42
+   violins2    0.83:Ab4/0.58 1.33:Ab4/0.58 1.83:Ab4/0.58 2.42:C5/0.58 2.92:C5/0.5 3.33:C5/0.58
+   violas      1.83:C4/3.33
+   cellos      0.83:F2/1.75 2.42:C3/1.58
+bar  26
+   flutes      0.92:G5/2 2.92:Ab5/0.67 3.42:Bb5/0.67
+   clarinets   0.92:Db5/1.58 2.42:Bb4/1.67
+   bassoons    0.92:F4/1.08 1.92:Eb4/2.08
+   harp        1:F4/0.42 1.5:F4/0.42 2:Eb4/0.42 2.5:Eb4/0.42 3:Eb4/0.42 3.5:Eb4/0.42
+   violins2    0.83:Db5/0.67 1.42:Db5/0.58 1.92:Db5/0.58 2.33:Bb4/0.58 2.92:Bb4/0.58 3.33:Bb4/0.67
+   violas      1.83:Bb3/3.25
+   cellos      0.92:Eb2/1.58 2.42:Eb2/1.75
+bar  27
+   flutes      0.92:Ab5/3.08
+   clarinets   0.92:C5/1.67 2.42:Eb5/1.67
+   bassoons    0.92:Ab4/1.67 2.42:Eb4/1.67
+   harp        1:Ab4/0.42 1.5:Ab4/0.42 2:Ab4/0.42 2.5:Eb4/0.42 3:Eb4/0.42 3.5:Eb4/0.42
+   violins2    0.92:C5/0.58 1.42:C5/0.5 1.92:C5/0.58 2.42:Eb5/0.5 2.83:Eb5/0.58 3.33:Eb5/0.67
+   violas      1.83:Eb4/1.25 2.92:C4/1.08
+   cellos      0.92:Ab2/3.08
+
+[S5]
+bar  28
+   clarinets   0.92:C5/3.08
+   bassoons    0.92:Ab3/2.75
+   horns       0.92:Ab3/3.17
+   trumpets    1:Eb5/1 1.92:G5/0.67 2.5:Ab5/1 3.5:G5/0.5
+   timpani     1:Ab2/1
+   harp        1:Ab3/0.42 1.5:Ab3/0.42 2:Ab3/0.42 2.5:Eb3/0.42 3:Eb3/0.42 3.5:Eb3/0.42
+   violins1    1.08:Eb5/1 1.92:G5/0.75 2.33:Ab5/1.08 3.42:G5/0.58
+   violins2    1:C5/0.42 1.5:C5/0.42 1.92:C5/0.5 2.5:Eb5/0.42 3:Eb5/0.42 3.5:Eb5/0.42
+   violas      0.83:C5/3.25
+   cellos      0.92:Ab2/1 1.92:Ab2/0.58 2.42:Ab2/1 3.42:Ab2/0.58
+   basses      0.83:Ab1/1.08 1.83:Ab1/0.67 2.33:Ab1/1.08 3.33:Ab1/0.67
+bar  29
+   clarinets   0.92:Ab4/3.08
+   bassoons    0.92:F4/6
+   horns       0.92:F3/6.17
+   trumpets    1:C6/1 1.92:F5/0.67 2.42:Ab5/1 3.42:F5/0.58
+   harp        1:F3/0.42 1.5:F3/0.42 2:F3/0.42 2.5:C3/0.42 3:C3/0.42 3.5:C3/0.42
+   violins1    1:C6/1 1.83:F5/0.75 2.33:Ab5/1.08 3.33:F5/0.67
+   violins2    1:Ab4/0.42 1.5:Ab4/0.42 2:Ab4/0.42 2.5:C5/0.42 3.08:C5/0.33 3.5:C5/0.42
+   violas      0.83:Ab4/3.25
+   cellos      0.92:F2/1.08 1.92:F2/0.58 2.42:F2/1 3.42:F2/0.58
+   basses      0.92:F1/1 1.83:F1/0.58 2.33:F1/1.08 3.33:F1/0.67
+bar  30
+   clarinets   0.92:Db5/3.17
+   trumpets    1:Bb5/3.58
+   harp        1:F3/0.42 1.5:F3/0.42 2.08:F3/0.33 2.5:Db3/0.42 3:Db3/0.42 3.5:Db3/0.42
+   violins1    1:Bb5/3.5
+   violins2    1:Db5/0.42 1.5:Db5/0.42 2:Db5/0.42 2.5:F5/0.42 3:F5/0.42 3.5:F5/0.42
+   violas      0.92:Db5/3.17
+   cellos      0.83:Bb2/1 1.83:Bb2/0.67 2.33:Bb2/1 3.33:Bb2/0.67
+   basses      0.83:Bb1/1.08 1.92:Bb1/0.58 2.33:Bb1/1.08 3.33:Bb1/0.67
+bar  31
+   clarinets   0.92:Eb5/2.83
+   bassoons    0.92:G3/3.08
+   horns       0.92:Eb3/3.17
+   timpani     1:Eb2/1
+   harp        1:G3/0.42 1.5:G3/0.42 2:G3/0.42 2.5:Eb3/0.42 3:Eb3/0.42 3.5:Eb3/0.42
+   violins2    1:Eb5/0.42 1.5:Eb5/0.42 2:Eb5/0.42 2.5:G5/0.42 3:G5/0.42 3.5:G5/0.42
+   violas      0.83:G5/3.25
+   cellos      0.83:Eb2/1.08 1.92:Eb2/0.58 2.33:Eb2/1.08 3.33:Eb2/0.58
+   basses      0.83:Eb2/1.08 1.92:Eb2/0.58 2.42:Eb2/1 3.42:Eb2/0.58
+
+[S6]
+bar  32
+   clarinets   0.92:Eb4/1.08 1.92:G4/0.58 2.42:Ab4/1 3.33:G4/0.67
+   cellos      1:Ab2/1.42 2.5:Ab3/1.42
+   basses      0.83:Ab1/0.58 1.33:Ab2/0.58 1.83:Ab1/0.58 2.33:Ab2/0.58 2.83:Ab1/0.58 3.33:Ab2/0.58
+bar  33
+   clarinets   0.92:C5/2.83
+   cellos      1:F2/1.42 2.42:F3/1.5
+   basses      0.83:F1/0.58 1.33:F2/0.58 1.75:F1/0.67 2.33:F2/0.58 2.83:F1/0.58 3.33:F2/0.58
+bar  34
+   clarinets   0.83:F4/1.17 1.92:Db4/0.67 2.42:Bb3/1.17 3.42:Db4/0.33
+   cellos      0.92:Bb2/0.5 1.42:Bb3/0.5 2:Bb2/0.42 2.5:Bb3/0.42 3:Bb2/0.42 3.5:Bb3/0.42
+   basses      0.83:Bb1/0.58 1.33:Bb2/0.67 1.92:Bb1/0.5 2.33:Bb2/0.58 2.83:Bb1/0.58 3.42:Bb2/0.58
+bar  35
+   horns       0.92:G3/1.17 1.83:B3/0.75 2.33:D4/1.25 3.33:B3/0.42
+   cellos      1:G2/0.42 1.42:G3/0.5 2:G2/0.42 2.42:G3/0.5 2.92:G2/0.5 3.5:G3/0.42
+   basses      0.83:G1/0.58 1.42:G2/0.58 1.92:G1/0.5 2.42:G2/0.58 2.83:G1/0.58 3.33:G2/0.58 3.75:C2/0.67
+bar  36
+   clarinets   0.92:G4/1.17 1.92:Bb4/0.67 2.5:Eb5/1.08 3.42:Bb4/0.33
+   horns       3.75:Ab3/1.25
+   violas      1.42:C4/0.5 3:G3/0.42
+   cellos      1:C3/0.42 1.42:C4/0.5 2:C3/0.5 2.5:C4/0.42 3:C3/0.42 3.5:C4/0.42
+   basses      1.33:C3/0.67 1.92:C2/0.58 2.42:C3/0.58 2.92:C2/0.5 3.42:C3/0.5
+bar  37
+   horns       1.83:F3/0.75 2.33:C3/1.17 3.33:F3/0.42
+   violas      1.5:Ab3/0.42 3:Gb3/0.42
+   cellos      1.08:Ab2/0.33 1.5:Ab3/0.42 2:Ab2/0.42 2.5:Ab3/0.42 3:Ab2/0.42 3.5:Ab3/0.42
+   basses      0.83:Ab1/0.58 1.33:Ab2/0.58 1.83:Ab1/0.58 2.42:Ab2/0.58 2.92:Ab1/0.58 3.42:Ab2/0.5
+bar  38
+   clarinets   0.92:Ab4/1.08 1.92:F4/0.67 2.42:Db4/1.17 3.42:F4/0.33
+   violas      1.5:Db4/0.42 3:Ab3/0.42
+   cellos      1:Db2/0.42 1.42:Db3/0.5 1.92:Db2/0.5 2.5:Db3/0.42 3:Db2/0.42 3.5:Db3/0.42
+   basses      0.83:Db2/0.67 1.42:Db2/0.5 1.83:Db2/0.58 2.33:Db2/0.58 2.83:Db2/0.58 3.33:Db2/0.58
+bar  39
+   horns       0.92:Bb3/1.17 1.83:Db4/0.67 2.33:Eb4/1.17 3.33:Db4/0.42
+   violas      1.5:Eb4/0.42 3:Db4/0.42
+   cellos      1:Eb2/0.42 1.5:Eb3/0.42 2:Eb2/0.42 2.5:Eb3/0.42 3:Eb2/0.42 3.42:Eb3/0.5
+   basses      0.92:Eb2/0.58 1.42:Eb2/0.5 1.92:Eb2/0.5 2.33:Eb2/0.58 2.83:Eb2/0.58 3.33:Eb2/0.58
+bar  40
+   clarinets   0.92:Eb4/1.17 1.92:G4/0.67 2.33:Ab4/1.08 3.42:G4/0.33
+   horns       2.42:Ab2/1.17 3.33:C3/0.67
+   violins2    1:C4/0.42 1.5:Ab3/0.42 1.92:Eb4/0.5 2.42:Eb4/0.5 3:Eb4/0.42 3.42:Eb4/0.5
+   violas      1.5:Ab3/0.83 3:Eb3/0.83
+   cellos      1:Ab2/0.5 1.42:Ab3/0.5 2:Ab2/0.42 2.5:Ab3/0.42 3:Ab2/0.42 3.5:Ab3/0.42
+   basses      0.83:Ab1/0.67 1.33:Ab2/0.58 1.83:Ab1/0.58 2.33:Ab2/0.58 2.75:Ab1/0.67 3.25:Ab2/0.67
+bar  41
+   clarinets   0.92:F4/1.08 1.92:Db4/0.67 2.42:A3/1 3.42:Db4/0.33
+   horns       0.92:Eb3/1.08 1.83:C3/0.42 2.33:C3/1.25 3.42:A2/0.33
+   violins2    0.92:Eb4/0.5 1.42:Eb4/0.5 2:C4/0.42 2.5:A4/0.42 2.92:C5/0.5 3.5:C4/0.42
+   violas      1.5:Eb3/0.83 2.92:C3/0.92
+   cellos      1:F2/0.42 1.5:F3/0.42 2:F2/0.42 2.5:F3/0.42 3:F2/0.42 3.5:F3/0.42
+   basses      0.83:F1/0.67 1.42:F2/0.58 1.92:F1/0.5 2.33:F2/0.58 2.83:F1/0.58 3.33:F2/0.67
+bar  42
+   clarinets   0.83:F4/1.08 1.83:Db4/0.67 2.42:Bb3/1 3.42:Db4/0.33
+   horns       2.42:Db3/1.25 3.5:Bb2/0.58
+   violins2    1:Db4/1.42 2.5:F4/1.42
+   cellos      1:Bb2/1.42 2.5:Bb3/1.42
+   basses      0.83:Bb1/0.58 1.33:Bb2/0.58 1.83:Bb1/0.58 2.33:Bb2/0.67 2.92:Bb1/0.58 3.42:Bb2/0.58
+bar  43
+   clarinets   0.92:G4/1 1.92:B4/0.58 2.42:D5/1 3.42:B4/0.33
+   horns       0.92:F2/1.17 2:B2/0.25 2.5:D3/1.17 3.5:F3/0.25
+   violins2    1:F4/1.42 2.5:B4/1.42
+   cellos      1:G2/1.42 2.5:G3/1.42
+   basses      0.92:G1/0.5 1.33:G2/0.58 1.83:G1/0.58 2.33:G2/0.67 2.92:G1/0.58 3.42:G2/0.5
+bar  44
+   clarinets   0.92:G4/1 1.92:Bb4/0.58 2.42:Eb5/1 3.42:Bb4/0.33
+   horns       2.5:Eb3/1.17 3.42:G3/0.67
+   violins2    1.5:Eb4/0.42 3:G4/0.42
+   violas      1.5:C4/0.42 3:G3/0.42
+   cellos      1.08:C3/0.42 1.5:C4/0.42 2:C3/0.42 2.5:C4/0.42 3:C3/0.42 3.5:C4/0.5
+   basses      0.92:C2/0.58 1.42:C3/0.58 1.83:C2/0.58 2.33:C3/0.58 2.92:C2/0.58 3.42:C3/0.58
+bar  45
+   clarinets   0.92:Ab4/1.08 1.83:F4/0.67 2.42:C4/1.08 3.42:F4/0.33
+   horns       0.92:Ab3/1.08 1.83:Gb3/0.42 2.33:Eb3/1.25 3.33:C3/0.42
+   violins2    1.5:Gb4/0.42 3:Ab3/0.42
+   violas      1.5:Ab3/0.42 3:Gb3/0.42
+   cellos      1:Ab2/0.42 1.5:Ab3/0.42 2:Ab2/0.42 2.5:Ab3/0.42 3:Ab2/0.42 3.58:Ab3/0.33
+   basses      0.92:Ab1/0.58 1.42:Ab2/0.5 1.83:Ab1/0.58 2.33:Ab2/0.58 2.83:Ab1/0.58 3.33:Ab2/0.58
+bar  46
+   clarinets   0.92:Ab4/0.58 1.42:Db5/0.33 2.42:C5/0.58 2.92:Eb5/0.33
+   horns       1.67:Bb3/0.67 2.08:Gb3/0.42 3.17:C4/0.67 3.58:Ab3/0.42
+   violins2    1.5:Db4/0.42 3:F4/0.42
+   violas      1.42:F3/0.5 3:Db3/0.42
+   cellos      1.08:Db3/0.33 1.5:Db4/0.42 2.08:Db3/0.33 2.58:Db4/0.42 3.08:Db3/0.42 3.5:Db4/0.42
+   basses      0.83:Db2/0.67 1.33:Db3/0.67 1.83:Db2/0.58 2.33:Db3/0.58 2.83:Db2/0.58 3.25:Db3/0.67
+bar  47
+   clarinets   0.92:C5/0.67 1.42:F5/0.33 2.5:E5/0.58 2.92:G5/0.33
+   horns       1.58:Db4/0.67 2.08:Bb3/0.42 3.17:E4/0.67 3.67:C4/0.42
+   violins2    1.5:E4/0.42 3:G4/0.42
+   violas      1.5:Bb3/0.42 3:G3/0.42
+   cellos      1:C3/0.42 1.5:C4/0.42 2:C3/0.42 2.5:C4/0.42 3:C3/0.42 3.5:C4/0.42
+   basses      0.83:C2/0.67 1.33:C3/0.58 1.83:C2/0.58 2.33:C3/0.58 2.83:C2/0.58 3.33:C3/0.58
+
+[S7]
+bar  48
+   bassoons    0.92:Db4/6.75
+   horns       0.92:Db4/6.75
+   harp        1:Db3/0.92 1.5:Ab3/0.92 2:Db4/0.92 2.5:F4/0.92 3:Ab4/0.92 3.5:F4/0.5
+   violins1    0.92:Ab4/1.08 1.83:C5/0.75 2.33:Db5/1.08 3.33:C5/0.67
+   violas      0.83:Db3/0.67 1.42:Ab3/0.58 1.92:Db4/0.58 2.33:Ab3/0.58 2.83:Db4/0.58 3.33:Ab4/0.67
+   cellos      0.83:Db4/1.83 2.25:Ab3/1.83
+   basses      0.83:Db3/3.25
+bar  49
+   harp        1:Bb4/0.92 1.5:F4/0.92 2:Bb3/0.92 2.5:Bb3/0.92 3:Bb3/0.92 3.5:Db4/0.5
+   violins1    1:F5/1 1.83:F4/0.75 2.33:Db4/1.08 3.33:F4/0.67
+   violas      0.92:Bb4/0.58 1.33:Bb4/0.58 2.33:Bb3/0.58 2.83:Db3/0.67 3.42:F3/0.58
+   cellos      0.83:Bb3/1.75 2.33:F3/1.75
+   basses      0.83:Bb2/3.25
+bar  50
+   flutes      1:C5/3.5
+   bassoons    1.92:Ab3/1.67 3.42:Bb3/0.67
+   horns       1.92:Ab3/1.67 3.42:Bb3/0.67
+   harp        1:Ab3/0.92 1.5:Eb3/0.92 2:Ab3/0.92 2.5:Ab3/0.92 3:Ab3/0.92 3.5:Ab3/0.5
+   violins1    1:C4/3.42
+   violas      0.92:Bb3/0.58 1.42:Bb3/0.58 1.92:Bb3/0.58 2.33:Ab3/0.58 2.83:Eb3/0.58 3.33:Ab3/0.58
+   cellos      0.83:Bb3/1.33 1.92:Ab3/5.08
+   basses      0.83:Ab2/3.17
+bar  51
+   bassoons    0.92:Ab3/0.58 1.42:Bb3/0.67 1.92:C4/1.08 2.92:Eb4/1
+   horns       0.92:Ab3/0.67 1.33:Bb3/0.75 1.92:C4/1.25 3:Eb4/1.17
+   harp        1:Ab3/0.92 1.5:Eb3/0.92 2:Ab3/0.92 2.5:C4/0.92 3:Eb4/0.92 3.5:C4/0.5
+   violas      0.83:Ab3/0.67 1.25:C4/0.67 1.83:Ab4/0.67 2.33:Ab4/0.67 2.83:Eb4/0.67 3.33:Ab4/0.58
+   basses      %
+
+[S8]
+bar  52
+   bassoons    0.92:F3/1.17 1.92:Ab3/0.67 2.33:Db4/1.08 3.33:Ab3/0.67
+   horns       0.92:Bb3/1.67 2.33:F3/1.67
+   violins2    0.83:F4/1.83 2.25:Bb4/1.83 3.75:Gb4/1.83
+bar  53
+   bassoons    0.83:Db4/1.08 1.83:Db4/1.17 2.83:Eb4/0.67 3.42:F4/1.08
+   horns       0.83:Gb3/1.75 2.33:F3/1.17
+   violins2    2.25:Eb4/1.83
+bar  54
+   bassoons    1.42:Db4/0.67 2:Bb3/1.08 2.92:Db4/0.58
+   horns       0.83:Bb3/1.75 2.42:Eb3/1.58
+   violins2    0.83:Db4/1.75 2.33:Eb4/1.75
+   cellos      0.83:Db4/1.25 1.92:Eb4/0.75 2.42:Gb4/1.08 3.42:Eb4/0.75
+bar  55
+   bassoons    0.92:F3/1.08 1.92:Db3/0.58 2.42:Bb2/1 3.42:Db3/0.67
+   horns       0.92:F3/1.67 2.42:Gb3/1.5
+   violins2    0.83:C4/1.75 2.42:Bb3/1.58
+   cellos      0.92:A4/1.17 1.92:F4/1.25 2.92:Bb4/0.67 3.25:Db5/1.17
+bar  56
+   bassoons    0.92:A2/2.08
+   horns       0.83:Gb3/0.92 1.83:F3/0.92 2.83:F3/0.92
+   violins2    1:Bb3/0.42 1.58:Gb4/0.33 2.08:A3/0.33 2.58:F4/0.33 3:Bb3/0.42 3.5:F4/0.42
+   violas      0.83:A3/1.08 1.83:A3/0.83 2.33:F4/1.08 3.33:F4/0.83
+   cellos      1.33:A4/0.75 1.83:F4/1.25 2.75:A4/0.75
+bar  57
+   bassoons    0.83:Db3/1.25 1.92:F3/0.67 2.42:A3/1 3.42:F3/0.67
+   horns       0.83:Bb3/0.92 1.92:Bb3/0.67 2.42:F3/0.92 3.42:F3/0.67
+   tuba        0.83:Db2/1.25 1.92:F2/0.58 2.42:A2/1 3.42:F2/0.67
+   violins2    1.08:Db4/0.33 1.58:Bb4/0.33 2.08:Db4/0.33 2.5:C4/0.42 3:F4/0.42 3.5:C4/0.42
+   violas      0.92:Db4/1.08 1.92:Db4/1.25 2.92:Eb4/0.58
+   cellos      0.83:Bb3/1.25 1.83:Gb3/0.83 2.25:Eb3/1.25 3.42:Gb3/0.75
+   basses      0.83:Db2/1.25 1.83:F1/0.75 2.33:A1/1.08 3.42:F1/0.75
+bar  58
+   bassoons    0.92:Bb3/2.08
+   horns       0.92:Bb3/0.92 1.92:Bb3/0.75 2.42:Eb4/0.42 3.5:Eb4/0.67
+   tuba        0.92:Bb2/2.08
+   violins1    0.83:Db5/1.25 1.83:Eb5/0.75 2.33:Gb5/1.08 3.33:Eb5/0.75
+   violins2    1:Db4/0.42 1.5:Bb4/0.42 2:Db4/0.42 2.5:Gb4/0.42 3:Eb5/0.42 3.5:Gb4/0.42
+   violas      1.42:Db5/0.75 1.92:Bb4/1.25 2.83:Db5/0.67
+   cellos      0.92:Db3/2.08
+   basses      0.83:Bb1/2.17
+bar  59
+   bassoons    0.92:F3/1.17 1.92:Db3/0.67 2.42:Bb2/1 3.42:Db3/0.67
+   horns       1:C4/0.83 2:C4/0.58 2.42:Gb3/0.92 3.42:Gb3/0.67
+   tuba        0.92:F2/1.08 1.92:Db2/0.67 2.42:Bb1/1 3.33:Db2/0.75
+   violins1    0.83:A5/1.33 1.83:F5/1.33 2.75:Bb5/0.83 3.33:Db6/1.08
+   violins2    0.92:A4/0.5 1.42:C5/0.5 1.92:A4/0.5 2.5:Bb4/0.42 3:Gb4/0.42 3.5:Bb4/0.42 3.75:Bb4/1.33
+   violas      0.83:F4/1.25 1.75:Db4/0.83 2.33:Bb3/1.08 3.33:Db4/0.75
+   cellos      0.92:A3/1.17 1.83:Gb3/0.75 2.33:Db3/1.17 3.42:Gb3/0.67
+   basses      0.83:F1/1.25 1.83:Db2/0.75 2.33:Bb1/1.08 3.25:Db2/0.83
+bar  60
+   bassoons    0.92:A2/2.08
+   horns       0.92:Eb3/1.67 2.42:C3/1.75
+   tuba        0.83:A1/2.17
+   violins1    1.33:A5/0.75 1.83:F5/1.25 2.92:A5/0.58
+   violins2    1.75:A4/2.17
+   violas      0.83:A3/2.17 3.75:C4/1.33
+   cellos      0.83:C3/2.17
+   basses      0.83:A1/2.17
+bar  61
+   bassoons    0.83:C3/1.17 1.83:Eb3/0.67 2.42:F3/1.17 3.42:Eb3/0.58
+   horns       1:F3/1.67 2.5:C3/1.5
+   tuba        0.92:C2/1.25 2:Eb2/0.67 2.5:F2/1.17 3.5:Eb2/0.5
+   violins1    0.83:A4/1.25 1.83:Gb4/0.83 2.33:F4/1.08 3.33:Gb4/0.75
+   violins2    0.83:A3/1.75 2.33:C4/1.58
+   violas      1.83:Eb4/0.75 2.33:F4/1.08 3.25:Eb4/0.83
+   cellos      0.83:A3/1.25 1.83:Gb3/0.75 2.33:F3/1.17 3.33:Gb3/0.83 3.75:Bb3/3.25
+   basses      0.83:C2/1.25 1.83:Eb2/0.75 2.33:F1/1.08 3.33:Eb2/0.67
+
+[S9]
+bar  62
+   violins1    0.83:F4/1.17 1.83:Bb4/0.75 2.33:Db5/1.17 3.33:Bb4/0.67
+   violas      0.83:Db4/3.25
+   cellos      3.75:C4/3.25
+   basses      1:Bb2/3
+bar  63
+   violins1    0.83:E5/3.17
+   violas      0.83:G4/6.08
+   basses      1.08:C3/2.92
+bar  64
+   oboes       0.92:C5/1.17 1.83:Db5/0.75 2.42:E5/1.08 3.42:Db5/0.67
+   timpani     1:C3/1.17 2.5:C3/1.25
+   cellos      1:C3/1.25 2.5:C3/1.17
+   basses      1:C2/1.17 2.5:C2/1.17
+bar  65
+   oboes       0.92:Ab5/3.08
+   timpani     1:C3/1.17 2.5:C3/1.17
+   violas      0.83:Ab4/3.33
+   cellos      1.08:C3/1.17 2.58:C3/1.17
+   basses      1:C2/1.25 2.5:C2/1.25
+bar  66
+   timpani     %
+   violins1    0.83:C5/1.25 1.83:F5/0.75 2.42:G5/1 3.33:F5/0.75
+   violas      0.83:E4/3.25
+   cellos      1:C3/1.17 2.5:C3/1.17
+   basses      1.08:C2/1.08 2.58:C2/1.17
+bar  67
+   oboes       0.92:F5/1.17 1.92:Ab5/0.58 2.42:Db6/1 3.42:Ab5/0.67
+   timpani     1:C3/0.42 1.5:C3/0.42 2:C3/0.42 2.5:C3/0.42 3:C3/0.42 3.5:C3/0.42
+   violins1    0.92:Bb5/2.83
+   violas      0.92:Bb4/3.25
+   cellos      1:C3/0.42 1.5:C3/0.42 2:C3/0.42 2.5:C3/0.42 3:C3/0.42 3.5:C3/0.42
+   basses      1:C2/0.42 1.5:C2/0.42 2:C2/0.42 2.5:C2/0.42 3:C2/0.42 3.5:C2/0.42
+bar  68
+   oboes       1:C6/1.5 2.42:C6/1.08 3.42:Db6/0.33
+   timpani     %
+   violins1    0.92:G5/1.17 1.83:C6/0.75 2.42:E6/1.08 3.42:C6/0.33
+   violas      0.92:E5/6
+   cellos      1:C3/0.42 1.5:C3/0.42 2:C3/0.42 2.42:C3/0.42 3:C3/0.42 3.5:C3/0.42
+   basses      %
+bar  69
+   timpani     1:C3/0.42 1.5:C3/0.42 2:C3/0.42 2.5:C3/0.42
+   violins1    0.83:C6/1.08 1.92:E5/0.75 2.33:G5/0.67
+   cellos      1:C3/0.42 1.5:C3/0.42 2:C3/0.42 2.5:C3/0.42
+   basses      1:C2/0.42 1.5:C2/0.42 2:C2/0.42 2.5:C2/0.42
+
+[S10]
+bar  70
+   flutes      1:C5/1.08 1.92:E5/0.58 2.42:G5/1.08 3.33:E5/0.67
+   oboes       0.92:C5/2.17 3:E5/1.08
+   clarinets   0.92:F4/1.58 2.42:C4/4.67
+   bassoons    0.92:A4/1.58 2.33:G4/1.67
+   horns       1.08:C4/2 2.92:E4/1.08
+   trumpets    1:C5/2 2.83:E5/1.17
+   trombones   0.92:F3+F4/1.67 1:C3/2 2.42:C3+E4/4.58 2.92:E3/1.08
+   tuba        1:C2/2 2.92:E2/1.08
+   timpani     1:F2/1 3:C3/1
+   violins1    0.83:C6/1.25 1.75:E6/0.83 2.25:G6/1.17 3.25:E6/0.83 3.75:A6/3.17
+   violins2    0.92:C5/1.33 1.92:E5/0.67 2.33:G5/1.08 3.33:E5/0.75
+   violas      0.83:A4/1.83 2.33:E4/1.75 3.75:A4/3.33
+   cellos      0.83:F2/1.75 2.33:C3/1.83
+   basses      0.83:F1/1.75 2.25:C2/1.83 3.75:A1/3.33
+bar  71
+   flutes      0.92:A5/3
+   oboes       0.92:A5/2 2.92:C6/1.17
+   bassoons    0.92:A4/6.33
+   horns       1:A4/2 2.83:C5/1.17
+   trumpets    1:A5/2 2.92:C6/1.08
+   trombones   1:A3/2 2.83:C4/1.17
+   tuba        1:A2/1.75 2.83:C3/1.17
+   violins2    0.83:A5/3.17
+   violas      3.75:D5/6.17
+   cellos      0.92:A2/3.25
+bar  72
+   flutes      0.92:A4/1.17 1.92:D5/0.67 2.42:F5/1 3.42:A5/0.67
+   oboes       0.92:A5/5.75
+   clarinets   0.92:F4/5.75
+   horns       1:A4/5.83
+   trumpets    1:A5/5.83
+   trombones   0.92:D3+F4/5.75 1:A3/6
+   tuba        1:A2/5.83
+   violins1    0.83:A5/1.33 1.92:D6/0.67 2.33:F6/1.08 3.33:A6/0.75 3.75:F6/3.17
+   violins2    0.83:A4/1.25 1.92:D5/0.75 2.42:F5/1.08 3.33:A5/0.75
+   cellos      0.92:D2/6.08
+   basses      0.83:D2/6.08
+bar  73
+   flutes      1:F5/2.75
+   bassoons    1.42:A4/2.67
+   violins2    0.92:F5/3
+bar  74
+   flutes      0.92:Bb4/1.17 1.92:E5/0.67 2.42:D5/0.58 2.92:C5/0.67 3.42:D5/0.5
+   oboes       0.92:Bb4/2.17 2.92:D5/1.08
+   clarinets   0.92:G3/3.17
+   bassoons    0.92:G4/3.08
+   horns       0.83:Bb3/2.17 2.83:D4/1.17
+   trumpets    0.92:Bb4/2.17 2.83:D5/1.17
+   trombones   0.83:Bb2+G3+D4/6.67 2.92:D3/1.08
+   tuba        0.83:Bb1/2.17 2.83:D2/1.17
+   violins1    0.83:Bb5/1.25 1.83:E6/0.75 2.33:D6/0.75 2.83:C6/0.83 3.33:D6/0.58 3.75:D6/1.17
+   violins2    0.83:Bb4/1.25 1.83:E5/0.75 2.33:D5/0.75 2.75:C5/0.83 3.25:D5/0.67
+   violas      0.83:G4/3.25
+   cellos      0.92:G2/3.25
+   basses      0.83:G1/3.25
+bar  75
+   flutes      0.92:D5/0.58 1.92:F5/0.67 2.42:E5/0.67 2.83:D5/0.67 3.33:E5/0.67
+   oboes       0.92:F5/2 2.92:D5/1.08
+   clarinets   0.92:Bb3/3.08
+   bassoons    0.92:F4/3.17
+   horns       1:F4/2 2.83:D4/1.17
+   trumpets    1:F5/2 2.92:D5/1.08
+   trombones   0.92:Bb3/3.08 1:F3/2 2.92:D3/0.75
+   tuba        1:F2/1.83 2.92:D2/1.08
+   timpani     1:F2/1 3:F2/1
+   violins1    1.83:F6/0.75 2.33:E6/0.75 2.83:D6/0.75 3.33:E6/0.75
+   violins2    0.83:D5/1.17 1.83:F5/0.75 2.42:E5/0.75 2.83:D5/0.75 3.33:E5/0.75
+   violas      0.83:F4/3.25
+   cellos      0.92:Bb2/3.25
+   basses      0.83:Bb1/3.25
+bar  76
+   flutes      0.83:G5/0.67 1.42:D5/0.67 1.92:C5/0.5 2.33:C5/0.67 2.92:E5/0.67 3.33:F5/0.67
+   oboes       0.92:G5/5.83
+   clarinets   0.92:G3/3.17
+   bassoons    0.92:Bb4/5.83
+   horns       1:G4/5.83
+   trumpets    0.92:G5/5.83
+   trombones   1:G3/3.08 1:G3/6 1.42:D4/2.67
+   tuba        1:G2/5.75
+   violins1    0.92:G6/0.75 1.33:D6/0.75 1.83:C6/0.58 2.33:C6/0.75 2.83:E6/0.75 3.33:F6/0.75 3.75:E6/3.17
+   violins2    0.83:G5/0.83 1.42:D5/0.67 1.83:C5/0.58 2.33:C5/0.75 2.83:E5/0.75 3.33:F5/0.75
+   violas      0.83:Bb4/3.25
+   cellos      0.83:G2/3.25
+   basses      0.83:G1/3.25
+bar  77
+   flutes      0.83:E5/3.25
+   clarinets   0.92:C4/5.83
+   trombones   0.92:C4+E4/6.08
+   violins2    0.83:E5/3.17
+   violas      0.83:E5/3.17
+   cellos      0.83:C3/3.08
+   basses      0.83:C2/3.17
+bar  78
+   oboes       0.92:C5/2.17 2.92:E5/1.17
+   bassoons    0.92:G4/3.17
+   horns       0.92:C4/2.17 2.92:E4/1.17
+   trumpets    0.92:C5/2.17 2.92:E5/1.17
+   trombones   0.92:C3/2.17 2.92:E3/0.83
+   tuba        0.92:C2/2.17 2.92:E2/1.17
+   timpani     1:C3/1 3:C3/1
+   violas      0.83:E4/3.25
+   cellos      0.83:C3/3.25
+   basses      0.92:C2/3.25
+bar  79
+   oboes       0.92:D5/1.08 1.83:D5/1.08 2.83:D5/1.08
+   clarinets   0.92:A3/1.58 2.42:Bb3/1.67
+   bassoons    1:A4/1.58 2.5:F4/1.58
+   horns       0.92:D4/1.08 1.92:D4/1.08 2.83:D4/0.75
+   trumpets    0.92:D5/1 1.92:D5/1 2.92:D5/1
+   trombones   0.92:D3+A3+F4/1.58 1.92:D3/1.08 2.42:Bb3+D4/3.17 2.92:D3/1.08
+   tuba        0.83:D2/1.08 1.92:D2/1 2.92:D2/0.75
+   timpani     3:F2/1
+   violas      0.83:F4/3.25
+   cellos      0.83:D3/1.75 2.33:Bb2/1.83
+   basses      0.92:D2/1.67 2.33:Bb1/1.75
+bar  80
+   oboes       0.92:D5/0.67 1.42:C5/0.67 2:Bb4/0.58 2.42:C5/0.58 2.92:D5/0.58 3.42:E5/0.58
+   clarinets   0.92:G3/1.58 2.33:C4/4.58
+   bassoons    1:G4/3.17
+   horns       0.92:D4/0.67 1.42:C4/0.67 1.92:Bb3/0.67 2.42:C4/0.67 2.92:D4/0.67 3.42:E4/0.58
+   trumpets    0.92:D5/0.67 1.42:C5/0.67 1.83:Bb4/0.67 2.33:C5/0.67 2.92:D5/0.67 3.42:E5/0.58
+   trombones   0.92:D3+G3/1.58 1.42:C3/0.67 1.83:Bb2/0.67 2.42:C3+C4+E4/1.58 2.92:D3/0.67 3.42:E3/0.58
+   tuba        0.92:D2/0.67 1.5:C2/0.67 2:Bb1/0.58 2.42:C2/0.67 3:D2/0.67 3.42:E2/0.58
+   timpani     2.5:C3/0.5 3:C3/0.5 3.5:C3/0.5
+   violas      0.83:G4/1.75 2.33:E4/1.75
+   cellos      0.92:G2/1.67 2.42:C3/1.67
+   basses      0.83:G1/1.75 2.33:C2/1.83
+bar  81
+   oboes       0.92:F5/3.17
+   bassoons    1:A4/2.75
+   horns       1:F4/2.92
+   trumpets    1:F5/3
+   trombones   0.92:F4/3.17 1:F3/3
+   tuba        1.08:F2/2.92
+   timpani     1:F2/1
+   violas      0.83:A4/3.25
+   cellos      0.83:F2/3.33
+   basses      0.92:F1/3.08
+
+[S11]
+bar  82
+   bassoons    1:F3/1.67 2.5:C3/1.5
+   violins1    0.83:A4/0.83 1.33:F4/0.75 1.83:D4/0.75 2.42:F4/1.5
+   violins2    0.92:A3/1.75 2.42:C4/1.75
+   basses      1.08:F2/0.83 2.5:F2/0.92
+bar  83
+   bassoons    1:Bb3/1.58 2.42:G3/1.58
+   violins1    0.83:C5/1.25 1.83:D5/0.75 2.33:E5/1.67
+   violins2    0.92:E4/1.75 2.42:G4/1.5
+   violas      0.92:G3/1.25 1.92:Bb3/0.75 2.42:C4/1.08 3.42:Bb3/0.75
+   basses      1:C2/0.92 2.42:C2/0.92
+bar  84
+   bassoons    0.92:C4/1.67 2.42:F4/1.33
+   violins1    0.83:E5/0.75 1.33:G5/1.25 2.33:F5/1.25 3.33:E5/0.58
+   violins2    0.92:G4/1.67 2.33:A4/1.75
+   violas      0.92:E4/1.08
+   basses      0.92:C2/0.92 2.5:F2/0.92
+bar  85
+   bassoons    0.92:C4/1.58 2.42:G3/1.67
+   violins1    0.83:E5/1.17 1.83:D5/0.75 2.33:C5/1.67
+   violins2    0.83:E4/1.75 2.33:G4/1.58
+   basses      1:C2/0.92 2.5:C2/0.92
+bar  86
+   bassoons    0.92:F3/1.67 2.33:D3/1.67
+   violins1    0.83:A4/0.75 1.33:F4/0.75 1.83:D4/0.75 2.25:F4/1.67
+   violins2    0.83:A3/0.67 1.33:F5/0.67 1.83:A3/0.58 2.33:D4/0.67 2.75:D4/0.67 3.33:D4/0.58
+   basses      1:D2/0.92 2.58:D2/0.83
+bar  87
+   bassoons    0.83:Bb3/1.67 2.33:C4/1.25
+   violins1    0.83:G5/1.33 1.83:A5/0.75 2.33:G5/0.75 2.83:F5/0.67 3.33:E5/0.58
+   violins2    0.83:Bb3/0.67 1.33:G4/0.58 1.83:Bb4/0.58 2.33:C5/0.58 2.75:Bb4/0.67 3.25:C5/0.67
+   violas      0.92:D3/1.17 1.83:F3/0.75 2.33:Bb3/1.08 3.33:F3/0.75
+   basses      1:G2/0.92 2.5:C2/0.83
+bar  88
+   bassoons    0.83:G3/1.75 2.33:C4/1.67
+   violins1    0.83:E5/2.08 2.83:F5/0.75 3.33:E5/0.75
+   violins2    0.83:G4/0.58 1.33:C5/0.67 1.83:G4/0.67 2.33:C4/0.58 2.83:C4/0.67 3.42:D4/0.58
+   violas      0.83:C4/1.17
+   basses      1:C2/0.83 2.5:C2/0.83
+bar  89
+   bassoons    0.92:D4/1.67 2.5:A3/1.58
+   violins1    0.83:D5/0.58 1.33:D5/1.17 2.42:D5/1.25 3.42:E5/0.58
+   violins2    0.83:D4/0.58 1.33:G4/0.58 1.83:D4/0.58 2.33:F4/0.67 2.83:A4/0.58 3.42:F4/0.58
+   basses      1:D2/0.92 2.5:D2/0.92
+bar  90
+   bassoons    1:D4/1.08 2:C4/2
+   violins1    0.92:E5/1.08 1.92:F5/0.75 2.42:E5/1.58
+   violins2    0.92:G4/1.75 2.42:C5/1.83
+   basses      1:C2/0.83 2.5:C2/0.83
+bar  91
+   bassoons    0.92:D4/1.58 2.42:A3/1.67
+   violins1    0.83:D5/1.25 1.75:C5/0.83 2.25:Bb4/0.83 2.83:C5/0.83 3.33:D5/0.75 3.75:E5/1.17
+   violins2    0.92:G4/1.25 1.92:F4/2
+   violas      0.83:A3/1.25 1.83:C4/0.83 2.33:F4/1.17 3.42:C4/0.75
+   basses      1:D2/0.92 2.5:D2/0.92
+bar  92
+   bassoons    0.92:D4/1.08 1.92:C4/2
+   violins1    1.83:F5/0.75 2.33:G5/1.75
+   violins2    0.83:Bb4/1.75 2.33:E5/1.75
+   violas      0.92:E4/1.08
+   basses      1:C2/0.92 2.5:C2/0.92
+bar  93
+   bassoons    0.92:F4/1.67 2.42:C4/1.17
+   violins1    0.92:F5/3.08
+   violins2    0.83:A4/1.75 2.33:C5/1.58
+   basses      1:F2/0.92 2.5:F2/0.83
+
+[S12]
+bar  94
+   bassoons    0.92:A4/1.58 2.42:E4/1.67
+   horns       1.08:C4/2 2.92:E4/1.08
+   trombones   0.92:F3+F4/1.67 2.42:C3+Bb3/1.67
+   tuba        0.92:F2/1.67 2.42:C2/1.5
+   timpani     1:F2/18
+   violins1    0.92:C5/1.25 1.92:E5/0.75 2.33:G5/1.08 3.33:Bb5/0.75
+   violas      0.92:F4+A4/1.75 2.42:Bb3+E4/1.67
+   cellos      0.83:F3/1.75 2.33:C3/1.58
+   basses      0.92:F2/1.75 2.42:C2/1.58
+bar  95
+   bassoons    0.92:G4/3.17
+   horns       1:G4/2 2.92:E4/1.08
+   trombones   0.92:C4/6.17
+   tuba        0.92:C2/3.17
+   violins1    0.83:G5/2.92
+   violas      0.83:C4+G4/3.25
+   cellos      0.83:C3/3.33
+   basses      0.92:C2/3.25
+bar  96
+   bassoons    0.92:A4/2.83
+   horns       1:A4/2.67
+   trombones   0.92:F3/2.83
+   tuba        0.92:F2/2.83
+   violins1    0.83:C5/1.25 1.75:F5/0.75 2.33:A5/1.25 3.42:F5/0.33
+   violas      0.83:F4+A4/3.25
+   cellos      0.83:F3/3.25
+   basses      0.83:F2/3.25
+bar  97
+   bassoons    0.92:G4/1.67 2.33:A4/1.67
+   horns       0.92:C4/1.17 1.92:E4/0.67 2.42:F4/0.67 2.83:G4/0.67 3.33:F4/0.67
+   trombones   0.92:C3+E4/1.58 2.42:F4/1.67
+   tuba        0.92:C2/1.67 2.42:F2/1.67
+   violas      0.83:C4+E4/1.75 2.25:A4/1.83 3.75:Bb4/1.75
+   cellos      0.83:C3/1.83 2.25:F3/1.83
+   basses      0.83:C2/1.75 2.25:F2/1.83
+bar  98
+   bassoons    0.92:Bb4/1.67 2.42:C5/4.33
+   horns       0.92:E4/1.08 1.83:G4/0.58 2.33:G4/0.75 2.83:Bb4/0.75 3.42:A4/0.58
+   trombones   0.92:G4/1.67 2.33:E4/1.67
+   tuba        0.92:C2/1.5 2.42:C2/1.67
+   violins2    1:C5/0.25 1.17:G4/0.33 1.42:Bb4/0.33 1.75:G4/0.25 2:C5/0.25 2.17:G4/0.33 2.5:G4/0.25 2.75:E5/0.25 3:C5/0.25 3.17:E5/0.33 3.42:G4/0.33 3.67:E5/0.33
+   violas      2.33:E4/1.75
+   cellos      0.83:C3/1.58 2.25:C3/1.83
+   basses      0.83:C2/1.67 2.42:C2/1.75
+bar  99
+   horns       1:F4/3
+   trombones   0.83:F3+A4/2.92
+   tuba        0.92:F2/3.17
+   violins2    0.92:F5/0.33 1.17:C6/0.33 1.5:A5/0.25 1.67:C6/0.33 2:F5/0.25 2.25:C6/0.25 2.5:A5/0.25 2.75:C5/0.25 3:F5/0.25 3.25:C5/0.25 3.5:A5/0.25 3.75:C5/0.25
+   violas      0.83:F4+A4/3.08
+   cellos      0.83:F3/3.33
+   basses      0.92:F2/3.17
+bar 100
+   clarinets   0.92:A3/3.08
+   bassoons    0.92:D3/4.67
+   horns       0.83:D4/4.67
+   trombones   0.92:A3/3.17
+   tuba        0.92:D2/3.08
+   violins1    0.92:A4/1.17 1.83:C5/0.75 2.33:F5/1.08 3.33:C5/0.42
+   violins2    0.83:D4/3.17
+   violas      0.83:F3/4.75
+   cellos      0.92:D3/3.25
+   basses      0.92:D2/3.25
+bar 101
+   clarinets   0.92:Bb3/3.08
+   bassoons    2.42:C3/1.5
+   horns       2.42:G3/1.25
+   trombones   0.92:Bb3/3.08
+   tuba        0.92:Bb1/1.67 2.42:C2/1.25
+   violins1    0.92:F4/1.67 2.33:E4/1.67
+   violins2    0.92:D4/1.67 2.42:C4/1.58
+   violas      2.33:G3/1.67
+   cellos      0.92:Bb2/1.75 2.42:C3/1.67
+   basses      0.92:Bb1/1.75 2.42:C2/1.58
+bar 102
+   clarinets   0.92:A3/3
+   bassoons    1:C3/2.92
+   horns       0.92:F3/2.92
+   trombones   0.92:A3/3
+   tuba        0.92:F2/2.92
+   violins1    0.83:F4/3
+   violins2    0.92:C4/2.92
+   violas      0.83:F3/3.08
+   cellos      0.92:F3/2.92
+   basses      0.83:F2/3
+bar 103
+   timpani     1:F2/3
+
+ANALYSIS (from the rendered audio; the same analyser for every packet)
+  loudness range 10.8 LU
+  section loudness (LU relative to the whole piece):  S1 -6.0  S2 -0.8  S3 -2.0  S4 -5.0  S5 +1.4  S6 -4.7  S7 -2.9  S8 -1.0  S9 -0.4  S10 +4.3  S11 -1.6  S12 +2.9
+  roles sounding per section:  S1 8  S2 7  S3 7  S4 10  S5 11  S6 9  S7 9  S8 8  S9 12  S10 14  S11 8  S12 11
+  highest note: A6 at bar 70 (68% into the piece)

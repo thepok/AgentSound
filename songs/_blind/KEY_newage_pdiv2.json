@@ -1,0 +1,1183 @@
+{
+ "AJDX": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v2/sets/on_371000/new-age/008-leaves-in-the-hills",
+  "title": "Leaves in the Hills",
+  "moves": [
+   [
+    "pause",
+    "climax",
+    57,
+    57
+   ],
+   [
+    "goose",
+    "A4",
+    67,
+    67
+   ]
+  ],
+  "code": "on",
+  "slot": "016",
+  "panel": "2"
+ },
+ "AYRE": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v2/sets/on_371000/new-age/001-before-the-evening",
+  "title": "Before the Evening",
+  "moves": [
+   [
+    "ostinato",
+    "intro",
+    1,
+    4
+   ],
+   [
+    "ostinato",
+    "A1",
+    5,
+    12
+   ],
+   [
+    "ostinato",
+    "A2",
+    13,
+    22
+   ],
+   [
+    "ostinato",
+    "A3",
+    33,
+    38
+   ],
+   [
+    "pause",
+    "climax",
+    48,
+    48
+   ],
+   [
+    "goose",
+    "climax",
+    51,
+    51
+   ],
+   [
+    "ostinato",
+    "A4",
+    58,
+    65
+   ],
+   [
+    "ostinato",
+    "coda",
+    66,
+    71
+   ]
+  ],
+  "code": "on",
+  "slot": "009",
+  "panel": "1"
+ },
+ "BVFD": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v2/sets/on_370000/new-age/002-quiet-stars-of-the-evening",
+  "title": "Quiet Stars of the Evening",
+  "moves": [
+   [
+    "ostinato",
+    "intro",
+    1,
+    4
+   ],
+   [
+    "ostinato",
+    "A1",
+    5,
+    11
+   ],
+   [
+    "ostinato",
+    "A3",
+    22,
+    29
+   ],
+   [
+    "ostinato",
+    "A4",
+    42,
+    49
+   ],
+   [
+    "ostinato",
+    "coda",
+    50,
+    55
+   ]
+  ],
+  "code": "on",
+  "slot": "002",
+  "panel": "2"
+ },
+ "BZYS": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v2/sets/on_370000/new-age/005-paper-footsteps",
+  "title": "Paper Footsteps",
+  "moves": [
+   [
+    "motto",
+    "plant",
+    1,
+    2
+   ],
+   [
+    "motto",
+    "recur:reharm",
+    24,
+    25
+   ],
+   [
+    "motto",
+    "payoff",
+    38,
+    39
+   ],
+   [
+    "goose",
+    "A3",
+    44,
+    44
+   ],
+   [
+    "motto",
+    "close",
+    55,
+    55
+   ]
+  ],
+  "code": "on",
+  "slot": "005",
+  "panel": "1"
+ },
+ "CGNA": {
+  "source": "composed",
+  "path": "D:/tmp/pdiv/refs/pro-newage-longing",
+  "panel": "all"
+ },
+ "DCQF": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v2/sets/off_370000/new-age/006-the-silver-petals",
+  "title": "The Silver Petals",
+  "moves": [
+   [
+    "pause",
+    "coda",
+    64,
+    64
+   ]
+  ],
+  "code": "off",
+  "slot": "006",
+  "panel": "1"
+ },
+ "ELDF": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v2/sets/off_371000/new-age/008-after-the-rain",
+  "title": "After the Rain",
+  "moves": [
+   [
+    "pause",
+    "climax",
+    38,
+    38
+   ],
+   [
+    "goose",
+    "A4",
+    50,
+    50
+   ]
+  ],
+  "code": "off",
+  "slot": "016",
+  "panel": "1"
+ },
+ "FSNA": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v2/sets/on_371000/new-age/006-after-winter",
+  "title": "After Winter",
+  "moves": [
+   [
+    "ostinato",
+    "intro",
+    1,
+    2
+   ],
+   [
+    "ostinato",
+    "A1",
+    3,
+    12
+   ],
+   [
+    "ostinato",
+    "A2",
+    13,
+    20
+   ],
+   [
+    "ostinato",
+    "A4",
+    49,
+    56
+   ],
+   [
+    "ostinato",
+    "coda",
+    57,
+    62
+   ]
+  ],
+  "code": "on",
+  "slot": "014",
+  "panel": "2"
+ },
+ "FVCY": {
+  "source": "composed",
+  "path": "D:/tmp/pdiv/refs/pro-newage-embers",
+  "panel": "all"
+ },
+ "GHVJ": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v2/sets/on_370000/new-age/003-early-stars-of-the-rain",
+  "title": "Early Stars of the Rain",
+  "moves": [
+   [
+    "pause",
+    "climax",
+    44,
+    44
+   ],
+   [
+    "goose",
+    "climax",
+    52,
+    52
+   ]
+  ],
+  "code": "on",
+  "slot": "003",
+  "panel": "1"
+ },
+ "HXET": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v2/sets/off_371000/new-age/001-before-the-evening",
+  "title": "Before the Evening",
+  "moves": [
+   [
+    "ostinato",
+    "intro",
+    1,
+    4
+   ],
+   [
+    "ostinato",
+    "A1",
+    5,
+    12
+   ],
+   [
+    "ostinato",
+    "A2",
+    13,
+    22
+   ],
+   [
+    "ostinato",
+    "A3",
+    33,
+    38
+   ],
+   [
+    "pause",
+    "climax",
+    48,
+    48
+   ],
+   [
+    "goose",
+    "climax",
+    51,
+    51
+   ],
+   [
+    "ostinato",
+    "A4",
+    58,
+    65
+   ],
+   [
+    "ostinato",
+    "coda",
+    66,
+    71
+   ]
+  ],
+  "code": "off",
+  "slot": "009",
+  "panel": "2"
+ },
+ "JGFS": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v2/sets/off_371000/new-age/003-the-distant-petals",
+  "title": "The Distant Petals",
+  "moves": [
+   [
+    "ostinato",
+    "intro",
+    1,
+    2
+   ],
+   [
+    "ostinato",
+    "A1",
+    3,
+    10
+   ],
+   [
+    "ostinato",
+    "A3",
+    35,
+    44
+   ],
+   [
+    "ostinato",
+    "coda",
+    45,
+    48
+   ]
+  ],
+  "code": "off",
+  "slot": "011",
+  "panel": "2"
+ },
+ "KSHG": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v2/sets/off_371000/new-age/005-after-snowfall",
+  "title": "After Snowfall",
+  "moves": [
+   [
+    "motto",
+    "plant",
+    1,
+    2
+   ],
+   [
+    "motto",
+    "recur:sequence",
+    27,
+    28
+   ],
+   [
+    "motto",
+    "payoff",
+    40,
+    41
+   ],
+   [
+    "motto",
+    "close",
+    55,
+    56
+   ]
+  ],
+  "code": "off",
+  "slot": "013",
+  "panel": "2"
+ },
+ "KSSG": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v2/sets/on_371000/new-age/004-before-the-hills",
+  "title": "Before the Hills",
+  "moves": [
+   [
+    "motto",
+    "plant",
+    1,
+    1
+   ],
+   [
+    "motto",
+    "recur:reharm",
+    31,
+    31
+   ],
+   [
+    "motto",
+    "payoff",
+    43,
+    43
+   ],
+   [
+    "goose",
+    "climax",
+    44,
+    44
+   ],
+   [
+    "motto",
+    "recur:reharm",
+    47,
+    47
+   ],
+   [
+    "pause",
+    "A3",
+    48,
+    48
+   ],
+   [
+    "motto",
+    "close",
+    61,
+    61
+   ]
+  ],
+  "code": "on",
+  "slot": "012",
+  "panel": "2"
+ },
+ "KTLU": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v2/sets/off_370000/new-age/003-kites-to-summer",
+  "title": "Kites to Summer",
+  "moves": [
+   [
+    "pause",
+    "climax",
+    37,
+    37
+   ],
+   [
+    "goose",
+    "climax",
+    43,
+    43
+   ]
+  ],
+  "code": "off",
+  "slot": "003",
+  "panel": "2"
+ },
+ "KUBT": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v2/sets/on_371000/new-age/007-windows-in-summer-waltz",
+  "title": "Windows in Summer Waltz",
+  "moves": [
+   [
+    "motto",
+    "plant",
+    1,
+    2
+   ],
+   [
+    "motto",
+    "recur:reharm",
+    37,
+    38
+   ],
+   [
+    "motto",
+    "payoff",
+    57,
+    58
+   ],
+   [
+    "motto",
+    "close",
+    79,
+    80
+   ]
+  ],
+  "code": "on",
+  "slot": "015",
+  "panel": "1"
+ },
+ "MELR": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v2/sets/off_370000/new-age/001-before-the-hills",
+  "title": "Before the Hills",
+  "moves": [
+   [
+    "motto",
+    "plant",
+    1,
+    1
+   ],
+   [
+    "motto",
+    "recur:octave",
+    35,
+    35
+   ],
+   [
+    "motto",
+    "recur:reharm",
+    43,
+    43
+   ],
+   [
+    "motto",
+    "payoff",
+    54,
+    54
+   ],
+   [
+    "goose",
+    "climax",
+    53,
+    53
+   ],
+   [
+    "motto",
+    "close",
+    69,
+    69
+   ]
+  ],
+  "code": "off",
+  "slot": "001",
+  "panel": "2"
+ },
+ "NBNE": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v2/sets/off_370000/new-age/004-stars-to-the-tide",
+  "title": "Stars to the Tide",
+  "moves": [
+   [
+    "ostinato",
+    "intro",
+    1,
+    4
+   ],
+   [
+    "ostinato",
+    "A1",
+    5,
+    14
+   ],
+   [
+    "ostinato",
+    "A2",
+    15,
+    23
+   ],
+   [
+    "ostinato",
+    "A4",
+    55,
+    62
+   ],
+   [
+    "ostinato",
+    "coda",
+    63,
+    68
+   ]
+  ],
+  "code": "off",
+  "slot": "004",
+  "panel": "1"
+ },
+ "NDBW": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v2/sets/on_371000/new-age/003-before-the-hills",
+  "title": "Before the Hills",
+  "moves": [
+   [
+    "ostinato",
+    "intro",
+    1,
+    2
+   ],
+   [
+    "ostinato",
+    "A1",
+    3,
+    10
+   ],
+   [
+    "ostinato",
+    "A3",
+    41,
+    50
+   ],
+   [
+    "ostinato",
+    "coda",
+    51,
+    56
+   ]
+  ],
+  "code": "on",
+  "slot": "011",
+  "panel": "1"
+ },
+ "NQAF": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v2/sets/off_370000/new-age/002-promises-to-winter",
+  "title": "Promises to Winter",
+  "moves": [
+   [
+    "ostinato",
+    "intro",
+    1,
+    2
+   ],
+   [
+    "ostinato",
+    "A1",
+    3,
+    10
+   ],
+   [
+    "ostinato",
+    "A3",
+    21,
+    28
+   ],
+   [
+    "ostinato",
+    "A4",
+    41,
+    48
+   ],
+   [
+    "ostinato",
+    "coda",
+    49,
+    52
+   ]
+  ],
+  "code": "off",
+  "slot": "002",
+  "panel": "1"
+ },
+ "NVSA": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v2/sets/off_370000/new-age/005-lanterns-to-snowfall",
+  "title": "Lanterns to Snowfall",
+  "moves": [
+   [
+    "motto",
+    "plant",
+    1,
+    2
+   ],
+   [
+    "motto",
+    "recur:sequence",
+    21,
+    22
+   ],
+   [
+    "motto",
+    "payoff",
+    35,
+    36
+   ],
+   [
+    "goose",
+    "A3",
+    39,
+    40
+   ],
+   [
+    "motto",
+    "close",
+    51,
+    51
+   ]
+  ],
+  "code": "off",
+  "slot": "005",
+  "panel": "2"
+ },
+ "QNZN": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v2/sets/off_370000/new-age/008-lights-to-the-hills",
+  "title": "Lights to the Hills",
+  "moves": [
+   [
+    "motto",
+    "plant",
+    1,
+    1
+   ],
+   [
+    "motto",
+    "recur:reharm",
+    28,
+    28
+   ],
+   [
+    "pause",
+    "climax",
+    35,
+    35
+   ],
+   [
+    "motto",
+    "payoff",
+    40,
+    40
+   ],
+   [
+    "motto",
+    "close",
+    56,
+    56
+   ]
+  ],
+  "code": "off",
+  "slot": "008",
+  "panel": "1"
+ },
+ "RTFS": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v2/sets/on_370000/new-age/001-before-the-hills",
+  "title": "Before the Hills",
+  "moves": [
+   [
+    "motto",
+    "plant",
+    1,
+    1
+   ],
+   [
+    "motto",
+    "recur:octave",
+    38,
+    38
+   ],
+   [
+    "motto",
+    "recur:reharm",
+    46,
+    46
+   ],
+   [
+    "motto",
+    "payoff",
+    61,
+    61
+   ],
+   [
+    "goose",
+    "climax",
+    60,
+    60
+   ],
+   [
+    "motto",
+    "close",
+    76,
+    76
+   ]
+  ],
+  "code": "on",
+  "slot": "001",
+  "panel": "1"
+ },
+ "RVTN": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v2/sets/on_371000/new-age/005-after-snowfall",
+  "title": "After Snowfall",
+  "moves": [
+   [
+    "motto",
+    "plant",
+    1,
+    2
+   ],
+   [
+    "motto",
+    "recur:sequence",
+    27,
+    28
+   ],
+   [
+    "motto",
+    "payoff",
+    40,
+    41
+   ],
+   [
+    "motto",
+    "close",
+    55,
+    56
+   ]
+  ],
+  "code": "on",
+  "slot": "013",
+  "panel": "1"
+ },
+ "SHUM": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v2/sets/off_371000/new-age/002-other-wings",
+  "title": "Other Wings",
+  "moves": [
+   [
+    "pause",
+    "coda",
+    57,
+    57
+   ]
+  ],
+  "code": "off",
+  "slot": "010",
+  "panel": "1"
+ },
+ "SQCW": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v2/sets/on_370000/new-age/008-lights-to-the-hills",
+  "title": "Lights to the Hills",
+  "moves": [
+   [
+    "motto",
+    "plant",
+    1,
+    1
+   ],
+   [
+    "motto",
+    "recur:reharm",
+    28,
+    28
+   ],
+   [
+    "pause",
+    "climax",
+    35,
+    35
+   ],
+   [
+    "motto",
+    "payoff",
+    40,
+    40
+   ],
+   [
+    "motto",
+    "close",
+    56,
+    56
+   ]
+  ],
+  "code": "on",
+  "slot": "008",
+  "panel": "2"
+ },
+ "TPCW": {
+  "source": "composed",
+  "path": "D:/tmp/pdiv/refs/pro-newage-tide",
+  "panel": "all"
+ },
+ "VEQK": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v2/sets/off_371000/new-age/006-mirrors-of-spring",
+  "title": "Mirrors of Spring",
+  "moves": [
+   [
+    "ostinato",
+    "intro",
+    1,
+    4
+   ],
+   [
+    "ostinato",
+    "A1",
+    5,
+    12
+   ],
+   [
+    "ostinato",
+    "A2",
+    13,
+    22
+   ],
+   [
+    "ostinato",
+    "A3",
+    31,
+    34
+   ],
+   [
+    "ostinato",
+    "A4",
+    51,
+    58
+   ],
+   [
+    "ostinato",
+    "coda",
+    59,
+    62
+   ]
+  ],
+  "code": "off",
+  "slot": "014",
+  "panel": "1"
+ },
+ "VLPC": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v2/sets/on_370000/new-age/007-before-summer-waltz",
+  "title": "Before Summer Waltz",
+  "moves": [
+   [
+    "ostinato",
+    "intro",
+    1,
+    4
+   ],
+   [
+    "ostinato",
+    "A1",
+    5,
+    20
+   ],
+   [
+    "ostinato",
+    "A2",
+    29,
+    36
+   ],
+   [
+    "pause",
+    "A4",
+    59,
+    60
+   ],
+   [
+    "ostinato",
+    "A4",
+    61,
+    72
+   ],
+   [
+    "ostinato",
+    "coda",
+    73,
+    80
+   ]
+  ],
+  "code": "on",
+  "slot": "007",
+  "panel": "1"
+ },
+ "VYZC": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v2/sets/on_371000/new-age/002-other-wings",
+  "title": "Other Wings",
+  "moves": [
+   [
+    "pause",
+    "coda",
+    57,
+    57
+   ]
+  ],
+  "code": "on",
+  "slot": "010",
+  "panel": "2"
+ },
+ "WGZG": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v2/sets/off_370000/new-age/007-before-summer-waltz",
+  "title": "Before Summer Waltz",
+  "moves": [
+   [
+    "ostinato",
+    "intro",
+    1,
+    4
+   ],
+   [
+    "ostinato",
+    "A1",
+    5,
+    20
+   ],
+   [
+    "ostinato",
+    "A2",
+    29,
+    36
+   ],
+   [
+    "pause",
+    "A4",
+    59,
+    60
+   ],
+   [
+    "ostinato",
+    "A4",
+    61,
+    72
+   ],
+   [
+    "ostinato",
+    "coda",
+    73,
+    80
+   ]
+  ],
+  "code": "off",
+  "slot": "007",
+  "panel": "2"
+ },
+ "WJQG": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v2/sets/off_371000/new-age/004-paper-lights-of-the-evening",
+  "title": "Paper Lights of the Evening",
+  "moves": [
+   [
+    "motto",
+    "plant",
+    1,
+    1
+   ],
+   [
+    "motto",
+    "recur:octave",
+    31,
+    31
+   ],
+   [
+    "motto",
+    "payoff",
+    41,
+    41
+   ],
+   [
+    "pause",
+    "A3",
+    44,
+    44
+   ],
+   [
+    "goose",
+    "climax",
+    37,
+    37
+   ],
+   [
+    "motto",
+    "close",
+    57,
+    57
+   ]
+  ],
+  "code": "off",
+  "slot": "012",
+  "panel": "1"
+ },
+ "YJQG": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v2/sets/on_370000/new-age/004-bridges-of-the-hills",
+  "title": "Bridges of the Hills",
+  "moves": [
+   [
+    "ostinato",
+    "intro",
+    1,
+    2
+   ],
+   [
+    "ostinato",
+    "A1",
+    3,
+    10
+   ],
+   [
+    "ostinato",
+    "A2",
+    11,
+    18
+   ],
+   [
+    "ostinato",
+    "A3",
+    27,
+    34
+   ],
+   [
+    "ostinato",
+    "A4",
+    50,
+    57
+   ],
+   [
+    "ostinato",
+    "coda",
+    58,
+    63
+   ]
+  ],
+  "code": "on",
+  "slot": "004",
+  "panel": "2"
+ },
+ "ZCZF": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v2/sets/off_371000/new-age/007-windows-in-summer-waltz",
+  "title": "Windows in Summer Waltz",
+  "moves": [
+   [
+    "motto",
+    "plant",
+    1,
+    2
+   ],
+   [
+    "motto",
+    "recur:reharm",
+    33,
+    34
+   ],
+   [
+    "motto",
+    "payoff",
+    53,
+    54
+   ],
+   [
+    "motto",
+    "close",
+    75,
+    76
+   ]
+  ],
+  "code": "off",
+  "slot": "015",
+  "panel": "2"
+ },
+ "ZRZS": {
+  "source": "generated",
+  "path": "D:/tmp/pdiv/v2/sets/on_370000/new-age/006-after-spring",
+  "title": "After Spring",
+  "moves": [
+   [
+    "pause",
+    "coda",
+    48,
+    48
+   ]
+  ],
+  "code": "on",
+  "slot": "006",
+  "panel": "2"
+ }
+}

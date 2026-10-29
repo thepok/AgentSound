@@ -1,0 +1,305 @@
+{
+ "AWDY": {
+  "source": "generated",
+  "path": "D:/tmp/o24/r/old/006-symphonic-dance-wings-of-the-dawn",
+  "title": "Symphonic Dance: Wings of the Dawn",
+  "moves": [],
+  "code": "old",
+  "slot": "006",
+  "panel": "2"
+ },
+ "BCDL": {
+  "source": "generated",
+  "path": "D:/tmp/o24/r/old/003-overture-silver-tides",
+  "title": "Overture: Silver Tides",
+  "moves": [],
+  "code": "old",
+  "slot": "003",
+  "panel": "1"
+ },
+ "BHLM": {
+  "source": "generated",
+  "path": "D:/tmp/o24/r/old/008-golden-banners-of-the-sea",
+  "title": "Golden Banners of the Sea",
+  "moves": [],
+  "code": "old",
+  "slot": "008",
+  "panel": "2"
+ },
+ "BMWG": {
+  "source": "generated",
+  "path": "D:/tmp/o24/r/old/010-symphonic-dance-rivers-of-winter",
+  "title": "Symphonic Dance: Rivers of Winter",
+  "moves": [],
+  "code": "old",
+  "slot": "010",
+  "panel": "2"
+ },
+ "DAQB": {
+  "source": "generated",
+  "path": "D:/tmp/o24/r/new/010-symphonic-dance-rivers-of-winter",
+  "title": "Symphonic Dance: Rivers of Winter",
+  "moves": [],
+  "code": "new",
+  "slot": "010",
+  "panel": "1"
+ },
+ "DCPD": {
+  "source": "generated",
+  "path": "D:/tmp/o24/r/new/012-symphonic-dance-fires-of-summer",
+  "title": "Symphonic Dance: Fires of Summer",
+  "moves": [],
+  "code": "new",
+  "slot": "012",
+  "panel": "1"
+ },
+ "DGJG": {
+  "source": "generated",
+  "path": "D:/tmp/o24/r/new/004-golden-bells",
+  "title": "Golden Bells",
+  "moves": [],
+  "code": "new",
+  "slot": "004",
+  "panel": "1"
+ },
+ "DHGD": {
+  "source": "generated",
+  "path": "D:/tmp/o24/r/old/012-symphonic-dance-fires-of-summer",
+  "title": "Symphonic Dance: Fires of Summer",
+  "moves": [],
+  "code": "old",
+  "slot": "012",
+  "panel": "2"
+ },
+ "DYTS": {
+  "source": "composed",
+  "path": "D:/Repos/AgentSound/songs/pro-orch-symphonic-stormy",
+  "panel": "all"
+ },
+ "FJFE": {
+  "source": "composed",
+  "path": "D:/Repos/AgentSound/songs/pro-orch-symphonic-river",
+  "panel": "all"
+ },
+ "FMJW": {
+  "source": "generated",
+  "path": "D:/tmp/o24/r/new/014-stormy-bells",
+  "title": "Stormy Bells",
+  "moves": [],
+  "code": "new",
+  "slot": "014",
+  "panel": "1"
+ },
+ "FQHK": {
+  "source": "generated",
+  "path": "D:/tmp/o24/r/old/002-toward-summer",
+  "title": "Toward Summer",
+  "moves": [],
+  "code": "old",
+  "slot": "002",
+  "panel": "2"
+ },
+ "GULT": {
+  "source": "generated",
+  "path": "D:/tmp/o24/r/new/007-riders-of-the-sea",
+  "title": "Riders of the Sea",
+  "moves": [],
+  "code": "new",
+  "slot": "007",
+  "panel": "2"
+ },
+ "HLPN": {
+  "source": "generated",
+  "path": "D:/tmp/o24/r/old/014-stormy-bells",
+  "title": "Stormy Bells",
+  "moves": [],
+  "code": "old",
+  "slot": "014",
+  "panel": "2"
+ },
+ "JVRH": {
+  "source": "generated",
+  "path": "D:/tmp/o24/r/old/004-golden-bells",
+  "title": "Golden Bells",
+  "moves": [],
+  "code": "old",
+  "slot": "004",
+  "panel": "2"
+ },
+ "KHCH": {
+  "source": "generated",
+  "path": "D:/tmp/o24/r/new/001-the-burning-bells",
+  "title": "The Burning Bells",
+  "moves": [],
+  "code": "new",
+  "slot": "001",
+  "panel": "2"
+ },
+ "KXJE": {
+  "source": "generated",
+  "path": "D:/tmp/o24/r/old/015-toward-the-valley",
+  "title": "Toward the Valley",
+  "moves": [],
+  "code": "old",
+  "slot": "015",
+  "panel": "1"
+ },
+ "LPNQ": {
+  "source": "generated",
+  "path": "D:/tmp/o24/r/new/003-overture-silver-tides",
+  "title": "Overture: Silver Tides",
+  "moves": [],
+  "code": "new",
+  "slot": "003",
+  "panel": "2"
+ },
+ "MKMM": {
+  "source": "generated",
+  "path": "D:/tmp/o24/r/new/011-distant-forests-of-the-plains",
+  "title": "Distant Forests of the Plains",
+  "moves": [],
+  "code": "new",
+  "slot": "011",
+  "panel": "2"
+ },
+ "NDXX": {
+  "source": "generated",
+  "path": "D:/tmp/o24/r/new/008-golden-banners-of-the-sea",
+  "title": "Golden Banners of the Sea",
+  "moves": [],
+  "code": "new",
+  "slot": "008",
+  "panel": "1"
+ },
+ "NHKR": {
+  "source": "generated",
+  "path": "D:/tmp/o24/r/new/009-toward-the-dawn",
+  "title": "Toward the Dawn",
+  "moves": [],
+  "code": "new",
+  "slot": "009",
+  "panel": "2"
+ },
+ "RWVN": {
+  "source": "generated",
+  "path": "D:/tmp/o24/r/old/007-riders-of-the-sea",
+  "title": "Riders of the Sea",
+  "moves": [],
+  "code": "old",
+  "slot": "007",
+  "panel": "1"
+ },
+ "SKWG": {
+  "source": "generated",
+  "path": "D:/tmp/o24/r/old/013-overture-restless-winds",
+  "title": "Overture: Restless Winds",
+  "moves": [],
+  "code": "old",
+  "slot": "013",
+  "panel": "1"
+ },
+ "SLSN": {
+  "source": "generated",
+  "path": "D:/tmp/o24/r/old/009-toward-the-dawn",
+  "title": "Toward the Dawn",
+  "moves": [],
+  "code": "old",
+  "slot": "009",
+  "panel": "1"
+ },
+ "SLWT": {
+  "source": "composed",
+  "path": "D:/Repos/AgentSound/songs/pro-orch-symphonic-scherzo",
+  "panel": "all"
+ },
+ "SMSA": {
+  "source": "generated",
+  "path": "D:/tmp/o24/r/new/013-overture-restless-winds",
+  "title": "Overture: Restless Winds",
+  "moves": [],
+  "code": "new",
+  "slot": "013",
+  "panel": "2"
+ },
+ "SQPE": {
+  "source": "generated",
+  "path": "D:/tmp/o24/r/old/001-the-burning-bells",
+  "title": "The Burning Bells",
+  "moves": [],
+  "code": "old",
+  "slot": "001",
+  "panel": "1"
+ },
+ "TZBN": {
+  "source": "generated",
+  "path": "D:/tmp/o24/r/new/005-toward-the-sea",
+  "title": "Toward the Sea",
+  "moves": [],
+  "code": "new",
+  "slot": "005",
+  "panel": "2"
+ },
+ "UHJB": {
+  "source": "generated",
+  "path": "D:/tmp/o24/r/new/006-symphonic-dance-wings-of-the-dawn",
+  "title": "Symphonic Dance: Wings of the Dawn",
+  "moves": [],
+  "code": "new",
+  "slot": "006",
+  "panel": "1"
+ },
+ "VNZN": {
+  "source": "generated",
+  "path": "D:/tmp/o24/r/new/015-toward-the-valley",
+  "title": "Toward the Valley",
+  "moves": [],
+  "code": "new",
+  "slot": "015",
+  "panel": "2"
+ },
+ "WUDS": {
+  "source": "generated",
+  "path": "D:/tmp/o24/r/old/016-overture-rising-horizons",
+  "title": "Overture: Rising Horizons",
+  "moves": [],
+  "code": "old",
+  "slot": "016",
+  "panel": "2"
+ },
+ "XHBC": {
+  "source": "generated",
+  "path": "D:/tmp/o24/r/new/002-toward-summer",
+  "title": "Toward Summer",
+  "moves": [],
+  "code": "new",
+  "slot": "002",
+  "panel": "1"
+ },
+ "YZWZ": {
+  "source": "generated",
+  "path": "D:/tmp/o24/r/old/005-toward-the-sea",
+  "title": "Toward the Sea",
+  "moves": [],
+  "code": "old",
+  "slot": "005",
+  "panel": "1"
+ },
+ "ZTCK": {
+  "source": "generated",
+  "path": "D:/tmp/o24/r/old/011-distant-forests-of-the-plains",
+  "title": "Distant Forests of the Plains",
+  "moves": [],
+  "code": "old",
+  "slot": "011",
+  "panel": "1"
+ },
+ "ZVHF": {
+  "source": "generated",
+  "path": "D:/tmp/o24/r/new/016-overture-rising-horizons",
+  "title": "Overture: Rising Horizons",
+  "moves": [],
+  "code": "new",
+  "slot": "016",
+  "panel": "1"
+ }
+}

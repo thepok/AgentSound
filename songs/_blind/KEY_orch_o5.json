@@ -1,0 +1,161 @@
+{
+ "APPG": {
+  "source": "generated",
+  "path": "D:/tmp/o5/r/old/006-northern-storms",
+  "title": "Northern Storms",
+  "moves": [],
+  "code": "old",
+  "slot": "006",
+  "panel": "2"
+ },
+ "BCRZ": {
+  "source": "generated",
+  "path": "D:/tmp/o5/r/new/008-symphonic-dance-mountains-of-the-sea",
+  "title": "Symphonic Dance: Mountains of the Sea",
+  "moves": [],
+  "code": "new",
+  "slot": "008",
+  "panel": "1"
+ },
+ "EQYV": {
+  "source": "generated",
+  "path": "D:/tmp/o5/r/old/007-rivers-of-winter",
+  "title": "Rivers of Winter",
+  "moves": [],
+  "code": "old",
+  "slot": "007",
+  "panel": "1"
+ },
+ "EXLQ": {
+  "source": "generated",
+  "path": "D:/tmp/o5/r/new/007-the-hidden-riders",
+  "title": "The Hidden Riders",
+  "moves": [],
+  "code": "new",
+  "slot": "007",
+  "panel": "2"
+ },
+ "GRGF": {
+  "source": "generated",
+  "path": "D:/tmp/o5/r/new/006-toward-the-dawn",
+  "title": "Toward the Dawn",
+  "moves": [],
+  "code": "new",
+  "slot": "006",
+  "panel": "1"
+ },
+ "HZWH": {
+  "source": "generated",
+  "path": "D:/tmp/o5/r/old/003-toward-the-sea",
+  "title": "Toward the Sea",
+  "moves": [],
+  "code": "old",
+  "slot": "003",
+  "panel": "1"
+ },
+ "RFGB": {
+  "source": "generated",
+  "path": "D:/tmp/o5/r/old/008-symphonic-dance-mountains-of-the-sea",
+  "title": "Symphonic Dance: Mountains of the Sea",
+  "moves": [],
+  "code": "old",
+  "slot": "008",
+  "panel": "2"
+ },
+ "RXEZ": {
+  "source": "generated",
+  "path": "D:/tmp/o5/r/new/003-wild-rivers-of-the-harvest",
+  "title": "Wild Rivers of the Harvest",
+  "moves": [],
+  "code": "new",
+  "slot": "003",
+  "panel": "2"
+ },
+ "SJKT": {
+  "source": "generated",
+  "path": "D:/tmp/o5/r/new/002-toward-the-sea",
+  "title": "Toward the Sea",
+  "moves": [],
+  "code": "new",
+  "slot": "002",
+  "panel": "1"
+ },
+ "SKUD": {
+  "source": "generated",
+  "path": "D:/tmp/o5/r/new/004-storms-of-the-north",
+  "title": "Storms of the North",
+  "moves": [],
+  "code": "new",
+  "slot": "004",
+  "panel": "1"
+ },
+ "SNDS": {
+  "source": "generated",
+  "path": "D:/tmp/o5/r/new/001-fields-of-home",
+  "title": "Fields of Home",
+  "moves": [],
+  "code": "new",
+  "slot": "001",
+  "panel": "2"
+ },
+ "TTTU": {
+  "source": "generated",
+  "path": "D:/tmp/o5/r/old/004-storms-of-the-north",
+  "title": "Storms of the North",
+  "moves": [],
+  "code": "old",
+  "slot": "004",
+  "panel": "2"
+ },
+ "WSAS": {
+  "source": "generated",
+  "path": "D:/tmp/o5/r/old/005-fires-of-winter",
+  "title": "Fires of Winter",
+  "moves": [],
+  "code": "old",
+  "slot": "005",
+  "panel": "1"
+ },
+ "WYVP": {
+  "source": "generated",
+  "path": "D:/tmp/o5/r/new/005-the-bright-riders",
+  "title": "The Bright Riders",
+  "moves": [],
+  "code": "new",
+  "slot": "005",
+  "panel": "2"
+ },
+ "XNRF": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-river",
+  "panel": "all"
+ },
+ "YHJD": {
+  "source": "generated",
+  "path": "D:/tmp/o5/r/old/002-overture-hidden-fields",
+  "title": "Overture: Hidden Fields",
+  "moves": [],
+  "code": "old",
+  "slot": "002",
+  "panel": "2"
+ },
+ "YMFR": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-scherzo",
+  "panel": "all"
+ },
+ "YSDR": {
+  "source": "generated",
+  "path": "D:/tmp/o5/r/old/001-restless-riders-of-winter",
+  "title": "Restless Riders of Winter",
+  "moves": [],
+  "code": "old",
+  "slot": "001",
+  "panel": "1"
+ },
+ "ZAFP": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-stormy",
+  "panel": "all"
+ }
+}

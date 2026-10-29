@@ -1,0 +1,305 @@
+{
+ "AHXN": {
+  "source": "generated",
+  "path": "D:/tmp/o16/r/old/013-symphonic-dance-riders-of-the-dawn",
+  "title": "Symphonic Dance: Riders of the Dawn",
+  "moves": [],
+  "code": "old",
+  "slot": "013",
+  "panel": "1"
+ },
+ "AJTS": {
+  "source": "generated",
+  "path": "D:/tmp/o16/r/new/007-golden-winds-of-the-dawn",
+  "title": "Golden Winds of the Dawn",
+  "moves": [],
+  "code": "new",
+  "slot": "007",
+  "panel": "2"
+ },
+ "ALYT": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-scherzo",
+  "panel": "all"
+ },
+ "BGGM": {
+  "source": "generated",
+  "path": "D:/tmp/o16/r/new/001-symphonic-dance-winds-of-the-sea",
+  "title": "Symphonic Dance: Winds of the Sea",
+  "moves": [],
+  "code": "new",
+  "slot": "001",
+  "panel": "2"
+ },
+ "BJTJ": {
+  "source": "generated",
+  "path": "D:/tmp/o16/r/new/009-banners-of-summer",
+  "title": "Banners of Summer",
+  "moves": [],
+  "code": "new",
+  "slot": "009",
+  "panel": "2"
+ },
+ "BQNN": {
+  "source": "generated",
+  "path": "D:/tmp/o16/r/new/002-fields-of-the-plains",
+  "title": "Fields of the Plains",
+  "moves": [],
+  "code": "new",
+  "slot": "002",
+  "panel": "1"
+ },
+ "DDYG": {
+  "source": "generated",
+  "path": "D:/tmp/o16/r/new/005-overture-hidden-fields",
+  "title": "Overture: Hidden Fields",
+  "moves": [],
+  "code": "new",
+  "slot": "005",
+  "panel": "2"
+ },
+ "DGFB": {
+  "source": "generated",
+  "path": "D:/tmp/o16/r/old/012-bright-storms-of-winter",
+  "title": "Bright Storms of Winter",
+  "moves": [],
+  "code": "old",
+  "slot": "012",
+  "panel": "2"
+ },
+ "HBSC": {
+  "source": "generated",
+  "path": "D:/tmp/o16/r/old/004-endless-fires",
+  "title": "Endless Fires",
+  "moves": [],
+  "code": "old",
+  "slot": "004",
+  "panel": "2"
+ },
+ "JEML": {
+  "source": "generated",
+  "path": "D:/tmp/o16/r/old/005-overture-hidden-fields",
+  "title": "Overture: Hidden Fields",
+  "moves": [],
+  "code": "old",
+  "slot": "005",
+  "panel": "1"
+ },
+ "KJAM": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-river",
+  "panel": "all"
+ },
+ "LSBM": {
+  "source": "generated",
+  "path": "D:/tmp/o16/r/new/016-toward-home",
+  "title": "Toward Home",
+  "moves": [],
+  "code": "new",
+  "slot": "016",
+  "panel": "1"
+ },
+ "MJJS": {
+  "source": "generated",
+  "path": "D:/tmp/o16/r/old/009-banners-of-summer",
+  "title": "Banners of Summer",
+  "moves": [],
+  "code": "old",
+  "slot": "009",
+  "panel": "1"
+ },
+ "NPAS": {
+  "source": "generated",
+  "path": "D:/tmp/o16/r/old/016-toward-home",
+  "title": "Toward Home",
+  "moves": [],
+  "code": "old",
+  "slot": "016",
+  "panel": "2"
+ },
+ "NTLK": {
+  "source": "generated",
+  "path": "D:/tmp/o16/r/old/010-burning-fields",
+  "title": "Burning Fields",
+  "moves": [],
+  "code": "old",
+  "slot": "010",
+  "panel": "2"
+ },
+ "PBRY": {
+  "source": "generated",
+  "path": "D:/tmp/o16/r/old/008-overture-northern-fields",
+  "title": "Overture: Northern Fields",
+  "moves": [],
+  "code": "old",
+  "slot": "008",
+  "panel": "2"
+ },
+ "PXWY": {
+  "source": "generated",
+  "path": "D:/tmp/o16/r/new/011-symphonic-dance-fires-of-the-north",
+  "title": "Symphonic Dance: Fires of the North",
+  "moves": [],
+  "code": "new",
+  "slot": "011",
+  "panel": "2"
+ },
+ "RYPF": {
+  "source": "generated",
+  "path": "D:/tmp/o16/r/old/015-burning-voyages",
+  "title": "Burning Voyages",
+  "moves": [],
+  "code": "old",
+  "slot": "015",
+  "panel": "1"
+ },
+ "RYXH": {
+  "source": "generated",
+  "path": "D:/tmp/o16/r/old/001-symphonic-dance-winds-of-the-sea",
+  "title": "Symphonic Dance: Winds of the Sea",
+  "moves": [],
+  "code": "old",
+  "slot": "001",
+  "panel": "1"
+ },
+ "SCGY": {
+  "source": "generated",
+  "path": "D:/tmp/o16/r/new/008-overture-northern-fields",
+  "title": "Overture: Northern Fields",
+  "moves": [],
+  "code": "new",
+  "slot": "008",
+  "panel": "1"
+ },
+ "SDCH": {
+  "source": "generated",
+  "path": "D:/tmp/o16/r/old/003-forests-of-the-sea",
+  "title": "Forests of the Sea",
+  "moves": [],
+  "code": "old",
+  "slot": "003",
+  "panel": "1"
+ },
+ "SRUX": {
+  "source": "generated",
+  "path": "D:/tmp/o16/r/old/011-symphonic-dance-fires-of-the-north",
+  "title": "Symphonic Dance: Fires of the North",
+  "moves": [],
+  "code": "old",
+  "slot": "011",
+  "panel": "1"
+ },
+ "TSJS": {
+  "source": "generated",
+  "path": "D:/tmp/o16/r/new/014-overture-burning-fires",
+  "title": "Overture: Burning Fires",
+  "moves": [],
+  "code": "new",
+  "slot": "014",
+  "panel": "1"
+ },
+ "TUTC": {
+  "source": "generated",
+  "path": "D:/tmp/o16/r/new/015-burning-voyages",
+  "title": "Burning Voyages",
+  "moves": [],
+  "code": "new",
+  "slot": "015",
+  "panel": "2"
+ },
+ "UASB": {
+  "source": "generated",
+  "path": "D:/tmp/o16/r/new/003-forests-of-the-sea",
+  "title": "Forests of the Sea",
+  "moves": [],
+  "code": "new",
+  "slot": "003",
+  "panel": "2"
+ },
+ "UJUY": {
+  "source": "generated",
+  "path": "D:/tmp/o16/r/new/012-bright-storms-of-winter",
+  "title": "Bright Storms of Winter",
+  "moves": [],
+  "code": "new",
+  "slot": "012",
+  "panel": "1"
+ },
+ "UZNZ": {
+  "source": "generated",
+  "path": "D:/tmp/o16/r/new/013-symphonic-dance-riders-of-the-dawn",
+  "title": "Symphonic Dance: Riders of the Dawn",
+  "moves": [],
+  "code": "new",
+  "slot": "013",
+  "panel": "2"
+ },
+ "WUEE": {
+  "source": "generated",
+  "path": "D:/tmp/o16/r/old/002-fields-of-the-plains",
+  "title": "Fields of the Plains",
+  "moves": [],
+  "code": "old",
+  "slot": "002",
+  "panel": "2"
+ },
+ "XJFD": {
+  "source": "generated",
+  "path": "D:/tmp/o16/r/new/006-toward-summer",
+  "title": "Toward Summer",
+  "moves": [],
+  "code": "new",
+  "slot": "006",
+  "panel": "1"
+ },
+ "XPVX": {
+  "source": "generated",
+  "path": "D:/tmp/o16/r/old/007-golden-winds-of-the-dawn",
+  "title": "Golden Winds of the Dawn",
+  "moves": [],
+  "code": "old",
+  "slot": "007",
+  "panel": "1"
+ },
+ "YGYR": {
+  "source": "generated",
+  "path": "D:/tmp/o16/r/old/006-toward-summer",
+  "title": "Toward Summer",
+  "moves": [],
+  "code": "old",
+  "slot": "006",
+  "panel": "2"
+ },
+ "YVQV": {
+  "source": "generated",
+  "path": "D:/tmp/o16/r/old/014-overture-burning-fires",
+  "title": "Overture: Burning Fires",
+  "moves": [],
+  "code": "old",
+  "slot": "014",
+  "panel": "2"
+ },
+ "ZFMW": {
+  "source": "generated",
+  "path": "D:/tmp/o16/r/new/010-burning-fields",
+  "title": "Burning Fields",
+  "moves": [],
+  "code": "new",
+  "slot": "010",
+  "panel": "1"
+ },
+ "ZNZP": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-stormy",
+  "panel": "all"
+ },
+ "ZTVA": {
+  "source": "generated",
+  "path": "D:/tmp/o16/r/new/004-endless-fires",
+  "title": "Endless Fires",
+  "moves": [],
+  "code": "new",
+  "slot": "004",
+  "panel": "1"
+ }
+}

@@ -1,0 +1,305 @@
+{
+ "ASKW": {
+  "source": "composed",
+  "path": "D:/Repos/AgentSound/songs/pro-orch-symphonic-scherzo",
+  "panel": "all"
+ },
+ "CXAV": {
+  "source": "generated",
+  "path": "D:/tmp/o23/r/new/012-overture-northern-mountains",
+  "title": "Overture: Northern Mountains",
+  "moves": [],
+  "code": "new",
+  "slot": "012",
+  "panel": "1"
+ },
+ "EGQH": {
+  "source": "generated",
+  "path": "D:/tmp/o23/r/new/002-fields-of-home",
+  "title": "Fields of Home",
+  "moves": [],
+  "code": "new",
+  "slot": "002",
+  "panel": "1"
+ },
+ "FKKQ": {
+  "source": "generated",
+  "path": "D:/tmp/o23/r/old/009-toward-winter",
+  "title": "Toward Winter",
+  "moves": [],
+  "code": "old",
+  "slot": "009",
+  "panel": "1"
+ },
+ "GALA": {
+  "source": "generated",
+  "path": "D:/tmp/o23/r/new/007-symphonic-dance-fields-of-the-valley",
+  "title": "Symphonic Dance: Fields of the Valley",
+  "moves": [],
+  "code": "new",
+  "slot": "007",
+  "panel": "2"
+ },
+ "HRYB": {
+  "source": "generated",
+  "path": "D:/tmp/o23/r/old/006-northern-horizons-of-summer",
+  "title": "Northern Horizons of Summer",
+  "moves": [],
+  "code": "old",
+  "slot": "006",
+  "panel": "2"
+ },
+ "JDAH": {
+  "source": "generated",
+  "path": "D:/tmp/o23/r/old/012-overture-northern-mountains",
+  "title": "Overture: Northern Mountains",
+  "moves": [],
+  "code": "old",
+  "slot": "012",
+  "panel": "2"
+ },
+ "JRBW": {
+  "source": "generated",
+  "path": "D:/tmp/o23/r/new/010-toward-the-plains",
+  "title": "Toward the Plains",
+  "moves": [],
+  "code": "new",
+  "slot": "010",
+  "panel": "1"
+ },
+ "KPKD": {
+  "source": "generated",
+  "path": "D:/tmp/o23/r/old/016-symphonic-dance-banners-of-winter",
+  "title": "Symphonic Dance: Banners of Winter",
+  "moves": [],
+  "code": "old",
+  "slot": "016",
+  "panel": "2"
+ },
+ "KUXJ": {
+  "source": "generated",
+  "path": "D:/tmp/o23/r/old/008-distant-forests",
+  "title": "Distant Forests",
+  "moves": [],
+  "code": "old",
+  "slot": "008",
+  "panel": "2"
+ },
+ "KZDT": {
+  "source": "generated",
+  "path": "D:/tmp/o23/r/old/003-the-burning-storms",
+  "title": "The Burning Storms",
+  "moves": [],
+  "code": "old",
+  "slot": "003",
+  "panel": "1"
+ },
+ "LDMW": {
+  "source": "generated",
+  "path": "D:/tmp/o23/r/new/015-toward-the-sea",
+  "title": "Toward the Sea",
+  "moves": [],
+  "code": "new",
+  "slot": "015",
+  "panel": "2"
+ },
+ "MBGG": {
+  "source": "generated",
+  "path": "D:/tmp/o23/r/new/014-the-distant-fires",
+  "title": "The Distant Fires",
+  "moves": [],
+  "code": "new",
+  "slot": "014",
+  "panel": "1"
+ },
+ "NAJW": {
+  "source": "generated",
+  "path": "D:/tmp/o23/r/old/004-burning-rivers",
+  "title": "Burning Rivers",
+  "moves": [],
+  "code": "old",
+  "slot": "004",
+  "panel": "2"
+ },
+ "NBGU": {
+  "source": "composed",
+  "path": "D:/Repos/AgentSound/songs/pro-orch-symphonic-river",
+  "panel": "all"
+ },
+ "PJGA": {
+  "source": "generated",
+  "path": "D:/tmp/o23/r/new/009-toward-winter",
+  "title": "Toward Winter",
+  "moves": [],
+  "code": "new",
+  "slot": "009",
+  "panel": "2"
+ },
+ "QCVV": {
+  "source": "generated",
+  "path": "D:/tmp/o23/r/old/010-toward-the-plains",
+  "title": "Toward the Plains",
+  "moves": [],
+  "code": "old",
+  "slot": "010",
+  "panel": "2"
+ },
+ "RAVU": {
+  "source": "generated",
+  "path": "D:/tmp/o23/r/new/003-the-burning-storms",
+  "title": "The Burning Storms",
+  "moves": [],
+  "code": "new",
+  "slot": "003",
+  "panel": "2"
+ },
+ "RNCG": {
+  "source": "generated",
+  "path": "D:/tmp/o23/r/new/013-tides-of-the-north",
+  "title": "Tides of the North",
+  "moves": [],
+  "code": "new",
+  "slot": "013",
+  "panel": "2"
+ },
+ "SGHC": {
+  "source": "generated",
+  "path": "D:/tmp/o23/r/old/005-symphonic-dance-voyages-of-summer",
+  "title": "Symphonic Dance: Voyages of Summer",
+  "moves": [],
+  "code": "old",
+  "slot": "005",
+  "panel": "1"
+ },
+ "SLGX": {
+  "source": "generated",
+  "path": "D:/tmp/o23/r/old/011-toward-summer",
+  "title": "Toward Summer",
+  "moves": [],
+  "code": "old",
+  "slot": "011",
+  "panel": "1"
+ },
+ "SSGJ": {
+  "source": "generated",
+  "path": "D:/tmp/o23/r/new/004-burning-rivers",
+  "title": "Burning Rivers",
+  "moves": [],
+  "code": "new",
+  "slot": "004",
+  "panel": "1"
+ },
+ "TFUG": {
+  "source": "generated",
+  "path": "D:/tmp/o23/r/new/008-distant-forests",
+  "title": "Distant Forests",
+  "moves": [],
+  "code": "new",
+  "slot": "008",
+  "panel": "1"
+ },
+ "UARX": {
+  "source": "generated",
+  "path": "D:/tmp/o23/r/new/006-northern-horizons-of-summer",
+  "title": "Northern Horizons of Summer",
+  "moves": [],
+  "code": "new",
+  "slot": "006",
+  "panel": "1"
+ },
+ "UBLK": {
+  "source": "generated",
+  "path": "D:/tmp/o23/r/old/013-tides-of-the-north",
+  "title": "Tides of the North",
+  "moves": [],
+  "code": "old",
+  "slot": "013",
+  "panel": "1"
+ },
+ "UEDW": {
+  "source": "generated",
+  "path": "D:/tmp/o23/r/new/011-toward-summer",
+  "title": "Toward Summer",
+  "moves": [],
+  "code": "new",
+  "slot": "011",
+  "panel": "2"
+ },
+ "UYPM": {
+  "source": "generated",
+  "path": "D:/tmp/o23/r/old/015-toward-the-sea",
+  "title": "Toward the Sea",
+  "moves": [],
+  "code": "old",
+  "slot": "015",
+  "panel": "1"
+ },
+ "WPAT": {
+  "source": "generated",
+  "path": "D:/tmp/o23/r/new/016-symphonic-dance-banners-of-winter",
+  "title": "Symphonic Dance: Banners of Winter",
+  "moves": [],
+  "code": "new",
+  "slot": "016",
+  "panel": "1"
+ },
+ "WQZL": {
+  "source": "composed",
+  "path": "D:/Repos/AgentSound/songs/pro-orch-symphonic-stormy",
+  "panel": "all"
+ },
+ "XTSD": {
+  "source": "generated",
+  "path": "D:/tmp/o23/r/old/007-symphonic-dance-fields-of-the-valley",
+  "title": "Symphonic Dance: Fields of the Valley",
+  "moves": [],
+  "code": "old",
+  "slot": "007",
+  "panel": "1"
+ },
+ "XWBN": {
+  "source": "generated",
+  "path": "D:/tmp/o23/r/new/001-the-stormy-rivers",
+  "title": "The Stormy Rivers",
+  "moves": [],
+  "code": "new",
+  "slot": "001",
+  "panel": "2"
+ },
+ "XXQP": {
+  "source": "generated",
+  "path": "D:/tmp/o23/r/old/002-fields-of-home",
+  "title": "Fields of Home",
+  "moves": [],
+  "code": "old",
+  "slot": "002",
+  "panel": "2"
+ },
+ "YKAJ": {
+  "source": "generated",
+  "path": "D:/tmp/o23/r/old/001-the-stormy-rivers",
+  "title": "The Stormy Rivers",
+  "moves": [],
+  "code": "old",
+  "slot": "001",
+  "panel": "1"
+ },
+ "YSAB": {
+  "source": "generated",
+  "path": "D:/tmp/o23/r/new/005-symphonic-dance-voyages-of-summer",
+  "title": "Symphonic Dance: Voyages of Summer",
+  "moves": [],
+  "code": "new",
+  "slot": "005",
+  "panel": "2"
+ },
+ "ZHJB": {
+  "source": "generated",
+  "path": "D:/tmp/o23/r/old/014-the-distant-fires",
+  "title": "The Distant Fires",
+  "moves": [],
+  "code": "old",
+  "slot": "014",
+  "panel": "2"
+ }
+}

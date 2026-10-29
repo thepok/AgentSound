@@ -1,0 +1,161 @@
+{
+ "ARFK": {
+  "source": "generated",
+  "path": "D:/tmp/o11/r/new/001-heroic-bells",
+  "title": "Heroic Bells",
+  "moves": [],
+  "code": "new",
+  "slot": "001",
+  "panel": "2"
+ },
+ "BLZF": {
+  "source": "generated",
+  "path": "D:/tmp/o11/r/new/006-hidden-fields-of-the-valley",
+  "title": "Hidden Fields of the Valley",
+  "moves": [],
+  "code": "new",
+  "slot": "006",
+  "panel": "1"
+ },
+ "BRCS": {
+  "source": "generated",
+  "path": "D:/tmp/o11/r/old/007-fields-of-the-storm",
+  "title": "Fields of the Storm",
+  "moves": [],
+  "code": "old",
+  "slot": "007",
+  "panel": "1"
+ },
+ "DZRZ": {
+  "source": "generated",
+  "path": "D:/tmp/o11/r/old/008-the-hidden-wings",
+  "title": "The Hidden Wings",
+  "moves": [],
+  "code": "old",
+  "slot": "008",
+  "panel": "2"
+ },
+ "FUQW": {
+  "source": "generated",
+  "path": "D:/tmp/o11/r/new/002-iron-rivers-of-home",
+  "title": "Iron Rivers of Home",
+  "moves": [],
+  "code": "new",
+  "slot": "002",
+  "panel": "1"
+ },
+ "JAUQ": {
+  "source": "generated",
+  "path": "D:/tmp/o11/r/new/007-the-silver-fields",
+  "title": "The Silver Fields",
+  "moves": [],
+  "code": "new",
+  "slot": "007",
+  "panel": "2"
+ },
+ "LNLM": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-stormy",
+  "panel": "all"
+ },
+ "NFGA": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-scherzo",
+  "panel": "all"
+ },
+ "NZLC": {
+  "source": "generated",
+  "path": "D:/tmp/o11/r/old/001-symphonic-dance-riders-of-winter",
+  "title": "Symphonic Dance: Riders of Winter",
+  "moves": [],
+  "code": "old",
+  "slot": "001",
+  "panel": "1"
+ },
+ "QDFH": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-river",
+  "panel": "all"
+ },
+ "QZEJ": {
+  "source": "generated",
+  "path": "D:/tmp/o11/r/old/004-symphonic-dance-storms-of-summer",
+  "title": "Symphonic Dance: Storms of Summer",
+  "moves": [],
+  "code": "old",
+  "slot": "004",
+  "panel": "2"
+ },
+ "RHDT": {
+  "source": "generated",
+  "path": "D:/tmp/o11/r/new/004-storms-of-the-dawn",
+  "title": "Storms of the Dawn",
+  "moves": [],
+  "code": "new",
+  "slot": "004",
+  "panel": "1"
+ },
+ "RMTE": {
+  "source": "generated",
+  "path": "D:/tmp/o11/r/old/005-overture-iron-rivers",
+  "title": "Overture: Iron Rivers",
+  "moves": [],
+  "code": "old",
+  "slot": "005",
+  "panel": "1"
+ },
+ "TFEC": {
+  "source": "generated",
+  "path": "D:/tmp/o11/r/old/002-iron-rivers-of-home",
+  "title": "Iron Rivers of Home",
+  "moves": [],
+  "code": "old",
+  "slot": "002",
+  "panel": "2"
+ },
+ "TKMN": {
+  "source": "generated",
+  "path": "D:/tmp/o11/r/old/003-the-stormy-riders",
+  "title": "The Stormy Riders",
+  "moves": [],
+  "code": "old",
+  "slot": "003",
+  "panel": "1"
+ },
+ "WBTS": {
+  "source": "generated",
+  "path": "D:/tmp/o11/r/new/005-overture-iron-rivers",
+  "title": "Overture: Iron Rivers",
+  "moves": [],
+  "code": "new",
+  "slot": "005",
+  "panel": "2"
+ },
+ "WWEG": {
+  "source": "generated",
+  "path": "D:/tmp/o11/r/old/006-hidden-fields-of-the-valley",
+  "title": "Hidden Fields of the Valley",
+  "moves": [],
+  "code": "old",
+  "slot": "006",
+  "panel": "2"
+ },
+ "YFQA": {
+  "source": "generated",
+  "path": "D:/tmp/o11/r/new/008-the-hidden-wings",
+  "title": "The Hidden Wings",
+  "moves": [],
+  "code": "new",
+  "slot": "008",
+  "panel": "1"
+ },
+ "YVCM": {
+  "source": "generated",
+  "path": "D:/tmp/o11/r/new/003-symphonic-dance-riders-of-the-plains",
+  "title": "Symphonic Dance: Riders of the Plains",
+  "moves": [],
+  "code": "new",
+  "slot": "003",
+  "panel": "2"
+ }
+}

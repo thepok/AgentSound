@@ -1,0 +1,341 @@
+{
+ "round": "oc2",
+ "pairs": {
+  "set161500": {
+   "dir": "D:/tmp/oc2/sets/set161500",
+   "judges": {
+    "composerA": {
+     "X": "new",
+     "Y": "old",
+     "first": "X"
+    },
+    "composerB": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    },
+    "composerC": {
+     "X": "new",
+     "Y": "old",
+     "first": "X"
+    },
+    "composerD": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    },
+    "composerE": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "statistician": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    },
+    "orchestrator": {
+     "X": "new",
+     "Y": "old",
+     "first": "X"
+    }
+   },
+   "sets": {
+    "new": [
+     "D:/tmp/oc2/sets/set161500/new/001-toward-the-dawn",
+     "D:/tmp/oc2/sets/set161500/new/002-overture-restless-horizons",
+     "D:/tmp/oc2/sets/set161500/new/003-storms-of-the-sea",
+     "D:/tmp/oc2/sets/set161500/new/004-open-wings",
+     "D:/tmp/oc2/sets/set161500/new/005-overture-iron-storms",
+     "D:/tmp/oc2/sets/set161500/new/006-rivers-of-the-storm",
+     "D:/tmp/oc2/sets/set161500/new/007-symphonic-dance-tides-of-summer",
+     "D:/tmp/oc2/sets/set161500/new/008-toward-the-storm"
+    ],
+    "old": [
+     "D:/tmp/oc2/sets/set161500/old/001-toward-the-dawn",
+     "D:/tmp/oc2/sets/set161500/old/002-overture-restless-horizons",
+     "D:/tmp/oc2/sets/set161500/old/003-storms-of-the-sea",
+     "D:/tmp/oc2/sets/set161500/old/004-open-wings",
+     "D:/tmp/oc2/sets/set161500/old/005-overture-iron-storms",
+     "D:/tmp/oc2/sets/set161500/old/006-rivers-of-the-storm",
+     "D:/tmp/oc2/sets/set161500/old/007-symphonic-dance-tides-of-summer",
+     "D:/tmp/oc2/sets/set161500/old/008-toward-the-storm"
+    ]
+   },
+   "titles": {
+    "new": [
+     "Toward the Dawn",
+     "Overture: Restless Horizons",
+     "Storms of the Sea",
+     "Open Wings",
+     "Overture: Iron Storms",
+     "Rivers of the Storm",
+     "Symphonic Dance: Tides of Summer",
+     "Toward the Storm"
+    ],
+    "old": [
+     "Toward the Dawn",
+     "Overture: Restless Horizons",
+     "Storms of the Sea",
+     "Open Wings",
+     "Overture: Iron Storms",
+     "Rivers of the Storm",
+     "Symphonic Dance: Tides of Summer",
+     "Toward the Storm"
+    ]
+   }
+  },
+  "set161600": {
+   "dir": "D:/tmp/oc2/sets/set161600",
+   "judges": {
+    "composerA": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    },
+    "composerB": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "composerC": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    },
+    "composerD": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "composerE": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    },
+    "statistician": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "orchestrator": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    }
+   },
+   "sets": {
+    "new": [
+     "D:/tmp/oc2/sets/set161600/new/001-toward-the-storm",
+     "D:/tmp/oc2/sets/set161600/new/002-bright-rivers-of-summer",
+     "D:/tmp/oc2/sets/set161600/new/003-iron-fires-of-the-dawn",
+     "D:/tmp/oc2/sets/set161600/new/004-open-fires",
+     "D:/tmp/oc2/sets/set161600/new/005-voyages-of-the-valley",
+     "D:/tmp/oc2/sets/set161600/new/006-open-bells",
+     "D:/tmp/oc2/sets/set161600/new/007-symphonic-dance-mountains-of-the-valley",
+     "D:/tmp/oc2/sets/set161600/new/008-toward-the-harvest"
+    ],
+    "old": [
+     "D:/tmp/oc2/sets/set161600/old/001-toward-the-storm",
+     "D:/tmp/oc2/sets/set161600/old/002-bright-rivers-of-summer",
+     "D:/tmp/oc2/sets/set161600/old/003-iron-fires-of-the-dawn",
+     "D:/tmp/oc2/sets/set161600/old/004-open-fires",
+     "D:/tmp/oc2/sets/set161600/old/005-voyages-of-the-valley",
+     "D:/tmp/oc2/sets/set161600/old/006-open-bells",
+     "D:/tmp/oc2/sets/set161600/old/007-symphonic-dance-mountains-of-the-valley",
+     "D:/tmp/oc2/sets/set161600/old/008-toward-the-harvest"
+    ]
+   },
+   "titles": {
+    "new": [
+     "Toward the Storm",
+     "Bright Rivers of Summer",
+     "Iron Fires of the Dawn",
+     "Open Fires",
+     "Voyages of the Valley",
+     "Open Bells",
+     "Symphonic Dance: Mountains of the Valley",
+     "Toward the Harvest"
+    ],
+    "old": [
+     "Toward the Storm",
+     "Bright Rivers of Summer",
+     "Iron Fires of the Dawn",
+     "Open Fires",
+     "Voyages of the Valley",
+     "Open Bells",
+     "Symphonic Dance: Mountains of the Valley",
+     "Toward the Harvest"
+    ]
+   }
+  },
+  "set161700": {
+   "dir": "D:/tmp/oc2/sets/set161700",
+   "judges": {
+    "composerA": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "composerB": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    },
+    "composerC": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "composerD": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    },
+    "composerE": {
+     "X": "new",
+     "Y": "old",
+     "first": "X"
+    },
+    "statistician": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    },
+    "orchestrator": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    }
+   },
+   "sets": {
+    "new": [
+     "D:/tmp/oc2/sets/set161700/new/001-restless-fires",
+     "D:/tmp/oc2/sets/set161700/new/002-symphonic-dance-rivers-of-the-dawn",
+     "D:/tmp/oc2/sets/set161700/new/003-wild-fires",
+     "D:/tmp/oc2/sets/set161700/new/004-the-golden-voyages",
+     "D:/tmp/oc2/sets/set161700/new/005-distant-forests-of-the-valley",
+     "D:/tmp/oc2/sets/set161700/new/006-the-stormy-winds",
+     "D:/tmp/oc2/sets/set161700/new/007-voyages-of-the-valley",
+     "D:/tmp/oc2/sets/set161700/new/008-tides-of-the-storm"
+    ],
+    "old": [
+     "D:/tmp/oc2/sets/set161700/old/001-restless-fires",
+     "D:/tmp/oc2/sets/set161700/old/002-symphonic-dance-rivers-of-the-dawn",
+     "D:/tmp/oc2/sets/set161700/old/003-wild-fires",
+     "D:/tmp/oc2/sets/set161700/old/004-the-golden-voyages",
+     "D:/tmp/oc2/sets/set161700/old/005-distant-forests-of-the-valley",
+     "D:/tmp/oc2/sets/set161700/old/006-the-stormy-winds",
+     "D:/tmp/oc2/sets/set161700/old/007-voyages-of-the-valley",
+     "D:/tmp/oc2/sets/set161700/old/008-tides-of-the-storm"
+    ]
+   },
+   "titles": {
+    "new": [
+     "Restless Fires",
+     "Symphonic Dance: Rivers of the Dawn",
+     "Wild Fires",
+     "The Golden Voyages",
+     "Distant Forests of the Valley",
+     "The Stormy Winds",
+     "Voyages of the Valley",
+     "Tides of the Storm"
+    ],
+    "old": [
+     "Restless Fires",
+     "Symphonic Dance: Rivers of the Dawn",
+     "Wild Fires",
+     "The Golden Voyages",
+     "Distant Forests of the Valley",
+     "The Stormy Winds",
+     "Voyages of the Valley",
+     "Tides of the Storm"
+    ]
+   }
+  },
+  "set161800": {
+   "dir": "D:/tmp/oc2/sets/set161800",
+   "judges": {
+    "composerA": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    },
+    "composerB": {
+     "X": "new",
+     "Y": "old",
+     "first": "X"
+    },
+    "composerC": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    },
+    "composerD": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "composerE": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    },
+    "statistician": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "orchestrator": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    }
+   },
+   "sets": {
+    "new": [
+     "D:/tmp/oc2/sets/set161800/new/001-the-open-storms",
+     "D:/tmp/oc2/sets/set161800/new/002-toward-the-sea",
+     "D:/tmp/oc2/sets/set161800/new/003-bells-of-the-sea",
+     "D:/tmp/oc2/sets/set161800/new/004-wild-banners",
+     "D:/tmp/oc2/sets/set161800/new/005-symphonic-dance-bells-of-home",
+     "D:/tmp/oc2/sets/set161800/new/006-symphonic-dance-voyages-of-the-valley",
+     "D:/tmp/oc2/sets/set161800/new/007-bright-wings-of-winter",
+     "D:/tmp/oc2/sets/set161800/new/008-symphonic-dance-fires-of-the-dawn"
+    ],
+    "old": [
+     "D:/tmp/oc2/sets/set161800/old/001-the-open-storms",
+     "D:/tmp/oc2/sets/set161800/old/002-toward-the-sea",
+     "D:/tmp/oc2/sets/set161800/old/003-bells-of-the-sea",
+     "D:/tmp/oc2/sets/set161800/old/004-wild-banners",
+     "D:/tmp/oc2/sets/set161800/old/005-symphonic-dance-bells-of-home",
+     "D:/tmp/oc2/sets/set161800/old/006-symphonic-dance-voyages-of-the-valley",
+     "D:/tmp/oc2/sets/set161800/old/007-bright-wings-of-winter",
+     "D:/tmp/oc2/sets/set161800/old/008-symphonic-dance-fires-of-the-dawn"
+    ]
+   },
+   "titles": {
+    "new": [
+     "The Open Storms",
+     "Toward the Sea",
+     "Bells of the Sea",
+     "Wild Banners",
+     "Symphonic Dance: Bells of Home",
+     "Symphonic Dance: Voyages of the Valley",
+     "Bright Wings of Winter",
+     "Symphonic Dance: Fires of the Dawn"
+    ],
+    "old": [
+     "The Open Storms",
+     "Toward the Sea",
+     "Bells of the Sea",
+     "Wild Banners",
+     "Symphonic Dance: Bells of Home",
+     "Symphonic Dance: Voyages of the Valley",
+     "Bright Wings of Winter",
+     "Symphonic Dance: Fires of the Dawn"
+    ]
+   }
+  }
+ }
+}

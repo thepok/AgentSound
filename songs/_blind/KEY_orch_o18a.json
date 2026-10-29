@@ -1,0 +1,305 @@
+{
+ "ATKS": {
+  "source": "generated",
+  "path": "D:/tmp/o18a/r/new/010-toward-the-storm",
+  "title": "Toward the Storm",
+  "moves": [],
+  "code": "new",
+  "slot": "010",
+  "panel": "1"
+ },
+ "BCSD": {
+  "source": "generated",
+  "path": "D:/tmp/o18a/r/old/014-the-distant-tides",
+  "title": "The Distant Tides",
+  "moves": [],
+  "code": "old",
+  "slot": "014",
+  "panel": "2"
+ },
+ "CNXL": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-river",
+  "panel": "all"
+ },
+ "CXMN": {
+  "source": "generated",
+  "path": "D:/tmp/o18a/r/new/009-the-golden-bells",
+  "title": "The Golden Bells",
+  "moves": [],
+  "code": "new",
+  "slot": "009",
+  "panel": "2"
+ },
+ "EBXH": {
+  "source": "generated",
+  "path": "D:/tmp/o18a/r/old/012-toward-the-harvest",
+  "title": "Toward the Harvest",
+  "moves": [],
+  "code": "old",
+  "slot": "012",
+  "panel": "2"
+ },
+ "EQRA": {
+  "source": "generated",
+  "path": "D:/tmp/o18a/r/new/001-fields-of-home",
+  "title": "Fields of Home",
+  "moves": [],
+  "code": "new",
+  "slot": "001",
+  "panel": "2"
+ },
+ "ERSJ": {
+  "source": "generated",
+  "path": "D:/tmp/o18a/r/new/003-the-rising-fires",
+  "title": "The Rising Fires",
+  "moves": [],
+  "code": "new",
+  "slot": "003",
+  "panel": "2"
+ },
+ "ESGW": {
+  "source": "generated",
+  "path": "D:/tmp/o18a/r/new/012-toward-the-harvest",
+  "title": "Toward the Harvest",
+  "moves": [],
+  "code": "new",
+  "slot": "012",
+  "panel": "1"
+ },
+ "FTMN": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-stormy",
+  "panel": "all"
+ },
+ "FWBC": {
+  "source": "generated",
+  "path": "D:/tmp/o18a/r/old/013-overture-silver-riders",
+  "title": "Overture: Silver Riders",
+  "moves": [],
+  "code": "old",
+  "slot": "013",
+  "panel": "1"
+ },
+ "GURQ": {
+  "source": "generated",
+  "path": "D:/tmp/o18a/r/new/004-winds-of-winter",
+  "title": "Winds of Winter",
+  "moves": [],
+  "code": "new",
+  "slot": "004",
+  "panel": "1"
+ },
+ "JVVH": {
+  "source": "generated",
+  "path": "D:/tmp/o18a/r/new/005-storms-of-the-north",
+  "title": "Storms of the North",
+  "moves": [],
+  "code": "new",
+  "slot": "005",
+  "panel": "2"
+ },
+ "LATS": {
+  "source": "generated",
+  "path": "D:/tmp/o18a/r/old/007-symphonic-dance-horizons-of-summer",
+  "title": "Symphonic Dance: Horizons of Summer",
+  "moves": [],
+  "code": "old",
+  "slot": "007",
+  "panel": "1"
+ },
+ "LGNB": {
+  "source": "generated",
+  "path": "D:/tmp/o18a/r/old/002-hidden-voyages",
+  "title": "Hidden Voyages",
+  "moves": [],
+  "code": "old",
+  "slot": "002",
+  "panel": "2"
+ },
+ "MUNK": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-scherzo",
+  "panel": "all"
+ },
+ "PGQS": {
+  "source": "generated",
+  "path": "D:/tmp/o18a/r/new/011-overture-silver-rivers",
+  "title": "Overture: Silver Rivers",
+  "moves": [],
+  "code": "new",
+  "slot": "011",
+  "panel": "2"
+ },
+ "PZUV": {
+  "source": "generated",
+  "path": "D:/tmp/o18a/r/new/008-open-fields-of-home",
+  "title": "Open Fields of Home",
+  "moves": [],
+  "code": "new",
+  "slot": "008",
+  "panel": "1"
+ },
+ "QDMZ": {
+  "source": "generated",
+  "path": "D:/tmp/o18a/r/new/013-overture-silver-riders",
+  "title": "Overture: Silver Riders",
+  "moves": [],
+  "code": "new",
+  "slot": "013",
+  "panel": "2"
+ },
+ "QGKG": {
+  "source": "generated",
+  "path": "D:/tmp/o18a/r/old/003-the-rising-fires",
+  "title": "The Rising Fires",
+  "moves": [],
+  "code": "old",
+  "slot": "003",
+  "panel": "1"
+ },
+ "SUEH": {
+  "source": "generated",
+  "path": "D:/tmp/o18a/r/old/001-fields-of-home",
+  "title": "Fields of Home",
+  "moves": [],
+  "code": "old",
+  "slot": "001",
+  "panel": "1"
+ },
+ "SVRG": {
+  "source": "generated",
+  "path": "D:/tmp/o18a/r/new/014-the-distant-tides",
+  "title": "The Distant Tides",
+  "moves": [],
+  "code": "new",
+  "slot": "014",
+  "panel": "1"
+ },
+ "TQTM": {
+  "source": "generated",
+  "path": "D:/tmp/o18a/r/old/011-overture-silver-rivers",
+  "title": "Overture: Silver Rivers",
+  "moves": [],
+  "code": "old",
+  "slot": "011",
+  "panel": "1"
+ },
+ "UBVC": {
+  "source": "generated",
+  "path": "D:/tmp/o18a/r/new/007-symphonic-dance-horizons-of-summer",
+  "title": "Symphonic Dance: Horizons of Summer",
+  "moves": [],
+  "code": "new",
+  "slot": "007",
+  "panel": "2"
+ },
+ "UFSG": {
+  "source": "generated",
+  "path": "D:/tmp/o18a/r/old/006-horizons-of-the-storm",
+  "title": "Horizons of the Storm",
+  "moves": [],
+  "code": "old",
+  "slot": "006",
+  "panel": "2"
+ },
+ "VSBM": {
+  "source": "generated",
+  "path": "D:/tmp/o18a/r/old/008-open-fields-of-home",
+  "title": "Open Fields of Home",
+  "moves": [],
+  "code": "old",
+  "slot": "008",
+  "panel": "2"
+ },
+ "WFCE": {
+  "source": "generated",
+  "path": "D:/tmp/o18a/r/old/010-toward-the-storm",
+  "title": "Toward the Storm",
+  "moves": [],
+  "code": "old",
+  "slot": "010",
+  "panel": "2"
+ },
+ "WKVR": {
+  "source": "generated",
+  "path": "D:/tmp/o18a/r/old/005-storms-of-the-north",
+  "title": "Storms of the North",
+  "moves": [],
+  "code": "old",
+  "slot": "005",
+  "panel": "1"
+ },
+ "WWDJ": {
+  "source": "generated",
+  "path": "D:/tmp/o18a/r/old/016-heroic-forests",
+  "title": "Heroic Forests",
+  "moves": [],
+  "code": "old",
+  "slot": "016",
+  "panel": "2"
+ },
+ "WWEW": {
+  "source": "generated",
+  "path": "D:/tmp/o18a/r/new/016-heroic-forests",
+  "title": "Heroic Forests",
+  "moves": [],
+  "code": "new",
+  "slot": "016",
+  "panel": "1"
+ },
+ "XBHB": {
+  "source": "generated",
+  "path": "D:/tmp/o18a/r/new/006-horizons-of-the-storm",
+  "title": "Horizons of the Storm",
+  "moves": [],
+  "code": "new",
+  "slot": "006",
+  "panel": "1"
+ },
+ "XNFT": {
+  "source": "generated",
+  "path": "D:/tmp/o18a/r/old/009-the-golden-bells",
+  "title": "The Golden Bells",
+  "moves": [],
+  "code": "old",
+  "slot": "009",
+  "panel": "1"
+ },
+ "YPEV": {
+  "source": "generated",
+  "path": "D:/tmp/o18a/r/old/015-restless-wings",
+  "title": "Restless Wings",
+  "moves": [],
+  "code": "old",
+  "slot": "015",
+  "panel": "1"
+ },
+ "YUWZ": {
+  "source": "generated",
+  "path": "D:/tmp/o18a/r/new/015-restless-wings",
+  "title": "Restless Wings",
+  "moves": [],
+  "code": "new",
+  "slot": "015",
+  "panel": "2"
+ },
+ "ZPNE": {
+  "source": "generated",
+  "path": "D:/tmp/o18a/r/new/002-hidden-voyages",
+  "title": "Hidden Voyages",
+  "moves": [],
+  "code": "new",
+  "slot": "002",
+  "panel": "1"
+ },
+ "ZVXK": {
+  "source": "generated",
+  "path": "D:/tmp/o18a/r/old/004-winds-of-winter",
+  "title": "Winds of Winter",
+  "moves": [],
+  "code": "old",
+  "slot": "004",
+  "panel": "2"
+ }
+}

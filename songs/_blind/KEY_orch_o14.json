@@ -1,0 +1,305 @@
+{
+ "ANQS": {
+  "source": "generated",
+  "path": "D:/tmp/o14/r/old/010-hidden-voyages-of-the-storm",
+  "title": "Hidden Voyages of the Storm",
+  "moves": [],
+  "code": "old",
+  "slot": "010",
+  "panel": "2"
+ },
+ "AUEN": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-river",
+  "panel": "all"
+ },
+ "AUXF": {
+  "source": "generated",
+  "path": "D:/tmp/o14/r/new/015-bells-of-the-plains",
+  "title": "Bells of the Plains",
+  "moves": [],
+  "code": "new",
+  "slot": "015",
+  "panel": "2"
+ },
+ "BUHR": {
+  "source": "generated",
+  "path": "D:/tmp/o14/r/new/009-symphonic-dance-mountains-of-the-storm",
+  "title": "Symphonic Dance: Mountains of the Storm",
+  "moves": [],
+  "code": "new",
+  "slot": "009",
+  "panel": "2"
+ },
+ "BYUJ": {
+  "source": "generated",
+  "path": "D:/tmp/o14/r/old/008-toward-the-storm",
+  "title": "Toward the Storm",
+  "moves": [],
+  "code": "old",
+  "slot": "008",
+  "panel": "2"
+ },
+ "CPKQ": {
+  "source": "generated",
+  "path": "D:/tmp/o14/r/new/012-overture-stormy-forests",
+  "title": "Overture: Stormy Forests",
+  "moves": [],
+  "code": "new",
+  "slot": "012",
+  "panel": "1"
+ },
+ "DDLV": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-scherzo",
+  "panel": "all"
+ },
+ "ENWP": {
+  "source": "generated",
+  "path": "D:/tmp/o14/r/old/011-the-bright-fires",
+  "title": "The Bright Fires",
+  "moves": [],
+  "code": "old",
+  "slot": "011",
+  "panel": "1"
+ },
+ "EUJQ": {
+  "source": "generated",
+  "path": "D:/tmp/o14/r/new/008-toward-the-storm",
+  "title": "Toward the Storm",
+  "moves": [],
+  "code": "new",
+  "slot": "008",
+  "panel": "1"
+ },
+ "EXMH": {
+  "source": "generated",
+  "path": "D:/tmp/o14/r/old/016-toward-the-north",
+  "title": "Toward the North",
+  "moves": [],
+  "code": "old",
+  "slot": "016",
+  "panel": "2"
+ },
+ "EXUP": {
+  "source": "generated",
+  "path": "D:/tmp/o14/r/old/004-symphonic-dance-mountains-of-the-harvest",
+  "title": "Symphonic Dance: Mountains of the Harvest",
+  "moves": [],
+  "code": "old",
+  "slot": "004",
+  "panel": "2"
+ },
+ "GNLG": {
+  "source": "generated",
+  "path": "D:/tmp/o14/r/new/010-hidden-voyages-of-the-storm",
+  "title": "Hidden Voyages of the Storm",
+  "moves": [],
+  "code": "new",
+  "slot": "010",
+  "panel": "1"
+ },
+ "GTEA": {
+  "source": "generated",
+  "path": "D:/tmp/o14/r/old/003-overture-silver-wings",
+  "title": "Overture: Silver Wings",
+  "moves": [],
+  "code": "old",
+  "slot": "003",
+  "panel": "1"
+ },
+ "JDPU": {
+  "source": "generated",
+  "path": "D:/tmp/o14/r/new/002-iron-fires",
+  "title": "Iron Fires",
+  "moves": [],
+  "code": "new",
+  "slot": "002",
+  "panel": "1"
+ },
+ "LDBS": {
+  "source": "generated",
+  "path": "D:/tmp/o14/r/new/004-symphonic-dance-mountains-of-the-harvest",
+  "title": "Symphonic Dance: Mountains of the Harvest",
+  "moves": [],
+  "code": "new",
+  "slot": "004",
+  "panel": "1"
+ },
+ "LSES": {
+  "source": "generated",
+  "path": "D:/tmp/o14/r/old/002-iron-fires",
+  "title": "Iron Fires",
+  "moves": [],
+  "code": "old",
+  "slot": "002",
+  "panel": "2"
+ },
+ "MVKB": {
+  "source": "generated",
+  "path": "D:/tmp/o14/r/new/011-the-bright-fires",
+  "title": "The Bright Fires",
+  "moves": [],
+  "code": "new",
+  "slot": "011",
+  "panel": "2"
+ },
+ "MWCW": {
+  "source": "generated",
+  "path": "D:/tmp/o14/r/new/007-hidden-tides-of-the-harvest",
+  "title": "Hidden Tides of the Harvest",
+  "moves": [],
+  "code": "new",
+  "slot": "007",
+  "panel": "2"
+ },
+ "NFAA": {
+  "source": "generated",
+  "path": "D:/tmp/o14/r/old/014-overture-wild-wings",
+  "title": "Overture: Wild Wings",
+  "moves": [],
+  "code": "old",
+  "slot": "014",
+  "panel": "2"
+ },
+ "PATU": {
+  "source": "generated",
+  "path": "D:/tmp/o14/r/old/001-horizons-of-the-plains",
+  "title": "Horizons of the Plains",
+  "moves": [],
+  "code": "old",
+  "slot": "001",
+  "panel": "1"
+ },
+ "PHVY": {
+  "source": "generated",
+  "path": "D:/tmp/o14/r/old/012-overture-stormy-forests",
+  "title": "Overture: Stormy Forests",
+  "moves": [],
+  "code": "old",
+  "slot": "012",
+  "panel": "2"
+ },
+ "SHKU": {
+  "source": "generated",
+  "path": "D:/tmp/o14/r/new/003-overture-silver-wings",
+  "title": "Overture: Silver Wings",
+  "moves": [],
+  "code": "new",
+  "slot": "003",
+  "panel": "2"
+ },
+ "TADX": {
+  "source": "generated",
+  "path": "D:/tmp/o14/r/new/001-horizons-of-the-plains",
+  "title": "Horizons of the Plains",
+  "moves": [],
+  "code": "new",
+  "slot": "001",
+  "panel": "2"
+ },
+ "UABH": {
+  "source": "generated",
+  "path": "D:/tmp/o14/r/new/005-symphonic-dance-mountains-of-the-north",
+  "title": "Symphonic Dance: Mountains of the North",
+  "moves": [],
+  "code": "new",
+  "slot": "005",
+  "panel": "2"
+ },
+ "UMZX": {
+  "source": "generated",
+  "path": "D:/tmp/o14/r/new/013-fires-of-the-dawn",
+  "title": "Fires of the Dawn",
+  "moves": [],
+  "code": "new",
+  "slot": "013",
+  "panel": "2"
+ },
+ "USWD": {
+  "source": "generated",
+  "path": "D:/tmp/o14/r/new/006-heroic-mountains",
+  "title": "Heroic Mountains",
+  "moves": [],
+  "code": "new",
+  "slot": "006",
+  "panel": "1"
+ },
+ "VJCV": {
+  "source": "generated",
+  "path": "D:/tmp/o14/r/old/007-hidden-tides-of-the-harvest",
+  "title": "Hidden Tides of the Harvest",
+  "moves": [],
+  "code": "old",
+  "slot": "007",
+  "panel": "1"
+ },
+ "VRNU": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-stormy",
+  "panel": "all"
+ },
+ "WKCC": {
+  "source": "generated",
+  "path": "D:/tmp/o14/r/new/016-toward-the-north",
+  "title": "Toward the North",
+  "moves": [],
+  "code": "new",
+  "slot": "016",
+  "panel": "1"
+ },
+ "XPXW": {
+  "source": "generated",
+  "path": "D:/tmp/o14/r/old/015-bells-of-the-plains",
+  "title": "Bells of the Plains",
+  "moves": [],
+  "code": "old",
+  "slot": "015",
+  "panel": "1"
+ },
+ "YACY": {
+  "source": "generated",
+  "path": "D:/tmp/o14/r/old/013-fires-of-the-dawn",
+  "title": "Fires of the Dawn",
+  "moves": [],
+  "code": "old",
+  "slot": "013",
+  "panel": "1"
+ },
+ "YJLD": {
+  "source": "generated",
+  "path": "D:/tmp/o14/r/old/006-heroic-mountains",
+  "title": "Heroic Mountains",
+  "moves": [],
+  "code": "old",
+  "slot": "006",
+  "panel": "2"
+ },
+ "YVKE": {
+  "source": "generated",
+  "path": "D:/tmp/o14/r/old/005-symphonic-dance-mountains-of-the-north",
+  "title": "Symphonic Dance: Mountains of the North",
+  "moves": [],
+  "code": "old",
+  "slot": "005",
+  "panel": "1"
+ },
+ "ZTDU": {
+  "source": "generated",
+  "path": "D:/tmp/o14/r/old/009-symphonic-dance-mountains-of-the-storm",
+  "title": "Symphonic Dance: Mountains of the Storm",
+  "moves": [],
+  "code": "old",
+  "slot": "009",
+  "panel": "1"
+ },
+ "ZVBD": {
+  "source": "generated",
+  "path": "D:/tmp/o14/r/new/014-overture-wild-wings",
+  "title": "Overture: Wild Wings",
+  "moves": [],
+  "code": "new",
+  "slot": "014",
+  "panel": "1"
+ }
+}

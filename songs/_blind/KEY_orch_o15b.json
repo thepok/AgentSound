@@ -1,0 +1,305 @@
+{
+ "ATBQ": {
+  "source": "generated",
+  "path": "D:/tmp/o15b/r/new/006-heroic-mountains",
+  "title": "Heroic Mountains",
+  "moves": [],
+  "code": "new",
+  "slot": "006",
+  "panel": "1"
+ },
+ "AVJP": {
+  "source": "generated",
+  "path": "D:/tmp/o15b/r/old/016-overture-northern-storms",
+  "title": "Overture: Northern Storms",
+  "moves": [],
+  "code": "old",
+  "slot": "016",
+  "panel": "2"
+ },
+ "AWTK": {
+  "source": "generated",
+  "path": "D:/tmp/o15b/r/new/012-burning-mountains-of-the-storm",
+  "title": "Burning Mountains of the Storm",
+  "moves": [],
+  "code": "new",
+  "slot": "012",
+  "panel": "1"
+ },
+ "BKEH": {
+  "source": "generated",
+  "path": "D:/tmp/o15b/r/new/013-iron-horizons-of-winter",
+  "title": "Iron Horizons of Winter",
+  "moves": [],
+  "code": "new",
+  "slot": "013",
+  "panel": "2"
+ },
+ "CMUM": {
+  "source": "generated",
+  "path": "D:/tmp/o15b/r/old/001-rising-wings-of-summer",
+  "title": "Rising Wings of Summer",
+  "moves": [],
+  "code": "old",
+  "slot": "001",
+  "panel": "1"
+ },
+ "CSXA": {
+  "source": "generated",
+  "path": "D:/tmp/o15b/r/new/016-overture-northern-storms",
+  "title": "Overture: Northern Storms",
+  "moves": [],
+  "code": "new",
+  "slot": "016",
+  "panel": "1"
+ },
+ "DKLQ": {
+  "source": "generated",
+  "path": "D:/tmp/o15b/r/old/007-the-iron-tides",
+  "title": "The Iron Tides",
+  "moves": [],
+  "code": "old",
+  "slot": "007",
+  "panel": "1"
+ },
+ "DXUD": {
+  "source": "generated",
+  "path": "D:/tmp/o15b/r/old/011-toward-winter",
+  "title": "Toward Winter",
+  "moves": [],
+  "code": "old",
+  "slot": "011",
+  "panel": "1"
+ },
+ "FTUL": {
+  "source": "generated",
+  "path": "D:/tmp/o15b/r/old/009-symphonic-dance-horizons-of-the-plains",
+  "title": "Symphonic Dance: Horizons of the Plains",
+  "moves": [],
+  "code": "old",
+  "slot": "009",
+  "panel": "1"
+ },
+ "GHKT": {
+  "source": "generated",
+  "path": "D:/tmp/o15b/r/old/008-symphonic-dance-tides-of-the-plains",
+  "title": "Symphonic Dance: Tides of the Plains",
+  "moves": [],
+  "code": "old",
+  "slot": "008",
+  "panel": "2"
+ },
+ "GPYE": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-stormy",
+  "panel": "all"
+ },
+ "HWEU": {
+  "source": "generated",
+  "path": "D:/tmp/o15b/r/new/008-symphonic-dance-tides-of-the-plains",
+  "title": "Symphonic Dance: Tides of the Plains",
+  "moves": [],
+  "code": "new",
+  "slot": "008",
+  "panel": "1"
+ },
+ "HYBM": {
+  "source": "generated",
+  "path": "D:/tmp/o15b/r/old/005-overture-heroic-riders",
+  "title": "Overture: Heroic Riders",
+  "moves": [],
+  "code": "old",
+  "slot": "005",
+  "panel": "1"
+ },
+ "JGKR": {
+  "source": "generated",
+  "path": "D:/tmp/o15b/r/old/004-northern-voyages",
+  "title": "Northern Voyages",
+  "moves": [],
+  "code": "old",
+  "slot": "004",
+  "panel": "2"
+ },
+ "JRAD": {
+  "source": "generated",
+  "path": "D:/tmp/o15b/r/new/005-overture-heroic-riders",
+  "title": "Overture: Heroic Riders",
+  "moves": [],
+  "code": "new",
+  "slot": "005",
+  "panel": "2"
+ },
+ "JWSV": {
+  "source": "generated",
+  "path": "D:/tmp/o15b/r/new/014-overture-hidden-winds",
+  "title": "Overture: Hidden Winds",
+  "moves": [],
+  "code": "new",
+  "slot": "014",
+  "panel": "1"
+ },
+ "KHRW": {
+  "source": "generated",
+  "path": "D:/tmp/o15b/r/new/010-stormy-wings-of-the-valley",
+  "title": "Stormy Wings of the Valley",
+  "moves": [],
+  "code": "new",
+  "slot": "010",
+  "panel": "1"
+ },
+ "MAPR": {
+  "source": "generated",
+  "path": "D:/tmp/o15b/r/new/011-toward-winter",
+  "title": "Toward Winter",
+  "moves": [],
+  "code": "new",
+  "slot": "011",
+  "panel": "2"
+ },
+ "PZUK": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-river",
+  "panel": "all"
+ },
+ "QHTU": {
+  "source": "generated",
+  "path": "D:/tmp/o15b/r/new/004-northern-voyages",
+  "title": "Northern Voyages",
+  "moves": [],
+  "code": "new",
+  "slot": "004",
+  "panel": "1"
+ },
+ "QJRL": {
+  "source": "generated",
+  "path": "D:/tmp/o15b/r/new/007-the-iron-tides",
+  "title": "The Iron Tides",
+  "moves": [],
+  "code": "new",
+  "slot": "007",
+  "panel": "2"
+ },
+ "QKRT": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-scherzo",
+  "panel": "all"
+ },
+ "QQXX": {
+  "source": "generated",
+  "path": "D:/tmp/o15b/r/old/006-heroic-mountains",
+  "title": "Heroic Mountains",
+  "moves": [],
+  "code": "old",
+  "slot": "006",
+  "panel": "2"
+ },
+ "RMDA": {
+  "source": "generated",
+  "path": "D:/tmp/o15b/r/new/009-symphonic-dance-horizons-of-the-plains",
+  "title": "Symphonic Dance: Horizons of the Plains",
+  "moves": [],
+  "code": "new",
+  "slot": "009",
+  "panel": "2"
+ },
+ "RSVN": {
+  "source": "generated",
+  "path": "D:/tmp/o15b/r/new/001-rising-wings-of-summer",
+  "title": "Rising Wings of Summer",
+  "moves": [],
+  "code": "new",
+  "slot": "001",
+  "panel": "2"
+ },
+ "SFZN": {
+  "source": "generated",
+  "path": "D:/tmp/o15b/r/old/010-stormy-wings-of-the-valley",
+  "title": "Stormy Wings of the Valley",
+  "moves": [],
+  "code": "old",
+  "slot": "010",
+  "panel": "2"
+ },
+ "SLRV": {
+  "source": "generated",
+  "path": "D:/tmp/o15b/r/old/015-overture-stormy-winds",
+  "title": "Overture: Stormy Winds",
+  "moves": [],
+  "code": "old",
+  "slot": "015",
+  "panel": "1"
+ },
+ "TDRS": {
+  "source": "generated",
+  "path": "D:/tmp/o15b/r/old/014-overture-hidden-winds",
+  "title": "Overture: Hidden Winds",
+  "moves": [],
+  "code": "old",
+  "slot": "014",
+  "panel": "2"
+ },
+ "VMZR": {
+  "source": "generated",
+  "path": "D:/tmp/o15b/r/new/003-symphonic-dance-voyages-of-the-north",
+  "title": "Symphonic Dance: Voyages of the North",
+  "moves": [],
+  "code": "new",
+  "slot": "003",
+  "panel": "2"
+ },
+ "VQAA": {
+  "source": "generated",
+  "path": "D:/tmp/o15b/r/new/015-overture-stormy-winds",
+  "title": "Overture: Stormy Winds",
+  "moves": [],
+  "code": "new",
+  "slot": "015",
+  "panel": "2"
+ },
+ "WBJN": {
+  "source": "generated",
+  "path": "D:/tmp/o15b/r/old/012-burning-mountains-of-the-storm",
+  "title": "Burning Mountains of the Storm",
+  "moves": [],
+  "code": "old",
+  "slot": "012",
+  "panel": "2"
+ },
+ "XZRB": {
+  "source": "generated",
+  "path": "D:/tmp/o15b/r/old/013-iron-horizons-of-winter",
+  "title": "Iron Horizons of Winter",
+  "moves": [],
+  "code": "old",
+  "slot": "013",
+  "panel": "1"
+ },
+ "YYKU": {
+  "source": "generated",
+  "path": "D:/tmp/o15b/r/new/002-rising-banners",
+  "title": "Rising Banners",
+  "moves": [],
+  "code": "new",
+  "slot": "002",
+  "panel": "1"
+ },
+ "ZDVX": {
+  "source": "generated",
+  "path": "D:/tmp/o15b/r/old/003-symphonic-dance-voyages-of-the-north",
+  "title": "Symphonic Dance: Voyages of the North",
+  "moves": [],
+  "code": "old",
+  "slot": "003",
+  "panel": "1"
+ },
+ "ZVVG": {
+  "source": "generated",
+  "path": "D:/tmp/o15b/r/old/002-rising-banners",
+  "title": "Rising Banners",
+  "moves": [],
+  "code": "old",
+  "slot": "002",
+  "panel": "2"
+ }
+}

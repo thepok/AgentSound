@@ -1,0 +1,161 @@
+{
+ "AMNU": {
+  "source": "generated",
+  "path": "D:/tmp/o7/r/new/002-overture-endless-bells",
+  "title": "Overture: Endless Bells",
+  "moves": [],
+  "code": "new",
+  "slot": "002",
+  "panel": "1"
+ },
+ "BTRX": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-stormy",
+  "panel": "all"
+ },
+ "CWLM": {
+  "source": "generated",
+  "path": "D:/tmp/o7/r/old/005-hidden-fires-of-the-valley",
+  "title": "Hidden Fires of the Valley",
+  "moves": [],
+  "code": "old",
+  "slot": "005",
+  "panel": "1"
+ },
+ "DFSS": {
+  "source": "generated",
+  "path": "D:/tmp/o7/r/old/007-symphonic-dance-mountains-of-the-storm",
+  "title": "Symphonic Dance: Mountains of the Storm",
+  "moves": [],
+  "code": "old",
+  "slot": "007",
+  "panel": "1"
+ },
+ "FHPB": {
+  "source": "generated",
+  "path": "D:/tmp/o7/r/old/008-the-restless-forests",
+  "title": "The Restless Forests",
+  "moves": [],
+  "code": "old",
+  "slot": "008",
+  "panel": "2"
+ },
+ "JWCL": {
+  "source": "generated",
+  "path": "D:/tmp/o7/r/new/004-burning-storms",
+  "title": "Burning Storms",
+  "moves": [],
+  "code": "new",
+  "slot": "004",
+  "panel": "1"
+ },
+ "KGRJ": {
+  "source": "generated",
+  "path": "D:/tmp/o7/r/old/003-winds-of-home",
+  "title": "Winds of Home",
+  "moves": [],
+  "code": "old",
+  "slot": "003",
+  "panel": "1"
+ },
+ "PFBT": {
+  "source": "generated",
+  "path": "D:/tmp/o7/r/new/007-symphonic-dance-mountains-of-the-storm",
+  "title": "Symphonic Dance: Mountains of the Storm",
+  "moves": [],
+  "code": "new",
+  "slot": "007",
+  "panel": "2"
+ },
+ "PHJV": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-river",
+  "panel": "all"
+ },
+ "PLSN": {
+  "source": "generated",
+  "path": "D:/tmp/o7/r/old/006-symphonic-dance-fires-of-the-dawn",
+  "title": "Symphonic Dance: Fires of the Dawn",
+  "moves": [],
+  "code": "old",
+  "slot": "006",
+  "panel": "2"
+ },
+ "SKKW": {
+  "source": "generated",
+  "path": "D:/tmp/o7/r/new/001-toward-the-sea",
+  "title": "Toward the Sea",
+  "moves": [],
+  "code": "new",
+  "slot": "001",
+  "panel": "2"
+ },
+ "SWKT": {
+  "source": "generated",
+  "path": "D:/tmp/o7/r/old/001-toward-the-sea",
+  "title": "Toward the Sea",
+  "moves": [],
+  "code": "old",
+  "slot": "001",
+  "panel": "1"
+ },
+ "THGD": {
+  "source": "generated",
+  "path": "D:/tmp/o7/r/new/005-toward-the-valley",
+  "title": "Toward the Valley",
+  "moves": [],
+  "code": "new",
+  "slot": "005",
+  "panel": "2"
+ },
+ "WDMN": {
+  "source": "generated",
+  "path": "D:/tmp/o7/r/new/008-toward-the-harvest",
+  "title": "Toward the Harvest",
+  "moves": [],
+  "code": "new",
+  "slot": "008",
+  "panel": "1"
+ },
+ "WGKU": {
+  "source": "generated",
+  "path": "D:/tmp/o7/r/new/003-overture-endless-mountains",
+  "title": "Overture: Endless Mountains",
+  "moves": [],
+  "code": "new",
+  "slot": "003",
+  "panel": "2"
+ },
+ "WRXX": {
+  "source": "generated",
+  "path": "D:/tmp/o7/r/old/002-overture-endless-bells",
+  "title": "Overture: Endless Bells",
+  "moves": [],
+  "code": "old",
+  "slot": "002",
+  "panel": "2"
+ },
+ "XGPD": {
+  "source": "generated",
+  "path": "D:/tmp/o7/r/new/006-open-riders-of-the-harvest",
+  "title": "Open Riders of the Harvest",
+  "moves": [],
+  "code": "new",
+  "slot": "006",
+  "panel": "1"
+ },
+ "YJNR": {
+  "source": "generated",
+  "path": "D:/tmp/o7/r/old/004-burning-storms",
+  "title": "Burning Storms",
+  "moves": [],
+  "code": "old",
+  "slot": "004",
+  "panel": "2"
+ },
+ "YKRV": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-scherzo",
+  "panel": "all"
+ }
+}

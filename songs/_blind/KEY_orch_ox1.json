@@ -1,0 +1,305 @@
+{
+ "ADJX": {
+  "source": "generated",
+  "path": "D:/tmp/ox1/r/new/007-symphonic-dance-horizons-of-home",
+  "title": "Symphonic Dance: Horizons of Home",
+  "moves": [],
+  "code": "new",
+  "slot": "007",
+  "panel": "2"
+ },
+ "AHVH": {
+  "source": "generated",
+  "path": "D:/tmp/ox1/r/new/009-the-heroic-banners",
+  "title": "The Heroic Banners",
+  "moves": [],
+  "code": "new",
+  "slot": "009",
+  "panel": "2"
+ },
+ "AZKR": {
+  "source": "composed",
+  "path": "D:/Repos/AgentSound/songs/pro-orch-symphonic-river",
+  "panel": "all"
+ },
+ "BAGU": {
+  "source": "generated",
+  "path": "D:/tmp/ox1/r/old/013-iron-fires-of-the-sea",
+  "title": "Iron Fires of the Sea",
+  "moves": [],
+  "code": "old",
+  "slot": "013",
+  "panel": "1"
+ },
+ "BWTR": {
+  "source": "generated",
+  "path": "D:/tmp/ox1/r/new/014-toward-winter",
+  "title": "Toward Winter",
+  "moves": [],
+  "code": "new",
+  "slot": "014",
+  "panel": "1"
+ },
+ "CLKV": {
+  "source": "generated",
+  "path": "D:/tmp/ox1/r/old/006-the-burning-storms",
+  "title": "The Burning Storms",
+  "moves": [],
+  "code": "old",
+  "slot": "006",
+  "panel": "2"
+ },
+ "DKAD": {
+  "source": "generated",
+  "path": "D:/tmp/ox1/r/old/010-horizons-of-the-storm",
+  "title": "Horizons of the Storm",
+  "moves": [],
+  "code": "old",
+  "slot": "010",
+  "panel": "2"
+ },
+ "EUUF": {
+  "source": "composed",
+  "path": "D:/Repos/AgentSound/songs/pro-orch-symphonic-stormy",
+  "panel": "all"
+ },
+ "EVVR": {
+  "source": "generated",
+  "path": "D:/tmp/ox1/r/old/005-iron-fields-of-winter",
+  "title": "Iron Fields of Winter",
+  "moves": [],
+  "code": "old",
+  "slot": "005",
+  "panel": "1"
+ },
+ "FJDU": {
+  "source": "generated",
+  "path": "D:/tmp/ox1/r/old/012-symphonic-dance-banners-of-the-plains",
+  "title": "Symphonic Dance: Banners of the Plains",
+  "moves": [],
+  "code": "old",
+  "slot": "012",
+  "panel": "2"
+ },
+ "FZWA": {
+  "source": "generated",
+  "path": "D:/tmp/ox1/r/new/001-symphonic-dance-fires-of-winter",
+  "title": "Symphonic Dance: Fires of Winter",
+  "moves": [],
+  "code": "new",
+  "slot": "001",
+  "panel": "2"
+ },
+ "HGEJ": {
+  "source": "generated",
+  "path": "D:/tmp/ox1/r/new/006-the-burning-storms",
+  "title": "The Burning Storms",
+  "moves": [],
+  "code": "new",
+  "slot": "006",
+  "panel": "1"
+ },
+ "JNTZ": {
+  "source": "generated",
+  "path": "D:/tmp/ox1/r/new/003-endless-riders-of-the-harvest",
+  "title": "Endless Riders of the Harvest",
+  "moves": [],
+  "code": "new",
+  "slot": "003",
+  "panel": "2"
+ },
+ "JYEL": {
+  "source": "generated",
+  "path": "D:/tmp/ox1/r/new/012-symphonic-dance-banners-of-the-plains",
+  "title": "Symphonic Dance: Banners of the Plains",
+  "moves": [],
+  "code": "new",
+  "slot": "012",
+  "panel": "1"
+ },
+ "LDUS": {
+  "source": "generated",
+  "path": "D:/tmp/ox1/r/new/011-toward-home",
+  "title": "Toward Home",
+  "moves": [],
+  "code": "new",
+  "slot": "011",
+  "panel": "2"
+ },
+ "MPWA": {
+  "source": "generated",
+  "path": "D:/tmp/ox1/r/new/008-toward-the-harvest",
+  "title": "Toward the Harvest",
+  "moves": [],
+  "code": "new",
+  "slot": "008",
+  "panel": "1"
+ },
+ "MRZX": {
+  "source": "generated",
+  "path": "D:/tmp/ox1/r/old/016-the-restless-banners",
+  "title": "The Restless Banners",
+  "moves": [],
+  "code": "old",
+  "slot": "016",
+  "panel": "2"
+ },
+ "MYSY": {
+  "source": "generated",
+  "path": "D:/tmp/ox1/r/old/014-toward-winter",
+  "title": "Toward Winter",
+  "moves": [],
+  "code": "old",
+  "slot": "014",
+  "panel": "2"
+ },
+ "NWGS": {
+  "source": "generated",
+  "path": "D:/tmp/ox1/r/new/004-toward-the-sea",
+  "title": "Toward the Sea",
+  "moves": [],
+  "code": "new",
+  "slot": "004",
+  "panel": "1"
+ },
+ "PEZK": {
+  "source": "composed",
+  "path": "D:/Repos/AgentSound/songs/pro-orch-symphonic-scherzo",
+  "panel": "all"
+ },
+ "PGGL": {
+  "source": "generated",
+  "path": "D:/tmp/ox1/r/old/011-toward-home",
+  "title": "Toward Home",
+  "moves": [],
+  "code": "old",
+  "slot": "011",
+  "panel": "1"
+ },
+ "QAFK": {
+  "source": "generated",
+  "path": "D:/tmp/ox1/r/new/016-the-restless-banners",
+  "title": "The Restless Banners",
+  "moves": [],
+  "code": "new",
+  "slot": "016",
+  "panel": "1"
+ },
+ "QANH": {
+  "source": "generated",
+  "path": "D:/tmp/ox1/r/old/015-the-wild-banners",
+  "title": "The Wild Banners",
+  "moves": [],
+  "code": "old",
+  "slot": "015",
+  "panel": "1"
+ },
+ "QXLG": {
+  "source": "generated",
+  "path": "D:/tmp/ox1/r/old/007-symphonic-dance-horizons-of-home",
+  "title": "Symphonic Dance: Horizons of Home",
+  "moves": [],
+  "code": "old",
+  "slot": "007",
+  "panel": "1"
+ },
+ "RCEV": {
+  "source": "generated",
+  "path": "D:/tmp/ox1/r/new/005-iron-fields-of-winter",
+  "title": "Iron Fields of Winter",
+  "moves": [],
+  "code": "new",
+  "slot": "005",
+  "panel": "2"
+ },
+ "RFXE": {
+  "source": "generated",
+  "path": "D:/tmp/ox1/r/old/004-toward-the-sea",
+  "title": "Toward the Sea",
+  "moves": [],
+  "code": "old",
+  "slot": "004",
+  "panel": "2"
+ },
+ "SBKY": {
+  "source": "generated",
+  "path": "D:/tmp/ox1/r/new/010-horizons-of-the-storm",
+  "title": "Horizons of the Storm",
+  "moves": [],
+  "code": "new",
+  "slot": "010",
+  "panel": "1"
+ },
+ "SSNZ": {
+  "source": "generated",
+  "path": "D:/tmp/ox1/r/old/003-endless-riders-of-the-harvest",
+  "title": "Endless Riders of the Harvest",
+  "moves": [],
+  "code": "old",
+  "slot": "003",
+  "panel": "1"
+ },
+ "UETS": {
+  "source": "generated",
+  "path": "D:/tmp/ox1/r/new/015-the-wild-banners",
+  "title": "The Wild Banners",
+  "moves": [],
+  "code": "new",
+  "slot": "015",
+  "panel": "2"
+ },
+ "UTYF": {
+  "source": "generated",
+  "path": "D:/tmp/ox1/r/old/008-toward-the-harvest",
+  "title": "Toward the Harvest",
+  "moves": [],
+  "code": "old",
+  "slot": "008",
+  "panel": "2"
+ },
+ "VVPD": {
+  "source": "generated",
+  "path": "D:/tmp/ox1/r/old/001-symphonic-dance-fires-of-winter",
+  "title": "Symphonic Dance: Fires of Winter",
+  "moves": [],
+  "code": "old",
+  "slot": "001",
+  "panel": "1"
+ },
+ "WFKS": {
+  "source": "generated",
+  "path": "D:/tmp/ox1/r/new/013-iron-fires-of-the-sea",
+  "title": "Iron Fires of the Sea",
+  "moves": [],
+  "code": "new",
+  "slot": "013",
+  "panel": "2"
+ },
+ "ZCTG": {
+  "source": "generated",
+  "path": "D:/tmp/ox1/r/old/009-the-heroic-banners",
+  "title": "The Heroic Banners",
+  "moves": [],
+  "code": "old",
+  "slot": "009",
+  "panel": "1"
+ },
+ "ZEGY": {
+  "source": "generated",
+  "path": "D:/tmp/ox1/r/new/002-distant-banners",
+  "title": "Distant Banners",
+  "moves": [],
+  "code": "new",
+  "slot": "002",
+  "panel": "1"
+ },
+ "ZETL": {
+  "source": "generated",
+  "path": "D:/tmp/ox1/r/old/002-distant-banners",
+  "title": "Distant Banners",
+  "moves": [],
+  "code": "old",
+  "slot": "002",
+  "panel": "2"
+ }
+}

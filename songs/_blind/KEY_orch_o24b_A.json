@@ -1,0 +1,305 @@
+{
+ "BPAC": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/A/r/old/006-the-bright-mountains",
+  "title": "The Bright Mountains",
+  "moves": [],
+  "code": "old",
+  "slot": "006",
+  "panel": "2"
+ },
+ "DGNB": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/A/r/new/016-symphonic-dance-horizons-of-the-dawn",
+  "title": "Symphonic Dance: Horizons of the Dawn",
+  "moves": [],
+  "code": "new",
+  "slot": "016",
+  "panel": "1"
+ },
+ "DGWC": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/A/r/old/010-distant-mountains-of-the-dawn",
+  "title": "Distant Mountains of the Dawn",
+  "moves": [],
+  "code": "old",
+  "slot": "010",
+  "panel": "2"
+ },
+ "DHJU": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/A/r/new/010-distant-mountains-of-the-dawn",
+  "title": "Distant Mountains of the Dawn",
+  "moves": [],
+  "code": "new",
+  "slot": "010",
+  "panel": "1"
+ },
+ "EGGM": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/A/r/old/008-the-burning-riders",
+  "title": "The Burning Riders",
+  "moves": [],
+  "code": "old",
+  "slot": "008",
+  "panel": "2"
+ },
+ "FGAY": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/A/r/new/004-wild-riders-of-winter",
+  "title": "Wild Riders of Winter",
+  "moves": [],
+  "code": "new",
+  "slot": "004",
+  "panel": "1"
+ },
+ "FRTS": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/A/r/new/013-toward-summer",
+  "title": "Toward Summer",
+  "moves": [],
+  "code": "new",
+  "slot": "013",
+  "panel": "2"
+ },
+ "GHBF": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/A/r/new/005-bells-of-the-north",
+  "title": "Bells of the North",
+  "moves": [],
+  "code": "new",
+  "slot": "005",
+  "panel": "2"
+ },
+ "GZUL": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/A/r/old/015-toward-winter",
+  "title": "Toward Winter",
+  "moves": [],
+  "code": "old",
+  "slot": "015",
+  "panel": "1"
+ },
+ "JFNE": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/A/r/new/009-the-rising-rivers",
+  "title": "The Rising Rivers",
+  "moves": [],
+  "code": "new",
+  "slot": "009",
+  "panel": "2"
+ },
+ "JXCL": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/A/r/new/014-bright-storms",
+  "title": "Bright Storms",
+  "moves": [],
+  "code": "new",
+  "slot": "014",
+  "panel": "1"
+ },
+ "KDUX": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/A/r/old/005-bells-of-the-north",
+  "title": "Bells of the North",
+  "moves": [],
+  "code": "old",
+  "slot": "005",
+  "panel": "1"
+ },
+ "KMHL": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/A/r/new/003-burning-tides-of-the-valley",
+  "title": "Burning Tides of the Valley",
+  "moves": [],
+  "code": "new",
+  "slot": "003",
+  "panel": "2"
+ },
+ "KSLY": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/A/r/old/013-toward-summer",
+  "title": "Toward Summer",
+  "moves": [],
+  "code": "old",
+  "slot": "013",
+  "panel": "1"
+ },
+ "KYBJ": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/A/r/new/001-overture-hidden-horizons",
+  "title": "Overture: Hidden Horizons",
+  "moves": [],
+  "code": "new",
+  "slot": "001",
+  "panel": "2"
+ },
+ "LDHY": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/A/r/old/012-toward-the-plains",
+  "title": "Toward the Plains",
+  "moves": [],
+  "code": "old",
+  "slot": "012",
+  "panel": "2"
+ },
+ "LRES": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/A/r/old/007-overture-distant-rivers",
+  "title": "Overture: Distant Rivers",
+  "moves": [],
+  "code": "old",
+  "slot": "007",
+  "panel": "1"
+ },
+ "MTXA": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/A/r/old/016-symphonic-dance-horizons-of-the-dawn",
+  "title": "Symphonic Dance: Horizons of the Dawn",
+  "moves": [],
+  "code": "old",
+  "slot": "016",
+  "panel": "2"
+ },
+ "MVTU": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/A/r/old/014-bright-storms",
+  "title": "Bright Storms",
+  "moves": [],
+  "code": "old",
+  "slot": "014",
+  "panel": "2"
+ },
+ "NQJL": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/A/r/new/011-fires-of-summer",
+  "title": "Fires of Summer",
+  "moves": [],
+  "code": "new",
+  "slot": "011",
+  "panel": "2"
+ },
+ "PEFF": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/A/r/old/001-overture-hidden-horizons",
+  "title": "Overture: Hidden Horizons",
+  "moves": [],
+  "code": "old",
+  "slot": "001",
+  "panel": "1"
+ },
+ "PVUM": {
+  "source": "composed",
+  "path": "D:/Repos/AgentSound/songs/pro-orch-symphonic-scherzo",
+  "panel": "all"
+ },
+ "PYSX": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/A/r/old/003-burning-tides-of-the-valley",
+  "title": "Burning Tides of the Valley",
+  "moves": [],
+  "code": "old",
+  "slot": "003",
+  "panel": "1"
+ },
+ "QCZY": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/A/r/old/009-the-rising-rivers",
+  "title": "The Rising Rivers",
+  "moves": [],
+  "code": "old",
+  "slot": "009",
+  "panel": "1"
+ },
+ "RAXG": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/A/r/new/007-overture-distant-rivers",
+  "title": "Overture: Distant Rivers",
+  "moves": [],
+  "code": "new",
+  "slot": "007",
+  "panel": "2"
+ },
+ "TCUB": {
+  "source": "composed",
+  "path": "D:/Repos/AgentSound/songs/pro-orch-symphonic-river",
+  "panel": "all"
+ },
+ "VFEJ": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/A/r/old/011-fires-of-summer",
+  "title": "Fires of Summer",
+  "moves": [],
+  "code": "old",
+  "slot": "011",
+  "panel": "1"
+ },
+ "VGAY": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/A/r/new/006-the-bright-mountains",
+  "title": "The Bright Mountains",
+  "moves": [],
+  "code": "new",
+  "slot": "006",
+  "panel": "1"
+ },
+ "WEXN": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/A/r/old/004-wild-riders-of-winter",
+  "title": "Wild Riders of Winter",
+  "moves": [],
+  "code": "old",
+  "slot": "004",
+  "panel": "2"
+ },
+ "WHQF": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/A/r/new/002-toward-the-plains",
+  "title": "Toward the Plains",
+  "moves": [],
+  "code": "new",
+  "slot": "002",
+  "panel": "1"
+ },
+ "WPXC": {
+  "source": "composed",
+  "path": "D:/Repos/AgentSound/songs/pro-orch-symphonic-stormy",
+  "panel": "all"
+ },
+ "WQMJ": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/A/r/new/015-toward-winter",
+  "title": "Toward Winter",
+  "moves": [],
+  "code": "new",
+  "slot": "015",
+  "panel": "2"
+ },
+ "XNJD": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/A/r/new/008-the-burning-riders",
+  "title": "The Burning Riders",
+  "moves": [],
+  "code": "new",
+  "slot": "008",
+  "panel": "1"
+ },
+ "ZJCF": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/A/r/old/002-toward-the-plains",
+  "title": "Toward the Plains",
+  "moves": [],
+  "code": "old",
+  "slot": "002",
+  "panel": "2"
+ },
+ "ZMTH": {
+  "source": "generated",
+  "path": "D:/tmp/o24b/A/r/new/012-toward-the-plains",
+  "title": "Toward the Plains",
+  "moves": [],
+  "code": "new",
+  "slot": "012",
+  "panel": "1"
+ }
+}

@@ -1,7 +1,10 @@
 """Blind "Turing test" packets for NEW-AGE solo piano: composed pieces (letters-to-the-morning + the pro-newage-*
 references) vs endless new-age tunes, anonymized.
 
-    python songs/_blind/make_packets_newage.py      # -> songs/_blind/packets_newage/<ID>.txt + KEY_newage.json
+    python songs/_blind/make_packets_newage.py ROUND   # -> songs/_blind/packets_newage/<ID>.txt + KEY_newage.json
+
+Rounds r*: four composed + four generated; g1 / g2: all generated (the judges count); g3 on: the QUALITY rounds - every
+tune folder of na_<round> plus the hidden anchors (COMPOSED), the judges rate each piece (JUDGE_NEWAGE.md).
 
 Every piece is rebuilt from its source (a song.py; an endless tune folder: recomposed from its tune.json by
 run.load_scored, the same call the score command makes), compiled to the render JSON (no audio render) and written
@@ -16,6 +19,7 @@ import contextlib
 import importlib.util
 import io
 import json
+import math
 import random
 import re
 import sys
@@ -37,13 +41,26 @@ COMPOSED = ['letters-to-the-morning', 'pro-newage-rain', 'pro-newage-hopeful', '
     ['letters-to-the-morning', 'pro-newage-waltz', 'pro-newage-lantern', 'pro-newage-homecoming'] if _RN <= 8 else \
     ['letters-to-the-morning', 'pro-newage-homecoming', 'pro-newage-longing', 'pro-newage-skylight']
 # (r6: set 2 joins; r9: three of set 2 - the 3/4 longing and the 6/8 skylight)
+_GN = int(ROUND[1:]) if ROUND.startswith('g') and ROUND[1:].isdigit() else 0
+ALL_GENERATED = 1 <= _GN <= 2           # (rounds g1, g2: every packet an endless tune - the judges are not told;
+if ALL_GENERATED:                       #  they estimate how many are generated, the target ~3 of 10)
+    COMPOSED = []
+QUALITY = _GN >= 3                      # (rounds g3 ...: the judges RATE every piece - JUDGE_NEWAGE.md; 8-9 fresh
+if QUALITY:                             #  generated pieces + hidden hand-composed anchors, the split not disclosed)
+    COMPOSED = ['pro-newage-homecoming', 'pro-newage-longing'] if _GN == 3 else \
+        ['pro-newage-embers', 'pro-newage-tide'] + (['pro-newage-longing'] if _GN >= 7 else [])
+    # (g4 on: references the judges have not seen - the C minor passacaglia and the D Dorian 6/8 arch; g7 on: a third
+    # one, the B minor 3/4 longing - g3's best-rated reference, 7.2 - so one round's yardstick drift averages out:
+    # embers and tide were rated 7.10 in g4 / g5, 6.40 in g6)
 GENERATED = sys.argv[2:] or (['001-gardens-to-autumn', '003-hidden-mirrors-of-spring', '005-before-the-sea',
                               '007-before-the-hills'] if ROUND == 'r5' else [])
 ID_SEED = f"blind-new-age-{ROUND}"
 OUT_DIR = HERE / 'packets_newage'
 KEY_FILE = HERE / 'KEY_newage.json'
 GRID = 12
+UNDER_HELD = 0.25        # (an inner voice: under a higher note held this many beats past it - tells_newage.UNDER_HELD)
 CLUSTER = 0.1
+LEAN = 0.1
 
 
 # ------------------------------------------------------------------------------------------------ the sources
@@ -119,8 +136,12 @@ def packet(song, key: str, tempo, timeline, report, render) -> str:
     n_bars = round(total / meter)
     spans = [(t, t + b, _chord(sym)) for t, b, sym in timeline]
 
-    def bar_of(beat):
-        return int(q(beat) // meter)
+    def bar_of(beat):                                  # (round g9: a downbeat struck up to LEAN early - the melody
+        return int(q(beat + LEAN) // meter)            # leaning ahead, a rolled grip - is its bar's downbeat: JKGC
+        #                                                41 '4.92:F5 2' then bar 42 'rest' read as a hole)
+
+    def pos_of(beat, b):
+        return max(1.0, q(beat) - b * meter + 1)
 
     def chord_at(beat):
         return next((c for a, z, c in spans if a - 1e-6 <= beat < z - 1e-6), None)
@@ -151,7 +172,11 @@ def packet(song, key: str, tempo, timeline, report, render) -> str:
             cells.append(' '.join(here) or '%')
         L.append(f"  {name:<8} (bars {round(s / meter) + 1}-{round(e / meter)}) | {' | '.join(cells)} |")
     L += ['', 'NOTATION', '  bar numbers count from 1 over the whole piece; positions are beats in the bar (1 = downbeat)',
-          '  RH  position:top-note duration(beats) velocity(1-127) [+n = n more right-hand notes struck under it]',
+          '  RH  position:top-note duration(beats) velocity(1-127) [+n = n more right-hand notes struck under it];',
+          '      position:(a b c) note ... = an ornament (turn, mordent): quick notes a b c, then the note they',
+          '      decorate; position:(under) note ... = struck under a higher right-hand note still held (an inner',
+          '      voice, not the melody); a downbeat struck a hair early is printed on its downbeat;',
+          '      (tied: X held from the bar before) = no new note, the note X sounds through the bar; rest = silence',
           '  LH  every left-hand attack: position:note (a+b = struck together), then the velocity range in the bar']
     cur = None
     for b in range(n_bars):
@@ -163,16 +188,43 @@ def packet(song, key: str, tempo, timeline, report, render) -> str:
         L.append(f"bar {b + 1:>3}  {' '.join(chords) if chords else '-'}")
         items = []
         for c in by_rh.get(b, []):
+            pos = pos_of(c[0][0], b)
+            main = max(c, key=lambda n: (n[1], n[0]))
+            grace = sorted((n for n in c if n[1] <= 0.12 and n[0] < main[0] - 0.01), key=lambda n: n[0])
+            one = False
+            if len(grace) == 1:                        # (one quick note: the top of the others is the note it leads
+                main = max((n for n in c if n not in grace), key=lambda n: (n[2], n[1]))     # into, a step away)
+                one = main[1] > 0.25 and abs(grace[0][2] - main[2]) <= 2
+            if (len(grace) >= 2 or one) and max(n[0] for n in c) - min(n[0] for n in c) > 0.05:
+                # (an ornament - a turn, a mordent, a slide: its quick notes in time order, then the note they
+                # decorate; round g1: four judges read a turn printed as a 4-note chord of 0.08 beat as a 'chord grab';
+                # round g14: one quick note leaning into a held downbeat note - a turn's last note, a crushed grace -
+                # printed as the bar's top note, 'A4 0.08 +1', hid the G4 held three beats under it: MYUS 8 / GALR 14
+                # read as "a 0.08-beat stab, then an empty bar" by all seven g13 judges)
+                rest = [n for n in c if n not in grace and n is not main and abs(n[0] - main[0]) < CLUSTER]
+                ch_ = chord_at(main[0] + 0.06)
+                items.append(f"{num(pos)}:({' '.join(sp.note(n[2], ch_) for n in grace)}) {sp.note(main[2], ch_)} "
+                             f"{num(max(1 / GRID, q(main[1])))} v{main[3]}" + (f" +{len(rest)}" if rest else ''))
+                continue
             top = max(c, key=lambda n: (n[2], n[1]))
-            pos = q(c[0][0]) - b * meter + 1
-            items.append(f"{num(pos)}:{sp.note(top[2], chord_at(top[0] + 0.06))} {num(max(1 / GRID, q(top[1])))} "
-                         f"v{top[3]}" + (f" +{len(c) - 1}" if len(c) > 1 else ''))
+            # (round g9: a note struck under a melody note still held - the woven figure, an inner voice - is an
+            # inner voice, not the top line: PKCG 34 'Gb6 +2  Db5  Bb4  Ab6' read as two-octave jumps in a beat;
+            # round g12: held UNDER_HELD beats past its onset - a finger legato's overlap, up to ~100 ms, is the
+            # melody moving on, not an inner voice)
+            under = any(n[0] < top[0] - 0.05 and n[0] + n[1] > top[0] + UNDER_HELD and n[2] >= top[2] + 3 for n in rh)
+            items.append(f"{num(pos)}:{'(under) ' if under else ''}{sp.note(top[2], chord_at(top[0] + 0.06))} "
+                         f"{num(max(1 / GRID, q(top[1])))} v{top[3]}" + (f" +{len(c) - 1}" if len(c) > 1 else ''))
+        if not items:                                  # (round g8: a note tied into the bar (half of it+) is no rest - the
+            held = [n for n in rh if n[0] < b * meter - LEAN and n[0] + n[1] >= (b + 0.5) * meter]   # g7
+            if held:                                   # statistician counted anticipated landings as RH holes)
+                top = max(held, key=lambda n: n[2])
+                items = [f"(tied: {sp.note(top[2], chord_at(b * meter + 0.06))} held from the bar before)"]
         L.append('   RH  ' + ('  '.join(items) if items else 'rest'))
         hits = by_lh.get(b, [])
         if hits:
             words = []
             for c in hits:
-                pos = q(c[0][0]) - b * meter + 1
+                pos = pos_of(c[0][0], b)
                 ch = chord_at(c[0][0] + 0.06)
                 words.append(f"{num(pos)}:" + '+'.join(sp.note(n[2], ch) for n in sorted(c, key=lambda n: n[2])))
             vs = [n[3] for c in hits for n in c]
@@ -185,6 +237,12 @@ def packet(song, key: str, tempo, timeline, report, render) -> str:
               f"{relabel.get(x['name'], x['name'])} {x['lufs'] - g['lufsIntegrated']:+.1f}"
               for x in report.get('sections') or []
               if x['name'] != 'end')]
+    try:                                                # (the performed tempo: rubato, pushes and ritardandi)
+        tm = song.tempo_map()
+        L.append('  tempo per section (mean BPM as performed):  ' + '  '.join(
+            f"{n} {60.0 * (e - s) / max(1e-9, tm.seconds_at(e) - tm.seconds_at(s)):.0f}" for n, s, e in secs))
+    except Exception:
+        pass
     for node in report.get('nodes') or []:
         d = node.get('dynamics')
         if node.get('id') not in ('piano', 'comp') or not isinstance(d, dict):
@@ -194,6 +252,20 @@ def packet(song, key: str, tempo, timeline, report, render) -> str:
         L.append(f"  note dynamics, {hand}: level spread (10-90 %) {d.get('spreadDb')} dB, within phrases "
                  f"{d.get('phraseSpreadDb')} dB, dynamics {d.get('dynamicsDb')} dB; velocities p10 {v.get('p10')} "
                  f"p90 {v.get('p90')} (min {v.get('min')}, max {v.get('max')})")
+    # the hands per section (composer.hands_tells' measures: round g3 on): the right hand's level over the left's in
+    # dB of the notes' energy ((velocity / 127) ** 2.5, summed - negative: the left hand leads) and the share of the
+    # right hand's notes at or above C6
+    def energy(ns):
+        return sum((n[3] / 127.0) ** 2.5 for n in ns)
+    cells = []
+    for name, s_, e_ in secs:
+        r_ = [n for n in rh if s_ - 1e-6 <= n[0] < e_ - 1e-6]
+        l_ = [n for n in lh if s_ - 1e-6 <= n[0] < e_ - 1e-6]
+        bal = f"{10 * math.log10(energy(r_) / energy(l_)):+.1f} dB" if r_ and l_ else '-'
+        hi = f"{sum(n[2] >= 84 for n in r_) / len(r_):.0%}" if r_ else '-'
+        cells.append(f"{name} {bal} / {hi}")
+    L.append('  hands per section (RH level over LH in dB of note energy / share of RH notes at or above C6):  '
+             + '  '.join(cells))
     L.append('  density per section (per bar):  section: RH attacks / RH notes / LH attacks / mean RH top velocity')
     for name, s, e in secs:
         bars = max(1e-9, (e - s) / meter)
@@ -222,7 +294,7 @@ def ids(n: int) -> list[str]:
 
 
 def pieces() -> list:
-    gen = GENERATED or sorted(p.name for p in NA.iterdir() if p.is_dir())[:4]
+    gen = GENERATED or sorted(p.name for p in NA.iterdir() if p.is_dir())[:None if ROUND.startswith('g') else 4]
     return [('composed', ROOT / 'songs' / c) for c in COMPOSED] + [('generated', NA / x) for x in gen]
 
 
@@ -241,6 +313,11 @@ def main() -> int:
         check_notes(folder.name, render, report)
         (OUT_DIR / f"{pid}.txt").write_text(packet(song, k, tempo, tl, report, render), encoding='utf-8')
         key[pid] = {'source': kind, 'path': folder.relative_to(ROOT).as_posix()}
+        if kind == 'generated':                        # (the tune's form and drawn texture, for the analysis)
+            info = json.loads((folder / 'tune.json').read_text(encoding='utf-8'))
+            key[pid]['title'] = info.get('title')
+            sg = getattr(song, 'endless_signature', None) or {}     # (the signature moves' bars: score_round's
+            key[pid]['moves'] = [[d['move'], str(d['role']), *d['bars']] for d in sg.get('statements') or ()]   # hits
         print(f"wrote {OUT_DIR.name}/{pid}.txt")
     KEY_FILE.write_text(json.dumps(dict(sorted(key.items())), indent=1) + '\n', encoding='utf-8')
     return 0

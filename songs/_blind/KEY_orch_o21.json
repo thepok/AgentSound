@@ -1,0 +1,305 @@
+{
+ "AFMD": {
+  "source": "generated",
+  "path": "D:/tmp/o21/r/new/012-the-open-banners",
+  "title": "The Open Banners",
+  "moves": [],
+  "code": "new",
+  "slot": "012",
+  "panel": "1"
+ },
+ "AMNU": {
+  "source": "generated",
+  "path": "D:/tmp/o21/r/new/011-restless-winds",
+  "title": "Restless Winds",
+  "moves": [],
+  "code": "new",
+  "slot": "011",
+  "panel": "2"
+ },
+ "CKXQ": {
+  "source": "generated",
+  "path": "D:/tmp/o21/r/old/011-restless-winds",
+  "title": "Restless Winds",
+  "moves": [],
+  "code": "old",
+  "slot": "011",
+  "panel": "1"
+ },
+ "CRMC": {
+  "source": "generated",
+  "path": "D:/tmp/o21/r/old/009-overture-endless-forests",
+  "title": "Overture: Endless Forests",
+  "moves": [],
+  "code": "old",
+  "slot": "009",
+  "panel": "1"
+ },
+ "DERX": {
+  "source": "generated",
+  "path": "D:/tmp/o21/r/old/002-bright-horizons-of-home",
+  "title": "Bright Horizons of Home",
+  "moves": [],
+  "code": "old",
+  "slot": "002",
+  "panel": "2"
+ },
+ "DJAH": {
+  "source": "generated",
+  "path": "D:/tmp/o21/r/new/006-bright-forests-of-the-dawn",
+  "title": "Bright Forests of the Dawn",
+  "moves": [],
+  "code": "new",
+  "slot": "006",
+  "panel": "1"
+ },
+ "DRDK": {
+  "source": "generated",
+  "path": "D:/tmp/o21/r/new/014-bright-rivers-of-the-valley",
+  "title": "Bright Rivers of the Valley",
+  "moves": [],
+  "code": "new",
+  "slot": "014",
+  "panel": "1"
+ },
+ "EJFH": {
+  "source": "generated",
+  "path": "D:/tmp/o21/r/old/008-toward-the-plains",
+  "title": "Toward the Plains",
+  "moves": [],
+  "code": "old",
+  "slot": "008",
+  "panel": "2"
+ },
+ "ENKH": {
+  "source": "generated",
+  "path": "D:/tmp/o21/r/old/005-winds-of-the-sea",
+  "title": "Winds of the Sea",
+  "moves": [],
+  "code": "old",
+  "slot": "005",
+  "panel": "1"
+ },
+ "EVNJ": {
+  "source": "generated",
+  "path": "D:/tmp/o21/r/new/001-forests-of-the-harvest",
+  "title": "Forests of the Harvest",
+  "moves": [],
+  "code": "new",
+  "slot": "001",
+  "panel": "2"
+ },
+ "FEYR": {
+  "source": "generated",
+  "path": "D:/tmp/o21/r/old/007-overture-wild-fires",
+  "title": "Overture: Wild Fires",
+  "moves": [],
+  "code": "old",
+  "slot": "007",
+  "panel": "1"
+ },
+ "GMXR": {
+  "source": "generated",
+  "path": "D:/tmp/o21/r/new/007-overture-wild-fires",
+  "title": "Overture: Wild Fires",
+  "moves": [],
+  "code": "new",
+  "slot": "007",
+  "panel": "2"
+ },
+ "GUHD": {
+  "source": "generated",
+  "path": "D:/tmp/o21/r/new/008-toward-the-plains",
+  "title": "Toward the Plains",
+  "moves": [],
+  "code": "new",
+  "slot": "008",
+  "panel": "1"
+ },
+ "HDPE": {
+  "source": "generated",
+  "path": "D:/tmp/o21/r/old/012-the-open-banners",
+  "title": "The Open Banners",
+  "moves": [],
+  "code": "old",
+  "slot": "012",
+  "panel": "2"
+ },
+ "JVRA": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-scherzo",
+  "panel": "all"
+ },
+ "JVZS": {
+  "source": "generated",
+  "path": "D:/tmp/o21/r/new/015-endless-horizons-of-the-harvest",
+  "title": "Endless Horizons of the Harvest",
+  "moves": [],
+  "code": "new",
+  "slot": "015",
+  "panel": "2"
+ },
+ "JXWF": {
+  "source": "generated",
+  "path": "D:/tmp/o21/r/old/006-bright-forests-of-the-dawn",
+  "title": "Bright Forests of the Dawn",
+  "moves": [],
+  "code": "old",
+  "slot": "006",
+  "panel": "2"
+ },
+ "KSMZ": {
+  "source": "generated",
+  "path": "D:/tmp/o21/r/new/002-bright-horizons-of-home",
+  "title": "Bright Horizons of Home",
+  "moves": [],
+  "code": "new",
+  "slot": "002",
+  "panel": "1"
+ },
+ "LMHJ": {
+  "source": "generated",
+  "path": "D:/tmp/o21/r/new/009-overture-endless-forests",
+  "title": "Overture: Endless Forests",
+  "moves": [],
+  "code": "new",
+  "slot": "009",
+  "panel": "2"
+ },
+ "NMNY": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-stormy",
+  "panel": "all"
+ },
+ "QWXN": {
+  "source": "generated",
+  "path": "D:/tmp/o21/r/new/004-symphonic-dance-rivers-of-home",
+  "title": "Symphonic Dance: Rivers of Home",
+  "moves": [],
+  "code": "new",
+  "slot": "004",
+  "panel": "1"
+ },
+ "RATN": {
+  "source": "generated",
+  "path": "D:/tmp/o21/r/new/016-bells-of-the-plains",
+  "title": "Bells of the Plains",
+  "moves": [],
+  "code": "new",
+  "slot": "016",
+  "panel": "1"
+ },
+ "RCCM": {
+  "source": "generated",
+  "path": "D:/tmp/o21/r/old/013-the-endless-rivers",
+  "title": "The Endless Rivers",
+  "moves": [],
+  "code": "old",
+  "slot": "013",
+  "panel": "1"
+ },
+ "SBBW": {
+  "source": "generated",
+  "path": "D:/tmp/o21/r/old/003-the-northern-voyages",
+  "title": "The Northern Voyages",
+  "moves": [],
+  "code": "old",
+  "slot": "003",
+  "panel": "1"
+ },
+ "TJLD": {
+  "source": "generated",
+  "path": "D:/tmp/o21/r/old/010-symphonic-dance-horizons-of-the-dawn",
+  "title": "Symphonic Dance: Horizons of the Dawn",
+  "moves": [],
+  "code": "old",
+  "slot": "010",
+  "panel": "2"
+ },
+ "TMLR": {
+  "source": "generated",
+  "path": "D:/tmp/o21/r/old/016-bells-of-the-plains",
+  "title": "Bells of the Plains",
+  "moves": [],
+  "code": "old",
+  "slot": "016",
+  "panel": "2"
+ },
+ "TRSL": {
+  "source": "generated",
+  "path": "D:/tmp/o21/r/new/013-the-endless-rivers",
+  "title": "The Endless Rivers",
+  "moves": [],
+  "code": "new",
+  "slot": "013",
+  "panel": "2"
+ },
+ "TTNH": {
+  "source": "generated",
+  "path": "D:/tmp/o21/r/new/005-winds-of-the-sea",
+  "title": "Winds of the Sea",
+  "moves": [],
+  "code": "new",
+  "slot": "005",
+  "panel": "2"
+ },
+ "TYRS": {
+  "source": "generated",
+  "path": "D:/tmp/o21/r/old/001-forests-of-the-harvest",
+  "title": "Forests of the Harvest",
+  "moves": [],
+  "code": "old",
+  "slot": "001",
+  "panel": "1"
+ },
+ "UPQR": {
+  "source": "generated",
+  "path": "D:/tmp/o21/r/new/010-symphonic-dance-horizons-of-the-dawn",
+  "title": "Symphonic Dance: Horizons of the Dawn",
+  "moves": [],
+  "code": "new",
+  "slot": "010",
+  "panel": "1"
+ },
+ "VLFT": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-river",
+  "panel": "all"
+ },
+ "VWZA": {
+  "source": "generated",
+  "path": "D:/tmp/o21/r/new/003-the-northern-voyages",
+  "title": "The Northern Voyages",
+  "moves": [],
+  "code": "new",
+  "slot": "003",
+  "panel": "2"
+ },
+ "XCPM": {
+  "source": "generated",
+  "path": "D:/tmp/o21/r/old/014-bright-rivers-of-the-valley",
+  "title": "Bright Rivers of the Valley",
+  "moves": [],
+  "code": "old",
+  "slot": "014",
+  "panel": "2"
+ },
+ "YHKT": {
+  "source": "generated",
+  "path": "D:/tmp/o21/r/old/015-endless-horizons-of-the-harvest",
+  "title": "Endless Horizons of the Harvest",
+  "moves": [],
+  "code": "old",
+  "slot": "015",
+  "panel": "1"
+ },
+ "ZLAV": {
+  "source": "generated",
+  "path": "D:/tmp/o21/r/old/004-symphonic-dance-rivers-of-home",
+  "title": "Symphonic Dance: Rivers of Home",
+  "moves": [],
+  "code": "old",
+  "slot": "004",
+  "panel": "2"
+ }
+}

@@ -1,0 +1,143 @@
+{
+ "CDCY": {
+  "source": "generated",
+  "path": "D:/tmp/o3/r/new/005-the-stormy-winds",
+  "title": "The Stormy Winds",
+  "moves": [],
+  "code": "new",
+  "slot": "005",
+  "panel": "2"
+ },
+ "GEUP": {
+  "source": "generated",
+  "path": "D:/tmp/o3/r/new/003-overture-golden-rivers",
+  "title": "Overture: Golden Rivers",
+  "moves": [],
+  "code": "new",
+  "slot": "003",
+  "panel": "2"
+ },
+ "KQZS": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-scherzo",
+  "panel": "all"
+ },
+ "LCCA": {
+  "source": "generated",
+  "path": "D:/tmp/o3/r/new/001-symphonic-dance-horizons-of-the-plains",
+  "title": "Symphonic Dance: Horizons of the Plains",
+  "moves": [],
+  "code": "new",
+  "slot": "001",
+  "panel": "2"
+ },
+ "MCMJ": {
+  "source": "generated",
+  "path": "D:/tmp/o3/r/old/007-toward-the-sea",
+  "title": "Toward the Sea",
+  "moves": [],
+  "code": "old",
+  "slot": "007",
+  "panel": "1"
+ },
+ "QUPN": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-stormy",
+  "panel": "all"
+ },
+ "RJJY": {
+  "source": "generated",
+  "path": "D:/tmp/o3/r/old/004-rivers-of-the-valley",
+  "title": "Rivers of the Valley",
+  "moves": [],
+  "code": "old",
+  "slot": "004",
+  "panel": "2"
+ },
+ "SZDR": {
+  "source": "generated",
+  "path": "D:/tmp/o3/r/new/002-overture-hidden-mountains",
+  "title": "Overture: Hidden Mountains",
+  "moves": [],
+  "code": "new",
+  "slot": "002",
+  "panel": "1"
+ },
+ "TEKS": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-river",
+  "panel": "all"
+ },
+ "URJK": {
+  "source": "generated",
+  "path": "D:/tmp/o3/r/old/002-symphonic-dance-forests-of-home",
+  "title": "Symphonic Dance: Forests of Home",
+  "moves": [],
+  "code": "old",
+  "slot": "002",
+  "panel": "2"
+ },
+ "WDUH": {
+  "source": "generated",
+  "path": "D:/tmp/o3/r/new/004-rivers-of-the-valley",
+  "title": "Rivers of the Valley",
+  "moves": [],
+  "code": "new",
+  "slot": "004",
+  "panel": "1"
+ },
+ "XARK": {
+  "source": "generated",
+  "path": "D:/tmp/o3/r/old/005-toward-the-dawn",
+  "title": "Toward the Dawn",
+  "moves": [],
+  "code": "old",
+  "slot": "005",
+  "panel": "1"
+ },
+ "XLQR": {
+  "source": "generated",
+  "path": "D:/tmp/o3/r/new/006-the-northern-voyages",
+  "title": "The Northern Voyages",
+  "moves": [],
+  "code": "new",
+  "slot": "006",
+  "panel": "1"
+ },
+ "XPBX": {
+  "source": "generated",
+  "path": "D:/tmp/o3/r/new/007-symphonic-dance-winds-of-the-valley",
+  "title": "Symphonic Dance: Winds of the Valley",
+  "moves": [],
+  "code": "new",
+  "slot": "007",
+  "panel": "2"
+ },
+ "YDCT": {
+  "source": "generated",
+  "path": "D:/tmp/o3/r/old/001-symphonic-dance-horizons-of-the-plains",
+  "title": "Symphonic Dance: Horizons of the Plains",
+  "moves": [],
+  "code": "old",
+  "slot": "001",
+  "panel": "1"
+ },
+ "YWCN": {
+  "source": "generated",
+  "path": "D:/tmp/o3/r/old/003-wild-winds-of-the-valley",
+  "title": "Wild Winds of the Valley",
+  "moves": [],
+  "code": "old",
+  "slot": "003",
+  "panel": "1"
+ },
+ "YYTF": {
+  "source": "generated",
+  "path": "D:/tmp/o3/r/old/006-the-northern-voyages",
+  "title": "The Northern Voyages",
+  "moves": [],
+  "code": "old",
+  "slot": "006",
+  "panel": "2"
+ }
+}

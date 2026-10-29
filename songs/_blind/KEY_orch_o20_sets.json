@@ -1,0 +1,257 @@
+{
+ "round": "o20",
+ "pairs": {
+  "set139500": {
+   "dir": "D:/tmp/o20/sets/set139500",
+   "judges": {
+    "composerA": {
+     "X": "new",
+     "Y": "old",
+     "first": "X"
+    },
+    "composerB": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    },
+    "composerC": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "composerD": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    },
+    "composerE": {
+     "X": "new",
+     "Y": "old",
+     "first": "X"
+    },
+    "statistician": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    },
+    "orchestrator": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    }
+   },
+   "sets": {
+    "new": [
+     "D:/tmp/o20/sets/set139500/new/001-stormy-forests-of-the-dawn",
+     "D:/tmp/o20/sets/set139500/new/002-fields-of-summer",
+     "D:/tmp/o20/sets/set139500/new/003-fires-of-home",
+     "D:/tmp/o20/sets/set139500/new/004-wings-of-winter",
+     "D:/tmp/o20/sets/set139500/new/005-silver-tides-of-the-north",
+     "D:/tmp/o20/sets/set139500/new/006-open-winds",
+     "D:/tmp/o20/sets/set139500/new/007-toward-the-north",
+     "D:/tmp/o20/sets/set139500/new/008-symphonic-dance-riders-of-the-plains"
+    ],
+    "old": [
+     "D:/tmp/o20/sets/set139500/old/001-stormy-forests-of-the-dawn",
+     "D:/tmp/o20/sets/set139500/old/002-fields-of-summer",
+     "D:/tmp/o20/sets/set139500/old/003-fires-of-home",
+     "D:/tmp/o20/sets/set139500/old/004-wings-of-winter",
+     "D:/tmp/o20/sets/set139500/old/005-silver-tides-of-the-north",
+     "D:/tmp/o20/sets/set139500/old/006-open-winds",
+     "D:/tmp/o20/sets/set139500/old/007-toward-the-north",
+     "D:/tmp/o20/sets/set139500/old/008-symphonic-dance-riders-of-the-plains"
+    ]
+   },
+   "titles": {
+    "new": [
+     "Stormy Forests of the Dawn",
+     "Fields of Summer",
+     "Fires of Home",
+     "Wings of Winter",
+     "Silver Tides of the North",
+     "Open Winds",
+     "Toward the North",
+     "Symphonic Dance: Riders of the Plains"
+    ],
+    "old": [
+     "Stormy Forests of the Dawn",
+     "Fields of Summer",
+     "Fires of Home",
+     "Wings of Winter",
+     "Silver Tides of the North",
+     "Open Winds",
+     "Toward the North",
+     "Symphonic Dance: Riders of the Plains"
+    ]
+   }
+  },
+  "set139600": {
+   "dir": "D:/tmp/o20/sets/set139600",
+   "judges": {
+    "composerA": {
+     "X": "new",
+     "Y": "old",
+     "first": "X"
+    },
+    "composerB": {
+     "X": "new",
+     "Y": "old",
+     "first": "X"
+    },
+    "composerC": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    },
+    "composerD": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    },
+    "composerE": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "statistician": {
+     "X": "new",
+     "Y": "old",
+     "first": "X"
+    },
+    "orchestrator": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    }
+   },
+   "sets": {
+    "new": [
+     "D:/tmp/o20/sets/set139600/new/001-overture-hidden-storms",
+     "D:/tmp/o20/sets/set139600/new/002-overture-rising-winds",
+     "D:/tmp/o20/sets/set139600/new/003-overture-bright-voyages",
+     "D:/tmp/o20/sets/set139600/new/004-the-silver-wings",
+     "D:/tmp/o20/sets/set139600/new/005-overture-endless-mountains",
+     "D:/tmp/o20/sets/set139600/new/006-iron-banners",
+     "D:/tmp/o20/sets/set139600/new/007-overture-wild-fields",
+     "D:/tmp/o20/sets/set139600/new/008-overture-wild-storms"
+    ],
+    "old": [
+     "D:/tmp/o20/sets/set139600/old/001-overture-hidden-storms",
+     "D:/tmp/o20/sets/set139600/old/002-overture-rising-winds",
+     "D:/tmp/o20/sets/set139600/old/003-overture-bright-voyages",
+     "D:/tmp/o20/sets/set139600/old/004-the-silver-wings",
+     "D:/tmp/o20/sets/set139600/old/005-overture-endless-mountains",
+     "D:/tmp/o20/sets/set139600/old/006-iron-banners",
+     "D:/tmp/o20/sets/set139600/old/007-overture-wild-fields",
+     "D:/tmp/o20/sets/set139600/old/008-overture-wild-storms"
+    ]
+   },
+   "titles": {
+    "new": [
+     "Overture: Hidden Storms",
+     "Overture: Rising Winds",
+     "Overture: Bright Voyages",
+     "The Silver Wings",
+     "Overture: Endless Mountains",
+     "Iron Banners",
+     "Overture: Wild Fields",
+     "Overture: Wild Storms"
+    ],
+    "old": [
+     "Overture: Hidden Storms",
+     "Overture: Rising Winds",
+     "Overture: Bright Voyages",
+     "The Silver Wings",
+     "Overture: Endless Mountains",
+     "Iron Banners",
+     "Overture: Wild Fields",
+     "Overture: Wild Storms"
+    ]
+   }
+  },
+  "set139700": {
+   "dir": "D:/tmp/o20/sets/set139700",
+   "judges": {
+    "composerA": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    },
+    "composerB": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "composerC": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "composerD": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    },
+    "composerE": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    },
+    "statistician": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "orchestrator": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    }
+   },
+   "sets": {
+    "new": [
+     "D:/tmp/o20/sets/set139700/new/001-heroic-wings-of-the-plains",
+     "D:/tmp/o20/sets/set139700/new/002-mountains-of-winter",
+     "D:/tmp/o20/sets/set139700/new/003-the-burning-tides",
+     "D:/tmp/o20/sets/set139700/new/004-wild-winds-of-summer",
+     "D:/tmp/o20/sets/set139700/new/005-burning-winds-of-the-storm",
+     "D:/tmp/o20/sets/set139700/new/006-rivers-of-winter",
+     "D:/tmp/o20/sets/set139700/new/007-northern-tides",
+     "D:/tmp/o20/sets/set139700/new/008-the-silver-rivers"
+    ],
+    "old": [
+     "D:/tmp/o20/sets/set139700/old/001-heroic-wings-of-the-plains",
+     "D:/tmp/o20/sets/set139700/old/002-mountains-of-winter",
+     "D:/tmp/o20/sets/set139700/old/003-the-burning-tides",
+     "D:/tmp/o20/sets/set139700/old/004-wild-winds-of-summer",
+     "D:/tmp/o20/sets/set139700/old/005-burning-winds-of-the-storm",
+     "D:/tmp/o20/sets/set139700/old/006-rivers-of-winter",
+     "D:/tmp/o20/sets/set139700/old/007-northern-tides",
+     "D:/tmp/o20/sets/set139700/old/008-the-silver-rivers"
+    ]
+   },
+   "titles": {
+    "new": [
+     "Heroic Wings of the Plains",
+     "Mountains of Winter",
+     "The Burning Tides",
+     "Wild Winds of Summer",
+     "Burning Winds of the Storm",
+     "Rivers of Winter",
+     "Northern Tides",
+     "The Silver Rivers"
+    ],
+    "old": [
+     "Heroic Wings of the Plains",
+     "Mountains of Winter",
+     "The Burning Tides",
+     "Wild Winds of Summer",
+     "Burning Winds of the Storm",
+     "Rivers of Winter",
+     "Northern Tides",
+     "The Silver Rivers"
+    ]
+   }
+  }
+ }
+}

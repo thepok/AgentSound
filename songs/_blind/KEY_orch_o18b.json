@@ -1,0 +1,305 @@
+{
+ "AWBJ": {
+  "source": "generated",
+  "path": "D:/tmp/o18b/r/old/009-toward-summer",
+  "title": "Toward Summer",
+  "moves": [],
+  "code": "old",
+  "slot": "009",
+  "panel": "1"
+ },
+ "BVMD": {
+  "source": "generated",
+  "path": "D:/tmp/o18b/r/old/011-symphonic-dance-winds-of-the-storm",
+  "title": "Symphonic Dance: Winds of the Storm",
+  "moves": [],
+  "code": "old",
+  "slot": "011",
+  "panel": "1"
+ },
+ "BWVE": {
+  "source": "generated",
+  "path": "D:/tmp/o18b/r/new/007-hidden-forests-of-the-harvest",
+  "title": "Hidden Forests of the Harvest",
+  "moves": [],
+  "code": "new",
+  "slot": "007",
+  "panel": "2"
+ },
+ "CYPB": {
+  "source": "generated",
+  "path": "D:/tmp/o18b/r/old/016-iron-wings-of-summer",
+  "title": "Iron Wings of Summer",
+  "moves": [],
+  "code": "old",
+  "slot": "016",
+  "panel": "2"
+ },
+ "DFJA": {
+  "source": "generated",
+  "path": "D:/tmp/o18b/r/new/014-bright-storms-of-summer",
+  "title": "Bright Storms of Summer",
+  "moves": [],
+  "code": "new",
+  "slot": "014",
+  "panel": "1"
+ },
+ "DXNC": {
+  "source": "generated",
+  "path": "D:/tmp/o18b/r/old/015-symphonic-dance-horizons-of-home",
+  "title": "Symphonic Dance: Horizons of Home",
+  "moves": [],
+  "code": "old",
+  "slot": "015",
+  "panel": "1"
+ },
+ "EJFY": {
+  "source": "generated",
+  "path": "D:/tmp/o18b/r/old/001-fires-of-the-sea",
+  "title": "Fires of the Sea",
+  "moves": [],
+  "code": "old",
+  "slot": "001",
+  "panel": "1"
+ },
+ "ELFR": {
+  "source": "generated",
+  "path": "D:/tmp/o18b/r/new/002-fields-of-the-dawn",
+  "title": "Fields of the Dawn",
+  "moves": [],
+  "code": "new",
+  "slot": "002",
+  "panel": "1"
+ },
+ "ELPQ": {
+  "source": "generated",
+  "path": "D:/tmp/o18b/r/old/012-rising-winds",
+  "title": "Rising Winds",
+  "moves": [],
+  "code": "old",
+  "slot": "012",
+  "panel": "2"
+ },
+ "FSBZ": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-river",
+  "panel": "all"
+ },
+ "HQRA": {
+  "source": "generated",
+  "path": "D:/tmp/o18b/r/new/016-iron-wings-of-summer",
+  "title": "Iron Wings of Summer",
+  "moves": [],
+  "code": "new",
+  "slot": "016",
+  "panel": "1"
+ },
+ "HYRF": {
+  "source": "generated",
+  "path": "D:/tmp/o18b/r/new/003-the-golden-riders",
+  "title": "The Golden Riders",
+  "moves": [],
+  "code": "new",
+  "slot": "003",
+  "panel": "2"
+ },
+ "JDGP": {
+  "source": "generated",
+  "path": "D:/tmp/o18b/r/new/009-toward-summer",
+  "title": "Toward Summer",
+  "moves": [],
+  "code": "new",
+  "slot": "009",
+  "panel": "2"
+ },
+ "KJPB": {
+  "source": "generated",
+  "path": "D:/tmp/o18b/r/old/014-bright-storms-of-summer",
+  "title": "Bright Storms of Summer",
+  "moves": [],
+  "code": "old",
+  "slot": "014",
+  "panel": "2"
+ },
+ "MLXA": {
+  "source": "generated",
+  "path": "D:/tmp/o18b/r/new/001-fires-of-the-sea",
+  "title": "Fires of the Sea",
+  "moves": [],
+  "code": "new",
+  "slot": "001",
+  "panel": "2"
+ },
+ "NFCX": {
+  "source": "generated",
+  "path": "D:/tmp/o18b/r/new/010-symphonic-dance-wings-of-summer",
+  "title": "Symphonic Dance: Wings of Summer",
+  "moves": [],
+  "code": "new",
+  "slot": "010",
+  "panel": "1"
+ },
+ "PFEM": {
+  "source": "generated",
+  "path": "D:/tmp/o18b/r/old/005-riders-of-home",
+  "title": "Riders of Home",
+  "moves": [],
+  "code": "old",
+  "slot": "005",
+  "panel": "1"
+ },
+ "PLLW": {
+  "source": "generated",
+  "path": "D:/tmp/o18b/r/new/011-symphonic-dance-winds-of-the-storm",
+  "title": "Symphonic Dance: Winds of the Storm",
+  "moves": [],
+  "code": "new",
+  "slot": "011",
+  "panel": "2"
+ },
+ "QEPD": {
+  "source": "generated",
+  "path": "D:/tmp/o18b/r/new/005-riders-of-home",
+  "title": "Riders of Home",
+  "moves": [],
+  "code": "new",
+  "slot": "005",
+  "panel": "2"
+ },
+ "QEZB": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-scherzo",
+  "panel": "all"
+ },
+ "QUJF": {
+  "source": "generated",
+  "path": "D:/tmp/o18b/r/old/010-symphonic-dance-wings-of-summer",
+  "title": "Symphonic Dance: Wings of Summer",
+  "moves": [],
+  "code": "old",
+  "slot": "010",
+  "panel": "2"
+ },
+ "RFWG": {
+  "source": "generated",
+  "path": "D:/tmp/o18b/r/new/006-the-bright-voyages",
+  "title": "The Bright Voyages",
+  "moves": [],
+  "code": "new",
+  "slot": "006",
+  "panel": "1"
+ },
+ "SFZB": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-stormy",
+  "panel": "all"
+ },
+ "SRUS": {
+  "source": "generated",
+  "path": "D:/tmp/o18b/r/new/004-symphonic-dance-winds-of-summer",
+  "title": "Symphonic Dance: Winds of Summer",
+  "moves": [],
+  "code": "new",
+  "slot": "004",
+  "panel": "1"
+ },
+ "TXPW": {
+  "source": "generated",
+  "path": "D:/tmp/o18b/r/old/004-symphonic-dance-winds-of-summer",
+  "title": "Symphonic Dance: Winds of Summer",
+  "moves": [],
+  "code": "old",
+  "slot": "004",
+  "panel": "2"
+ },
+ "UFLM": {
+  "source": "generated",
+  "path": "D:/tmp/o18b/r/old/007-hidden-forests-of-the-harvest",
+  "title": "Hidden Forests of the Harvest",
+  "moves": [],
+  "code": "old",
+  "slot": "007",
+  "panel": "1"
+ },
+ "UURQ": {
+  "source": "generated",
+  "path": "D:/tmp/o18b/r/new/012-rising-winds",
+  "title": "Rising Winds",
+  "moves": [],
+  "code": "new",
+  "slot": "012",
+  "panel": "1"
+ },
+ "VEYQ": {
+  "source": "generated",
+  "path": "D:/tmp/o18b/r/old/006-the-bright-voyages",
+  "title": "The Bright Voyages",
+  "moves": [],
+  "code": "old",
+  "slot": "006",
+  "panel": "2"
+ },
+ "VGVX": {
+  "source": "generated",
+  "path": "D:/tmp/o18b/r/old/003-the-golden-riders",
+  "title": "The Golden Riders",
+  "moves": [],
+  "code": "old",
+  "slot": "003",
+  "panel": "1"
+ },
+ "VSDP": {
+  "source": "generated",
+  "path": "D:/tmp/o18b/r/new/008-toward-the-dawn",
+  "title": "Toward the Dawn",
+  "moves": [],
+  "code": "new",
+  "slot": "008",
+  "panel": "1"
+ },
+ "WDFG": {
+  "source": "generated",
+  "path": "D:/tmp/o18b/r/new/015-symphonic-dance-horizons-of-home",
+  "title": "Symphonic Dance: Horizons of Home",
+  "moves": [],
+  "code": "new",
+  "slot": "015",
+  "panel": "2"
+ },
+ "WTUZ": {
+  "source": "generated",
+  "path": "D:/tmp/o18b/r/old/008-toward-the-dawn",
+  "title": "Toward the Dawn",
+  "moves": [],
+  "code": "old",
+  "slot": "008",
+  "panel": "2"
+ },
+ "XMYN": {
+  "source": "generated",
+  "path": "D:/tmp/o18b/r/new/013-symphonic-dance-fields-of-the-storm",
+  "title": "Symphonic Dance: Fields of the Storm",
+  "moves": [],
+  "code": "new",
+  "slot": "013",
+  "panel": "2"
+ },
+ "YTVZ": {
+  "source": "generated",
+  "path": "D:/tmp/o18b/r/old/002-fields-of-the-dawn",
+  "title": "Fields of the Dawn",
+  "moves": [],
+  "code": "old",
+  "slot": "002",
+  "panel": "2"
+ },
+ "ZKMQ": {
+  "source": "generated",
+  "path": "D:/tmp/o18b/r/old/013-symphonic-dance-fields-of-the-storm",
+  "title": "Symphonic Dance: Fields of the Storm",
+  "moves": [],
+  "code": "old",
+  "slot": "013",
+  "panel": "1"
+ }
+}

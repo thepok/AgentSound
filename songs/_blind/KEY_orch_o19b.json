@@ -1,0 +1,305 @@
+{
+ "AVSK": {
+  "source": "generated",
+  "path": "D:/tmp/o19b/r/new/014-tides-of-the-valley",
+  "title": "Tides of the Valley",
+  "moves": [],
+  "code": "new",
+  "slot": "014",
+  "panel": "1"
+ },
+ "BUNU": {
+  "source": "generated",
+  "path": "D:/tmp/o19b/r/old/001-toward-the-sea",
+  "title": "Toward the Sea",
+  "moves": [],
+  "code": "old",
+  "slot": "001",
+  "panel": "1"
+ },
+ "CJTK": {
+  "source": "generated",
+  "path": "D:/tmp/o19b/r/old/008-overture-restless-forests",
+  "title": "Overture: Restless Forests",
+  "moves": [],
+  "code": "old",
+  "slot": "008",
+  "panel": "2"
+ },
+ "DDQS": {
+  "source": "generated",
+  "path": "D:/tmp/o19b/r/new/003-overture-heroic-tides",
+  "title": "Overture: Heroic Tides",
+  "moves": [],
+  "code": "new",
+  "slot": "003",
+  "panel": "2"
+ },
+ "EQTH": {
+  "source": "generated",
+  "path": "D:/tmp/o19b/r/old/004-horizons-of-the-dawn",
+  "title": "Horizons of the Dawn",
+  "moves": [],
+  "code": "old",
+  "slot": "004",
+  "panel": "2"
+ },
+ "ERUV": {
+  "source": "generated",
+  "path": "D:/tmp/o19b/r/new/015-open-storms-of-the-valley",
+  "title": "Open Storms of the Valley",
+  "moves": [],
+  "code": "new",
+  "slot": "015",
+  "panel": "2"
+ },
+ "FDJQ": {
+  "source": "generated",
+  "path": "D:/tmp/o19b/r/new/006-rising-forests-of-winter",
+  "title": "Rising Forests of Winter",
+  "moves": [],
+  "code": "new",
+  "slot": "006",
+  "panel": "1"
+ },
+ "FGXD": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-river",
+  "panel": "all"
+ },
+ "FVSQ": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-scherzo",
+  "panel": "all"
+ },
+ "FXXQ": {
+  "source": "generated",
+  "path": "D:/tmp/o19b/r/old/015-open-storms-of-the-valley",
+  "title": "Open Storms of the Valley",
+  "moves": [],
+  "code": "old",
+  "slot": "015",
+  "panel": "1"
+ },
+ "FYEK": {
+  "source": "generated",
+  "path": "D:/tmp/o19b/r/old/009-open-winds-of-winter",
+  "title": "Open Winds of Winter",
+  "moves": [],
+  "code": "old",
+  "slot": "009",
+  "panel": "1"
+ },
+ "GELL": {
+  "source": "generated",
+  "path": "D:/tmp/o19b/r/old/011-overture-heroic-storms",
+  "title": "Overture: Heroic Storms",
+  "moves": [],
+  "code": "old",
+  "slot": "011",
+  "panel": "1"
+ },
+ "GEPR": {
+  "source": "generated",
+  "path": "D:/tmp/o19b/r/new/001-toward-the-sea",
+  "title": "Toward the Sea",
+  "moves": [],
+  "code": "new",
+  "slot": "001",
+  "panel": "2"
+ },
+ "GKER": {
+  "source": "generated",
+  "path": "D:/tmp/o19b/r/new/002-symphonic-dance-wings-of-the-storm",
+  "title": "Symphonic Dance: Wings of the Storm",
+  "moves": [],
+  "code": "new",
+  "slot": "002",
+  "panel": "1"
+ },
+ "HZMX": {
+  "source": "generated",
+  "path": "D:/tmp/o19b/r/new/008-overture-restless-forests",
+  "title": "Overture: Restless Forests",
+  "moves": [],
+  "code": "new",
+  "slot": "008",
+  "panel": "1"
+ },
+ "KBRL": {
+  "source": "generated",
+  "path": "D:/tmp/o19b/r/new/016-tides-of-the-sea",
+  "title": "Tides of the Sea",
+  "moves": [],
+  "code": "new",
+  "slot": "016",
+  "panel": "1"
+ },
+ "KPMS": {
+  "source": "generated",
+  "path": "D:/tmp/o19b/r/old/005-horizons-of-home",
+  "title": "Horizons of Home",
+  "moves": [],
+  "code": "old",
+  "slot": "005",
+  "panel": "1"
+ },
+ "LHZX": {
+  "source": "generated",
+  "path": "D:/tmp/o19b/r/new/005-horizons-of-home",
+  "title": "Horizons of Home",
+  "moves": [],
+  "code": "new",
+  "slot": "005",
+  "panel": "2"
+ },
+ "LPAF": {
+  "source": "generated",
+  "path": "D:/tmp/o19b/r/new/007-overture-northern-bells",
+  "title": "Overture: Northern Bells",
+  "moves": [],
+  "code": "new",
+  "slot": "007",
+  "panel": "2"
+ },
+ "LUNL": {
+  "source": "generated",
+  "path": "D:/tmp/o19b/r/new/013-the-open-riders",
+  "title": "The Open Riders",
+  "moves": [],
+  "code": "new",
+  "slot": "013",
+  "panel": "2"
+ },
+ "NMQF": {
+  "source": "generated",
+  "path": "D:/tmp/o19b/r/old/007-overture-northern-bells",
+  "title": "Overture: Northern Bells",
+  "moves": [],
+  "code": "old",
+  "slot": "007",
+  "panel": "1"
+ },
+ "NPDD": {
+  "source": "generated",
+  "path": "D:/tmp/o19b/r/old/012-overture-stormy-horizons",
+  "title": "Overture: Stormy Horizons",
+  "moves": [],
+  "code": "old",
+  "slot": "012",
+  "panel": "2"
+ },
+ "PJFK": {
+  "source": "generated",
+  "path": "D:/tmp/o19b/r/old/016-tides-of-the-sea",
+  "title": "Tides of the Sea",
+  "moves": [],
+  "code": "old",
+  "slot": "016",
+  "panel": "2"
+ },
+ "RECB": {
+  "source": "generated",
+  "path": "D:/tmp/o19b/r/old/002-symphonic-dance-wings-of-the-storm",
+  "title": "Symphonic Dance: Wings of the Storm",
+  "moves": [],
+  "code": "old",
+  "slot": "002",
+  "panel": "2"
+ },
+ "REUF": {
+  "source": "generated",
+  "path": "D:/tmp/o19b/r/old/006-rising-forests-of-winter",
+  "title": "Rising Forests of Winter",
+  "moves": [],
+  "code": "old",
+  "slot": "006",
+  "panel": "2"
+ },
+ "SECE": {
+  "source": "generated",
+  "path": "D:/tmp/o19b/r/old/014-tides-of-the-valley",
+  "title": "Tides of the Valley",
+  "moves": [],
+  "code": "old",
+  "slot": "014",
+  "panel": "2"
+ },
+ "TNSF": {
+  "source": "generated",
+  "path": "D:/tmp/o19b/r/new/004-horizons-of-the-dawn",
+  "title": "Horizons of the Dawn",
+  "moves": [],
+  "code": "new",
+  "slot": "004",
+  "panel": "1"
+ },
+ "UZBH": {
+  "source": "generated",
+  "path": "D:/tmp/o19b/r/new/011-overture-heroic-storms",
+  "title": "Overture: Heroic Storms",
+  "moves": [],
+  "code": "new",
+  "slot": "011",
+  "panel": "2"
+ },
+ "VEBZ": {
+  "source": "generated",
+  "path": "D:/tmp/o19b/r/new/010-toward-summer",
+  "title": "Toward Summer",
+  "moves": [],
+  "code": "new",
+  "slot": "010",
+  "panel": "1"
+ },
+ "VZQG": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-stormy",
+  "panel": "all"
+ },
+ "XEVZ": {
+  "source": "generated",
+  "path": "D:/tmp/o19b/r/old/013-the-open-riders",
+  "title": "The Open Riders",
+  "moves": [],
+  "code": "old",
+  "slot": "013",
+  "panel": "1"
+ },
+ "XPSZ": {
+  "source": "generated",
+  "path": "D:/tmp/o19b/r/old/010-toward-summer",
+  "title": "Toward Summer",
+  "moves": [],
+  "code": "old",
+  "slot": "010",
+  "panel": "2"
+ },
+ "XUHE": {
+  "source": "generated",
+  "path": "D:/tmp/o19b/r/new/012-overture-stormy-horizons",
+  "title": "Overture: Stormy Horizons",
+  "moves": [],
+  "code": "new",
+  "slot": "012",
+  "panel": "1"
+ },
+ "XXNW": {
+  "source": "generated",
+  "path": "D:/tmp/o19b/r/old/003-overture-heroic-tides",
+  "title": "Overture: Heroic Tides",
+  "moves": [],
+  "code": "old",
+  "slot": "003",
+  "panel": "1"
+ },
+ "ZRGR": {
+  "source": "generated",
+  "path": "D:/tmp/o19b/r/new/009-open-winds-of-winter",
+  "title": "Open Winds of Winter",
+  "moves": [],
+  "code": "new",
+  "slot": "009",
+  "panel": "2"
+ }
+}

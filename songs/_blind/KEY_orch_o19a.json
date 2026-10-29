@@ -1,0 +1,305 @@
+{
+ "BAPY": {
+  "source": "generated",
+  "path": "D:/tmp/o19a/r/new/012-overture-burning-rivers",
+  "title": "Overture: Burning Rivers",
+  "moves": [],
+  "code": "new",
+  "slot": "012",
+  "panel": "1"
+ },
+ "BNQU": {
+  "source": "generated",
+  "path": "D:/tmp/o19a/r/old/004-overture-bright-bells",
+  "title": "Overture: Bright Bells",
+  "moves": [],
+  "code": "old",
+  "slot": "004",
+  "panel": "2"
+ },
+ "BUKJ": {
+  "source": "generated",
+  "path": "D:/tmp/o19a/r/old/015-winds-of-summer",
+  "title": "Winds of Summer",
+  "moves": [],
+  "code": "old",
+  "slot": "015",
+  "panel": "1"
+ },
+ "BZAM": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-river",
+  "panel": "all"
+ },
+ "BZWP": {
+  "source": "generated",
+  "path": "D:/tmp/o19a/r/old/014-tides-of-the-valley",
+  "title": "Tides of the Valley",
+  "moves": [],
+  "code": "old",
+  "slot": "014",
+  "panel": "2"
+ },
+ "CPAB": {
+  "source": "generated",
+  "path": "D:/tmp/o19a/r/old/006-heroic-bells-of-the-harvest",
+  "title": "Heroic Bells of the Harvest",
+  "moves": [],
+  "code": "old",
+  "slot": "006",
+  "panel": "2"
+ },
+ "EWFT": {
+  "source": "generated",
+  "path": "D:/tmp/o19a/r/new/015-winds-of-summer",
+  "title": "Winds of Summer",
+  "moves": [],
+  "code": "new",
+  "slot": "015",
+  "panel": "2"
+ },
+ "EYAF": {
+  "source": "generated",
+  "path": "D:/tmp/o19a/r/new/002-toward-summer",
+  "title": "Toward Summer",
+  "moves": [],
+  "code": "new",
+  "slot": "002",
+  "panel": "1"
+ },
+ "FYAE": {
+  "source": "generated",
+  "path": "D:/tmp/o19a/r/new/005-distant-riders-of-the-sea",
+  "title": "Distant Riders of the Sea",
+  "moves": [],
+  "code": "new",
+  "slot": "005",
+  "panel": "2"
+ },
+ "GCWZ": {
+  "source": "generated",
+  "path": "D:/tmp/o19a/r/new/014-tides-of-the-valley",
+  "title": "Tides of the Valley",
+  "moves": [],
+  "code": "new",
+  "slot": "014",
+  "panel": "1"
+ },
+ "GZBB": {
+  "source": "generated",
+  "path": "D:/tmp/o19a/r/old/001-symphonic-dance-storms-of-home",
+  "title": "Symphonic Dance: Storms of Home",
+  "moves": [],
+  "code": "old",
+  "slot": "001",
+  "panel": "1"
+ },
+ "HASG": {
+  "source": "generated",
+  "path": "D:/tmp/o19a/r/old/016-rising-winds",
+  "title": "Rising Winds",
+  "moves": [],
+  "code": "old",
+  "slot": "016",
+  "panel": "2"
+ },
+ "HFEH": {
+  "source": "generated",
+  "path": "D:/tmp/o19a/r/new/004-overture-bright-bells",
+  "title": "Overture: Bright Bells",
+  "moves": [],
+  "code": "new",
+  "slot": "004",
+  "panel": "1"
+ },
+ "KDFY": {
+  "source": "generated",
+  "path": "D:/tmp/o19a/r/new/011-golden-mountains-of-home",
+  "title": "Golden Mountains of Home",
+  "moves": [],
+  "code": "new",
+  "slot": "011",
+  "panel": "2"
+ },
+ "KUZJ": {
+  "source": "generated",
+  "path": "D:/tmp/o19a/r/old/008-symphonic-dance-fires-of-home",
+  "title": "Symphonic Dance: Fires of Home",
+  "moves": [],
+  "code": "old",
+  "slot": "008",
+  "panel": "2"
+ },
+ "LEPD": {
+  "source": "generated",
+  "path": "D:/tmp/o19a/r/new/007-stormy-bells-of-the-sea",
+  "title": "Stormy Bells of the Sea",
+  "moves": [],
+  "code": "new",
+  "slot": "007",
+  "panel": "2"
+ },
+ "MXJM": {
+  "source": "generated",
+  "path": "D:/tmp/o19a/r/old/010-overture-golden-tides",
+  "title": "Overture: Golden Tides",
+  "moves": [],
+  "code": "old",
+  "slot": "010",
+  "panel": "2"
+ },
+ "PSND": {
+  "source": "generated",
+  "path": "D:/tmp/o19a/r/old/009-rivers-of-the-harvest",
+  "title": "Rivers of the Harvest",
+  "moves": [],
+  "code": "old",
+  "slot": "009",
+  "panel": "1"
+ },
+ "REJE": {
+  "source": "generated",
+  "path": "D:/tmp/o19a/r/new/009-rivers-of-the-harvest",
+  "title": "Rivers of the Harvest",
+  "moves": [],
+  "code": "new",
+  "slot": "009",
+  "panel": "2"
+ },
+ "RKJR": {
+  "source": "generated",
+  "path": "D:/tmp/o19a/r/new/013-the-endless-bells",
+  "title": "The Endless Bells",
+  "moves": [],
+  "code": "new",
+  "slot": "013",
+  "panel": "2"
+ },
+ "RUES": {
+  "source": "generated",
+  "path": "D:/tmp/o19a/r/old/002-toward-summer",
+  "title": "Toward Summer",
+  "moves": [],
+  "code": "old",
+  "slot": "002",
+  "panel": "2"
+ },
+ "TKNH": {
+  "source": "generated",
+  "path": "D:/tmp/o19a/r/new/016-rising-winds",
+  "title": "Rising Winds",
+  "moves": [],
+  "code": "new",
+  "slot": "016",
+  "panel": "1"
+ },
+ "USYF": {
+  "source": "generated",
+  "path": "D:/tmp/o19a/r/new/010-overture-golden-tides",
+  "title": "Overture: Golden Tides",
+  "moves": [],
+  "code": "new",
+  "slot": "010",
+  "panel": "1"
+ },
+ "UXNW": {
+  "source": "generated",
+  "path": "D:/tmp/o19a/r/new/008-symphonic-dance-fires-of-home",
+  "title": "Symphonic Dance: Fires of Home",
+  "moves": [],
+  "code": "new",
+  "slot": "008",
+  "panel": "1"
+ },
+ "VDSU": {
+  "source": "generated",
+  "path": "D:/tmp/o19a/r/old/003-open-rivers-of-the-north",
+  "title": "Open Rivers of the North",
+  "moves": [],
+  "code": "old",
+  "slot": "003",
+  "panel": "1"
+ },
+ "VGLT": {
+  "source": "generated",
+  "path": "D:/tmp/o19a/r/old/005-distant-riders-of-the-sea",
+  "title": "Distant Riders of the Sea",
+  "moves": [],
+  "code": "old",
+  "slot": "005",
+  "panel": "1"
+ },
+ "VSJP": {
+  "source": "generated",
+  "path": "D:/tmp/o19a/r/old/011-golden-mountains-of-home",
+  "title": "Golden Mountains of Home",
+  "moves": [],
+  "code": "old",
+  "slot": "011",
+  "panel": "1"
+ },
+ "WNDT": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-stormy",
+  "panel": "all"
+ },
+ "WPFN": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-scherzo",
+  "panel": "all"
+ },
+ "XUUS": {
+  "source": "generated",
+  "path": "D:/tmp/o19a/r/old/012-overture-burning-rivers",
+  "title": "Overture: Burning Rivers",
+  "moves": [],
+  "code": "old",
+  "slot": "012",
+  "panel": "2"
+ },
+ "YHWA": {
+  "source": "generated",
+  "path": "D:/tmp/o19a/r/old/007-stormy-bells-of-the-sea",
+  "title": "Stormy Bells of the Sea",
+  "moves": [],
+  "code": "old",
+  "slot": "007",
+  "panel": "1"
+ },
+ "YPEH": {
+  "source": "generated",
+  "path": "D:/tmp/o19a/r/new/003-open-rivers-of-the-north",
+  "title": "Open Rivers of the North",
+  "moves": [],
+  "code": "new",
+  "slot": "003",
+  "panel": "2"
+ },
+ "YZEG": {
+  "source": "generated",
+  "path": "D:/tmp/o19a/r/old/013-the-endless-bells",
+  "title": "The Endless Bells",
+  "moves": [],
+  "code": "old",
+  "slot": "013",
+  "panel": "1"
+ },
+ "YZGH": {
+  "source": "generated",
+  "path": "D:/tmp/o19a/r/new/001-symphonic-dance-storms-of-home",
+  "title": "Symphonic Dance: Storms of Home",
+  "moves": [],
+  "code": "new",
+  "slot": "001",
+  "panel": "2"
+ },
+ "ZAVN": {
+  "source": "generated",
+  "path": "D:/tmp/o19a/r/new/006-heroic-bells-of-the-harvest",
+  "title": "Heroic Bells of the Harvest",
+  "moves": [],
+  "code": "new",
+  "slot": "006",
+  "panel": "1"
+ }
+}

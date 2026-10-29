@@ -1,0 +1,341 @@
+{
+ "round": "o23",
+ "pairs": {
+  "set147500": {
+   "dir": "D:/tmp/o23/sets/set147500",
+   "judges": {
+    "composerA": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "composerB": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    },
+    "composerC": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "composerD": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    },
+    "composerE": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "statistician": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    },
+    "orchestrator": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    }
+   },
+   "sets": {
+    "new": [
+     "D:/tmp/o23/sets/set147500/new/001-symphonic-dance-storms-of-summer",
+     "D:/tmp/o23/sets/set147500/new/002-restless-rivers-of-the-dawn",
+     "D:/tmp/o23/sets/set147500/new/003-wild-fields",
+     "D:/tmp/o23/sets/set147500/new/004-symphonic-dance-storms-of-winter",
+     "D:/tmp/o23/sets/set147500/new/005-overture-iron-winds",
+     "D:/tmp/o23/sets/set147500/new/006-the-silver-banners",
+     "D:/tmp/o23/sets/set147500/new/007-bright-wings",
+     "D:/tmp/o23/sets/set147500/new/008-storms-of-summer"
+    ],
+    "old": [
+     "D:/tmp/o23/sets/set147500/old/001-symphonic-dance-storms-of-summer",
+     "D:/tmp/o23/sets/set147500/old/002-restless-rivers-of-the-dawn",
+     "D:/tmp/o23/sets/set147500/old/003-wild-fields",
+     "D:/tmp/o23/sets/set147500/old/004-symphonic-dance-storms-of-winter",
+     "D:/tmp/o23/sets/set147500/old/005-overture-iron-winds",
+     "D:/tmp/o23/sets/set147500/old/006-the-silver-banners",
+     "D:/tmp/o23/sets/set147500/old/007-bright-wings",
+     "D:/tmp/o23/sets/set147500/old/008-storms-of-summer"
+    ]
+   },
+   "titles": {
+    "new": [
+     "Symphonic Dance: Storms of Summer",
+     "Restless Rivers of the Dawn",
+     "Wild Fields",
+     "Symphonic Dance: Storms of Winter",
+     "Overture: Iron Winds",
+     "The Silver Banners",
+     "Bright Wings",
+     "Storms of Summer"
+    ],
+    "old": [
+     "Symphonic Dance: Storms of Summer",
+     "Restless Rivers of the Dawn",
+     "Wild Fields",
+     "Symphonic Dance: Storms of Winter",
+     "Overture: Iron Winds",
+     "The Silver Banners",
+     "Bright Wings",
+     "Storms of Summer"
+    ]
+   }
+  },
+  "set147600": {
+   "dir": "D:/tmp/o23/sets/set147600",
+   "judges": {
+    "composerA": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    },
+    "composerB": {
+     "X": "new",
+     "Y": "old",
+     "first": "X"
+    },
+    "composerC": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    },
+    "composerD": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "composerE": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    },
+    "statistician": {
+     "X": "new",
+     "Y": "old",
+     "first": "X"
+    },
+    "orchestrator": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    }
+   },
+   "sets": {
+    "new": [
+     "D:/tmp/o23/sets/set147600/new/001-open-riders",
+     "D:/tmp/o23/sets/set147600/new/002-symphonic-dance-storms-of-the-sea",
+     "D:/tmp/o23/sets/set147600/new/003-heroic-fields",
+     "D:/tmp/o23/sets/set147600/new/004-overture-bright-banners",
+     "D:/tmp/o23/sets/set147600/new/005-northern-tides-of-winter",
+     "D:/tmp/o23/sets/set147600/new/006-winds-of-the-storm",
+     "D:/tmp/o23/sets/set147600/new/007-the-rising-voyages",
+     "D:/tmp/o23/sets/set147600/new/008-overture-rising-voyages"
+    ],
+    "old": [
+     "D:/tmp/o23/sets/set147600/old/001-open-riders",
+     "D:/tmp/o23/sets/set147600/old/002-symphonic-dance-storms-of-the-sea",
+     "D:/tmp/o23/sets/set147600/old/003-heroic-fields",
+     "D:/tmp/o23/sets/set147600/old/004-overture-bright-banners",
+     "D:/tmp/o23/sets/set147600/old/005-northern-tides-of-winter",
+     "D:/tmp/o23/sets/set147600/old/006-winds-of-the-storm",
+     "D:/tmp/o23/sets/set147600/old/007-the-rising-voyages",
+     "D:/tmp/o23/sets/set147600/old/008-overture-rising-voyages"
+    ]
+   },
+   "titles": {
+    "new": [
+     "Open Riders",
+     "Symphonic Dance: Storms of the Sea",
+     "Heroic Fields",
+     "Overture: Bright Banners",
+     "Northern Tides of Winter",
+     "Winds of the Storm",
+     "The Rising Voyages",
+     "Overture: Rising Voyages"
+    ],
+    "old": [
+     "Open Riders",
+     "Symphonic Dance: Storms of the Sea",
+     "Heroic Fields",
+     "Overture: Bright Banners",
+     "Northern Tides of Winter",
+     "Winds of the Storm",
+     "The Rising Voyages",
+     "Overture: Rising Voyages"
+    ]
+   }
+  },
+  "set147700": {
+   "dir": "D:/tmp/o23/sets/set147700",
+   "judges": {
+    "composerA": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "composerB": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    },
+    "composerC": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "composerD": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    },
+    "composerE": {
+     "X": "new",
+     "Y": "old",
+     "first": "X"
+    },
+    "statistician": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    },
+    "orchestrator": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    }
+   },
+   "sets": {
+    "new": [
+     "D:/tmp/o23/sets/set147700/new/001-heroic-wings-of-the-storm",
+     "D:/tmp/o23/sets/set147700/new/002-toward-home",
+     "D:/tmp/o23/sets/set147700/new/003-the-restless-tides",
+     "D:/tmp/o23/sets/set147700/new/004-overture-golden-fields",
+     "D:/tmp/o23/sets/set147700/new/005-symphonic-dance-voyages-of-the-plains",
+     "D:/tmp/o23/sets/set147700/new/006-symphonic-dance-fields-of-home",
+     "D:/tmp/o23/sets/set147700/new/007-heroic-bells-of-the-north",
+     "D:/tmp/o23/sets/set147700/new/008-overture-northern-bells"
+    ],
+    "old": [
+     "D:/tmp/o23/sets/set147700/old/001-heroic-wings-of-the-storm",
+     "D:/tmp/o23/sets/set147700/old/002-toward-home",
+     "D:/tmp/o23/sets/set147700/old/003-the-restless-tides",
+     "D:/tmp/o23/sets/set147700/old/004-overture-golden-fields",
+     "D:/tmp/o23/sets/set147700/old/005-symphonic-dance-voyages-of-the-plains",
+     "D:/tmp/o23/sets/set147700/old/006-symphonic-dance-fields-of-home",
+     "D:/tmp/o23/sets/set147700/old/007-heroic-bells-of-the-north",
+     "D:/tmp/o23/sets/set147700/old/008-overture-northern-bells"
+    ]
+   },
+   "titles": {
+    "new": [
+     "Heroic Wings of the Storm",
+     "Toward Home",
+     "The Restless Tides",
+     "Overture: Golden Fields",
+     "Symphonic Dance: Voyages of the Plains",
+     "Symphonic Dance: Fields of Home",
+     "Heroic Bells of the North",
+     "Overture: Northern Bells"
+    ],
+    "old": [
+     "Heroic Wings of the Storm",
+     "Toward Home",
+     "The Restless Tides",
+     "Overture: Golden Fields",
+     "Symphonic Dance: Voyages of the Plains",
+     "Symphonic Dance: Fields of Home",
+     "Heroic Bells of the North",
+     "Overture: Northern Bells"
+    ]
+   }
+  },
+  "set147800": {
+   "dir": "D:/tmp/o23/sets/set147800",
+   "judges": {
+    "composerA": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    },
+    "composerB": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "composerC": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    },
+    "composerD": {
+     "X": "new",
+     "Y": "old",
+     "first": "X"
+    },
+    "composerE": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    },
+    "statistician": {
+     "X": "new",
+     "Y": "old",
+     "first": "X"
+    },
+    "orchestrator": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    }
+   },
+   "sets": {
+    "new": [
+     "D:/tmp/o23/sets/set147800/new/001-toward-the-sea",
+     "D:/tmp/o23/sets/set147800/new/002-the-wild-tides",
+     "D:/tmp/o23/sets/set147800/new/003-heroic-fields",
+     "D:/tmp/o23/sets/set147800/new/004-restless-bells-of-the-sea",
+     "D:/tmp/o23/sets/set147800/new/005-rising-winds",
+     "D:/tmp/o23/sets/set147800/new/006-toward-the-valley",
+     "D:/tmp/o23/sets/set147800/new/007-toward-home",
+     "D:/tmp/o23/sets/set147800/new/008-overture-burning-mountains"
+    ],
+    "old": [
+     "D:/tmp/o23/sets/set147800/old/001-toward-the-sea",
+     "D:/tmp/o23/sets/set147800/old/002-the-wild-tides",
+     "D:/tmp/o23/sets/set147800/old/003-heroic-fields",
+     "D:/tmp/o23/sets/set147800/old/004-restless-bells-of-the-sea",
+     "D:/tmp/o23/sets/set147800/old/005-rising-winds",
+     "D:/tmp/o23/sets/set147800/old/006-toward-the-valley",
+     "D:/tmp/o23/sets/set147800/old/007-toward-home",
+     "D:/tmp/o23/sets/set147800/old/008-overture-burning-mountains"
+    ]
+   },
+   "titles": {
+    "new": [
+     "Toward the Sea",
+     "The Wild Tides",
+     "Heroic Fields",
+     "Restless Bells of the Sea",
+     "Rising Winds",
+     "Toward the Valley",
+     "Toward Home",
+     "Overture: Burning Mountains"
+    ],
+    "old": [
+     "Toward the Sea",
+     "The Wild Tides",
+     "Heroic Fields",
+     "Restless Bells of the Sea",
+     "Rising Winds",
+     "Toward the Valley",
+     "Toward Home",
+     "Overture: Burning Mountains"
+    ]
+   }
+  }
+ }
+}

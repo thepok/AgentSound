@@ -1,0 +1,305 @@
+{
+ "ANEY": {
+  "source": "generated",
+  "path": "D:/tmp/o17/r/old/015-overture-golden-storms",
+  "title": "Overture: Golden Storms",
+  "moves": [],
+  "code": "old",
+  "slot": "015",
+  "panel": "1"
+ },
+ "AVPD": {
+  "source": "generated",
+  "path": "D:/tmp/o17/r/new/014-fields-of-the-sea",
+  "title": "Fields of the Sea",
+  "moves": [],
+  "code": "new",
+  "slot": "014",
+  "panel": "1"
+ },
+ "CBDE": {
+  "source": "generated",
+  "path": "D:/tmp/o17/r/new/002-fields-of-the-dawn",
+  "title": "Fields of the Dawn",
+  "moves": [],
+  "code": "new",
+  "slot": "002",
+  "panel": "1"
+ },
+ "DHTC": {
+  "source": "generated",
+  "path": "D:/tmp/o17/r/old/009-bright-mountains",
+  "title": "Bright Mountains",
+  "moves": [],
+  "code": "old",
+  "slot": "009",
+  "panel": "1"
+ },
+ "FTLJ": {
+  "source": "generated",
+  "path": "D:/tmp/o17/r/new/001-toward-winter",
+  "title": "Toward Winter",
+  "moves": [],
+  "code": "new",
+  "slot": "001",
+  "panel": "2"
+ },
+ "GZSB": {
+  "source": "generated",
+  "path": "D:/tmp/o17/r/new/016-the-silver-tides",
+  "title": "The Silver Tides",
+  "moves": [],
+  "code": "new",
+  "slot": "016",
+  "panel": "1"
+ },
+ "HGHD": {
+  "source": "generated",
+  "path": "D:/tmp/o17/r/new/003-stormy-bells-of-home",
+  "title": "Stormy Bells of Home",
+  "moves": [],
+  "code": "new",
+  "slot": "003",
+  "panel": "2"
+ },
+ "HHQN": {
+  "source": "generated",
+  "path": "D:/tmp/o17/r/old/003-stormy-bells-of-home",
+  "title": "Stormy Bells of Home",
+  "moves": [],
+  "code": "old",
+  "slot": "003",
+  "panel": "1"
+ },
+ "HUDC": {
+  "source": "generated",
+  "path": "D:/tmp/o17/r/old/004-symphonic-dance-riders-of-the-storm",
+  "title": "Symphonic Dance: Riders of the Storm",
+  "moves": [],
+  "code": "old",
+  "slot": "004",
+  "panel": "2"
+ },
+ "JDWF": {
+  "source": "generated",
+  "path": "D:/tmp/o17/r/new/005-restless-banners-of-the-sea",
+  "title": "Restless Banners of the Sea",
+  "moves": [],
+  "code": "new",
+  "slot": "005",
+  "panel": "2"
+ },
+ "KAWY": {
+  "source": "generated",
+  "path": "D:/tmp/o17/r/old/001-toward-winter",
+  "title": "Toward Winter",
+  "moves": [],
+  "code": "old",
+  "slot": "001",
+  "panel": "1"
+ },
+ "LBGE": {
+  "source": "generated",
+  "path": "D:/tmp/o17/r/new/010-winds-of-winter",
+  "title": "Winds of Winter",
+  "moves": [],
+  "code": "new",
+  "slot": "010",
+  "panel": "1"
+ },
+ "MAYP": {
+  "source": "generated",
+  "path": "D:/tmp/o17/r/old/014-fields-of-the-sea",
+  "title": "Fields of the Sea",
+  "moves": [],
+  "code": "old",
+  "slot": "014",
+  "panel": "2"
+ },
+ "MLAE": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-river",
+  "panel": "all"
+ },
+ "NAMN": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-stormy",
+  "panel": "all"
+ },
+ "NKVD": {
+  "source": "generated",
+  "path": "D:/tmp/o17/r/old/011-symphonic-dance-riders-of-the-sea",
+  "title": "Symphonic Dance: Riders of the Sea",
+  "moves": [],
+  "code": "old",
+  "slot": "011",
+  "panel": "1"
+ },
+ "NNDY": {
+  "source": "generated",
+  "path": "D:/tmp/o17/r/new/011-symphonic-dance-riders-of-the-sea",
+  "title": "Symphonic Dance: Riders of the Sea",
+  "moves": [],
+  "code": "new",
+  "slot": "011",
+  "panel": "2"
+ },
+ "PKHQ": {
+  "source": "generated",
+  "path": "D:/tmp/o17/r/new/006-overture-golden-fields",
+  "title": "Overture: Golden Fields",
+  "moves": [],
+  "code": "new",
+  "slot": "006",
+  "panel": "1"
+ },
+ "PMFF": {
+  "source": "generated",
+  "path": "D:/tmp/o17/r/old/010-winds-of-winter",
+  "title": "Winds of Winter",
+  "moves": [],
+  "code": "old",
+  "slot": "010",
+  "panel": "2"
+ },
+ "QFCP": {
+  "source": "generated",
+  "path": "D:/tmp/o17/r/new/009-bright-mountains",
+  "title": "Bright Mountains",
+  "moves": [],
+  "code": "new",
+  "slot": "009",
+  "panel": "2"
+ },
+ "QFPR": {
+  "source": "generated",
+  "path": "D:/tmp/o17/r/old/007-the-iron-forests",
+  "title": "The Iron Forests",
+  "moves": [],
+  "code": "old",
+  "slot": "007",
+  "panel": "1"
+ },
+ "QKNP": {
+  "source": "generated",
+  "path": "D:/tmp/o17/r/old/002-fields-of-the-dawn",
+  "title": "Fields of the Dawn",
+  "moves": [],
+  "code": "old",
+  "slot": "002",
+  "panel": "2"
+ },
+ "QNLX": {
+  "source": "generated",
+  "path": "D:/tmp/o17/r/old/005-restless-banners-of-the-sea",
+  "title": "Restless Banners of the Sea",
+  "moves": [],
+  "code": "old",
+  "slot": "005",
+  "panel": "1"
+ },
+ "RKAZ": {
+  "source": "generated",
+  "path": "D:/tmp/o17/r/old/006-overture-golden-fields",
+  "title": "Overture: Golden Fields",
+  "moves": [],
+  "code": "old",
+  "slot": "006",
+  "panel": "2"
+ },
+ "SAMY": {
+  "source": "generated",
+  "path": "D:/tmp/o17/r/old/008-symphonic-dance-horizons-of-the-valley",
+  "title": "Symphonic Dance: Horizons of the Valley",
+  "moves": [],
+  "code": "old",
+  "slot": "008",
+  "panel": "2"
+ },
+ "SHZH": {
+  "source": "generated",
+  "path": "D:/tmp/o17/r/old/013-banners-of-the-north",
+  "title": "Banners of the North",
+  "moves": [],
+  "code": "old",
+  "slot": "013",
+  "panel": "1"
+ },
+ "SZMP": {
+  "source": "generated",
+  "path": "D:/tmp/o17/r/new/015-overture-golden-storms",
+  "title": "Overture: Golden Storms",
+  "moves": [],
+  "code": "new",
+  "slot": "015",
+  "panel": "2"
+ },
+ "TFNZ": {
+  "source": "composed",
+  "path": "songs/pro-orch-symphonic-scherzo",
+  "panel": "all"
+ },
+ "VAZA": {
+  "source": "generated",
+  "path": "D:/tmp/o17/r/old/012-symphonic-dance-winds-of-the-sea",
+  "title": "Symphonic Dance: Winds of the Sea",
+  "moves": [],
+  "code": "old",
+  "slot": "012",
+  "panel": "2"
+ },
+ "VNLM": {
+  "source": "generated",
+  "path": "D:/tmp/o17/r/new/004-symphonic-dance-riders-of-the-storm",
+  "title": "Symphonic Dance: Riders of the Storm",
+  "moves": [],
+  "code": "new",
+  "slot": "004",
+  "panel": "1"
+ },
+ "WKHZ": {
+  "source": "generated",
+  "path": "D:/tmp/o17/r/new/007-the-iron-forests",
+  "title": "The Iron Forests",
+  "moves": [],
+  "code": "new",
+  "slot": "007",
+  "panel": "2"
+ },
+ "WTGA": {
+  "source": "generated",
+  "path": "D:/tmp/o17/r/new/013-banners-of-the-north",
+  "title": "Banners of the North",
+  "moves": [],
+  "code": "new",
+  "slot": "013",
+  "panel": "2"
+ },
+ "XECL": {
+  "source": "generated",
+  "path": "D:/tmp/o17/r/old/016-the-silver-tides",
+  "title": "The Silver Tides",
+  "moves": [],
+  "code": "old",
+  "slot": "016",
+  "panel": "2"
+ },
+ "ZQYZ": {
+  "source": "generated",
+  "path": "D:/tmp/o17/r/new/008-symphonic-dance-horizons-of-the-valley",
+  "title": "Symphonic Dance: Horizons of the Valley",
+  "moves": [],
+  "code": "new",
+  "slot": "008",
+  "panel": "1"
+ },
+ "ZRNR": {
+  "source": "generated",
+  "path": "D:/tmp/o17/r/new/012-symphonic-dance-winds-of-the-sea",
+  "title": "Symphonic Dance: Winds of the Sea",
+  "moves": [],
+  "code": "new",
+  "slot": "012",
+  "panel": "1"
+ }
+}

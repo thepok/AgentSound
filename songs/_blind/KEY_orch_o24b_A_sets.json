@@ -1,0 +1,481 @@
+{
+ "round": "o24bA",
+ "pairs": {
+  "set159100": {
+   "dir": "D:/tmp/o24b/A/sets/set159100",
+   "judges": {
+    "composerA": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "composerA__p2": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    },
+    "composerB": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    },
+    "composerB__p2": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "composerC": {
+     "X": "new",
+     "Y": "old",
+     "first": "X"
+    },
+    "composerC__p2": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    },
+    "composerD": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    },
+    "composerD__p2": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "composerE": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "composerE__p2": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    },
+    "statistician": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    },
+    "statistician__p2": {
+     "X": "new",
+     "Y": "old",
+     "first": "X"
+    },
+    "orchestrator": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "orchestrator__p2": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    }
+   },
+   "sets": {
+    "new": [
+     "D:/tmp/o24b/A/sets/set159100/new/001-symphonic-dance-bells-of-the-north",
+     "D:/tmp/o24b/A/sets/set159100/new/002-tides-of-the-harvest",
+     "D:/tmp/o24b/A/sets/set159100/new/003-symphonic-dance-wings-of-home",
+     "D:/tmp/o24b/A/sets/set159100/new/004-toward-the-valley",
+     "D:/tmp/o24b/A/sets/set159100/new/005-iron-voyages",
+     "D:/tmp/o24b/A/sets/set159100/new/006-rising-riders",
+     "D:/tmp/o24b/A/sets/set159100/new/007-open-wings",
+     "D:/tmp/o24b/A/sets/set159100/new/008-the-northern-bells"
+    ],
+    "old": [
+     "D:/tmp/o24b/A/sets/set159100/old/001-symphonic-dance-bells-of-the-north",
+     "D:/tmp/o24b/A/sets/set159100/old/002-tides-of-the-harvest",
+     "D:/tmp/o24b/A/sets/set159100/old/003-symphonic-dance-wings-of-home",
+     "D:/tmp/o24b/A/sets/set159100/old/004-toward-the-valley",
+     "D:/tmp/o24b/A/sets/set159100/old/005-iron-voyages",
+     "D:/tmp/o24b/A/sets/set159100/old/006-rising-riders",
+     "D:/tmp/o24b/A/sets/set159100/old/007-open-wings",
+     "D:/tmp/o24b/A/sets/set159100/old/008-the-northern-bells"
+    ]
+   },
+   "titles": {
+    "new": [
+     "Symphonic Dance: Bells of the North",
+     "Tides of the Harvest",
+     "Symphonic Dance: Wings of Home",
+     "Toward the Valley",
+     "Iron Voyages",
+     "Rising Riders",
+     "Open Wings",
+     "The Northern Bells"
+    ],
+    "old": [
+     "Symphonic Dance: Bells of the North",
+     "Tides of the Harvest",
+     "Symphonic Dance: Wings of Home",
+     "Toward the Valley",
+     "Iron Voyages",
+     "Rising Riders",
+     "Open Wings",
+     "The Northern Bells"
+    ]
+   }
+  },
+  "set159200": {
+   "dir": "D:/tmp/o24b/A/sets/set159200",
+   "judges": {
+    "composerA": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    },
+    "composerA__p2": {
+     "X": "new",
+     "Y": "old",
+     "first": "X"
+    },
+    "composerB": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "composerB__p2": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    },
+    "composerC": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    },
+    "composerC__p2": {
+     "X": "new",
+     "Y": "old",
+     "first": "X"
+    },
+    "composerD": {
+     "X": "new",
+     "Y": "old",
+     "first": "X"
+    },
+    "composerD__p2": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    },
+    "composerE": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    },
+    "composerE__p2": {
+     "X": "new",
+     "Y": "old",
+     "first": "X"
+    },
+    "statistician": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "statistician__p2": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    },
+    "orchestrator": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    },
+    "orchestrator__p2": {
+     "X": "new",
+     "Y": "old",
+     "first": "X"
+    }
+   },
+   "sets": {
+    "new": [
+     "D:/tmp/o24b/A/sets/set159200/new/001-overture-rising-winds",
+     "D:/tmp/o24b/A/sets/set159200/new/002-iron-horizons-of-winter",
+     "D:/tmp/o24b/A/sets/set159200/new/003-the-open-mountains",
+     "D:/tmp/o24b/A/sets/set159200/new/004-toward-the-dawn",
+     "D:/tmp/o24b/A/sets/set159200/new/005-mountains-of-the-valley",
+     "D:/tmp/o24b/A/sets/set159200/new/006-toward-winter",
+     "D:/tmp/o24b/A/sets/set159200/new/007-the-iron-voyages",
+     "D:/tmp/o24b/A/sets/set159200/new/008-symphonic-dance-banners-of-the-sea"
+    ],
+    "old": [
+     "D:/tmp/o24b/A/sets/set159200/old/001-overture-rising-winds",
+     "D:/tmp/o24b/A/sets/set159200/old/002-iron-horizons-of-winter",
+     "D:/tmp/o24b/A/sets/set159200/old/003-the-open-mountains",
+     "D:/tmp/o24b/A/sets/set159200/old/004-toward-the-dawn",
+     "D:/tmp/o24b/A/sets/set159200/old/005-mountains-of-the-valley",
+     "D:/tmp/o24b/A/sets/set159200/old/006-toward-winter",
+     "D:/tmp/o24b/A/sets/set159200/old/007-the-iron-voyages",
+     "D:/tmp/o24b/A/sets/set159200/old/008-symphonic-dance-banners-of-the-sea"
+    ]
+   },
+   "titles": {
+    "new": [
+     "Overture: Rising Winds",
+     "Iron Horizons of Winter",
+     "The Open Mountains",
+     "Toward the Dawn",
+     "Mountains of the Valley",
+     "Toward Winter",
+     "The Iron Voyages",
+     "Symphonic Dance: Banners of the Sea"
+    ],
+    "old": [
+     "Overture: Rising Winds",
+     "Iron Horizons of Winter",
+     "The Open Mountains",
+     "Toward the Dawn",
+     "Mountains of the Valley",
+     "Toward Winter",
+     "The Iron Voyages",
+     "Symphonic Dance: Banners of the Sea"
+    ]
+   }
+  },
+  "set159300": {
+   "dir": "D:/tmp/o24b/A/sets/set159300",
+   "judges": {
+    "composerA": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "composerA__p2": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    },
+    "composerB": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    },
+    "composerB__p2": {
+     "X": "new",
+     "Y": "old",
+     "first": "X"
+    },
+    "composerC": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "composerC__p2": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    },
+    "composerD": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    },
+    "composerD__p2": {
+     "X": "new",
+     "Y": "old",
+     "first": "X"
+    },
+    "composerE": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "composerE__p2": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    },
+    "statistician": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    },
+    "statistician__p2": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "orchestrator": {
+     "X": "new",
+     "Y": "old",
+     "first": "X"
+    },
+    "orchestrator__p2": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    }
+   },
+   "sets": {
+    "new": [
+     "D:/tmp/o24b/A/sets/set159300/new/001-the-rising-forests",
+     "D:/tmp/o24b/A/sets/set159300/new/002-overture-endless-forests",
+     "D:/tmp/o24b/A/sets/set159300/new/003-burning-wings",
+     "D:/tmp/o24b/A/sets/set159300/new/004-distant-horizons",
+     "D:/tmp/o24b/A/sets/set159300/new/005-wild-bells-of-home",
+     "D:/tmp/o24b/A/sets/set159300/new/006-wild-rivers-of-home",
+     "D:/tmp/o24b/A/sets/set159300/new/007-toward-the-dawn",
+     "D:/tmp/o24b/A/sets/set159300/new/008-symphonic-dance-bells-of-home"
+    ],
+    "old": [
+     "D:/tmp/o24b/A/sets/set159300/old/001-the-rising-forests",
+     "D:/tmp/o24b/A/sets/set159300/old/002-overture-endless-forests",
+     "D:/tmp/o24b/A/sets/set159300/old/003-burning-wings",
+     "D:/tmp/o24b/A/sets/set159300/old/004-distant-horizons",
+     "D:/tmp/o24b/A/sets/set159300/old/005-wild-bells-of-home",
+     "D:/tmp/o24b/A/sets/set159300/old/006-wild-rivers-of-home",
+     "D:/tmp/o24b/A/sets/set159300/old/007-toward-the-dawn",
+     "D:/tmp/o24b/A/sets/set159300/old/008-symphonic-dance-bells-of-home"
+    ]
+   },
+   "titles": {
+    "new": [
+     "The Rising Forests",
+     "Overture: Endless Forests",
+     "Burning Wings",
+     "Distant Horizons",
+     "Wild Bells of Home",
+     "Wild Rivers of Home",
+     "Toward the Dawn",
+     "Symphonic Dance: Bells of Home"
+    ],
+    "old": [
+     "The Rising Forests",
+     "Overture: Endless Forests",
+     "Burning Wings",
+     "Distant Horizons",
+     "Wild Bells of Home",
+     "Wild Rivers of Home",
+     "Toward the Dawn",
+     "Symphonic Dance: Bells of Home"
+    ]
+   }
+  },
+  "set159400": {
+   "dir": "D:/tmp/o24b/A/sets/set159400",
+   "judges": {
+    "composerA": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    },
+    "composerA__p2": {
+     "X": "new",
+     "Y": "old",
+     "first": "X"
+    },
+    "composerB": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    },
+    "composerB__p2": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    },
+    "composerC": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    },
+    "composerC__p2": {
+     "X": "new",
+     "Y": "old",
+     "first": "X"
+    },
+    "composerD": {
+     "X": "new",
+     "Y": "old",
+     "first": "X"
+    },
+    "composerD__p2": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    },
+    "composerE": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    },
+    "composerE__p2": {
+     "X": "new",
+     "Y": "old",
+     "first": "X"
+    },
+    "statistician": {
+     "X": "new",
+     "Y": "old",
+     "first": "X"
+    },
+    "statistician__p2": {
+     "X": "old",
+     "Y": "new",
+     "first": "X"
+    },
+    "orchestrator": {
+     "X": "new",
+     "Y": "old",
+     "first": "Y"
+    },
+    "orchestrator__p2": {
+     "X": "old",
+     "Y": "new",
+     "first": "Y"
+    }
+   },
+   "sets": {
+    "new": [
+     "D:/tmp/o24b/A/sets/set159400/new/001-symphonic-dance-bells-of-the-dawn",
+     "D:/tmp/o24b/A/sets/set159400/new/002-overture-iron-banners",
+     "D:/tmp/o24b/A/sets/set159400/new/003-overture-rising-winds",
+     "D:/tmp/o24b/A/sets/set159400/new/004-the-burning-rivers",
+     "D:/tmp/o24b/A/sets/set159400/new/005-the-distant-bells",
+     "D:/tmp/o24b/A/sets/set159400/new/006-rivers-of-the-sea",
+     "D:/tmp/o24b/A/sets/set159400/new/007-symphonic-dance-riders-of-the-valley",
+     "D:/tmp/o24b/A/sets/set159400/new/008-symphonic-dance-forests-of-winter"
+    ],
+    "old": [
+     "D:/tmp/o24b/A/sets/set159400/old/001-symphonic-dance-bells-of-the-dawn",
+     "D:/tmp/o24b/A/sets/set159400/old/002-overture-iron-banners",
+     "D:/tmp/o24b/A/sets/set159400/old/003-overture-rising-winds",
+     "D:/tmp/o24b/A/sets/set159400/old/004-the-burning-rivers",
+     "D:/tmp/o24b/A/sets/set159400/old/005-the-distant-bells",
+     "D:/tmp/o24b/A/sets/set159400/old/006-rivers-of-the-sea",
+     "D:/tmp/o24b/A/sets/set159400/old/007-symphonic-dance-riders-of-the-valley",
+     "D:/tmp/o24b/A/sets/set159400/old/008-symphonic-dance-forests-of-winter"
+    ]
+   },
+   "titles": {
+    "new": [
+     "Symphonic Dance: Bells of the Dawn",
+     "Overture: Iron Banners",
+     "Overture: Rising Winds",
+     "The Burning Rivers",
+     "The Distant Bells",
+     "Rivers of the Sea",
+     "Symphonic Dance: Riders of the Valley",
+     "Symphonic Dance: Forests of Winter"
+    ],
+    "old": [
+     "Symphonic Dance: Bells of the Dawn",
+     "Overture: Iron Banners",
+     "Overture: Rising Winds",
+     "The Burning Rivers",
+     "The Distant Bells",
+     "Rivers of the Sea",
+     "Symphonic Dance: Riders of the Valley",
+     "Symphonic Dance: Forests of Winter"
+    ]
+   }
+  }
+ }
+}

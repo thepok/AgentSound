@@ -1,34 +1,582 @@
 {
- "BWVH": {
+ "FHJE": {
   "source": "composed",
-  "path": "songs/pro-newage-longing"
+  "path": "songs/pro-newage-tide",
+  "panel": "all"
  },
- "GYXJ": {
+ "FJSQ": {
   "source": "generated",
-  "path": "songs/_endless_piano/out/na_r12/new-age/005-rivers-to-the-evening"
+  "path": "songs/_endless_piano/out/na_g14/g12code/new-age/004-wings-to-dawn",
+  "title": "Wings to Dawn",
+  "moves": [
+   [
+    "ostinato",
+    "intro",
+    1,
+    4
+   ],
+   [
+    "ostinato",
+    "A1",
+    5,
+    14
+   ],
+   [
+    "ostinato",
+    "A2",
+    15,
+    22
+   ],
+   [
+    "ostinato",
+    "A3",
+    31,
+    38
+   ],
+   [
+    "pause",
+    "A4",
+    52,
+    52
+   ],
+   [
+    "ostinato",
+    "A4",
+    53,
+    60
+   ],
+   [
+    "ostinato",
+    "coda",
+    61,
+    66
+   ]
+  ],
+  "code": "g12",
+  "slot": "004",
+  "panel": "1"
  },
- "JKGG": {
+ "FSLJ": {
+  "source": "generated",
+  "path": "songs/_endless_piano/out/na_g14/g12code/new-age/008-paper-lanterns",
+  "title": "Paper Lanterns",
+  "moves": [],
+  "code": "g12",
+  "slot": "008",
+  "panel": "1"
+ },
+ "GACE": {
+  "source": "generated",
+  "path": "songs/_endless_piano/out/na_g14/g12code/new-age/006-lanterns-of-snowfall",
+  "title": "Lanterns of Snowfall",
+  "moves": [
+   [
+    "pause",
+    "climax",
+    34,
+    34
+   ],
+   [
+    "goose",
+    "climax",
+    39,
+    39
+   ]
+  ],
+  "code": "g12",
+  "slot": "006",
+  "panel": "1"
+ },
+ "JQHZ": {
+  "source": "generated",
+  "path": "songs/_endless_piano/out/na_g14/g14code/new-age/008-leaves-of-autumn",
+  "title": "Leaves of Autumn",
+  "moves": [],
+  "code": "g14",
+  "slot": "008",
+  "panel": "1"
+ },
+ "JUJW": {
+  "source": "generated",
+  "path": "songs/_endless_piano/out/na_g14/g14code/new-age/004-stones-of-the-hills",
+  "title": "Stones of the Hills",
+  "moves": [
+   [
+    "ostinato",
+    "intro",
+    1,
+    2
+   ],
+   [
+    "ostinato",
+    "A1",
+    3,
+    12
+   ],
+   [
+    "ostinato",
+    "A3",
+    23,
+    30
+   ],
+   [
+    "pause",
+    "A4",
+    43,
+    43
+   ],
+   [
+    "ostinato",
+    "A4",
+    44,
+    51
+   ],
+   [
+    "ostinato",
+    "coda",
+    52,
+    57
+   ]
+  ],
+  "code": "g14",
+  "slot": "004",
+  "panel": "1"
+ },
+ "MCRW": {
   "source": "composed",
-  "path": "songs/pro-newage-skylight"
+  "path": "songs/pro-newage-embers",
+  "panel": "all"
  },
- "KMJA": {
+ "MFMM": {
   "source": "generated",
-  "path": "songs/_endless_piano/out/na_r12/new-age/002-before-spring"
+  "path": "songs/_endless_piano/out/na_g14/g14code/new-age/005-before-the-evening",
+  "title": "Before the Evening",
+  "moves": [
+   [
+    "motto",
+    "plant",
+    1,
+    2
+   ],
+   [
+    "motto",
+    "recur:octave",
+    27,
+    28
+   ],
+   [
+    "motto",
+    "recur:reharm",
+    29,
+    30
+   ],
+   [
+    "pause",
+    "climax",
+    46,
+    46
+   ],
+   [
+    "motto",
+    "payoff",
+    53,
+    54
+   ],
+   [
+    "goose",
+    "climax",
+    50,
+    50
+   ],
+   [
+    "motto",
+    "close",
+    68,
+    69
+   ]
+  ],
+  "code": "g14",
+  "slot": "005",
+  "panel": "2"
  },
- "SPQY": {
+ "MNLT": {
   "source": "generated",
-  "path": "songs/_endless_piano/out/na_r12/new-age/007-petals-to-autumn"
+  "path": "songs/_endless_piano/out/na_g14/g12code/new-age/005-distant-stones",
+  "title": "Distant Stones",
+  "moves": [
+   [
+    "motto",
+    "plant",
+    1,
+    2
+   ],
+   [
+    "motto",
+    "recur:reharm",
+    19,
+    20
+   ],
+   [
+    "motto",
+    "payoff",
+    31,
+    32
+   ],
+   [
+    "motto",
+    "close",
+    49,
+    49
+   ]
+  ],
+  "code": "g12",
+  "slot": "005",
+  "panel": "2"
  },
- "WHDY": {
+ "RQHP": {
   "source": "generated",
-  "path": "songs/_endless_piano/out/na_r12/new-age/004-rivers-in-the-tide"
+  "path": "songs/_endless_piano/out/na_g14/g14code/new-age/002-quiet-bridges",
+  "title": "Quiet Bridges",
+  "moves": [
+   [
+    "pause",
+    "A3",
+    39,
+    39
+   ]
+  ],
+  "code": "g14",
+  "slot": "002",
+  "panel": "1"
  },
- "YKQE": {
+ "SSTQ": {
+  "source": "generated",
+  "path": "songs/_endless_piano/out/na_g14/g12code/new-age/007-open-petals-of-snowfall",
+  "title": "Open Petals of Snowfall",
+  "moves": [
+   [
+    "ostinato",
+    "intro",
+    1,
+    4
+   ],
+   [
+    "ostinato",
+    "A1",
+    5,
+    20
+   ],
+   [
+    "ostinato",
+    "A4",
+    65,
+    76
+   ],
+   [
+    "ostinato",
+    "coda",
+    77,
+    84
+   ]
+  ],
+  "code": "g12",
+  "slot": "007",
+  "panel": "2"
+ },
+ "SXEM": {
   "source": "composed",
-  "path": "songs/letters-to-the-morning"
+  "path": "songs/pro-newage-longing",
+  "panel": "all"
  },
- "YRWW": {
-  "source": "composed",
-  "path": "songs/pro-newage-homecoming"
+ "TKNU": {
+  "source": "generated",
+  "path": "songs/_endless_piano/out/na_g14/g12code/new-age/002-leaves-of-autumn",
+  "title": "Leaves of Autumn",
+  "moves": [
+   [
+    "pause",
+    "A4",
+    47,
+    47
+   ]
+  ],
+  "code": "g12",
+  "slot": "002",
+  "panel": "1"
+ },
+ "TQTV": {
+  "source": "generated",
+  "path": "songs/_endless_piano/out/na_g14/g12code/new-age/001-windows-of-the-morning",
+  "title": "Windows of the Morning",
+  "moves": [
+   [
+    "ostinato",
+    "intro",
+    1,
+    2
+   ],
+   [
+    "ostinato",
+    "A1",
+    3,
+    10
+   ],
+   [
+    "ostinato",
+    "A2",
+    19,
+    26
+   ],
+   [
+    "motto",
+    "recur:sequence",
+    27,
+    27
+   ],
+   [
+    "motto",
+    "payoff",
+    39,
+    40
+   ],
+   [
+    "pause",
+    "A4",
+    45,
+    45
+   ],
+   [
+    "goose",
+    "climax",
+    42,
+    42
+   ],
+   [
+    "ostinato",
+    "A4",
+    46,
+    53
+   ],
+   [
+    "motto",
+    "close",
+    58,
+    58
+   ],
+   [
+    "ostinato",
+    "coda",
+    54,
+    59
+   ]
+  ],
+  "code": "g12",
+  "slot": "001",
+  "panel": "2"
+ },
+ "WYQD": {
+  "source": "generated",
+  "path": "songs/_endless_piano/out/na_g14/g14code/new-age/006-before-the-sea",
+  "title": "Before the Sea",
+  "moves": [
+   [
+    "ostinato",
+    "intro",
+    1,
+    2
+   ],
+   [
+    "ostinato",
+    "A1",
+    3,
+    12
+   ],
+   [
+    "ostinato",
+    "A2",
+    13,
+    18
+   ],
+   [
+    "ostinato",
+    "A4",
+    43,
+    50
+   ],
+   [
+    "ostinato",
+    "coda",
+    51,
+    56
+   ]
+  ],
+  "code": "g14",
+  "slot": "006",
+  "panel": "1"
+ },
+ "XTHR": {
+  "source": "generated",
+  "path": "songs/_endless_piano/out/na_g14/g14code/new-age/007-gardens-in-spring-waltz",
+  "title": "Gardens in Spring Waltz",
+  "moves": [],
+  "code": "g14",
+  "slot": "007",
+  "panel": "2"
+ },
+ "YDBM": {
+  "source": "generated",
+  "path": "songs/_endless_piano/out/na_g14/g12code/new-age/003-waves-of-the-rain",
+  "title": "Waves of the Rain",
+  "moves": [
+   [
+    "motto",
+    "plant",
+    1,
+    1
+   ],
+   [
+    "motto",
+    "recur:octave",
+    30,
+    30
+   ],
+   [
+    "goose",
+    "climax",
+    41,
+    41
+   ],
+   [
+    "motto",
+    "recur:sequence",
+    49,
+    49
+   ],
+   [
+    "motto",
+    "close",
+    63,
+    63
+   ]
+  ],
+  "code": "g12",
+  "slot": "003",
+  "panel": "2"
+ },
+ "YPCW": {
+  "source": "generated",
+  "path": "songs/_endless_piano/out/na_g14/g14code/new-age/003-golden-windows",
+  "title": "Golden Windows",
+  "moves": [
+   [
+    "motto",
+    "plant",
+    1,
+    1
+   ],
+   [
+    "motto",
+    "recur:sequence",
+    28,
+    28
+   ],
+   [
+    "motto",
+    "payoff",
+    41,
+    41
+   ],
+   [
+    "goose",
+    "climax",
+    40,
+    40
+   ],
+   [
+    "motto",
+    "recur:reharm",
+    45,
+    45
+   ],
+   [
+    "motto",
+    "close",
+    59,
+    59
+   ]
+  ],
+  "code": "g14",
+  "slot": "003",
+  "panel": "2"
+ },
+ "ZNSH": {
+  "source": "generated",
+  "path": "songs/_endless_piano/out/na_g14/g14code/new-age/001-early-lights-of-the-tide",
+  "title": "Early Lights of the Tide",
+  "moves": [
+   [
+    "ostinato",
+    "intro",
+    1,
+    2
+   ],
+   [
+    "ostinato",
+    "A1",
+    3,
+    9
+   ],
+   [
+    "ostinato",
+    "A2",
+    19,
+    26
+   ],
+   [
+    "motto",
+    "recur:sequence",
+    27,
+    27
+   ],
+   [
+    "motto",
+    "payoff",
+    41,
+    41
+   ],
+   [
+    "pause",
+    "A4",
+    45,
+    45
+   ],
+   [
+    "goose",
+    "climax",
+    42,
+    42
+   ],
+   [
+    "ostinato",
+    "A4",
+    46,
+    53
+   ],
+   [
+    "motto",
+    "close",
+    58,
+    58
+   ],
+   [
+    "ostinato",
+    "coda",
+    54,
+    59
+   ]
+  ],
+  "code": "g14",
+  "slot": "001",
+  "panel": "2"
  }
 }
