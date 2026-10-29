@@ -17,6 +17,7 @@ Endless symphonic orchestra uses the listening-approved mix (2026-10-28): bells 
 
 Optional individual audio tracks: `python -m agentsound endless orchestra --count 1 --stems` exports aligned WAVs alongside each song. See [Endless stems](docs/ENDLESS_STEMS.md).
 
+Visual orchestra stage: [UI preview and reusable fitting layout](tools/orchestra-stage/README.md), with interchangeable backgrounds and instrument illustrations.
 
 **Requirements**
 
@@ -965,11 +966,10 @@ orchestra's performance rules), `expressive` (the KTH rules every player shares)
 | a role | `roles/<role>.md` with the header block (Role, When to use, Inputs, Deliverable), a row in `docs/ROLES.md` and here |
 | an analysis profile | `engine/analysis/Profiles.cpp`, `cli.ANALYSIS_PROFILES`, a mixer profile, RENDER_FORMAT tables, here |
 
+Piano visualization: `tools/piano-stage/` provides the After Hours 88-key stage with actual song notes, audio-clock synchronization, sustain/half-pedal display, subtly different melody/accompaniment colors, and a replaceable bar background. `prepare_song.py` exports existing render notes and pedal automation through the TempoMap; `render_fast.py` composites frames directly in Python/Pillow with cached artwork and produces a complete 1080p video with the original audio; `render_video.py` retains the slower browser reference export. The browser supports play/pause, seek, speed, brightness and fullscreen; without a demo song it falls back to silent random notes. See its README for commands.
 
 **Keep this file current**: update it in the same commit as any user-facing change. `tests/python/test_readme.py`
 fails when an engine module, helper module, band preset, role, analysis profile, CLI command, recipe, patch family
 or hero preset is not mentioned here.
 
 Browser/WASM: `python tools/wasm/runtime.py` restores the checksum-pinned runtime assets into `web/` (ignored binaries); `python -m http.server 8778 --directory web` serves the app. See [web/README.md](web/README.md) and [tools/wasm/README.md](tools/wasm/README.md). The existing p11 browser release is preserved independently of current native generator development.
-
-Visual orchestra stage: [UI preview and reusable fitting layout](tools/orchestra-stage/README.md), with interchangeable backgrounds and instrument illustrations.

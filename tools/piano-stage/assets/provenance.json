@@ -1,0 +1,6 @@
+{
+  "tool": "built-in imagegen",
+  "source": "D:/tmp/piano-bar-concepts/A.png",
+  "generated": "C:\\Users\\richt\\.codex\\generated_images\\01a174eb-b45c-7f91-aada-e30dce45d762\\exec-55f8005c-7b86-4e2f-817b-aa06337c4231.png",
+  "prompt": "Edit target: attached concept A. Create clean background plate for a piano visualizer. Keep exactly the dark warm amber Manhattan cocktail bar, walnut counter on left, leather armchairs, rainy windows and New York skyline, lighting and camera composition. REMOVE ALL overlay graphics: every glowing note bar, every thin vertical guide line, all title lettering. REMOVE the entire foreground piano keyboard and its black housing at bottom, replace with plausible continuation of dark bar floor and furniture. Retain the distant grand piano in the room as furniture. Pure photoreal cinematic environment, no text, no UI, no light streaks. Wide 16:9."
+}
