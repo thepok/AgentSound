@@ -371,7 +371,7 @@ new-bus policies. Pop and EDM keep each lead sound, pack fallback, chain and tri
 | rock | `rock_band`, `indie_band`, `power_ballad` |
 | orchestra | `string_quartet`, `chamber_orchestra`, `symphony_orchestra`, `film_orchestra` (both with `solos=('oboe_solo', 'violin_solo', ...)`: the solo players of `orch.SOLOS` next to the sections, calibrated against them), `church_organ` (a Lars Palo GrandOrgue organ in its church, `organ='burea' | 'pitea'`: registrations as roles - soft / principal / full / pedal / pedal_full + `registers=` flute, positiv, cornet, reed, trumpet, oboe, strings, swell_full, pedal_soft, pedal_cantus on their manuals; `tremulant=` True or per role; the swell box `orch.swell(band, points)` on the Swell's roles; `hall=` another band's hall bus: the organ seated with an orchestra), `orch.guests(song, roles, hall=)` (guest colours beside an orchestra in its hall: guitar, harpsichord, celesta, glockenspiel, bells - the endless symphony's COLOUR) |
 
-**Recipes** (read before composing): [synthwave](recipes/synthwave.md), [jazz trio](recipes/jazz-trio.md), [jazz composition](recipes/jazz-composition.md) (writing heads and solos),
+**Recipes** (read before composing): [synthwave](recipes/synthwave.md), [jazz trio](recipes/jazz-trio.md), [jazz piano](recipes/jazz-piano.md), [jazz composition](recipes/jazz-composition.md) (writing heads and solos),
 [pop](recipes/pop.md), [rock](recipes/rock.md), [classical](recipes/classical.md), [EDM](recipes/edm.md), [organ](recipes/organ.md) (registration, idioms, the church), [SimCity](recipes/simcity.md) (the SimCity 3000 city-building jazz: research, sounds, form) - sound palette, progressions,
 arrangement, mix targets, hero sounds; plus [HUMAN_FEEDBACK](recipes/HUMAN_FEEDBACK.md).
 
